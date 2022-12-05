@@ -58,12 +58,6 @@ Motivation for making votes pay the same exact base fee as other
 transactions is to prevent a faulty majority from stuffing the
 ledger with maximum votes.
 
-Maximum block limit is defined as part of the solana validator
-client.  Currently it is at 48 million compute units.  The block
-target is 50% of the maximum, which is 24 million compute units.
-This target may be updated with a minor version mainnet release
-followed by a feature activation.
-
 ### Reward split between leader and burn
 
 With this proposal, the base fee should be 100% burned, and the
