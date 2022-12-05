@@ -80,3 +80,7 @@ to charge up to the maximum fee possible. If all the blocks were
 full for the entire duration of a recent blockhash, the maximum fee
 growth is roughly 600% at a 12.5% rate and a max blockhash age of
 120 - (1.125)^(120/8).
+
+To reduce the exposure, users can sign an older blockhash. One with
+a max lifetime of 30 slots would have a maximum fee increase of
+55%.
