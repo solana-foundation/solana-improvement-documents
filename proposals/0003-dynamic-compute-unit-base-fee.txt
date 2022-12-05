@@ -30,6 +30,17 @@ while paying minimal base fees and zero priority fees.
 
 ## Specification
 
+### Transaction Fees on solana
+
+There are two kinds of fees on solana, base fees, and priority fees.
+This proposal is focused on base fees only.  Base fees are automatic
+and are set by the network. Prior to this proposal the base fees
+were fixed, 0.000005 sol per signature.
+
+After this proposal has been implemented the base fees are set by
+the network based on current load, and the fee is charged per Compute
+Unit requested by the transaction.
+
 ### Compute Unit Target
 
 Maximum block limit is defined as part of the solana validator
