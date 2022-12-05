@@ -53,7 +53,7 @@ followed by a feature activation.
 
 If the average compute units for the last 8 blocks > 50%, base fee
 goes up by 12.5%.  If the average compute units for the last 8
-blocks < 50%, base fee drops by 50%.
+blocks < 50%, base fee drops by 12.5%.
 
 Lowest possible fee = 1000 lamports / 200_000 compute units.
 
