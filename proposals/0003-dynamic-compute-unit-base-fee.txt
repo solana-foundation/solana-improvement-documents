@@ -83,9 +83,13 @@ that leaders have to acutely pay for.
 When users sign a tx, they are implicitly authorizing the network
 to charge up to the maximum fee possible. If all the blocks were
 full for the entire duration of a recent blockhash, the maximum fee
-growth is roughly 600% at a 12.5% rate and a max blockhash age of
-120 - (1.125)^(120/8).
+growth is roughly 82x at a 12.5% rate and a max blockhash age of
+300. (1.125)^(300/8).
 
 To reduce the exposure, users can sign an older blockhash. One with
 a max lifetime of 30 slots would have a maximum fee increase of
 55%.
+
+Durable nonce transactions should limit their exposure via a maximum
+balance in the fee payer or cancel the transaction by invalidating
+the nonce with a different high priority tx.
