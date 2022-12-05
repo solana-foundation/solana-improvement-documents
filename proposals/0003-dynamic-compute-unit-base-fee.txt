@@ -1,0 +1,59 @@
+---
+simd: '0003'
+title: Dynamic Compute Unit Base Fee
+authors:
+  - Anatoly Yakovenko (Solana Labs)
+category: Sealevel Virtual Machine
+type: Standards Track
+status: Draft
+created: 2022-12-05
+---
+
+## Summary
+
+Original implementation of Solana had a dynamic governor that
+targeted blocks to be at 50% load. The governor was signature based,
+and was designed without compute units in mind.  As SVM matured
+compute units were added to track load instead of signatures, and
+priority fees were added for prioritizing transaction scheduling.
+The dynamic signature based governor was removed, and right now the
+network has no mechanism to try to target a specific load.
+
+The motivation for a 50% target load is two fold.  One is that at
+100% the heterogeneous hardware on the network doesn't perform
+uniformly.  This causes downstream issues with leaders delaying and
+missing their blocks, and overall performance degradation. Secondly,
+stuffing the ledger with full blocks without a fee is an attack on
+the verifiability of the ledger by 3rd parties. For example, a faulty
+majority of the validators start creating continuous full blocks
+while paying minimal base fees and zero priority fees.
+
+## Specification
+
+### Compute Unit Target
+
+Maximum block limit is defined as part of the solana validator
+client.  Currently it is at 48 million compute units.  The block
+target is 50% of the maximum, which is 24 million compute units.
+This target may be updated with a minor version mainnet release
+followed by a feature activation.
+
+### Governor
+
+If the average compute units for the last 8 blocks > 50%, base fee
+goes up by 12.5%.  If the average compute units for the last 8
+blocks < 50%, base fee drops by 50%.
+
+Lowest possible fee = 1000 lamports / 200_000 compute units.
+
+There is no maximum fee, see [###Votes].
+
+### Votes
+
+Votes are not exempt. Validators should start censoring to maintain
+load < 50% that includes votes and non votes after fees reach some
+critical point.
+
+Motivation for making votes pay the same exact base fee as other
+transactions is to prevent a faulty majority from stuffing the
+ledger with maximum votes.
