@@ -87,4 +87,8 @@ ledger with maximum votes.
 ### Reward split between leader and burn
 
 With this proposal, the base fee should be 100% burned, and the
-priority fee should 100% go to the block producer.
+priority fee should 100% go to the block producer. The motivation
+for this split is that block verification is something that every
+participant has to pay for, even unstaked nodes.  Prioritizing the
+top paying transactions out of 100gbps worth of spam is something
+that leaders have to acutely pay for.
