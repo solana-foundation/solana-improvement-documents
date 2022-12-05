@@ -72,3 +72,11 @@ for this split is that block verification is something that every
 participant has to pay for, even unstaked nodes.  Prioritizing the
 top paying transactions out of 100gbps worth of spam is something
 that leaders have to acutely pay for.
+
+### Maximum expected cost for users
+
+When users sign a tx, they are implicitly authorizing the network
+to charge up to the maximum fee possible. If all the blocks were
+full for the entire duration of a recent blockhash, the maximum fee
+growth is roughly 600% at a 12.5% rate and a max blockhash age of
+120 - (1.125)^(120/8).
