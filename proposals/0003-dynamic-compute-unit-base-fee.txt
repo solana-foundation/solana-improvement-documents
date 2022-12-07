@@ -11,6 +11,14 @@ created: 2022-12-05
 
 ## Summary
 
+This proposal changes the base fee from being based on signatures
+per transaction to requested compute units per transaction, as well
+as adds a mechanism to dynamically adjust the base fee based on
+desired target load for the network, and changes the economics of
+fees on the network such that base fee is 100% burned and priority
+fees 100% go to the leader. This proposal doesn't impact storage
+fees.
+
 Original implementation of Solana had a dynamic governor that
 targeted blocks to be at 50% load. The governor was signature based,
 and was designed without compute units in mind.  As SVM matured
@@ -41,7 +49,11 @@ After this proposal has been implemented the base fees are set by
 the network based on current load, and the fee is charged per Compute
 Unit requested by the transaction.
 
-### Compute Unit Target
+There are two ways the validators control the base fee on the
+network.  Validators can set the Maximum Compute Unit Limit, or the
+Lowest Base fee.
+
+### Maximum Compute Unit Limit
 
 Maximum block limit is defined as part of the solana validator
 client.  Currently it is at 48 million compute units.  The block
@@ -53,15 +65,20 @@ If the average load in compute units for the last 8 blocks > 50%,
 base fee goes up by 12.5%.  If the average load in compute units
 for the last 8 blocks < 50%, base fee drops by 12.5%.
 
+Note, the 12.5% and 8 slot limits are an approximation of eip 1559's
+targets per 12.5 second ethereum block.
+
+### Lowest Base Fee
+
 Lowest possible fee = 1000 lamports / 200_000 compute units.
 
 There is no maximum fee, see [###Votes].
 
 ### Votes
 
-Votes are not exempt. Validators should start censoring to maintain
-load < 50% that includes votes and non votes after fees reach some
-critical point.
+Votes are not exempt. Validators should start dropping non essential
+transactions to maintain load < 50% that includes votes and non
+votes after fees reach some critical point.
 
 Motivation for making votes pay the same exact base fee as other
 transactions is to prevent a faulty majority from stuffing the
