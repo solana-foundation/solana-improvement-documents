@@ -109,6 +109,8 @@ Durable nonce transactions should limit their exposure via a maximum
 balance in the fee payer or cancel the transaction by invalidating
 the nonce with a different high priority tx.
 
+Burn economics may need to be considered in a separate proposal.
+
 ### Constants
 
 * lowest fee per compute unit: 1000 lamports / 200_000 CUs
