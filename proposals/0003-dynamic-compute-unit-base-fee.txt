@@ -145,6 +145,6 @@ be scheduled in the leader schedule and wouldn't earn any rewards
 from voting, and wouldn't be considered as part of the quorum in
 consensus.
 
-In this example, base fees would double when load > 66%, and base
-fees would double only for non-vote transactions.  Votes would
-continue paying the lowest base fee.
+In this example, base fees would start increasing when load > 66%,
+and base fees would double only for non-vote transactions.  Votes
+would continue paying the lowest base fee.
