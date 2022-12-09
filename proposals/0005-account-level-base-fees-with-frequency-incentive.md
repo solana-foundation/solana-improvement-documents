@@ -68,7 +68,7 @@ This means that in times of low or even moderate network utilization, the
 supply of block space far exceeds the supply created by the validators.  
 
 Economically, it makes sense that in times of low utilization, the cost to use 
-blockspace would also be low.  However, with base bees currently set at a small
+blockspace would also be low.  However, with base fees currently set at a small
 fraction of a penny, the cost to utilize blockspace is below what most 
 blockchain users are willing to pay.  This is evidenced by many users of other 
 chains paying fees several orders of magnitude higher than this even in times 
