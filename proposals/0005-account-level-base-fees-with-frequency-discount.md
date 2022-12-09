@@ -1,6 +1,6 @@
 ---
 simd: '0005'
-title: account-level-base-fees-with-frequency-incentive
+title: account-level-base-fees-with-frequency-discount
 authors:
   - betaconger
 
