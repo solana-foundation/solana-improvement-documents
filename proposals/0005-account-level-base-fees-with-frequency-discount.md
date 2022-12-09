@@ -62,8 +62,8 @@ dropped.
 
 Solana is designed as a high-throughput system, with the goal of being able 
 to operate at the limits of hardware and network throughput.  It is able to 
-process tens of thousands of transactiosn per seconds, and with the impending 
-release of firedancer, this amount may increas by another order of magnitude.  
+process tens of thousands of transactions per seconds, and with the impending 
+release of firedancer, this amount may increase by another order of magnitude.  
 This means that in times of low or even moderate network utilization, the 
 supply of block space far exceeds the supply created by the validators.  
 
@@ -76,7 +76,7 @@ of similarly low utilization.
 
 The goal of this proposal is to try to increase fee revenue for the validators 
 and stakers.  This should help increase ROI for validators and stakers and 
-encourage more validators to particpate, increasing decentralization.
+encourage more validators to participate, increasing decentralization.
 
 ## Supporting observation
 
