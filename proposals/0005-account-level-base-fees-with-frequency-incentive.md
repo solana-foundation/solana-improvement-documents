@@ -85,7 +85,7 @@ a mechanism to maximize fee revenue.
 
 ## Technical Considerations
 
-I admitedly do not know enough about the structure of core components to know 
+I admittedly do not know enough about the structure of core components to know 
 if this would even be possible, or how complex the changes would be if it is 
 possible.  However, the success of the proposal would certainly increase the 
 ROI for validators and stakers significantly.
