@@ -1,5 +1,5 @@
 ---
-simd: '0005'
+simd: '0006'
 title: account-level-base-fees-with-frequency-discount
 authors:
   - betaconger
