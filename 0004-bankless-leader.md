@@ -72,7 +72,7 @@ transaction.
    accounts_db and store the lamport balance in the cache.
 3. If the balance is less than the fee, drop the transaction.
 4. Subtract the fee from the balance.
-5. If fee account is called by system program, or it is passed to a instruction
+5. If account is called by system program, or it is passed to a instruction
    with system program, then reduce its balance to 0 in the cache.
 
 ### Leader Replay
@@ -110,7 +110,7 @@ Clients that transmit a large number of transactions per second should use a
 dedicated fee account.
 
 Once an account fee is used by system program, it will fail the balance check
-until the balance cache is reset.
+until the balance cache is reset. 
 
 
 ## Security Considerations
