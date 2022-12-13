@@ -124,7 +124,7 @@ weighted value signaled by validators.
 
 ### Alternative Solution For Vote base fees
 
-Increasing vote fees may problematic for validators.  Alternative
+Increasing vote fees may be problematic for validators.  Alternative
 solution would be to reserve X% of the block for votes. For example:
 
 * 33% CUs are reserved for votes
