@@ -13,7 +13,7 @@ created: 2022-12-09
 
 Users that don't run a full node need secure access to the solana
 blockchain. The goal of this proposal is to define a protocol for
-sampling the validators such that if only a small minority of
+sampling the validators such that if at least a small minority of
 validators are not faulty the user can be notified of an invalid
 state transition or a double confirmation attack on the network.
 
@@ -23,9 +23,9 @@ state transition or a double confirmation attack on the network.
 
 1. User observes a confirmation for a TX at slot N. Confirmation
 contains 2/3+ votes for slot N, and a path from the transaction to
-the signed bankhash.
+the bankhash signed by all the votes.
 
-2. Concurrently, user requests at random for votes from N different
+2. Concurrently, user requests at random votes from N different
 nodes. Votes maybe for later slots, and would contain a path to the
 requested slot's bankhash.
 
@@ -60,13 +60,17 @@ withholding the data from the rest of the network, so the rest can
 identify an invalid state transition or a double confirmation.
 
 Turbine, solana's block propagation protocol, transmits blocks in
-small chunks called shreds.  Shreds are transmitted in batches.
+small chunks called shreds. Shreds are transmitted in batches.
 Each batch includes N data shreds and M erasure codes.
 
 Upon executing the block, the validator should compute the merkle
-root of all the shreds, including the erasure codes.  The merkle
+root of all the shreds, including the erasure shreds. The merkle
 root should be added to the BankHash, which is signed by validators
 when voting.
+
+When sampling for shreds, the user knows that the shreds are for
+the proposed confirmed block because each shred has a merkle path
+to the bankhash that was signed by all the validators.
 
 #### StateHash: Transaction state transition merkle tree
 
@@ -75,30 +79,37 @@ status codes.
 
 ### Future work: Separating execution and fork choice
 
-The computation for Bankhash is decoupled from StateHash
+The computation for the heaviest fork is separated from computing
+all the state transitions from all the programs.
 
-BankHash = (ShredHash, BlockHash, Prev BankHash)
+BankHash = (ShredHash, BlockHash, VoteStateHash, Prev BankHash)
 
-StateHash = (Current TX StateResults, Previous StateHash)
+VoteStateHash = Current TX State Results for votes only
+
+ProgramStateHash = (Current TX State Results, Previous ProgramStateHash)
 
 While validators vote only on the BankHash, users still need to
-know the StateHash for the slot. 
+know the ProgramStateHash for the slot. 
 
-Validators are not expected to compute StateHash at the same time
-as the BankHash, and the StateHash may lag.  But at least once an
-epoch, all the validators must compute the EpochHash for the previous
-epoch, which includes all the StateHashes from the previous epoch.
+Validators are not expected to compute the ProgramStateHash at the
+same time as the BankHash, and the ProgramStateHash may lag.  But
+at least once an epoch, all the validators must compute the EpochHash
+for the previous epoch, which includes all the ProgramStateHashe from the
+previous epoch.
 
-Epoch Hash = (Merkle root of all the accounts,All the epoch StateHashes)
+Epoch Hash = Merkle root of all the accounts including the account
+that stores ProgramStateHashes for the epoch
 
 #### Overview
+
+The original protocol is modified as follows:
 
 2. Concurrently, user requests at random for votes from N different
 nodes. Votes maybe for later slots, and would contain a path to the
 requested slot's bankhash.
-    a. User also requests StateHash attestations from the nodes.
+2.a User also requests signed ProgramStateHash attestations from
+the staked validators.
 
-
-If the validator signed an invalid StateHash, this attestation can
-be used to slash them after the EpochHash has been computed by the
-network.
+If the validator signed an invalid ProgramStateHash, this signed
+attestation can be used to slash them after the EpochHash has been
+computed by the network.
