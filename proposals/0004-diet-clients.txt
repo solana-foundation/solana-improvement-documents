@@ -1,5 +1,5 @@
 ---
-simd: '0004'
+simd: '0010'
 title: Diet Clients
 authors:
   - Anatoly Yakovenko (Solana Labs)
