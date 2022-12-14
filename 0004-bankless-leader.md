@@ -103,7 +103,7 @@ empty cache.
 ### Impact on Clients
 
 The same fee account can be reused many times in the same block until it is
-called by system program, or it is passed to a instruction alone side system
+called by system program, or it is passed to a instruction aloneside system
 program.
 
 Clients that transmit a large number of transactions per second should use a
