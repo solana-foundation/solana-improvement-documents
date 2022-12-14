@@ -25,13 +25,13 @@ state transition or a double confirmation attack on the network.
 contains 2/3+ votes for slot N, and a path from the transaction to
 the bankhash signed by all the votes.
 
-2. Concurrently, user requests at random votes from N different
-nodes. Votes maybe for later slots, and would contain a path to the
-requested slot's bankhash.
+2. Concurrently with 1, user requests votes for slot N from M random
+validators.  Votes returned may be for later slots, and would contain
+a merkle path to the requested slot's bankhash.
 
 3. If all the responses are the same, the user is done. 
 
-4. If X% or more of staked nodes responds that they do not have block,
+4. If X% or more of staked nodes respond that they do not have block,
 the user starts sampling nodes at random for missing shreds and
 submitting the shreds to the validators with the missing block.
 
@@ -43,7 +43,8 @@ submitting the shreds to the validators with the missing block.
 
 5. If X% or more of the staked nodes respond with different
 bankhash, a fault has occurred on the network. User shouldn't
-trust the confirmation.
+trust the confirmation. User should then submit the conflicting
+votes to M random validators.
 
 ### Confirmation Proof
 
