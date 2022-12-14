@@ -79,8 +79,10 @@ status codes.
 
 ### Future work: Separating execution and fork choice
 
-The computation for the heaviest fork is separated from computing
-all the state transitions from all the programs.
+Eventually the solana protocol will separate fork choice from
+computing all the state transitions for all the programs. Diet
+clients would need to be modified to provide confirmation of execution
+for users.
 
 BankHash = (ShredHash, BlockHash, VoteStateHash, Prev BankHash)
 
