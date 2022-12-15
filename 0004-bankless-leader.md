@@ -20,20 +20,23 @@ and replay execution of well formed entries.
 
 ## Motivation
 
-Without having to execute transactions, Bankless leaders can ingest more
-packets from receiving buffer for filtering and sorting per slot, therefore
-producing high quality blocks. Some of the benefits include:
+Without having to execute transactions, leader threads will have more cycles
+to pull packets from receiving buffer, and processing more packets per slot.
 
-1. Process fuller blocks;
-2. Higher prioritized transactions have higher chance to be packed into block
-   earlier;
-3. Combine with Scheduler, to produce more parallelizable entries;
+Feeding more packets to filtering and sorting logic allows higher prioritized
+transactions to have higher chance be added to the top of queue, therefore have
+priority to be considered to block inclusion.
 
+It also ingests more non-conflicting transactions to be packed into block,
+therefore improve block quality.
+
+Combine with scheduler logic, it'd produce entries that are parallelizable,
+potential simplify replay and reduce time.  
 
 ## Detailed Design
 
 Normal bank operation for a spend needs to do 2 loads and 2 stores. With this
-design leader just does 1 load. so 4x less account_db work before generating the
+design leader just does 1 load. So 4x less account_db work before generating the
 block. The store operations are likely to be more expensive than reads.
 
 When replay stage starts processing the same transactions, it can assume that
@@ -41,7 +44,6 @@ PoH is valid, and that all the entries are safe for parallel execution. The fee
 accounts that have been loaded to produce the block are likely to still be in
 memory, so the additional load should be warm and the cost is likely to be
 amortized.
-
 
 ### Fee Account
 
