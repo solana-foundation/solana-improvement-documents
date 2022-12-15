@@ -21,13 +21,13 @@ and replay execution of well formed entries.
 ## Motivation
 
 Without having to execute transactions, Bankless leaders can ingest more
-packets from receiving buffer for filtering and sorting per slort, therefore
+packets from receiving buffer for filtering and sorting per slot, therefore
 producing high quality blocks. Some of the benefits include:
 
 1. Process fuller blocks;
 2. Higher prioritized transactions have higher chance to be packed into block
    earlier;
-3. Combine with Scheduler, to produce more parallizeble entries;
+3. Combine with Scheduler, to produce more parallelizable entries;
 
 
 ## Detailed Design
@@ -103,7 +103,7 @@ empty cache.
 ### Impact on Clients
 
 The same fee account can be reused many times in the same block until it is
-called by system program, or it is passed to a instruction aloneside system
+called by system program, or it is passed to a instruction alongside system
 program.
 
 Clients that transmit a large number of transactions per second should use a
