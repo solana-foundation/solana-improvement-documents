@@ -116,3 +116,65 @@ the staked validators.
 If the validator signed an invalid ProgramStateHash, this signed
 attestation can be used to slash them after the EpochHash has been
 computed by the network.
+
+### Future work: Minimized fraud proof
+
+Majority fraud is detectable when the majority has signed an invalid
+state transition. Currently, the above proposal requires a client
+to validate the entire chain starting from a previously trusted
+snapshot up to the invalid block.
+
+#### Overview
+
+1. Track all the inputs into state transitions
+
+Each input should have a merkle path to the original snapshot, or
+if it has been modified, to an output from a previous transaction.
+
+2. Merkelize all the txs and their inputs and outputs for each block
+
+       StateHash
+     h1       h2
+
+  tx1  tx2  tx3 tx4
+
+tx:
+inputs: path to snapshot | path to previous block output | path to intra-block tx output
+result: success or failure code
+outputs: hash of the result if result is successful, 0 otherwise
+
+The tree should contain an ordered sequence of txs. Each tx is its
+own tree that contains all the input paths to the accounts used for
+execution and all the outputs. Each input can either be an
+output from a snapshot root, or an output from a previous block,
+or from a transaction in the same block.
+
+3. User receives a path for their confirmed TX along with the
+majority of votes signing the root.  An honest node will generate
+a path for the same TX when processing the same block.  Either
+inputs will be different, or the outputs.
+
+4. If the input is different, user will need to recursively request
+a confirmation for the transaction that generated the input.
+
+5. If the output is different, user will need to run the program
+locally and confirm the result.
+
+Eventually user will be able to confirm the invalid state transition
+locally. The amount resources necessary to execute the confirmation
+should be on the order of executing 1 transaction, which generally
+fits in a mobile browser sandbox.
+
+#### Storage
+
+Upon storing the output of a transaction, AccountsDB should also
+record the merkle path of that output to the transaction. At the
+end of each block, each transaction in ledger order is merklelized
+into the StateHash.
+
+#### Retrieval
+
+When retrieving the inputs for execution, each input should have
+been tagged with a path to the transaction that generated it. That
+path, along the path to the root of the block that generated the
+transaction can be retrieved concurrently during replay.
