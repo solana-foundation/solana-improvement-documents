@@ -1,6 +1,6 @@
 ---
 simd: '0006'
-title: account-level-base-fees-with-frequency-discount
+title: Increase account-specific base fees with frequency discount
 authors:
   - betaconger
 
