@@ -86,12 +86,26 @@ ledger with maximum votes.
 
 ### Reward split between leader and burn
 
-With this proposal, the base fee should be 100% burned, and the
-priority fee should 100% go to the block producer. The motivation
-for this split is that block verification is something that every
-participant has to pay for, even unstaked nodes.  Prioritizing the
-top paying transactions out of 100gbps worth of spam is something
-that leaders have to acutely pay for.
+The original solana design had a 50% burn and 50% validator reward
+for all fees. With priority fees, this split is suboptimal.  A user
+and validator can prioritize via a side channel and avoid the burn
+for the priority portion of the fees all together. For example,
+instead of adding a 0.1 sol priority fee to the tx, user sends 0.75
+sol to the validator directly. The validator earns 25% more and the
+user spends 25% less, by bypassing the default priority fees.
+
+It's necessary to burn the congestion fees, otherwise a faulty
+majority is incentivized to keep the congestion fees high.
+
+With this proposal, the base fee, including the congestion fee,
+should be 100% burned, and the priority fee should 100% go to the
+block producer. The motivation for this split is that block
+verification is something that every participant has to pay for,
+even unstaked nodes.  Prioritizing the top paying transactions out
+of 100gbps worth of spam is something that leaders have to acutely
+pay for. By rewarding 100% of the priority fees to the block producer,
+the incentive to use a side channel for prioritization fees is
+greatly reduced.
 
 ### Maximum expected cost for users
 
