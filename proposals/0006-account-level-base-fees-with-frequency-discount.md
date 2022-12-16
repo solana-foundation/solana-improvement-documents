@@ -1,6 +1,6 @@
 ---
 simd: '0006'
-title: Increase account-specific base fees with frequency discount
+title: Increase base fees for infrequent users
 authors:
   - betaconger
 
