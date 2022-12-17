@@ -21,11 +21,11 @@ Processes include release process for spec, clients or how standards are updated
 
 #### Expectations
 
-Ideas presented ultimately as SIMDs will need to be driven by the author through the process. It's an exciting opportunity with a fair amount of responsibility from the contributor(s). Please put care into the details. SIMDs that do not present convincing motivation, demonstrate understanding of the impact of the design, or are disingenuous about the drawbacks or alternatives tend to be poorly received and not make it past the approval phase. Again, by the time the SIMDs makes it to the pull request, it has a clear plan and path forward based on the discussions in the governance forum.
+Ideas presented ultimately as SIMDs will need to be driven by the author through the process or reassigned to an owner if the author is no longer active.  SIMDs that do not present convincing motivation, demonstrate understanding of the impact of the design, or are disingenuous about the drawbacks or alternatives tend to be poorly received and not make it past the approval phase. Again, by the time the SIMDs makes it to the pull request, it has a clear plan and path forward based on the discussions in the governance forum.
 
 #### Process
 
-Spec changes are ultimately done via pull requests to this repository . In an effort to keep the pull request clean and readable, please follow these instructions to flesh out an idea.
+Spec changes are ultimately done via pull requests to this repository.
 
-TBD
+TBD (put more information on format of such a PR in XXXX-template)
 
