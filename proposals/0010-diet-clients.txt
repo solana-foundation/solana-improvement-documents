@@ -119,10 +119,12 @@ computed by the network.
 
 ### Future work: Minimized fraud proof
 
-Majority fraud is detectable when the majority has signed an invalid
-state transition. Currently, the above proposal requires a client
-to validate the entire chain starting from a previously trusted
-snapshot up to the invalid block.
+Currently, the above proposal requires a client to validate the
+entire chain starting from a previously trusted snapshot up to the
+invalid block. This proposal covers a minimized fraud proof that
+allows the user to detect when the majority signed an invalid state
+transition. User would only need enough resources to process the
+votes and one transaction.
 
 #### Overview
 
