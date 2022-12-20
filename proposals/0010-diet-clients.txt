@@ -141,9 +141,10 @@ if it has been modified, to an output from a previous transaction.
   tx1  tx2  tx3 tx4
 
 tx:
-inputs: path to snapshot | path to previous block output | path to intra-block tx output
-result: success or failure code
-outputs: hash of the result if result is successful, 0 otherwise
+    inputs: all read account paths: path to snapshot | path to previous
+            block output | path to intra-block tx output
+    result: success or failure code
+    outputs: all write accounts if result is successful, 0 otherwise
 
 The tree should contain an ordered sequence of txs. Each tx is its
 own tree that contains all the input paths to the accounts used for
