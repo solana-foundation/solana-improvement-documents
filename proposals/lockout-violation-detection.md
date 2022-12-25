@@ -1,24 +1,42 @@
 ### Lockout Violation Detection
 
-We assume a database that we will store vote information ingested from gossip/turbine, which in turn will
-be consulted to detect lockout violations as follows.
+We assume a database that we will store vote information ingested from
+gossip/turbine, which in turn will be consulted to detect lockout violations
+as follows.
 
 1) Track all SlotHashes on the main fork in the database.
-2) If there are any votes made that have a root `R` missing from the SlotHashes list, slash them on this fork
-3) For all other slots `S` in each vote other than the root, track a range `(S, S + 2^n)` where `n` is the confirmation count. For each slot `S` we only have to track the greatest such lockout range in the database.
-4) For each new vote `V`, for each slot `S` in the vote, lookup in the database to see if there's some range `(X, X + 2^n)` where `S` is in this range, but `X < S` and `X` is missing from the vote `V`. This is a lockout violation because this implies that the validator made a vote where `S` popped off `X`, but the lockout on `X` from an earlier vote should have prevented that from happening.
+2) If there are any votes made that have a root `R` missing from the SlotHashes
+list, slash them on this fork
+3) For all other slots `S` in each vote other than the root, track a range
+`(S, S + 2^n)` where `n` is the confirmation count. For each slot `S` we only
+have to track the greatest such lockout range in the database.
+4) For each new vote `V`, for each slot `S` in the vote, lookup in the database
+to see if there's some range `(X, X + 2^n)` where `S` is in this range, but
+`X < S` and `X` is missing from the vote `V`. This is a lockout violation
+because this implies that the validator made a vote where `S` popped off `X`,
+but the lockout on `X` from an earlier vote should have prevented that from
+happening.
 
-Note for each interval `(S, S + 2^n)` we also need to be able to lookup the vote. This is important for being able to pull up the votes later as part of a proof.
+Note for each interval `(S, S + 2^n)` we also need to be able to lookup the
+vote. This is important for being able to pull up the votes later as part of a
+proof.
 
-5) For each validator we also track a rooted set in the database as well to catch violating lockouts on rooted slots. We can remove an interval `(S, S + 2^n)` from the database once the slot becomes a root add it to a rooted set for this validator, and any new votes < root also get added to rooted set.
+5) For each validator we also track a rooted set in the database as well to
+catch violating lockouts on rooted slots. We can remove an interval
+`(S, S + 2^n)` from the database once the slot becomes a root add it to a
+rooted set for this validator, and any new votes < root also get added to
+rooted set.
 
-When we see a vote with root N on the main fork, then we remove all intervals (M, P) where `M < N && P >= N` and  add `M` to the rooted set.
+When we see a vote with root N on the main fork, then we remove all intervals
+`(M, P)` where `M < N && P >= N` and  add `M` to the rooted set.
 
 So for example if we see:
 (Assume `{slot: confirmation count}` format)
 1. `{root: 0, 1: 4, 3: 3, 5: 2, 7: 1}`
 2. `{root: 5, 7: 1}`
-3. Then we add `{1, 3`} to rooted set and remove their intervals from the interval tree because both of those are `< 5`, but have lockouts that extend past `5` 
+3. Then we add `{1, 3`} to rooted set and remove their intervals from the
+interval tree because both of those are `< 5`, but have lockouts that extend
+past `5`
 
 Thus, if we then later saw a vote:
 
