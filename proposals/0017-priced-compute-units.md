@@ -1,3 +1,4 @@
+---
 simd: '0017'
 title: Priced Compute Units
 authors:
