@@ -20,12 +20,11 @@ hence a new economic model is required for using compute that disincentivizes ex
 
 ## Solution
 Introduce a new price and economic model for compute units. It's important to note that the new model must not make it more expensive to vote i.e affect vote
-transactions or atleast make sure the fees collected from CU are worth the extra voting fees and things like Token 22 
-which require a lot more CU by default give the proof sizes.
+transactions.
 
-A few ways this could be implemented:
-- Flat fee per compute unit of 5 x 10<sup>-7</sup> SOL per CU
-- Slab based system that becomes more expensive with every level, for example:
-  - First 400k CU 5 x 10<sup>-7</sup> SOL per CU, next 400k could be 2x and so on.
-- Keep CU fee exemptions for specific programs like vote program and token 22.
-- Charge penalty on unused compute units similar to write lock fees that could be rebated if used
+A good way to normalize and do this would be charge a fee per compute unit of 5 x 10<sup>-6</sup>/vote CU price SOL per CU<br/>
+Example: Txn A requires 10000 CU -> Cost of txn is 10000 x (5 x 10<sup>-6</sup>)/2500 SOL (2500 is the vote CU)
+
+
+Suggestion:
+- Change the burn mechanism to burn 50% base fee and remaining 50% goes to validator and give 100% of the priority fee to the validator.
