@@ -24,7 +24,8 @@ hence a new economic model is required for using compute that disincentivizes ex
 Introduce a new price and economic model for compute units. It's important to note that the new model might not want to make it more expensive to vote.
 
 A good way to normalize and do this would be charge a fee per compute unit of 5 x 10<sup>-6</sup> SOL/(vote CU) per CU<br/>
-Example: Txn A requires 10000 CU -> Cost of txn is 10000 x (5 x 10<sup>-6</sup> SOL)/2100 CU  (2100 is the vote CU)
+Example: Txn A requires 10000 CU -> Cost of txn is 10000 x (5 x 10<sup>-6</sup> SOL)/2100 CU  (2100 is the vote CU).
+Note that this normalization no longer includes a separate signature based fee which is outside of compute unit calculations. It may make sense to keep a separate signature fee if there is a dos vector here.
 
 **Note: This would cause problems for CLOBs since doing a large cancel order consumes 20k CU and would cost 0.1 SOL**
 
