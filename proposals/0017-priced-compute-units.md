@@ -3,6 +3,8 @@ simd: '0017'
 title: Priced Compute Units
 authors:
   - Anoushk Kharangate (SuperteamDAO)
+  - 7Layer (Overclock Validator)
+  - Dubbelosix (Overclock Validator)
 category: Fees
 type: Fees
 status: Draft
