@@ -24,7 +24,3 @@ transactions.
 
 A good way to normalize and do this would be charge a fee per compute unit of 5 x 10<sup>-6</sup>/vote CU price SOL per CU<br/>
 Example: Txn A requires 10000 CU -> Cost of txn is 10000 x (5 x 10<sup>-6</sup>)/2500 SOL (2500 is the vote CU)
-
-
-Suggestion:
-- Change the burn mechanism to burn 50% base fee and remaining 50% goes to validator and give 100% of the priority fee to the validator.
