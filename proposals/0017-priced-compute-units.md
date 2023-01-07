@@ -29,6 +29,9 @@ Note that this normalization no longer includes a separate signature based fee w
 
 **Note: This would cause problems for CLOBs since doing a large cancel order consumes 20k CU and would cost 0.1 SOL**
 
+The total compute unit based fee would be tied to the existing compute budget program requests that priority fees use. The total fee would be equivalent to the fee per cu times the compute requested. It may be useful to have a lower and upper bound in the compute budget program requests.
+
+
 ### Dynamic Base Fee based on Validator Governance
 For a V2 change to this system, it would be ideal if base fees could be adjusted in some way to track fiat/sol prices better given that hardware and bandwidth costs are denominated in fiat, and spam resistance is also more meaningful at certain fiat pricing. One way this could be accomplished is through validator governance each epoch where the fee per CU base fee could be adjusted either up or down in some form of simply fixed increment to adjust for fiat changes. When SOL price is too low in fiat terms, the network becomes less spam resistant and validators need to accommodate larger blocks despite receiving less in fiat block rewards to pay for bandwidth and hardware. When Sol price increases significantly, the price increases may impinge on certain use cases and voting may become prohibitively expensive for validators.
 
