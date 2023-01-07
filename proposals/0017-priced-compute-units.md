@@ -19,8 +19,9 @@ using extra compute units comes at no extra cost unlike something like rent but 
 hence a new economic model is required for using compute that disincentivizes extra CU unless absolutely necessary.
 
 ## Solution
-Introduce a new price and economic model for compute units. It's important to note that the new model must not make it more expensive to vote i.e affect vote
-transactions.
+Introduce a new price and economic model for compute units. It's important to note that the new model must not make it more expensive to vote.
 
-A good way to normalize and do this would be charge a fee per compute unit of 5 x 10<sup>-6</sup>/vote CU price SOL per CU<br/>
+A good way to normalize and do this would be charge a fee per compute unit of 5 x 10<sup>-6</sup>/(vote CU) SOL per CU<br/>
 Example: Txn A requires 10000 CU -> Cost of txn is 10000 x (5 x 10<sup>-6</sup>)/2500 SOL (2500 is the vote CU)
+
+**Note: This would cause problems for CLOBs since doing a large cancel order consumes 20k CU and would cost 0.1 SOL**
