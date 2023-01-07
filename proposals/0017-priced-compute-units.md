@@ -27,7 +27,7 @@ A good way to normalize and do this would be charge a fee per compute unit of 5 
 Example: Txn A requires 10000 CU -> Cost of txn is 10000 x (5 x 10<sup>-6</sup> SOL)/2100 CU  (2100 is the vote CU).
 Note that this normalization no longer includes a separate signature based fee which is outside of compute unit calculations. It may make sense to keep a separate signature fee if there is a dos vector here.
 
-**Note: This would cause problems for CLOBs since doing a large cancel order consumes 20k CU and would cost 0.1 SOL**
+**Note: This would cause problems for CLOBs since doing a large cancel order consumes 20k CU and would cost 0.000004761 SOL**
 
 The total compute unit based fee would be tied to the existing compute budget program requests that priority fees use. The total fee would be equivalent to the fee per cu times the compute requested. It may be useful to have a lower and upper bound in the compute budget program requests.
 
