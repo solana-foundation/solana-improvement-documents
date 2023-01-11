@@ -3,6 +3,7 @@ simd: '0016'
 title: Application Fees (Write-lock fees)
 authors:
   - Godmode Galactus (Mango Markets)
+  - Maximilian Schneider (Mango Markets)
 category: Fees
 type: Fees
 status: Draft
@@ -14,11 +15,31 @@ created: 2022-12-23
 According to the discussion on the following issue:
 https://github.com/solana-labs/solana/issues/21883
 
-During network congestion, many transactions in the network cannot be processed because they all want to write lock similar accounts. When a write lock on an account is taken by a transaction batch no other batch can use this account in parallel, so only transactions belonging to a single batch are processed correctly and all others fail. Then the failed transactions are forwarded to the leader of the next slot. There are multiple accounts of OpenBook (formerly serum), mango markets, etc which are used in high-frequency trading and by market makers. During the event of extreme congestion these clients are incentivized to send as many transactions as possible to the network so that some of their transactions may pass through, this adds more congestion to the network.
+During network congestion, many transactions in the network cannot be processed because they all want to write lock similar accounts. When a write lock on an account is taken by a transaction batch no other batch can use this account in parallel, so only transactions belonging to a single batch are processed correctly and all others are forwarded to the leader of the next slot. There are multiple accounts of OpenBook (formerly serum), mango markets, etc which are used in high-frequency trading. During the event of extreme congestion we observe that specialized trading programs write lock these accounts but never CPI into the respecitve programs unless they can extract profit, effectively starving the actual users for access. Penalizing this behaviour with runtime fees collected by validators can create a perverse incentive to artificially delay HFT transactions, cause them to fail and charge penalty fees.
 
 ## Solution
 
-As a high-performance cluster, we want to incentivize players which feed the network with correctly formed transactions instead of spamming the network. Introduction of application fees (write account fees) would be interesting way to penalize the bad actors and applications can rebate these fees to the good actors. This means the application has to decide who to rebate and who to penalize.
+As a high-performance cluster, we want to incentivize players which feed the network with correctly formed transactions instead of spamming the network. Introduction of application fees would be interesting way to penalize the bad actors and applications can rebate these fees to the good actors. This means the application has to decide who to rebate and who to penalize through lamport transfers. In particular it needs to be able to penalize, even if the application is not CPI'd to. There are multiple possible approaches to provide the application with access to transfer lamports outside of the regular cpi execution context:
+
+1. A new specialized fee collection mechanism that uses per account meta-data to encode additional fees. Lamports should be collected on the actual accounts until claimed by their owner. Account owners can trigger a per account rebate on the fee collected during a transaction. Two strategies have been proposed:
+
+    1. Create PDAs of the application program to store fee settings
+
+        1. Concern is well encapsulated and implementation can be easily modified (**+**)
+        1. Overhead for loading a lot of PDAs might be high (**-**)
+
+    1. Extend existing account structure in ledger to store fee settings and collect lamports
+
+        1. High efficiency, minimal performance impact (**+**)
+        1. Accounts structure is difficult to modify (**-**)
+
+2. A generic execution phase that gets invoked for every program account passed to a transaction. Programs would optionally contain a fee entry-point in their binary code that gets invoked with a list of all accessed account keys and their lock status. Programs would need access to a new sysvar identifying the transaction fee payer to rebate lamports to, to prevent breaking API changes for clients.
+
+    1. Highest degree of flexibility for programs (**+**)
+    1. Least data structures modified in runtime (**+**)
+    1. Does not allow guarding non-pda accounts (e.g. an end-users signer key) (**-**)
+    1. Allowing program execution that continues on failure might invite users to implement unforseen side-effects inside the fee entry-point (**-**)
+
 
 ### Application fees in working
 
