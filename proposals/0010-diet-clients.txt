@@ -27,7 +27,10 @@ the bankhash signed by all the votes.
 
 2. Concurrently with 1, user requests votes for slot N from M random
 validators.  Votes returned may be for later slots, and would contain
-a merkle path to the requested slot's bankhash.
+a merkle path to the requested slot's bankhash. M should be large
+enough to represent a small but significant percentage of the stake
+above X%. X should  be configured by the client as the desired
+threshold for confidence.
 
 3. If all the responses are the same, the user is done. 
 
@@ -42,9 +45,19 @@ submitting the shreds to the validators with the missing block.
     shouldn't trust the confirmation.
 
 5. If X% or more of the staked nodes respond with different
-bankhash, a fault has occurred on the network. User shouldn't
-trust the confirmation. User should then submit the conflicting
-votes to M random validators.
+bankhash, a fault has occurred on the network. User shouldn't trust
+the confirmation. User should then submit the conflicting votes to
+M random validators. User shouldn't trust any confirmations from
+the network.
+
+6. if X% or more of the staked nodes do not respond in T seconds a
+faulty majority may have partitioned the network and the client.
+Client should ignore the confirmation, manually confirm those nodes
+are down, and remove them from the local view of quorum for this
+transaction and try again. X should be configured large enough that
+this doesn't happen more then once a year. Clients can automatically
+remove nodes from the local view of the quorum which have not voted
+for K slots.
 
 ### Confirmation Proof
 
@@ -62,7 +75,7 @@ identify an invalid state transition or a double confirmation.
 
 Turbine, solana's block propagation protocol, transmits blocks in
 small chunks called shreds. Shreds are transmitted in batches.
-Each batch includes N data shreds and M erasure codes.
+Each batch includes J data shreds and K erasure codes.
 
 Upon executing the block, the validator should compute the merkle
 root of all the shreds, including the erasure shreds. The merkle
@@ -157,8 +170,17 @@ majority of votes signing the root.  An honest node will generate
 a path for the same TX when processing the same block.  Either
 inputs will be different, or the outputs.
 
-4. If the input is different, user will need to recursively request
-a confirmation for the transaction that generated the input.
+4. If the input is invalid, ether an invalid value, or a valid but
+not the most recent value, user or the honest validator will need
+to recursively request a confirmation for the transaction that
+generated the input.
+
+    a. An invalid value for the input would have no path to a
+    previously valid header.
+
+    b. An honest node can provide the most recent input and its
+    path to a signed header to prove that the faulty majority used
+    a valid but older input.
 
 5. If the output is different, user will need to run the program
 locally and confirm the result.
