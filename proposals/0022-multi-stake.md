@@ -49,7 +49,6 @@ rewards. Meaning:
 * they don't take up space in the stakes cache
 * they take the correct amount of epoch boundaries to activate / deactivate
 * they are included in a validator's voting power
-* they can be slashed
 
 There are a few ways of solving this at the stakes cache level, and they all have
 serious issues.
@@ -74,8 +73,6 @@ stake delegation amount.
 
 During rewards payout, small stakes are completely omitted, since they are not
 present in the cache.
-
-During a slashing event, it's still possible to query it using `get_program_accounts`.
 
 This is incredibly brittle, however, and introduces more overhead in the runtime.
 The bank must hold onto pre-states for all transactions to debit the stakes cache. And,
