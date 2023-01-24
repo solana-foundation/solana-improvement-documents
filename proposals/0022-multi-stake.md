@@ -91,7 +91,7 @@ was the pre-state of that small stake? There's no way to know.
 
 Rather than hacking the validator, let's change the stake program.
 
-With a new "multi delegation stake" account, carrying *three* `Delegation` instances,
+With a new "multi delegation stake" account, carrying *two* `Delegation` instances,
 the stake program becomes much more flexible.
 
 Here are some example uses:
@@ -121,7 +121,7 @@ The permissionless `update` instruction clears out the first one once it's inact
 
 ### Runtime
 
-The main difference to the runtime is processing up to three `Delegation`s
+The main difference to the runtime is processing up to two `Delegation`s
 per account.
 
 There's minor impact on the stakes cache, which gets a little bigger for the
@@ -163,12 +163,12 @@ around that, since the proposal entails a new stake account variant.
 A single-validator stake pool program can manage small stakes with 100% efficiency
 using "multi stakes".
 
-Since there's a total of *three* `Delegation` instances, small stakes can be added
-and removed at the same time. One instance covers the main amount, another covers
-new activations, and the last one covers deactivations.
+With a total of *two* `Delegation` instances, the program can add or remove small
+stakes. One instance covers the main amount, and the other covers new activations
+or deactivations.
 
 For small stake deposit, you simply transfer the lamports and activate the new amount.
 
-For small stake withdrawal, the program deactivates the small stake and provides
-a claimable ticket to the user, used to claim their lamports after deactivation.
-
+If a user wishes to withdraw, the program first withdraws from the activating amount.
+If there is no more activating amount available, then the pool deactivates from
+the main delegation and provides a ticket to the user, used to claim their lamports after deactivation.
