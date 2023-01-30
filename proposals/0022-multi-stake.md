@@ -41,8 +41,8 @@ to cover the minimum delegation amount.
 Small stakes need to be delegated, while not causing problems in the validator's
 stakes cache.
 
-Side note: this isn't my first proposal for a new stake account type. Here's an earlier
-attempt meant for redelegation: https://github.com/solana-labs/solana/pull/24762
+For more background, here's an earlier proposal meant for only for redelegation:
+https://github.com/solana-labs/solana/pull/24762
 
 ## Alternatives Considered
 
@@ -102,7 +102,7 @@ To add a small stake to your account, transfer the lamports, call `delegate` onc
 more, and now your stake account has two delegations: the initial one, and the
 newly activating one.
 
-Once the new `Delegation` is active, a permissionless `update` instruction follows
+Once the new `Delegation` is active, an `update` instruction follows
 the existing `merge` logic to consolidate the two `Delegation`s into one.
 
 The same roughly applies for removing a small stake. You `deactivate` a portion
@@ -117,7 +117,16 @@ within the same account.
 It works the same as the existing "redelegate" instruction, except the lamports
 all stay in the same account, and the second `Delegation` covers the redelegation.
 
-The permissionless `update` instruction clears out the first one once it's inactive.
+The `update` instruction clears out the first one once it's inactive.
+
+### Upgrade
+
+The stake program exposes a new instruction to upgrade a stake account to a multi-stake
+account. It performs a realloc to the new size of the stake account, and
+updates the rent-exempt reserve field in the stake account `Meta`.
+
+It must be signed by the current staker or withdrawer, and takes an optional
+payer to fund the additional rent-exempt reserve requirement.
 
 ### Runtime
 
