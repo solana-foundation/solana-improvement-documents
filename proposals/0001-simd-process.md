@@ -123,8 +123,8 @@ channel.
 To begin drafting the proposal, do the following:
 
 - Fork the proposal repository
-- Copy `proposals/XXXX-template.md` to `proposals/XXXX-my-feature.md` (where
-"my-feature" is descriptive)
+- Copy `XXXX-template.md` to `proposals/XXXX-my-feature.md` (where "my-feature"
+is descriptive)
 - Fill in the proposal. Put care into the details: proposals that do not
 present convincing motivation, demonstrate lack of understanding of the
 design's impact, or are disingenuous about the drawbacks or alternatives tend
