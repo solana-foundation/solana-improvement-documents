@@ -18,7 +18,7 @@ for simpler stake movement through more activations, deactivations, or redelegat
 ## New Terminology
 
 * "multi stake": a stake account with multiple `Delegation` instances
-* "small stake": a stake whose delegation is a small lamport amount
+* "small stake": a stake whose delegation is less than current minimum stake delegation amount
 
 ## Motivation
 
@@ -31,7 +31,8 @@ eventually cleaning up the old one, which can be tricky to use.
 
 As a minimum stake delegation amount is applied to the network, and potentially
 increased over time, these operations will become more complicated, since all
-delegations must clear that threshold. A lot of small stake will be left liquid.
+delegations must clear that threshold. Small SOL amounts will be left liquid rather
+than delegated to a validator.
 
 Additionally, stake pools always carry some risk or capital inefficiency for the
 stake pool operator. Either there's a requirement to leave liquid SOL available
