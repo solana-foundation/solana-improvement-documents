@@ -1,0 +1,216 @@
+import { RuleParams, RuleOnError } from "markdownlint"
+import * as yaml from "js-yaml"
+
+export const enforceHeaderStructure = {
+  names: ["enforce-header-structure"],
+  description: "Proposal header structure should follow template",
+  tags: ["structure"],
+  function: function rule(params: RuleParams, onError: RuleOnError) {
+    const filtered = params.tokens.filter(function filterToken(token) {
+      return (
+        token.type === "heading_open" &&
+        (token.tag === "h1" || token.tag === "h2")
+      )
+    })
+
+    let index = 0
+
+    while (index < expectedHeadings.length) {
+      let token = filtered[index]
+      if (token.line !== expectedHeadings[index]) {
+        onError({
+          lineNumber: token.lineNumber,
+          detail: `Expected heading \`${expectedHeadings[index]}\` and instead got \`${token.line}\`. Please follow the structure outlined in the Proposal Template.`,
+          context: token.line,
+        })
+
+        return
+      }
+
+      if (index + 1 >= filtered.length) {
+        onError({
+          lineNumber: token.lineNumber,
+          detail: `Expected heading \`${expectedHeadings[index]}\` and none exists. Please follow the structure outlined in the Proposal Template.`,
+          context: token.line,
+        })
+
+        return
+      } else {
+        index++
+      }
+    }
+  },
+}
+
+const expectedHeadings = [
+  "## Summary",
+  "## Motivation",
+  "## Alternatives Considered",
+  "## New Terminology",
+  "## Detailed Design",
+  "## Impact",
+  "## Security Considerations",
+]
+
+export const enforceMetadataStructure = {
+  names: ["enforce-front-matter-structure"],
+  description:
+    "Proposal front matter should be YAML following template structure",
+  tags: ["front-matter"],
+  function: function rule(params: RuleParams, onError: RuleOnError) {
+    const string = params.frontMatterLines
+      .join("\n")
+      .trim()
+      .replace(/^-*$/gm, "")
+
+    const frontMatter: any = yaml.load(string)
+
+    if (!frontMatter) {
+      onError({
+        lineNumber: 1,
+        detail: `Missing front matter metadata formatted as YAML`,
+      })
+      return
+    }
+
+    Object.keys(requiredMetadata).forEach((meta) => {
+      if (!frontMatter[meta]) {
+        onError({
+          lineNumber: 1,
+          detail: `Front matter metadata either doesn't contain \`${meta}\` or isn't formatted correctly`,
+        })
+      }
+    })
+
+    Object.keys(frontMatter).forEach((key) => {
+      if (!(requiredMetadata as any)[key] && !(optionalMetadata as any)[key]) {
+        onError({
+          lineNumber: 1,
+          detail: `Front matter contains invalid metadata \`${key}\``,
+        })
+      }
+    })
+  },
+}
+
+const requiredMetadata = {
+  simd: {},
+  title: {},
+  authors: {},
+  category: {},
+  type: {},
+  status: {},
+  created: {},
+}
+
+const optionalMetadata = {
+  feature: {},
+}
+
+export const metadataSimdIsValid = {
+  names: ["front-matter-has-simd"],
+  description: "Metadata `simd` is a 4 digit numerical string",
+  tags: ["front-matter"],
+  function: function rule(params: RuleParams, onError: RuleOnError) {
+    const string = params.frontMatterLines
+      .join("\n")
+      .trim()
+      .replace(/^-*$/gm, "")
+
+    const frontMatter: any = yaml.load(string)
+    if (!frontMatter) return
+
+    const simd: string = frontMatter.simd
+    if (!simd) return
+
+    if (isNaN(Number(simd))) {
+      onError({
+        lineNumber: 1,
+        detail: "Front matter `simd` must be a numerical string",
+      })
+    }
+
+    if (simd.length !== 4) {
+      onError({
+        lineNumber: 1,
+        detail: "Front matter `simd` must be 4 digits",
+      })
+    }
+  },
+}
+
+export const metadataTitleIsValid = {
+  names: ["front-matter-has-title"],
+  description:
+    "Proposal front matter should include a title no longer than 45 characters",
+  tags: ["front-matter"],
+  function: function rule(params: RuleParams, onError: RuleOnError) {
+    const string = params.frontMatterLines
+      .join("\n")
+      .trim()
+      .replace(/^-*$/gm, "")
+
+    const frontMatter: any = yaml.load(string)
+    if (!frontMatter) return
+
+    const title: string = frontMatter.title
+    if (!title) return
+
+    if (title.length > 45) {
+      onError({
+        lineNumber: 1,
+        detail: "Metadata `title` should be no longer than 45 characters",
+      })
+    }
+  },
+}
+
+export const metadataAuthorsIsValid = {
+  names: ["front-matter-has-authors"],
+  description: "Proposal front matter should include authors",
+  tags: ["front-matter"],
+  function: function rule(params: RuleParams, onError: RuleOnError) {
+    const string = params.frontMatterLines
+      .join("\n")
+      .trim()
+      .replace(/^-*$/gm, "")
+
+    const frontMatter: any = yaml.load(string)
+    if (!frontMatter) return
+
+    const authors: string = frontMatter.authors
+    if (!authors) return
+
+    if (authors.length == 0) {
+      onError({
+        lineNumber: 1,
+        detail: "Metadata `authors` exists but doesn't include any values",
+      })
+    }
+  },
+}
+
+export const metadataCategoryIsValid = {
+  names: ["front-matter-has-valid-category"],
+  description: "Proposal front matter should have a valid category",
+  tags: ["front-matter"],
+  function: function rule(params: RuleParams, onError: RuleOnError) {
+    const string = params.frontMatterLines
+      .join("\n")
+      .trim()
+      .replace(/^-*$/gm, "")
+
+    const frontMatter: any = yaml.load(string)
+    if (!frontMatter) return
+
+    const category: string = frontMatter.category
+    if (!category) return
+
+    if (!["Meta", "Standard"].includes(category)) {
+      onError({
+        lineNumber: 1,
+        detail: `\`${category}\` is not supported as a value for category`,
+      })
+    }
+  },
+}
