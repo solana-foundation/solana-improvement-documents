@@ -4,7 +4,7 @@ Assume:
 1. A database that we will store vote information ingested from
 gossip/turbine, which in turn will be consulted to detect lockout violations
 as follows.
-2. First we track all SlotHashes on the canonical/rooted fork in the database
+2. Tracking of all SlotHashes on the canonical/rooted fork in the database
 for the last epoch.
 
 The following sections will go over the possible lockout violations that will
@@ -20,9 +20,9 @@ Attempting to illegally *remove* a lockout in a newer vote that that should
 have still existed based on an older vote is a lockout violation. We detect
 this as follows:
 
-1. For all other slots `S` in each vote other than the root, track a range
-`(S, S + 2^n)` where `n` is the confirmation count. For each slot `S` we only
-have to track the greatest such lockout range in the database.
+1. For all non root slots `S` in each vote, track a range `(S, S + 2^n)` where
+`n` is the confirmation count. For each slot `S` we only have to track the
+greatest such lockout range in the database.
 
 2. For each new vote `V`, for each slot `S` in the vote, lookup in the database
 to see if there's some range `(X, X + 2^n)` where `S` is in this range, but
@@ -77,6 +77,11 @@ So for example if we see:
 - Then we add `{1, 3}` to rooted set and remove their intervals from the
 interval tree because both of those are `< 5`, but have lockouts that extend
 past `5`
+
+Note here also that that artificially increasing your lockout is not a
+slashable offense (here we root 5 however 7 still has a conf count of 1),
+because adopting stricter lockout does not weaken commitment on any previously
+committed fork.
 
 Thus, if we then later saw a vote:
 
