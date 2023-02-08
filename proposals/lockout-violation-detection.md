@@ -1,3 +1,20 @@
+---
+simd: '000'
+title: Lockout Violation Detection
+authors:
+  - carllin
+  - ashwinsekar
+  - wencoding
+category: Slashing
+type: Core
+status: Draft
+created: 2022-12-12
+---
+### Problem
+
+There's currently no comprehensive method to catch validators that submit votes
+which violate lockouts. This potentially hurts consensus in the cluster.
+
 ### Lockout Violation Detection
 
 Assume:
