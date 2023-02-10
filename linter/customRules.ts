@@ -214,3 +214,69 @@ export const metadataCategoryIsValid = {
     }
   },
 }
+
+export const metadataTypeIsValid = {
+  names: ["front-matter-has-valid-type"],
+  description: "Proposal front matter should have a valid type",
+  tags: ["front-matter"],
+  function: function rule(params: RuleParams, onError: RuleOnError) {
+    const string = params.frontMatterLines
+      .join("\n")
+      .trim()
+      .replace(/^-*$/gm, "")
+
+    const frontMatter: any = yaml.load(string)
+    if (!frontMatter) return
+
+    const type: string = frontMatter.type
+    if (!type) return
+
+    const validTypes = ["Core", "Networking", "Interface", "Meta"]
+
+    if (!validTypes.some((validType) => type.includes(validType))) {
+      onError({
+        lineNumber: 1,
+        detail: `\`${type}\` is not supported as a value for type. Valid values for type are: ${validTypes.join(
+          ", "
+        )}`,
+      })
+    }
+  },
+}
+
+export const metadataStatusIsValid = {
+  names: ["front-matter-has-valid-status"],
+  description: "Proposal front matter should have a valid status",
+  tags: ["front-matter"],
+  function: function rule(params: RuleParams, onError: RuleOnError) {
+    const string = params.frontMatterLines
+      .join("\n")
+      .trim()
+      .replace(/^-*$/gm, "")
+
+    const frontMatter: any = yaml.load(string)
+    if (!frontMatter) return
+
+    const status: string = frontMatter.status
+    if (!status) return
+
+    const validStatus = [
+      "Idea",
+      "Draft",
+      "Review",
+      "Accepted",
+      "Stagnant",
+      "Withdrawn",
+      "Implemented",
+    ]
+
+    if (!validStatus.includes(status)) {
+      onError({
+        lineNumber: 1,
+        detail: `\`${status}\` is not supported as a value for status. Valid values for status are: ${validStatus.join(
+          ", "
+        )}`,
+      })
+    }
+  },
+}
