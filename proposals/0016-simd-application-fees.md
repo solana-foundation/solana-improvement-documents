@@ -22,7 +22,7 @@ interact with the app as intentended. These fees will be applied even if the tra
 eventually fails. These fees will be collected on the same writable account and the
 authority can do lamport transfers to recover these fees.
 
-Discussion for the issue : https://github.com/solana-labs/solana/issues/21883
+Discussion for the issue : <https://github.com/solana-labs/solana/issues/21883>
 
 ## Motivation
 
@@ -138,7 +138,6 @@ application fees, if the account with application fees was set at the end then t
 all the accounts till the end and then realize that payer is unable to pay application fees.
 This can be used by an attacker to slow the cluster.
 
-
 To address this issue we will add additional surcharge for base fees if the transaction uses
 any account with application fees but was not available to pay them. It will work as follows.
 
@@ -190,6 +189,7 @@ Argument : Maximum application fees intented to pay in lamports (u64).
 
 This instruction will update application fees for an account.
 It requires :
+
 * authority of the writable account as (signer)
 * Writable account as (writable)
 
@@ -199,6 +199,7 @@ Argument: updated fees in lamport (u64).
 
 This instruction should be called by the dapp using CPI or by the owner of the account.
 It requires :
+
 * Authority of the writable account (signer)
 * Writable account (writable)
 
@@ -288,6 +289,29 @@ The updates in the application fees will be stored in a special hashmap and the 
 applied at the end of the slot when the bank is freezing. This will effectively make any updates to
 the application fees valid from the next slot and not in the current slot.
 
+## Implementation of application fees without saving data in the ledger
+
+This section describes an alternate implementation of application fees noted in the third implementation
+here [3](#detailed-design). It is very similar to the implementation described above, we do not save the
+application fees data on the ledger so no need to make changes in the account struct. Instead of `LimitApplicationFees`
+we will have `PayApplicationFees` for each account we have to pay the application fee. No need for `UpdateFees`
+instruction, instead we can have `CheckApplicationFeesArePaid` which dapp can cpi into to check if the
+application fee for the account is paid. The application fee paid will be valid for the whole transaction,
+so if multiple instructions are calling `CheckApplicationFeesArePaid` will pass if the payer has paid
+application fees once for that account. The rebate is exactly as described above.
+
+In `load_transaction_accounts` section we iterate through all the instructions and find any instruction for
+program id `App1icationFees1111111111111111111111111111`. If there are any instructions for the application
+fees program then we will decode them and check if it is `PayApplicationFees` instruction. We will collect
+all `PayApplicationFees` instructions to calculate the total application fees. To validate the payer we will
+check if the payer has other fees + application fees to pay. There is no more need to implement a base fee surcharge
+section as we already know what are total fees required before loading all the accounts.
+
+The changes in `invoke_context` and `bank` will remain as described above. This implementation is more elegant,
+but setting application fees for existing dapps like openbook means we have to move the checking application fee
+part to the dapp. The dapps interfacing with openbook have to do additional development of this feature to support
+their cpi interface.
+
 ## Impact
 
 This feature is very intersting for dapps as they can earn application fees from users.
@@ -306,21 +330,25 @@ Even updating the application fees for the account will need a very high amount 
 can be easily solved by setting a maximum limit to the application fees.
 
 ## Mango V4 Usecase
+
 With this feature implemented Mango-V4 will be able to charge users who spam risk-free aribitrage
 or spam liquidations by increasing application fees on perp-markets, token banks
 and mango-user accounts.
 #### Perp markets
+
 Application fees on perp liquidations, perp place order, perp cancel, perp consume, perp settle fees.
 Rebates on : successful liquidations, consume events, HFT marketmaking refresh
 (cancel all, N* place POST, no IOC).
 
 #### Token vaults
+
 Application fees on openorderbook liquidations, deposit, withdrawals.
-Rebate on successful liquidations, place IOC & fill in isolation, HFT marketmaking 
+Rebate on successful liquidations, place IOC & fill in isolation, HFT marketmaking
 refresh (cancel all, N* place POST, no IOC).
 
-#### Mango accounts 
-Application fees on all liquidity transactions, consume events, settle pnl, all user 
+#### Mango accounts
+
+Application fees on all liquidity transactions, consume events, settle pnl, all user
 signed transactions.
-Rebate on transaction signed by owner or delegate, successful liquidations, 
+Rebate on transaction signed by owner or delegate, successful liquidations,
 settlements, consume events.
