@@ -6,6 +6,19 @@ export const enforceHeaderStructure = {
   description: "Proposal header structure should follow template",
   tags: ["structure"],
   function: function rule(params: RuleParams, onError: RuleOnError) {
+    const string = params.frontMatterLines
+    .join("\n")
+    .trim()
+    .replace(/^-*$/gm, "")
+
+    const frontMatter: any = yaml.load(string)
+    if (!frontMatter) return
+
+    const category: string = frontMatter.category
+    if (!category) return
+
+    if (["Meta"].includes(category)) return
+
     const filtered = params.tokens.filter(function filterToken(token) {
       return (
         token.type === "heading_open" &&
@@ -15,17 +28,11 @@ export const enforceHeaderStructure = {
 
     let index = 0
 
+    let tempHeadings = expectedHeadings;
+
     while (index < expectedHeadings.length) {
       let token = filtered[index]
-      if (token.line !== expectedHeadings[index]) {
-        onError({
-          lineNumber: token.lineNumber,
-          detail: `Expected heading \`${expectedHeadings[index]}\` and instead got \`${token.line}\`. Please follow the structure outlined in the Proposal Template.`,
-          context: token.line,
-        })
-
-        return
-      }
+      tempHeadings = tempHeadings.filter(item => item !== token.line)
 
       if (index + 1 >= filtered.length) {
         onError({
@@ -38,6 +45,16 @@ export const enforceHeaderStructure = {
       } else {
         index++
       }
+    }
+    tempHeadings.forEach(item => {
+      onError({
+        lineNumber: 1,
+        detail: `Expected heading \`${item}\` and none exists. Please follow the structure outlined in the Proposal Template.`,
+      })
+    })
+
+    if (tempHeadings.length >= 0) {
+      return
     }
   },
 }
