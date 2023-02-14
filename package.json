@@ -4,19 +4,19 @@
   "description": "Solana IMprovement Documents (SIMD) describe proposed and accepted changes to the Solana protocol.",
   "main": "index.js",
   "scripts": {
-    "lint": "ts-node linter/index.ts"
+    "lint": "ts-node .github/linter/index.ts"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Unboxed-Software/solana-improvement-documents.git"
+    "url": "git+https://github.com/solana-foundation/solana-improvement-documents.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Unboxed-Software/solana-improvement-documents/issues"
+    "url": "https://github.com/solana-foundation/solana-improvement-documents/issues"
   },
-  "homepage": "https://github.com/Unboxed-Software/solana-improvement-documents#readme",
+  "homepage": "https://github.com/solana-foundation/solana-improvement-documents#readme",
   "devDependencies": {
     "@types/js-yaml": "^4.0.5",
     "markdownlint-cli2": "^0.6.0",
@@ -24,6 +24,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
+    "@actions/core": "^1.10.0",
     "js-yaml": "^4.1.0"
   }
 }

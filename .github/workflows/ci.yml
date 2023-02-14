@@ -1,0 +1,51 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - edited
+
+jobs:
+  markdownlint:
+    name: Markdown Linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout SIMD Repository
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+
+      - name: Get Changed Files
+        id: changed
+        continue-on-error: true
+        run: |
+          echo "CHANGED_FILES<<EOF" >> $GITHUB_ENV
+          gh pr diff ${{ github.event.number }} --name-only | grep -E -x '[^/]+\.md|proposals/.+\.md' >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint
+        uses: DavidAnson/markdownlint-cli2-action@16d9da45919c958a8d1ddccb4bd7028e8848e4f1
+        if: steps.changed.outcome == 'success'
+        with:
+          command: config
+          globs: |
+            .github/config/.markdownlint.yaml
+            ${{ env.CHANGED_FILES }}
+  customSIMDLint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: npm run lint
