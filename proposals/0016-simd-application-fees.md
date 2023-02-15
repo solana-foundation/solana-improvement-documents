@@ -20,7 +20,7 @@ write-locking one of the accounts. Dapp developers then can decide to rebate the
 if a user interacts with the dapp as intended and disincentivize the users which do not
 interact with the app as intentended. These fees will be applied even if the transaction
 eventually fails. These fees will be collected on the same writable account and the
-authority can do lamport transfers to recover these fees.
+authority (i.e owner of the account) can do lamport transfers to recover these fees.
 
 Discussion for the issue : <https://github.com/solana-labs/solana/issues/21883>
 
@@ -139,10 +139,11 @@ all the accounts till the end and then realize that payer is unable to pay appli
 This can be used by an attacker to slow the cluster.
 
 To address this issue we will add additional surcharge for base fees if the transaction uses
-any account with application fees but was not available to pay them. It will work as follows.
+any account with application fees but was not available to pay them. This is just a recommendatation
+and is subjected to change to something static instead of dynamic. It will work as follows.
 
-1. Before loading accounts we check that payer has
-`minimum balance = base fees + other fees + base fees * number of accounts` in the transaction.
+1. Before loading accounts we check that payer has minimum balance
+`balance >= base fees + other fees + base fees * number of accounts` in the transaction.
 2. If payer does not have this balance minimum transaction fails.
 3. If payer has this balance then we start loading accounts and checking if there are any application fees.
 4. If payer does not have enough balance to pay application fees then we charge payer
@@ -190,7 +191,7 @@ Argument : Maximum application fees intented to pay in lamports (u64).
 This instruction will update application fees for an account.
 It requires :
 
-* authority of the writable account as (signer)
+* authority (i.e owner) of the writable account as (signer)
 * Writable account as (writable)
 
 Argument: updated fees in lamport (u64).
