@@ -143,18 +143,18 @@ any account with application fees but was not available to pay them. This is jus
 and is subjected to change to something static instead of dynamic. It will work as follows.
 
 1. Before loading accounts we check that payer has minimum balance
-`balance >= base fees + other fees + base fees * number of accounts` in the transaction.
+`balance >=  per-signature transaction base fees + priority fees + (per account fee) * number of accounts` in the transaction.
 2. If payer does not have this balance minimum transaction fails.
 3. If payer has this balance then we start loading accounts and checking if there are any application fees.
 4. If payer does not have enough balance to pay application fees then we charge payer
-`total fees = base fees + other fees + base fees * accounts loaded`.
+`total fees = per-signature transaction base fees + priority fees + (per account fee) * accounts loaded`.
 5. If payer has enough balance to pay application fees but `LimitApplicationFees` instruction set amount too low.
-`total fees = base fees + other fees + base fees * accounts loaded`.
+`total fees = per-signature transaction base fees + priority fees + (per account fee) * accounts loaded`.
 6. If payer has enough balance then to pay application fee and has included the instruction `LimitApplicationFees`
 with sufficient limit in the instruction.
-`total fees = base fees + other fees + application fees`.
+`total fees = per-signature transaction base fees + priority fees + application fees`.
 7. If there is no application fees involved then the payer pays.
-`total fees = base fees + other fees`
+`total fees = per-signature transaction base fees + priority fees`
 
 So this method adds the requirement that payer **MUST** have additional balance of number of accounts * base fees.
 With base fees so low we hope that wont be an issue for the user and this additional fees will goes to
