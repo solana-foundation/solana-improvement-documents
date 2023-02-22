@@ -15,13 +15,13 @@ feature:
 ## Summary
 
 This SIMD will discuss additional fees called Application Fees or write lock fees.
-These fees are decided and set by the dapp developer to interact with the dapp. 
-Dapp developers then can decide to rebate these fees if a user interacts with the dapp 
+These fees are decided and set by the dapp developer to interact with the dapp.
+Dapp developers then can decide to rebate these fees if a user interacts with the dapp
 as intended and disincentivize the users which do not.
-These fees will be applied even if the transaction eventually fails and collected on 
+These fees will be applied even if the transaction eventually fails and collected on
 the same writable account.
 Account authority (i.e owner of the account) can do lamport transfers to recover these fees.
-So instead of fees going to the validator these fees go to the dapp developers.
+So instead of fees going to the validator these fees go to the **dapp developers**.
 
 Discussion for the issue : <https://github.com/solana-labs/solana/issues/21883>
 
@@ -67,7 +67,7 @@ to use the dapp. They will be applied even if transaction fails contrary to lamp
 ## Detailed Design
 
 As a high-performance cluster, we want to incentivize players which feed the network
-with correctly formed transactions instead of spamming the network. The introduction
+with responsibly behaved transactions instead of spamming the network. The introduction
 of application fees would be an interesting way to penalize the bad actors and dapps
 can rebate these fees to the good actors. This means the dapp developer has to decide who to
 rebate and who to penalize special instructions. In particular, it needs to be able to
@@ -86,7 +86,7 @@ instruction `CheckApplicationFee` will check if the application fee for an accou
     5. Does not prevent any denial of service attack on a smart contract (**-**)
     6. Each dapp has to implement a cpi to check if a transaction has paid app fees
 
-If existing dapps like openbook want to implement application fees then all the dapps depending on openbook 
+If existing dapps like openbook want to implement application fees then all the dapps depending on openbook
 also have to do additional development. The checks on the application fees will be responsibility of dapp developers.
 The plus point is that we do not have to touch the core solana structure to store the application fees.
 It is also more easier to calculate total fees.
@@ -112,10 +112,17 @@ i.e even if the transaction fails the payer will end up paying.
 If this instruction is added then even if the dapp does not check the application fees the payer ends
 up paying.
 If the payer does not have enough balance the transaction fails with error `InsufficientFunds`.
+This instruction is decoded in the `calculate_fee` method of `bank.rs` where other fees are calculated and the sum
+of the fees on all the accounts are deducted from the payer. The resulting map for (Accounts -> Fees) are passed
+into invoke context and execution results. If the transaction is successfully executed then rebates are returned to the
+payer and the remaining fees are transferred to respective accounts if the transaction fails to execute then the
+fees are transferred to respective accounts without any rebates, this will happen in `filter_program_errors_and_collect_fee`
+stage in `bank.rs`.
 
 It requires:
 
 Accounts :
+
 * List of accounts that need an application fees.
 
 Argument : Corresponding list of application fees for each account in `Accounts`.
@@ -138,6 +145,7 @@ an error. The idea is dapp developer uses this instruction to check if the requi
 are paid and fail the transaction if they are not paid or partially paid.
 In case of partial payment, the user will lose the partially paid amount.
 A payer may overpay for the fees. This instruction can be called multiple times across multiple instructions.
+Internally it checks if curresponding fees are present in the map calculated in `calculate_fee` stage.
 
 #### Rebate Instruction
 
@@ -154,7 +162,7 @@ usually account and owner are the same (if it was not changed), then `invoke_sig
 to issue a rebate.
 In case of multiple rebate instructions, only the maximum rebate will one will be issued.
 Payer has to pay full application fees even if they are eligible for a rebate.
-If there is no application fee associated with the account we ignore the rebate instruction. 
+If there is no application fee associated with the account we ignore the rebate instruction.
 
 ### Changes in the core solana code
 
@@ -176,7 +184,7 @@ a new structure called `ApplicationFeeChanges` which contains one hashmap mappin
 (`Pubkey` -> `application fees(u64)`), another containing rebates (`Pubkey` -> `amount rebated (u64)`).
 The `ApplicationFeeChanges` structure is already filled with application fees in the stage `load_transaction_accounts`.
 
-```Rust
+```rust
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct ApplicationFeeChanges {
     pub application_fees: HashMap<Pubkey, u64>, // To store application fees by account
@@ -188,9 +196,9 @@ pub struct ApplicationFeeChanges {
 Each time `CheckApplicationFees` is called we just check that the account is present in the map `application_fees`
 and that the amount passed in the instruction is `<=` value in the `application_fees` map.
 On each `Rebate` instruction we find the minimum between `application_fees` and the rebate amount for the account.
-If there is already a rebate in the `rebated` map then we update it by 
+If there is already a rebate in the `rebated` map then we update it by
 `max(rebate amount in map, rebate amount in instruction)`, if the
-map does not have any value for the account, then we add the rebated amount in the map. 
+map does not have any value for the account, then we add the rebated amount in the map.
 
 In verify stage we verify that `Application Fees` >= `Rebates` for each account and return `UnbalancedInstruction` on failure.
 
@@ -221,16 +229,21 @@ So DApp developers have to be sure when to do rebates usually white listing and 
 would be ideal.
 
 A dapp can break the cpi interface with other dapps if it implements this feature. This is because
-it will require additional account for application fees program to all the instructions which calls 
+it will require additional account for application fees program to all the instructions which calls
 `CheckApplicationFees` or `Rebate`, interface also has to add an additional instruction `PayApplicationFees`
 to the correct account.
 
+It is the DApp's responsibility to publish the application fee required for each account and instruction.
+They should also add appropriate `PayApplicationFee` instruction in their client library while creating transactions
+or provide visible API to get these application fees. As DApp has to be redeployed to change application fees,
+we do not expect to change it often.
+
 Overall this feature will incentivise creation of proper transaction and spammers would have to pay
-much more fees reducing congestion in the cluster.
+much more fees reducing congestion in the cluster. This will add very low calculation overhead on the validators.
 
 ## Security Considerations
 
-User could overpay (more than required by dapp) application fees, if the `CheckApplicationFees` instruction 
+User could overpay (more than required by dapp) application fees, if the `CheckApplicationFees` instruction
 has amount more than the application fee required by dapp.
 
 Denial of service attack for a dapp is possible by flooding the cluster with a lot of transactions write-locking
@@ -241,9 +254,8 @@ None of these transactions will be executed successfully but the write lock on t
 payment of application fees.
 
 To solve this kind of attack the application fees should be stored in the ledger but this involves a lot of changes in
-the solana core code. And this kind of attack can only affect one dapp at a time, attacker has to burn a lot of gas 
+the solana core code. And this kind of attack can only affect one dapp at a time, attacker has to burn a lot of gas
 fees to sustain for a very long time.
-
 
 ## Backwards Compatibility
 
