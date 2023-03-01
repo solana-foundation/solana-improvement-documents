@@ -1,6 +1,6 @@
 ---
 simd: '0016'
-title: Application Fees (Write-lock fees)
+title: Application Fees
 authors:
   - Godmode Galactus (Mango Markets)
   - Maximilian Schneider (Mango Markets)
@@ -14,7 +14,7 @@ feature:
 
 ## Summary
 
-This SIMD will discuss additional fees called Application Fees or write lock fees.
+This SIMD will discuss additional fees called Application Fees.
 These fees are decided and set by the dapp developer to interact with the dapp.
 Dapp developers then can decide to rebate these fees if a user interacts with the dapp
 as intended and disincentivize the users which do not.
@@ -22,6 +22,8 @@ These fees will be applied even if the transaction eventually fails and collecte
 the same writable account.
 Account authority (i.e owner of the account) can do lamport transfers to recover these fees.
 So instead of fees going to the validator these fees go to the **dapp developers**.
+It will be dapp developer's responsibility to advertise the required application fees to its
+users.
 
 Discussion for the issue : <https://github.com/solana-labs/solana/issues/21883>
 
@@ -41,6 +43,28 @@ that specialized trading programs write lock these accounts but never CPI into t
 programs unless they can extract profit, effectively starving the actual users for access.
 Penalizing this behavior with runtime fees collected by validators can create a perverse
 incentive to artificially delay HFT transactions, cause them to fail, and charge penalty fees.
+
+Currently, there is no way for dapp developers to enforce appropriate behavior and the way their
+contracts should be used. Bots spamming on dapps make them unusable and dapps lose their
+users/clients because the UX is laggy and inefficient. Validators gain base fees and 
+prioritization fees even if the transactions are executed unsuccessfully but unsuccessful 
+transactions deny block space to potentially valid transactions which reduces activity on the dapp.
+For dapps like mango or openbook increasing fees without any rebates or dynamically based other
+proposed mechanisms will punish potentially thousands of users because of a handful of malicious
+users. Giving dapp's authority more control to incentivize proper utilization of its contract is the
+primary motivation for this proposal.
+
+Adding dynamic fees per account penalizes the dapp and its user. Without proper rebates to
+users Solana gas fees will increase and it will lose the edge for being low fees cluster. If the
+dynamic gas fees are low then it won't solve the spamming issues. Either way, dynamic fees will
+not be covered by this proposal because for users can't tell beforehand how much fees will be paid
+for the transaction they have sent. This will make the cluster not interesting for required players
+like market makers for whom profit margins are thin and a dynamic cluster will make it impossible
+to predict the outcome.
+
+We are motivated to improve the user experience, and user activity and keep Solana a low gas fee
+blockchain. Keeping gas fees low and increasing user activity on the chain will help all the
+communities based on Solana grow.
 
 ## Alternatives Considered
 
@@ -76,7 +100,7 @@ discussed to provide the application with access to transfer lamports outside of
 execution context. The following approach seems the best.
 
 *Passing the application fees in the instruction for each account and validating in the dapp*. A `PayApplicationFee`
-instruction is like irrevocable transfer instruction and will do the transfer even if the transaction fails. A new
+instruction is like infallible transfer instruction and will do the transfer even if the transaction fails. A new
 instruction `CheckApplicationFee` will check if the application fee for an account has been paid.
 
     1. High degree of flexibility for programs (**++**)
@@ -107,7 +131,7 @@ amount of lamports they are willing to pay as application fees per account.
 
 With this instruction, the fee payer accepts to pay application fees specifying the amount.
 This instruction **MUST** be included in the transaction that interacts with dapps having application fees.
-This instruction is like an irrevokable transfer if the payer has enough funds
+This instruction is like an infallible transfer if the payer has enough funds
 i.e even if the transaction fails the payer will end up paying.
 If this instruction is added then even if the dapp does not check the application fees the payer ends
 up paying.
@@ -161,7 +185,8 @@ The authority or the owner could be easily deduced from the `AccountMeta`. In ca
 usually account and owner are the same (if it was not changed), then `invoke_signed` can be used
 to issue a rebate.
 In case of multiple rebate instructions, only the maximum rebate will one will be issued.
-Payer has to pay full application fees even if they are eligible for a rebate.
+Payer has to pay full application fees initially even if they are eligible for a rebate.
+There will be no rebates if the transaction fails even if the authority had rebated the fees back.
 If there is no application fee associated with the account we ignore the rebate instruction.
 
 ### Changes in the core solana code
@@ -213,7 +238,6 @@ We also transfer the application fees to the repective accounts in this stage.
 
 ## Impact
 
-This feature is very intersting for dapps as they can earn application fees from users.
 If the dapps want to rebate application fees they have to implement very carefully the logic of rebate.
 They should be very meticoulous before calling rebate so that a malicious user could not use this
 feature to bypass application fees. Dapp developer also have to implement additional instruction
