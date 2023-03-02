@@ -185,9 +185,10 @@ The authority or the owner could be easily deduced from the `AccountMeta`. In ca
 usually account and owner are the same (if it was not changed), then `invoke_signed` can be used
 to issue a rebate.
 In case of multiple rebate instructions, only the maximum rebate will one will be issued.
+Rebates on same accounts can be done in multiple instructions only the maximum one will be issued.
 Payer has to pay full application fees initially even if they are eligible for a rebate.
 There will be no rebates if the transaction fails even if the authority had rebated the fees back.
-If there is no application fee associated with the account we ignore the rebate instruction.
+If there is no application fee associated with the account rebate instruction does not do anything.
 
 ### Changes in the core solana code
 
@@ -261,6 +262,11 @@ It is the DApp's responsibility to publish the application fee required for each
 They should also add appropriate `PayApplicationFee` instruction in their client library while creating transactions
 or provide visible API to get these application fees. As DApp has to be redeployed to change application fees,
 we do not expect to change it often.
+
+Dapp should be careful before rolling out this feature. Because the transaction would start failing if the roll
+out is sudden. It is preferable to implement rebate, and adding pay application fees in their apis, so that the
+user pays full application fee but is then rebated if the transactions succeds. Then once everyone starts using
+the new API they can add the check on application fees.
 
 Overall this feature will incentivise creation of proper transaction and spammers would have to pay
 much more fees reducing congestion in the cluster. This will add very low calculation overhead on the validators.
