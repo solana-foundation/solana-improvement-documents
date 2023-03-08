@@ -8,5 +8,5 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist"
   },
-  "include": [ "./**/*" ]
+  "include": [ "./**/*", ".github/linter/customRules.ts", ".github/linter/index.ts" ]
 }
