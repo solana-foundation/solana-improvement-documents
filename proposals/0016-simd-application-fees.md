@@ -170,6 +170,11 @@ are paid and fail the transaction if they are not paid or partially paid.
 In case of partial payment, the user will lose the partially paid amount.
 A payer may overpay for the fees. This instruction can be called multiple times across multiple instructions.
 Internally it checks if curresponding fees are present in the map calculated in `calculate_fee` stage.
+To avoid burning application fees or creating new accounts, we add a constraint that accounts on which
+application fees are paid must exist and write-locked. Suppose we pay application fees on an account
+that does not exist. In that case, the payer will end up paying
+`base fees + prioritization fees + application fees on existing accounts`,
+and the transaction will fail.
 
 #### Rebate Instruction
 
@@ -286,6 +291,13 @@ payment of application fees.
 To solve this kind of attack the application fees should be stored in the ledger but this involves a lot of changes in
 the solana core code. And this kind of attack can only affect one dapp at a time, attacker has to burn a lot of gas
 fees to sustain for a very long time.
+
+Another type of attack is currently possible on the cluster, which reamins unresolved by this SIMD.
+An attacker who intends to do MEV can block competitors by creating a transaction that write-locks their accounts
+and do some heavy calculation consuming a lot of CUs. This attack will prevent competitors from performing MEV during
+that block, and the attacker will have an advantage. We have identified certain transactions that do to this attack and
+waste block space. We also wanted to address this issue in this SIMD but could not find an elegant solution, so another
+SIMD will be created to address this issue.
 
 ## Backwards Compatibility
 
