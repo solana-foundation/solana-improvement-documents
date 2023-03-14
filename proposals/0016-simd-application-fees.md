@@ -296,8 +296,8 @@ Another type of attack is currently possible on the cluster, which reamins unres
 An attacker who intends to do MEV can block competitors by creating a transaction that write-locks their accounts
 and do some heavy calculation consuming a lot of CUs. This attack will prevent competitors from performing MEV during
 that block, and the attacker will have an advantage. We have identified certain transactions that do to this attack and
-waste block space. We also wanted to address this issue in this SIMD but could not find an elegant solution, so another
-SIMD will be created to address this issue.
+waste block space. We also wanted to address this issue in this SIMD but there are multiple possible solutions and we
+would like a feedback from the community, so another SIMD will be created to address this issue.
 
 ## Backwards Compatibility
 
