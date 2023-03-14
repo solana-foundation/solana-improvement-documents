@@ -1,0 +1,30 @@
+{
+  "name": "solana-improvement-documents",
+  "version": "1.0.0",
+  "description": "Solana IMprovement Documents (SIMD) describe proposed and accepted changes to the Solana protocol.",
+  "main": "index.js",
+  "scripts": {
+    "lint": "ts-node .github/linter/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solana-foundation/solana-improvement-documents.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/solana-foundation/solana-improvement-documents/issues"
+  },
+  "homepage": "https://github.com/solana-foundation/solana-improvement-documents#readme",
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.5",
+    "markdownlint-cli2": "^0.6.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "js-yaml": "^4.1.0"
+  }
+}
