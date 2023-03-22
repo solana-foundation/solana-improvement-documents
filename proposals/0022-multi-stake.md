@@ -18,7 +18,8 @@ for simpler stake movement through more activations, deactivations, or redelegat
 ## New Terminology
 
 * "multi stake": a stake account with multiple `Delegation` instances
-* "small stake": a stake whose delegation is less than current minimum stake delegation amount
+* "small stake": a stake whose delegation is less than current minimum stake 
+  delegation amount
 
 ## Motivation
 
@@ -69,9 +70,9 @@ Unfortunately, small stakes can still bloat the stakes cache from a memory level
 
 * Don't include small stakes in the cache, but track them in transactions
 
-In this solution, on every transaction that manipulates a small stake delegation, it
-includes its delegation amount in the validator's voting power, but doesn't
-add its pubkey and `Delegation` to the cache.
+In this solution, on every transaction that manipulates a small stake
+delegation, it includes its delegation amount in the validator's voting power,
+but doesn't add its pubkey and `Delegation` to the cache.
 
 The runtime tracks the pre and post state of every account, and for a successful
 transaction, subtracts the old small stake delegation amount, and adds the new small
@@ -81,9 +82,9 @@ During rewards payout, small stakes are completely omitted, since they are not
 present in the cache.
 
 This is incredibly brittle, however, and introduces more overhead in the runtime.
-The bank must hold onto pre-states for all transactions to debit the stakes cache. And,
-if called from the outside, all `store_accounts` functions on the bank could easily
-invalidate the stakes cache.
+The bank must hold onto pre-states for all transactions to debit the stakes
+cache. And, if called from the outside, all `store_accounts` functions on the
+bank could easily invalidate the stakes cache.
 
 For example, if you store a small stake directly, what does the cache do? What
 was the pre-state of that small stake? There's no way to know.
@@ -152,7 +153,8 @@ that try to deserialize any stake account.
 
 The network benefits as a whole:
 
-* stake accounts are more flexible for adding or removing stake, without splits and merges
+* stake accounts are more flexible for adding or removing stake, without splits
+and merges
 * stakers can easily redelegate without missing out on rewards
 
 ## Security Considerations
@@ -181,4 +183,5 @@ For small stake deposit, you simply transfer the lamports and activate the new a
 
 If a user wishes to withdraw, the program first withdraws from the activating amount.
 If there is no more activating amount available, then the pool deactivates from
-the main delegation and provides a ticket to the user, used to claim their lamports after deactivation.
+the main delegation and provides a ticket to the user, used to claim their lamports
+after deactivation.

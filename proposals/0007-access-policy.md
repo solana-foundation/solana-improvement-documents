@@ -35,7 +35,8 @@ in accordance with Github access policies.
 ## Motivation
 
 Shamelessly borrowing from [Mozilla's access
-policy](https://www.mozilla.org/en-US/about/governance/policies/commit/access-policy/): 
+policy](https://www.mozilla.org/en-US/about/governance/policies/commit/access-policy/)
+: 
 
 ```
 There are two sorts of control which can be used to stop people checking in -
