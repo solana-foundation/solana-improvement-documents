@@ -36,7 +36,7 @@ export const enforceHeaderStructure = {
 
       if (index + 1 >= filtered.length) {
         onError({
-          lineNumber: 0,
+          lineNumber: 1,
           detail: `Expected heading \`${tempHeadings[0]}\` and none exists. Please follow the structure outlined in the Proposal Template.`,
         })
 
