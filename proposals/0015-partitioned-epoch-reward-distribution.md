@@ -88,12 +88,15 @@ the beginning of the epoch. When reaching block height `N` after the start
 block of the `reward calculation phase`, the bank will mark it the end the
 `reward calculation phase`.
 
-On Solana Mainnet Beta, the 90% cut-off of the epoch reward computation time
-for all the nodes is around 40 seconds for the ~550K active stake accounts.
-This is approximately 1000 blocks at the cluster's average block rate (40ms
-per block, approximately 10% of the total block time, i.e. 400ms). Therefore,
-a conservative value of 1,000 is chosen for `N`. This parameter will be
-feature-gated and maybe updated in future.
+On Solana Mainnet Beta with ~550K active stake accounts, the 90% cut-off of the
+epoch reward time for all the nodes is around 40 seconds. Note that this time
+includes both reward computation and reward distribution. The actual reward
+computation time could be less. However, to be conservative, we can safely
+assume the reward computation time to 40s.
+
+If we target 10% of the total block time for reward computation, this will give
+us `N=1000`, i.e. 40s/(400ms*10%). This parameter will be feature-gated and
+maybe updated in future.
 
 At the end of the `reward calculation phase`, aka. `Epoch_start + N` block
 height, the reward computation process is "barrier synchronized" with the bank
@@ -242,9 +245,10 @@ the reward from one partition of the rewards stored in the `EpochRewardReserve`
 account with the address specified by the `get_epoch_reward_reserve_addr`
 function above. Once all rewards have been distributed, the balance of the
 `EpochRewardReserve` account and shadow balance field `reward_balance` both
-should be reduced to `0`. However, to protect from unexpected deposits to
-`EpochRewardReserve` accounts, when the reward distribution completes, any
-extra lamports in `EpochRewardReserve` accounts will be burned.
+MUST be reduced to `0` (or something has gone wrong). However, to protect from
+unforeseen deposits to `EpochRewardReserve` accounts, when the reward
+distribution completes, any extra lamports in `EpochRewardReserve` accounts
+will be burned.
 
 Before each reward distribution, the `EpochRewardReserve` account's
 `reserve_balance` is checked to make sure there is enough balance to distribute
@@ -269,12 +273,14 @@ the epoch.
 To accommodate the new reward distribution approach, there are a few changes
 to the rewards related RPC APIs.
 
-In particular, `getInflationReward` RPC API will change. It will be unavailable
-during reward period, and only available after reward distribution completes.
+In particular, `getInflationReward` RPC API will change when query the reward
+for the preceding epoch. Such queries will be unavailable during reward period,
+and only available after reward distribution completes.
 
 To help to determine when the reward period completes, a new RPC API,
 `getRewardPeriodInfo`,  will be added. This API will returns:
 
+   - `rewardStartBlock: u64`
    - `numOfRewardComputationBlocks: u64`
    - `numOfRewardDistributionBlocks: u64`
    - `totalNumOfBlocksInRewardPeriod: u64`.
@@ -283,6 +289,9 @@ To query the reward received for individual account, user Apps will first make
 a query to `getRewardPeriodInfo`, and wait for `totalNumOfBlocksInRewardPeriod`
 of blocks since the start of the epoch. Then, the App can call
 `getInflationReward` to query the rewards as before.
+
+`getRewardPeriodInfo` will also be exposed via sysvar/syscall to support on
+chain Dapp program usage.
 
 
 ### Restrict Stake Account Access
