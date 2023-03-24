@@ -42,7 +42,7 @@ rewards to the accounts with stake balance above the threshold. This will
 effectively reduce the number of stake rewards to be distributed, and reduce
 reward distribution time at the epoch boundary. However, this will impact stake
 accounts with small balance. To receive rewards, the small stake accounts will
-be forced to join stake pools, which some of them are hesitant to do.
+be forced to join stake pools, which some may be hesitant to do.
 
 The second approach is to handle reward distributions through transactions with
 specialized native reward programs. While this approach is optimal, it requires
@@ -56,7 +56,7 @@ stake accounts and 1.5K vote accounts on Solana Mainnet Beta. Given the
 relatively small number of vote accounts, it makes sense to keep vote rewards
 distribution mechanism unchanged. They can still be distributed efficiently at
 the first block of the epoch boundary. This reduces the impact of rewards for
-vote account and also simplifies the overall changes, and let us focus on
+vote account and also simplifies the overall changes. It also lets us focus on
 solving the primary bottleneck - Stake Rewards. Only Stake rewards are going to
 be distributed out over multiple blocks.
 
@@ -220,7 +220,7 @@ struct EpochRewardReserve {
 }
 ```
 
-The account balance of `RewardsReserve` is equal to the total amount (in the
+The account balance of `EpochRewardsReserve` is equal to the total amount (in the
 `AccountInfo::lamports` field) of all rewards to be distributed in a block. And
 the `reward_balance` field shadow the `AccountInfo::lamports`. The
 `reserve_hash` is computed from the rewards in the block as follows.
