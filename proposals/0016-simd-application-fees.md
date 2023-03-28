@@ -20,7 +20,7 @@ Dapp developers then can decide to rebate these fees if a user interacts with th
 as intended and disincentivize the users which do not.
 These fees will be applied even if the transaction eventually fails and collected on
 the same writable account.
-Account authority (i.e owner of the account) can do lamport transfers to recover these fees.
+Owner of the account can do lamport transfers to recover these fees.
 So instead of fees going to the validator these fees go to the **dapp developers**.
 It will be dapp developer's responsibility to advertise the required application fees to its
 users.
@@ -62,9 +62,21 @@ for the transaction they have sent. This will make the cluster not interesting f
 like market makers for whom profit margins are thin and a dynamic cluster will make it impossible
 to predict the outcome.
 
+The cluster is currently vulnerable to a different kind of attack where an adversary with
+malicious intent can engage in MEV by writing or read-locking the accounts
+of their competitors through a transaction. This attack involves carrying out intensive calculations
+that consume a large number of computational units, thereby blocking competitors from performing MEV
+during that particular block, and giving the attacker an unfair advantage. We have identified specific
+transactions that perpetrate this attack and waste valuable block space. As a result, it can prevent
+users from using their token accounts, vote accounts, or stake accounts, and dapps from utilizing
+their own accounts. With the proposed solution, every program, such as the token program, stake program,
+and vote program, can include instructions to employ the application fees feature on their accounts and
+return the fees if the user initiates the transaction. The attacker will find this option unfeasible
+as they will consume their SOL tokens more rapidly while maintaining the attack.
+
 We are motivated to improve the user experience, and user activity and keep Solana a low gas fee
 blockchain. Keeping gas fees low and increasing user activity on the chain will help all the
-communities based on Solana grow.
+communities based on Solana grow. This will also help users to gain more control over accounts owned by them.
 
 ## Alternatives Considered
 
@@ -75,18 +87,31 @@ Pros: Simpler to implement, Simple to calculate fees.
 Cons: Will increase fees for everyone, dapp cannot decide to rebate fees, (or not all existing
 apps have to develop a rebate system). Fees cannot be decided by the dapp developer.
 
-* Extend existing account structure in ledger to store fee settings and collect lamports.
+* Passing application fees by instruction and validating them during the execution
 
-Pros: High efficiency, minimal performance impact, no need to add additional instruction in transaction,
-helps to avoid denial of service attack on the smart contract.
+Pros: High efficiency, minimal performance impact, more generic, no need to change the account structure.
 
-Cons: Modification of account structure which impacts a lot of code. Needs to load all accounts to calculate
-total fees to charge the payer, to avoid that have to implement multiple level of fees.
+Cons: Cannot prevent denial of service attacks, or account blocking attacks.
 
 ## New Terminology
 
 Application Fees: Fees that are decided by the dapp developer that will be charged if a user wants
 to use the dapp. They will be applied even if transaction fails contrary to lamport transfers.
+
+## Other terminology
+
+`Owner` of an account: It is the account owner as specified in the `owner` field in the account structure.
+In the case of an externally owned account (i.e, keypair) owner is a `system program` and in case of a
+Program derived address owner is usually itself, and the PDA has to call invoke signed to sign from the
+same program that it is derived from.
+
+Account `Authority`: The true authority for the account. Let's take an example for a token account.
+A token account is a `PDA`, so the actual owner is itself. To update the token account,
+invoke signed has to be called in token program on behalf of the PDA. But the way token program has
+implemented the signing is cyclic, i.e if the authority wants to update the token account
+it owns, then they create a transaction updating the account, which inturn checks if the authority
+has signed the transaction. If the correct authority has signed
+the transaction, the token account PDA will call invoke signed to initiate the update. 
 
 ## Detailed Design
 
@@ -99,21 +124,33 @@ penalize, even if the application is not CPI'd to. There were multiple possible 
 discussed to provide the application with access to transfer lamports outside of the regular cpi
 execution context. The following approach seems the best.
 
-*Passing the application fees in the instruction for each account and validating in the dapp*. A `PayApplicationFee`
-instruction is like infallible transfer instruction and will do the transfer even if the transaction fails. A new
-instruction `CheckApplicationFee` will check if the application fee for an account has been paid.
+*Updating core account structure to store application fees in ledger*. A `PayApplicationFee`
+instruction is will be used by solana runtime to calculate how much application fees are being
+paid by the instruction. A `UpdateApplicationFees` instruction which will update the application
+fees for an owned account. A `Rebate` instruction which will be used to rebate the application
+fees back to the payer. 
 
     1. High degree of flexibility for programs (**++**)
-    2. No need to save the application fees on the ledger. (**++**)
-    3. Each transaction has to include additional instructions so it will break existing dapp interfaces (**-**)
-    4. Account structure does not need to be modified (**++**)
-    5. Does not prevent any denial of service attack on a smart contract (**-**)
-    6. Each dapp has to implement a cpi to check if a transaction has paid app fees
+    2. Each transaction has to include additional instructions so it will break existing dapp interfaces (**-**)
+    3. This implementation will prevent DOS on dapps and account blocking attacks.
+    4. Account structure need to be modified, lot of changes in core solana code (**---**)
+    5. Application fees are check before executing the dapps (**++**)
+    6. Easier to calculate total fees to be payed by the payer (**+**)
+    7. Application fees cannot be dynamic (**-**)
+
+An additional option will be added to disable read locking of accounts so that an account having application
+fees could not be read-locked by transactions. This will disable attacks where transaction read locks an account
+and prevents other transactions from write-locking the account.
 
 If existing dapps like openbook want to implement application fees then all the dapps depending on openbook
-also have to do additional development. The checks on the application fees will be responsibility of dapp developers.
-The plus point is that we do not have to touch the core solana structure to store the application fees.
-It is also more easier to calculate total fees.
+also have to do additional development. The checks on the application fees will be taken care by solana runtime.
+Application fees paid will be included in the transaction so that it is easier to calculate the
+total amount of fees that will be paid and less scope for fraud. The maximum amount of application fees that
+can be set for an account will be limited to a predecided number of SOLs recommended (10/100 SOLs) so that
+account does not become inaccessible.
+
+All other programs have to implement required instructions so that the authority of the accounts can
+cyclically sign to update application fees on the accounts they own.
 
 ### A new application fee program
 
@@ -132,16 +169,18 @@ amount of lamports they are willing to pay as application fees per account.
 With this instruction, the fee payer accepts to pay application fees specifying the amount.
 This instruction **MUST** be included in the transaction that interacts with dapps having application fees.
 This instruction is like an infallible transfer if the payer has enough funds
-i.e even if the transaction fails the payer will end up paying.
-If this instruction is added then even if the dapp does not check the application fees the payer ends
-up paying.
-If the payer does not have enough balance the transaction fails with error `InsufficientFunds`.
-This instruction is decoded in the `calculate_fee` method of `bank.rs` where other fees are calculated and the sum
-of the fees on all the accounts are deducted from the payer. The resulting map for (Accounts -> Fees) are passed
-into invoke context and execution results. If the transaction is successfully executed then rebates are returned to the
-payer and the remaining fees are transferred to respective accounts if the transaction fails to execute then the
-fees are transferred to respective accounts without any rebates, this will happen in `filter_program_errors_and_collect_fee`
-stage in `bank.rs`.
+i.e, even if the transaction fails, the payer will end up paying.
+If the payer does not have enough balance, the transaction fails with the error `InsufficientFunds`.
+This instruction is decoded in the `calculate_fee` method of `bank.rs` where other fees are calculated, and the sum
+of the fees on all the accounts are deducted from the payer. The resulting (Accounts -> Fees) map is passed
+into invoke context and execution results. Before executing the transaction, we will check if the application
+fees on all loaded accounts has been paid or not. In case of missing application fees for an account,
+the transaction will fail, citing `ApplicationFeesNotPaid` error. If the transaction read locks an account on
+which read lock has been disabled then the transaction fails with an error `ReadLockDisabled`. If the transaction
+fails at this stage the payer will end up paying `base fees + prioritization fees + application fees on other accounts`.
+If the transaction is successfully executed, then rebates are returned to the
+payer and the remaining fees are transferred to respective accounts. if the transaction fails to execute, the
+fees are transferred to respective accounts without any rebates; this will happen after the transaction is executed.
 
 It requires:
 
@@ -155,20 +194,23 @@ The arguments list must be of same length as number of accounts.
 The index of fees and account should match.
 The account fees for each account is 8 bytes represented in rust type `u64`
 
-#### CheckApplicationFees Instruction
+#### UpdateApplicationFees Instruction
 
-This instruction will check if an application fee for an account is paid.
+This instruction will update application fees for an account.
 It requires :
 
-* Account where fees are paid.
+* Writable account as (writable)
+* Owner of the writable account as (signer)
 
-Argument: required fees in lamport (u64).
+Argument: fees in lamport (u64), boolean to disable read lock.
 
-If application fees are not paid or are paid insufficiently this instruction will return
-an error. The idea is dapp developer uses this instruction to check if the required fees
-are paid and fail the transaction if they are not paid or partially paid.
+This instruction will set the application fees for an account in the `Account` structure.
+It will also update if the account has disabled read locking in the `Account` structure.
+Before executing transactions Solana runtime will check the data set by this instruction for an account
+against application fees paid by the instruction. In case the application fees were not paid or partially
+paid then the instruction will fail citing `ApplicationFeesNotPaid` error.
 In case of partial payment, the user will lose the partially paid amount.
-A payer may overpay for the fees. This instruction can be called multiple times across multiple instructions.
+In case of overpayment the the payer will get the difference amount even if instruction fails.
 Internally it checks if curresponding fees are present in the map calculated in `calculate_fee` stage.
 To avoid burning application fees or creating new accounts, we add a constraint that accounts on which
 application fees are paid must exist and write-locked. Suppose we pay application fees on an account
@@ -182,7 +224,7 @@ This instruction should be called by the dapp using CPI or by the owner of the a
 It requires :
 
 * Account on which a fee was paid
-* Authority (owner) of the account (signer)
+* Owner of the account (signer)
 
 Argument: Number of lamports to rebate (u64) can be u64::MAX to rebate all the fees.
 
@@ -194,10 +236,85 @@ Rebates on same accounts can be done in multiple instructions only the maximum o
 Payer has to pay full application fees initially even if they are eligible for a rebate.
 There will be no rebates if the transaction fails even if the authority had rebated the fees back.
 If there is no application fee associated with the account rebate instruction does not do anything.
+The programs could integrate cyclic signing, where the token program, for instance, can implement the
+application fees feature and include a rebate instruction that necessitates the token account owner's
+signature. Therefore, while write-locking their token account to perform fund transfers, the owner can
+add rebate instruction to intiate rebate to itself.
 
 ### Changes in the core solana code
 
 These are following changes that we have identified as required to implement this feature.
+
+Currently account structure is defined as follows:
+
+```Rust
+#[repr(C)]
+pub struct Account {
+    /// lamports in the account
+    pub lamports: u64,              // size = 8, align = 8, offset = 0
+    /// data held in this account
+    #[serde(with = "serde_bytes")]
+    pub data: Vec<u8>,              // size = 24, align = 8, offset = 8
+    /// the program that owns this account. If executable, the program that loads this account.
+    pub owner: Pubkey,              // size = 32, align = 1, offset = 32
+    /// this account's data contains a loaded program (and is now read-only)
+    pub executable: bool,           // size = 1, align = 1, offset = 64
+    /// the epoch at which this account will next owe rent
+    pub rent_epoch: Epoch,          // size = 8, align = 8, offset = 72
+}
+```
+
+Here we can see that we have 7 bytes of space between executable and rent_epoch.
+The rent_epoch is being deprecated and will be eventually removed. So we can reuse the rent epoch
+to store application fees as both of them store value as u64. We also add a new field called
+`has_application_fees` and rename `rent_epoch` to `rent_epoch_or_application_fees`. If `has_application_fees`
+is true then rent_epoch for the account is rent exempt i.e u64::MAX and the application fee is
+decided by value of `rent_epoch_or_application_fees`. And if `has_application_fees` is false then
+`rent_epoch` is `rent_epoch_or_application_fees` and the application fee is 0.
+
+So we cannot have both the rent epoch and application fees in the same space. We cannot set
+application fees for accounts that are not rent-free. As in two years, we won't have any
+account which is not rent-free I guess that won't be an issue.
+
+We will also add a boolean `disable_read_locks` after `has_application_fees` boolean. This boolean can
+also be set by the `UpdateApplicationFees` instruction. If true then no instruction can take a read lock on
+the account. If any instruction takes the read lock then the instruction will fail with `ReadLockDisabled` error
+before executing the instruction.
+
+In append_vec.rs AccountMeta is the way an account is stored physically on the disk. We use a similar
+concept as above but we do not have extra space to add the `has_application_fees` boolean. Here we have
+decided to reuse the space in the `executable` byte to store the value of `has_application_fees` and `disable_read_locks`.
+So `executable` will be changed to `account_flags` where 1 LSB is `executable` and 2nd LSB is `has_application_fees`
+and 3rd LSB is `disable_read_locks`.
+This change does not impact a lot of code and is very localized to file append_vec.
+
+The new account structure will look like :
+
+```Rust
+#[repr(C)]
+pub struct Account {
+    /// lamports in the account
+    pub lamports: u64,              // size = 8, align = 8, offset = 0
+    /// data held in this account
+    #[serde(with = "serde_bytes")]
+    pub data: Vec<u8>,              // size = 24, align = 8, offset = 8
+    /// the program that owns this account. If executable, the program that loads this account.
+    pub owner: Pubkey,              // size = 32, align = 1, offset = 32
+    /// this account's data contains a loaded program (and is now read-only)
+    pub executable: bool,           // size = 1, align = 1, offset = 64
+    pub has_application_fees: bool  // size = 1, align = 1, offset = 65
+    pub disable_read_locks: bool    // size = 1, align = 1, offset = 66
+    /// the epoch at which this account will next owe rent
+    pub rent_epoch_or_application_fees: Epoch, // size = 8, align = 8, offset = 72
+}
+```
+
+#### Changes in `MessageProcessor::process_message`
+
+Before starting processing message we check if a loaded account has application fees associated.
+If they have then we check if the fees were sufficiently paid. In case of over paid we accumulate the difference
+in a variable. Incase the application fees are insufficiently paid or not paid then we set transaction status as errored.
+If there was a readlock taken on an account where readlock has been disabled then we set transaction status as errored.
 
 #### Changes in `load_transaction_accounts`
 
@@ -207,6 +324,8 @@ instruction. Then we verify that fee payer has miminum balance of:
 
 If the payer has sufficient balance then we continue loading other accounts. If `PayApplicationFees` is missing
 then application fees is 0. If payer has insufficient balance transaction fails with error `Insufficient Balance`.
+We also check here if read lock for an account is taken for which read lock is disabled, if this is the case then
+the transaction fails with error `ReadLockDisabled`.
 
 #### Changes in invoke context
 
@@ -224,14 +343,13 @@ pub struct ApplicationFeeChanges {
 ```
 
 `PayApplicationFees` will add the accounts specified in the `application_fees` field of this structure.
-Each time `CheckApplicationFees` is called we just check that the account is present in the map `application_fees`
-and that the amount passed in the instruction is `<=` value in the `application_fees` map.
 On each `Rebate` instruction we find the minimum between `application_fees` and the rebate amount for the account.
 If there is already a rebate in the `rebated` map then we update it by
 `max(rebate amount in map, rebate amount in instruction)`, if the
 map does not have any value for the account, then we add the rebated amount in the map.
 
-In verify stage we verify that `Application Fees` >= `Rebates` for each account and return `UnbalancedInstruction` on failure.
+In verify stage we verify that `Application Fees` >= `Rebates` + `Overpaid amount` for each account
+and return `UnbalancedInstruction` on failure.
 
 #### Changes in Bank
 
@@ -240,6 +358,7 @@ to the respective mutable accounts and to reimburse the rebates to the payer in 
 successful. If the transaction fails then we withdraw
 `per-transaction base fees + prioritization fees + sum of application fees on all accounts`
 from the payer.
+We return the overpaid amount in case the transaction was sucessful or unsuccessful.
 We also transfer the application fees to the repective accounts in this stage.
 
 ## Impact
@@ -260,44 +379,67 @@ would be ideal.
 
 A dapp can break the cpi interface with other dapps if it implements this feature. This is because
 it will require additional account for application fees program to all the instructions which calls
-`CheckApplicationFees` or `Rebate`, interface also has to add an additional instruction `PayApplicationFees`
+`Rebate`, interface also has to add an additional instruction `PayApplicationFees`
 to the correct account.
 
 It is the DApp's responsibility to publish the application fee required for each account and instruction.
 They should also add appropriate `PayApplicationFee` instruction in their client library while creating transactions
 or provide visible API to get these application fees. As DApp has to be redeployed to change application fees,
-we do not expect to change it often.
+we do not expect to change it often. We can also add additional methods in JsonRpc and solana web3 library to
+get application fees involved for an account.
 
 Dapp should be careful before rolling out this feature. Because the transaction would start failing if the roll
 out is sudden. It is preferable to implement rebate, and adding pay application fees in their apis, so that the
 user pays full application fee but is then rebated if the transactions succeds. Then once everyone starts using
 the new API they can add the check on application fees.
 
+Additional instructions should be added to the known programs like Token Program, Vote Program, Stake Program, etc.
+to enable this feature on the TokenAccount, VoteAccount, and other accounts. Take an example of the token program;
+we can let the user change application fees to its token account. For that, we have to add an instruction `UpdateApplicationFees`
+instruction to the token program, which will cpi `UpdateApplicationFees` for the token account PDA. Same goes for
+`Rebate.` In this way, any malicious access to the user's token account will fail without paying application fees.
+These token program also have to find a way for a user to get back the application fees collected on their accounts.
+
 Overall this feature will incentivise creation of proper transaction and spammers would have to pay
 much more fees reducing congestion in the cluster. This will add very low calculation overhead on the validators.
+It will also enable users to protect their accounts against malicious read and write locks.
+
+## Calculating Application Fees for a dapp
+
+Lets consider setting application fees for Openbook DEX. We can set fees comparable to the rent of the accounts
+involved or something fixed. Setting application fees too high means dapp users need more balance to interact
+with the dapps and if they are too low then it won't prevent spamming or malicious use. In case of openbook the
+intent is to avoid spamming.
+
+Most of open books accounts like asks, bids and eventqueues are used by the openbook in write mode only we can
+disable read-locks on these accounts. Now we can consider there are 48 M CU's per block and 2.5 blocks per second.
+Considering each instruction takes 200 CUs so around 600 trasactions per second. Currently base fees are around 0.00005 SOLs,
+with so low gas fees spammers have an advantage to spam the cluster. A reasonable application fee could be around 0.1 SOLs
+per transaction that could be distributed amoung different accounts. For a general user interacting with dapp with 0.1 SOLs
+in account seems resonable assuming that the transactions is executed successfully and the fees are rebated.
+This will make spammers spend their SOLs 2000 times more rapidly than before. Thumb rule for dapps to
+set application fee on their accounts is `More important the account = Higher application fees`.
+
+Suppose an user or entity desires to safeguard their token account from potentially malicious
+read/write locking that obstructs their ability to perform MEV. In that case, they can set the
+highest possible application fees on their token account, rendering it impossible to extract profit
+by blocking their account. Even if the transaction fails, and they have to pay the application fees,
+they can recover the fees as they own the account. A general guideline for users is that they should
+posses atleast N times (where N=10 is recommended) the SOLs required to pay application fees on their
+accounts so that they are not locked out. The user has to pay application fees to transfer all collected
+application fees.
 
 ## Security Considerations
 
-User could overpay (more than required by dapp) application fees, if the `CheckApplicationFees` instruction
-has amount more than the application fee required by dapp.
+If the application fee for an account is set too high then we cannot ever mutate that account anymore.
+Even updating the application fees for the account will need a very high amount of balance. This issue
+can be easily solved by setting a maximum limit to the application fees. We suggest setting this limit to 100 SOLs.
 
-Denial of service attack for a dapp is possible by flooding the cluster with a lot of transactions write-locking
-an account used by the dapp. This attack is already possible on the network.
-This implementation of application fees does not protect the dapp from denial of service
-attacks. An attacker can always flood the network with the transactions without the `CheckApplicationFees` instruction.
-None of these transactions will be executed successfully but the write lock on the account was taken without any
-payment of application fees.
+For an account that has collected application fees, to transfer these fees collected on to another account we have
+to pay application fees to write lock the account, we can include a rebate instruction in the transaction.
 
-To solve this kind of attack the application fees should be stored in the ledger but this involves a lot of changes in
-the solana core code. And this kind of attack can only affect one dapp at a time, attacker has to burn a lot of gas
-fees to sustain for a very long time.
-
-Another type of attack is currently possible on the cluster, which reamins unresolved by this SIMD.
-An attacker who intends to do MEV can block competitors by creating a transaction that write-locks their accounts
-and do some heavy calculation consuming a lot of CUs. This attack will prevent competitors from performing MEV during
-that block, and the attacker will have an advantage. We have identified certain transactions that do to this attack and
-waste block space. We also wanted to address this issue in this SIMD but there are multiple possible solutions and we
-would like a feedback from the community, so another SIMD will be created to address this issue.
+For a dapp it is better to set a very low application fees at the beginning so that it could be rolled out easier.
+In case of any bugs while transfering application fees 
 
 ## Backwards Compatibility
 
