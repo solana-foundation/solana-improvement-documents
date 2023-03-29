@@ -14,7 +14,7 @@ feature: (fill in with feature tracking issues once accepted)
 
 This feature changes how the ledger is broadcast and executed. It
 separates proposing blocks full of user transactions from blocks
-with votes.  It allows for N concurrent proposers of user transaction
+with votes.  It allows for N concurrent builders of user transaction
 blocks, and it allows for asynchronous execution of user blocks.
 
 ## Motivation
@@ -44,7 +44,7 @@ APEX design that was proposed in https://github.com/solana-labs/solana/pull/2412
 * Leader - the current leader for the slot that will propose a PoH
 ledger full of Votes and UserBlockEntry
 
-* Proposer - a node that is scheduled to propose a block with non
+* Builder - a node that is scheduled to propose a block with non
 vote transactions
 
 ## Detailed Design
@@ -53,16 +53,16 @@ vote transactions
 Leaders are scheduled to propose blocks as they are currently by
 the LeaderSchedule.
 
-Proposer's are scheduled along side leaders to propose blocks. N
-number of proposers can be scheudled per slot.  Proposers are
+Builder's are scheduled along side leaders to propose blocks. N
+number of builders can be scheudled per slot.  Builder are
 scheudled at 2x the rate of leaders.  So for every leader slot,
-there are N proposers producing 2 UserBlocks.
+there are N builders producing 2 UserBlocks.
 
 While a leader is scheduled, they receive and encode votes as normal.
-Any well formed UserBlocks that were received from the **previous**
+Any well formed UserBlocks that were received from the previous
 UserBlockSlot are added to the leaders PoH ledger as UserBlockEntry.
 
-The N concurrent Proposers have 200ms slots to create blocks out
+The N concurrent Builder have 200ms slots to create blocks out
 of user transactions. These are transmitted to the network.  The
 leader receives and decodes them and generates a UserBlockEntry,
 and adds it to PoH as soon as the leaders PoH has passed the
@@ -70,7 +70,7 @@ UserBlockSlot.
 
 ### Fork Choice
 
-If a validator doesn't have the proposer's UserBlock, the validator
+If a validator doesn't have the builder's UserBlock, the validator
 doesn't vote on the proposed block and tries to repair the UserBlock.
 That fork is ignored for fork choice.
 
@@ -113,7 +113,7 @@ the network will halt anyways.
 
 ## Impact
 
-Multiple nodes can operate as Proposers on the network concurrently.
+Multiple nodes can operate as Builder on the network concurrently.
 So clients can pick the nearest one, and the bandwidth to schedule
 and prioritize transactions is doubled.  There needs to be a design
 for BundleTransactions that allow the bundler to prioritize a batch
@@ -125,10 +125,7 @@ Priority fees now also imply execution priority.
 Fork choice and voting is not blocked by user block propagation or
 execution of user transactions.
 
-Need a mechanism for splitting the reward between the leader and
-proposer.
-
-Proposers are going to capture all the MEV.
+Builders are going to capture all the MEV.
 
 ## Security Considerations
 
@@ -139,8 +136,8 @@ BankHash and copy results from other validators.
 * Network halts if it cannot compute a epoch snapshot hash once an
 epoch because it is overloaded with user transactions.
 
-* Leader could censor the proposer. But then they would miss out
-on the total fees proposed in the block.
+* Leader could censor the builder. But then they would miss out
+on all the fees in the block.
 
 ## Drawbacks
 
