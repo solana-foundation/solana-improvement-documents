@@ -125,6 +125,11 @@ Priority fees now also imply execution priority.
 Fork choice and voting is not blocked by user block propagation or
 execution of user transactions.
 
+Need a mechanism for splitting the reward between the leader and
+proposer.
+
+Proposers are going to capture all the MEV.
+
 ## Security Considerations
 
 * Validators may include incorrect BankHash values which may not
@@ -133,6 +138,9 @@ BankHash and copy results from other validators.
 
 * Network halts if it cannot compute a epoch snapshot hash once an
 epoch because it is overloaded with user transactions.
+
+* Leader could censor the proposer. But then they would miss out
+on the total fees proposed in the block.
 
 ## Drawbacks
 
