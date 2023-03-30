@@ -136,11 +136,10 @@ Invalid transactions are skipped, including duplicates, or those
 with invalid signatures, or completely malformed, and the rest of
 the block is processed.
 
-The first entry must start with the hash of the builders public
-key, the last entry must contain a signature from the builder of
-the previous entry hash. This will ensure that leader cannot
-manipulate the UserBlock, and that the entire block must be included
-when computing the UserBlockEntry.
+The first entry must start with the value 0, the last entry must
+contain a signature from the builder of the previous entry hash.
+This will ensure that leader cannot manipulate the UserBlock, and
+that the entire block must be included when computing the UserBlockEntry.
 
 ### UserBlockEntry format
 
