@@ -44,7 +44,7 @@ the UserBlock, it contains a hash of the built UserBlock.
 the cluster over turbine. Cluster could be configured with more
 then one UserBlockSlots per slot with a default setting of 2.
 
-* Leader - the current leader for the slot that will propose a PoH
+* Leader - the current leader for the slot that will build a PoH
 ledger full of Votes and UserBlockEntries.
 
 * Builder - a node that is scheduled to build a block with non
@@ -63,7 +63,7 @@ format.
 ## Detailed Design
 
 ### Overview
-Leaders are scheduled to propose blocks as they are currently by
+Leaders are scheduled to build blocks as they are currently by
 the LeaderSchedule.
 
 Builder's are scheduled along side leaders to build UserBlocks -
@@ -110,15 +110,21 @@ each UserBlock can use no more then 48m/4 or 12m CU.
 
 ### UserBlock execution
 
+Execution of UserBlocks can happen asynchronously to voting.  When
+voting validators transmit their most recent BankHash, but it may
+be for an older parent slot then the slot they are voting on.
+
 Each UserBlock is assumed to have been created simultaneously during
-the UserBlockSlot that it was encoded by the leader. For each
-UserBlock, the transactions are ordered by priority fee before
-execution. If two transactions from two different blocks have the
-same priority, the earliest transaction by UserBlock is executed
-first, otherwise by which UserBlock appears first in the leaders
+the UserBlockSlot that it was encoded by the leader.
+
+For each UserBlock in the PoH section spanning the UesrBlockSlot,
+the transactions are ordered by priority fee before execution.
+
+If two transactions from two different blocks have the same priority,
+they are ordered by which UserBlock appears first in the leaders
 PoH.
 
-If the leader's proposed block is attached to the heaviest fork,
+If the leader's block is attached to the heaviest fork,
 the validator can start execution of the UserBlocks optimistically.
 Otherwise the validator should only execute UserBlocks on the
 heaviest fork.
