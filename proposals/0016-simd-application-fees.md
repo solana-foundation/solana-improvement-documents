@@ -68,7 +68,7 @@ through a transaction. This attack involves carrying out intensive calculations
 that consume a large number of computational units, thereby blocking competitors from performing MEV
 during that particular block, and giving the attacker an unfair advantage. We have identified specific
 transactions that perpetrate this attack and waste valuable block space. The malicious transaction write
-locks multiple token accounts and consumes 10 million CU i.e around 1/4 the block space. As a result, such
+locks multiple token accounts and consumes 11.7 million CU i.e around 1/4 the block space. As a result, such
 attacks can prevent users from using their own token accounts, vote accounts, or stake accounts, and
 dapps from utilizing the required accounts. With the proposed solution, every program, such as the
 token program, stake program, and vote program, can include instructions to employ the application fees
