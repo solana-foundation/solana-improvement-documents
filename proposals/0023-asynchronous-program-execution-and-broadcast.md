@@ -60,7 +60,7 @@ such that the entire bundle is prioritized for execution as a batch.
 Leaders are scheduled to propose blocks as they are currently by
 the LeaderSchedule.
 
-Builder's are scheduled along side leaders to propose blocks. N
+Builder's are scheduled along side leaders to build blocks. N
 number of builders can be scheudled per slot.  Builder are
 scheudled at 2x the rate of leaders.  So for every leader slot,
 there are N builders producing 2 UserBlocks.
