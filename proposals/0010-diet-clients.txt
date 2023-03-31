@@ -203,3 +203,41 @@ When retrieving the inputs for execution, each input should have
 been tagged with a path to the transaction that generated it. That
 path, along the path to the root of the block that generated the
 transaction can be retrieved concurrently during replay.
+
+### Future work: Full DAS
+
+With the current proposal, clients need to rely on a stake weighted
+threshold of nodes to signal a data availability failure. This
+design changes the repair protocol to use a full block erasure
+coding, so clients can sample the network for shreds and get high
+confidence that the entire block has not been witheld.
+
+#### Overview
+
+A batch of N:N data and erasure shreds can be sampled by clients.
+Attacker would need to withold N shreds for the batch to not be
+recoverable. Each sample has a N/2N chance of detecting the witheld
+shred. For an entire block, attacker can withold any single batch
+and cause a data availablity failure. A client that samples a batch
+that is missing 50% of its shreds X times should have a 1:2^X chance
+of a false positive for data availability.
+
+This is assuming that the client is not completely eclipsed. If the
+client is eclipsed, the attacker could only generate the samples for
+the client and withold all other data. Implementation should be
+such that the attacker can't distinguish between clients and
+validators repairing blocks, and that a sufficient number of clients
+will sample more then 50% of shreds, and thus be able to repair the
+data for honest validators.
+
+Turbine currently has 32:32 shred batches, so for any given block
+the client would need to sample each batch 30 times to get 1 in a
+billion confidence that no batch was witheld from the network.
+
+The proposal introduces a different erasure layout that will be
+used for repair. After receiving the block via turbine, each validator
+will regenerate a full erasure code batch for the entire block
+<shreds in block>:<erasure shreds>. ShredHash  is then the merkle
+root of the entire block data and erasure codes.  Repair protocols
+will then provide a proof to the block ShredHash for
+every shred.
