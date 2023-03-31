@@ -103,16 +103,14 @@ to use the dapp. They will be applied even if the transaction fails contrary to 
 
 `Owner` of an account: It is the account owner as specified in the `owner` field in the account structure.
 In the case of an externally owned account (i.e, keypair) owner is a `system program` and in case of a
-Program derived address owner is usually itself, and the PDA has to call invoke signed to sign in the
-same program that it is derived from.
+Program derived address owner is usually the program.
 
-Account `Authority`: The true authority for the account. Let's take an example for a token account.
-A token account is a `PDA` belonging to token program, so the actual owner is itself. To update the
-token account, invoke signed has to be called from token program with signer seeds of the PDA. But the way
-token program has implemented the signing is cyclic, i.e if the authority wants to update the token account
-it owns, then they create a transaction to update the account using a token program instruction,
-which inturn checks if the authority has signed the transaction. If the correct authority has signed
-the transaction, the token account PDA will call invoke signed to initiate the update.
+Account `Authority`: The true authority for the account. Let's take an example of associated token account.
+A associated token account is a `PDA` derived from associated token program, so the owner is the
+associated token program. But the program internally saves who has the authority over the account. To update
+the account, program must call invoke signed with the signer seeds of the PDA. For operations like withdrawing tokens,
+the authority of the associated token account has to be the signer for the transaction containing transfer instruction.
+To receive tokens from another account, the authority's signature is not required.
 
 ## Detailed Design
 
