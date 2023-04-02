@@ -106,11 +106,11 @@ In the case of an externally owned account (i.e, keypair) owner is a `system pro
 Program derived address owner is usually the program.
 
 Account `Authority`: The true authority for the account. Let's take an example of associated token account.
-A associated token account is a `PDA` derived from associated token program, so the owner is the
-associated token program. But the program internally saves who has the authority over the account. To update
-the account, program must call invoke signed with the signer seeds of the PDA. For operations like withdrawing tokens,
-the authority of the associated token account has to be the signer for the transaction containing transfer instruction.
-To receive tokens from another account, the authority's signature is not required.
+A associated token account is a `PDA` derived from associated token program, where the owner is token program.
+But the program internally saves who has the authority over the account. Only token program can change the data
+of token account. For operations like withdrawing tokens, the authority of the associated token account has to
+be the signer for the transaction containing transfer instruction. To receive tokens from another account, the
+authority's signature is not required.
 
 ## Detailed Design
 
