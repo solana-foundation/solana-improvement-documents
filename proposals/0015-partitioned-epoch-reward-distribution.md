@@ -143,6 +143,8 @@ The layout of `EpochRewardHistory` sysvar is shown in the following pseudo code.
 struct RewardHistoryEntry {
    total_reward_in_lamport: u64,          // total rewards for this epoch
    distributed_reward_in_lamport: u64,    // already distributed reward amount
+   num_stake_accounts: u64,               // total number of reward receiving stake accounts
+   total_vote_points: u64,                // total number of accrued vote points in the epoch
    root_hash: Option<Hash>,               // hash computed from all EpochRewardReserves
 }
 
@@ -223,11 +225,21 @@ struct EpochRewardReserve {
 }
 ```
 
-The account balance of `EpochRewardsReserve` is equal to the total amount (in the
-`AccountInfo::lamports` field) of all rewards to be distributed in a block. And
-the `reward_balance` field shadow the `AccountInfo::lamports`. The
-`reserve_hash` is computed from the rewards in the block as follows.
+The `reward_balance` field is equal to the total amount of all rewards to be
+distributed in a block.
 
+And the account balance balance of `EpochRewardsReserve` (aka.
+`AccountInfo::lamports`) should be equal to `reward_balance`. However,
+the `reward_balance` could be so small that it is less than the
+threshold for `rent exemption`. To prevent that from happening,  the account
+balance of `EpochRewardsReserve` (aka. `AccountInfo::lamports`) is set to
+`max(reward_balance, rent_exemption)`.
+
+When the reward distribution completes, any extra lamports in
+`EpochRewardReserve` account's `AccountInfo::lamports`- due to unforeseen
+deposits or the extra amount for rent exemption, will be burned.
+
+The `reserve_hash` is computed from the rewards in the block as follows.
 ```
 reserve_hash = hash([(stake_account_key, reward_amount)])
 ```
@@ -245,10 +257,8 @@ the reward from one partition of the rewards stored in the `EpochRewardReserve`
 account with the address specified by the `get_epoch_reward_reserve_addr`
 function above. Once all rewards have been distributed, the balance of the
 `EpochRewardReserve` account and shadow balance field `reward_balance` both
-MUST be reduced to `0` (or something has gone wrong). However, to protect from
-unforeseen deposits to `EpochRewardReserve` accounts, when the reward
-distribution completes, any extra lamports in `EpochRewardReserve` accounts
-will be burned.
+MUST be reduced to `0` (or something has gone wrong). Any extra lamports in
+`EpochRewardReserve` accounts will be burned.
 
 Before each reward distribution, the `EpochRewardReserve` account's
 `reserve_balance` is checked to make sure there is enough balance to distribute
@@ -304,6 +314,13 @@ a new unique error code - `StakeProgramUnavailable`.
 
 That means all updates to stake accounts have to wait until the rewards
 distribution finishes.
+
+Because different stake accounts are receiving the rewards at different blocks,
+on-chain programs, which depends on the rewards of stakes accounts during the
+reward period, may get into partial epoch reward state. To prevent this from
+happening, loading stake accounts from on-chain programs during reward period
+will be disabled. However, reading the stake account through RPC will still be
+available.
 
 
 ### Snapshot and Cluster Restart
