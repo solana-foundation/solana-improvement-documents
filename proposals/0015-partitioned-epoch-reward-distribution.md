@@ -144,7 +144,7 @@ struct RewardHistoryEntry {
    total_reward_in_lamport: u64,          // total rewards for this epoch
    distributed_reward_in_lamport: u64,    // already distributed reward amount
    num_stake_accounts: u64,               // total number of reward receiving stake accounts
-   total_vote_points: u64,                // total number of accrued vote points in the epoch
+   total_vote_points: u128,               // total number of accrued vote points in the epoch
    root_hash: Option<Hash>,               // hash computed from all EpochRewardReserves
 }
 
@@ -228,12 +228,11 @@ struct EpochRewardReserve {
 The `reward_balance` field is equal to the total amount of all rewards to be
 distributed in a block.
 
-And the account balance balance of `EpochRewardsReserve` (aka.
-`AccountInfo::lamports`) should be equal to `reward_balance`. However,
-the `reward_balance` could be so small that it is less than the
-threshold for `rent exemption`. To prevent that from happening,  the account
-balance of `EpochRewardsReserve` (aka. `AccountInfo::lamports`) is set to
-`max(reward_balance, rent_exemption)`.
+And the account balance of `EpochRewardsReserve` (aka. `AccountInfo::lamports`)
+should be equal to `reward_balance`. However, the `reward_balance` could be so
+small that it is less than the threshold for `rent exemption`. To prevent that
+from happening,  the account balance of `EpochRewardsReserve` (aka.
+`AccountInfo::lamports`) is set to `max(reward_balance, rent_exemption)`.
 
 When the reward distribution completes, any extra lamports in
 `EpochRewardReserve` account's `AccountInfo::lamports`- due to unforeseen
