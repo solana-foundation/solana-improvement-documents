@@ -143,9 +143,9 @@ The layout of `EpochRewardHistory` sysvar is shown in the following pseudo code.
 struct RewardHistoryEntry {
    total_reward_in_lamport: u64,          // total rewards for this epoch
    distributed_reward_in_lamport: u64,    // already distributed reward amount
-   num_stake_accounts: u64,               // total number of reward receiving stake accounts
-   total_vote_points: u128,               // total number of accrued vote points in the epoch
-   root_hash: Option<Hash>,               // hash computed from all EpochRewardReserves
+   num_stake_accounts: u64,  // number of reward receiving stake accounts
+   total_vote_points: u128,  // accrued vote points in the epoch
+   root_hash: Option<Hash>,  // hash computed from all EpochRewardReserves
 }
 
 type EpochReward = (Epoch, RewardHistoryEntry);
@@ -239,6 +239,7 @@ When the reward distribution completes, any extra lamports in
 deposits or the extra amount for rent exemption, will be burned.
 
 The `reserve_hash` is computed from the rewards in the block as follows.
+
 ```
 reserve_hash = hash([(stake_account_key, reward_amount)])
 ```
