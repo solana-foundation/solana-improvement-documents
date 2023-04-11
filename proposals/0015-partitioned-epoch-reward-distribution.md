@@ -336,8 +336,13 @@ struct RewardCalculationResult {
 ```
 
 The bank snapshot data file inside snapshot archives will have a new optional
-field, `Option<RewardCalculationResult>`, at the end. All snapshots taken during
-the reward period will have this field populated.
+field, `Option<RewardCalculationResult>`, at the end. All snapshots taken
+during the reward period will have this field populated.
+
+If the snapshot is taken by the `AccountsBackgroundService`, when the reward
+computation is still pending  (i.e. during reward calculation phase), the
+`AccountsBackgroundService` will wait for the completion of reward calculation
+to store `RewardCalculationResult`.
 
 When a node restarts from those snapshots, it will pick up the
 `RewardCalculationResult` from the snapshot and resume the left-over reward
