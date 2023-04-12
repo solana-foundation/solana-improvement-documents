@@ -57,7 +57,7 @@ Turbine, vote, and new block generation are paused in this mode.
 ## Detailed Design
 
 The new protocol tries to do the following:
-1. Everyone freeze, no new blocks, no new votes, and no Turbine
+1. Everyone freezes, no new blocks, no new votes, and no Turbine
 2. Make all blocks which can potentially have been optimistically confirmed
 before the freeze propagate to everyone
 3. Make restart partipants' last votes before the freze propagate to everyone
@@ -82,16 +82,16 @@ the EpicSlots data structure. The number of ancestor slots sent is determined by
 ### Aggregate, repair, and replay the slots in LastVotedForkSlots
 
 Aggregate the slots in received LastVotedForkSlots messages, whenever some slot has
-more than 47% stake and it's missing locally, start the repair process for this slot.
-47% is chosen because we don't want to miss any optimistically confirmed slot, those
-slots have at least 67% votes, and we assume that there can be 20% validators not
-participating in restarts, so we need to repair all slots with at least
-67% - 20% = 47% votes.
+more than 34% stake and it's missing locally, start the repair process for this slot.
+34% is chosen because we don't want to miss any optimistically confirmed slot, those
+slots have at least 67% votes, there can be 33% validators not giving out dependable
+answers (for example, claim they didn't vote for a slot when they actually did), so
+we need to repair all slots with at least 67% - 33% = 34% votes.
 
 ### Gossip current heaviest fork
 
 After receiving LastVotedForkSlots from 80% of the validators and reparing all slots
-with more than 47% votes, count the heaviest fork and Gossip Heaviest(X, Hash(X)) out,
+with more than 34% votes, count the heaviest fork and Gossip Heaviest(X, Hash(X)) out,
 where X is the tip of the heaviest fork.
 
 ### Generate local snapshot on the heaviest slot
