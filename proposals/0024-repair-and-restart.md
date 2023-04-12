@@ -44,7 +44,7 @@ is needed. So for now we still plan to have human in the loop.
 ## New Terminology
 
 * SilentRepairMode - when validators restart in this new mode, they will
-talk with each other to find the highest oc slot and repair all necessary
+talk with each other to find the highest optimistically confirmed slot and repair all necessary
 blocks. To improve speed and guarantee simplicity, Turbine, vote, and new
 block generation are paused in this mode.
 
