@@ -25,7 +25,7 @@ mistake in deciding the highest optimistically confirmed slot, it could mean
 rollback of user transactions after they have been confirmed, which is not
 acceptable.
 
-We aim to automate the finding of oc slot and snapshot generation, so that
+We aim to automate the finding of the highest optimistically confirmed slot and snapshot generation, so that
 we can lower the possibility of human mistakes in the cluster restart process.
 
 ## Alternatives Considered
