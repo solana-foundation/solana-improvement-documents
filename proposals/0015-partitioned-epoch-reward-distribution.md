@@ -384,3 +384,8 @@ security issues.
 
 This is a breaking change.  The new epoch calculation and distribution approach
 will not be compatible with the old approach.
+
+## Open Questions
+
+1. How many blocks should be targeted for reward computation?
+   1000 blocks at 10% of the block time seems to be a good trade off.
