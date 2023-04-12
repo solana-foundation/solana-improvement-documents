@@ -21,7 +21,7 @@ Currently during a [cluster restart](https://docs.solana.com/running-validator/r
 then restart the validators with new commandline arguments.
 
 The current process involves a lot of human intenvention, if people make a
-mistake in deciding the latest optimistically confirmed slot, it could mean
+mistake in deciding the highest optimistically confirmed slot, it could mean
 rollback of user transactions after they have been confirmed, which is not
 acceptable.
 
