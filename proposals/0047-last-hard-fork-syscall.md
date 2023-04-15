@@ -1,5 +1,5 @@
 ---
-simd: '00XX'
+simd: '0047'
 title: Syscall to get the last hardfork
 authors:
   - Godmode Galactus (Mango Markets)
