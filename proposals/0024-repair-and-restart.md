@@ -56,11 +56,16 @@ Turbine, vote, and new block generation are paused in this mode.
 
 ## Detailed Design
 
-The new protocol tries to do the following:
+The new protocol tries to make all 80% restarting validators get the same
+data blocks and the same set of last votes among them, then they can probably
+make the same decision and then proceed.
+
+The steps roughly look like this:
 1. Everyone freezes, no new blocks, no new votes, and no Turbine
 2. Make all blocks which can potentially have been optimistically confirmed
 before the freeze propagate to everyone
-3. Make restart partipants' last votes before the freze propagate to everyone
+3. Make restart participants' last votes before the freeze propagate to
+everyone
 4. Now see if enough people can optimistically agree on one block (same
 slot and hash) to restart from
 4.1 If yes, proceed and restart
@@ -77,7 +82,10 @@ of the following steps are completed.
 Send Gossip message LastVotedForkSlots to everyone, it contains the last voted slot on
 its tower and the ancestor slots on the last voted fork and is sent in a bitmap like
 the EpicSlots data structure. The number of ancestor slots sent is determined by
-<optional_slots_to_send_on_last_voted_fork>, by default this number is 2000.
+<optional_slots_to_send_on_last_voted_fork>. By default this number is 108000,
+because that's 400ms * 10800 = 12 hours, we assume most restart decisions to be made
+in half a day. You can increase this number if you restart after the outage lasted
+more than 12 hours.
 
 ### Aggregate, repair, and replay the slots in LastVotedForkSlots
 
