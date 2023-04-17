@@ -14,14 +14,14 @@ feature: (fill in with feature tracking issues once accepted)
 
 Improve the current [cluster restart]
 (https://docs.solana.com/running-validator/restart-cluster)
-procedure such that validators can automatically figure out confirmed slots,
-generate a snapshot, and then proceed to restart if everything looks fine.
+procedure such that validators can automatically figure out confirmed slots
+and then proceed to restart if everything looks fine.
 
 ## Motivation
 
 Currently during a cluster restart, validator operators need to decide latest
-optimistically confirmed slot, create a snapshot, then restart the validators
-with new commandline arguments.
+optimistically confirmed slot, then restart the validators with new commandline
+arguments.
 
 The current process involves a lot of human intenvention, if people make a
 mistake in deciding the highest optimistically confirmed slot, it could mean
@@ -29,7 +29,7 @@ rollback of user transactions after they have been confirmed, which is not
 acceptable.
 
 We aim to automate the finding of highest optimistically confirmed slot and
-snapshot generation, so that we can lower the possibility of human mistakes
+block data distribution, so that we can lower the possibility of human mistakes
 in the cluster restart process.
 
 ## Alternatives Considered
@@ -61,14 +61,20 @@ data blocks and the same set of last votes among them, then they can probably
 make the same decision and then proceed.
 
 The steps roughly look like this:
+
 1. Everyone freezes, no new blocks, no new votes, and no Turbine
+
 2. Make all blocks which can potentially have been optimistically confirmed
 before the freeze propagate to everyone
+
 3. Make restart participants' last votes before the freeze propagate to
 everyone
+
 4. Now see if enough people can optimistically agree on one block (same
 slot and hash) to restart from
+
 4.1 If yes, proceed and restart
+
 4.2 If no, freeze and print out what you think is wrong, wait for human
 
 A new command line arg --RepairAndRestart <optional_slots_to_send> is added.
@@ -79,44 +85,37 @@ of the following steps are completed.
 
 ### Gossip last vote before the restart and ancestors on that fork
 
-Send Gossip message LastVotedForkSlots to everyone, it contains the last voted slot on
-its tower and the ancestor slots on the last voted fork and is sent in a bitmap like
-the EpicSlots data structure. The number of ancestor slots sent is determined by
-<optional_slots_to_send_on_last_voted_fork>. By default this number is 108000,
-because that's 400ms * 10800 = 12 hours, we assume most restart decisions to be made
-in half a day. You can increase this number if you restart after the outage lasted
-more than 12 hours.
+Send Gossip message LastVotedForkSlots to everyone, it contains the last voted
+slot on its tower and the ancestor slots on the last voted fork and is sent in
+a bitmap like the EpicSlots data structure. The number of ancestor slots sent
+is determined by <optional_slots_to_send_on_last_voted_fork>. By default this
+number is 108000, because that's 400ms * 10800 = 12 hours, we assume most
+restart decisions to be made in half a day. You can increase this number if you
+restart after the outage lasted more than 12 hours.
 
 ### Aggregate, repair, and replay the slots in LastVotedForkSlots
 
-Aggregate the slots in received LastVotedForkSlots messages, whenever some slot has
-more than 34% stake and it's missing locally, start the repair process for this slot.
-34% is chosen because we don't want to miss any optimistically confirmed slot, those
-slots have at least 67% votes, there can be 33% validators not giving out dependable
-answers (for example, claim they didn't vote for a slot when they actually did), so
-we need to repair all slots with at least 67% - 33% = 34% votes.
+Aggregate the slots in received LastVotedForkSlots messages, whenever some slot
+has more than 34% stake and it's missing locally, start the repair process for
+this slot. 34% is chosen because we don't want to miss any optimistically
+confirmed slot, those slots have at least 67% votes, there can be 33% validators
+not giving out dependable answers (for example, claim they didn't vote for a slot
+when they actually did), so we need to repair all slots with at least
+67% - 33% = 34% votes.
 
 ### Gossip current heaviest fork
 
-After receiving LastVotedForkSlots from 80% of the validators and reparing all slots
-with more than 34% votes, count the heaviest fork and Gossip Heaviest(X, Hash(X)) out,
-where X is the tip of the heaviest fork.
-
-### Generate local snapshot on the heaviest slot
-
-Generate a local snapshot on the heaviest slot. In case validators can't agree on
-the correct restart slot in the next step, we still need to restart using the old
-method, then the snapshot generated here may help speed up that process, because
-human operators can easily decide which is actually the correct restart slot and
-use the snapshots generated in this step.
+After receiving LastVotedForkSlots from 80% of the validators and reparing all
+slots with more than 34% votes, count the heaviest fork and Gossip
+Heaviest(X, Hash(X)) out, where X is the tip of the heaviest fork.
 
 ### Proceed to restart if everything looks okay, halt otherwise
 
 If things go well, all 80% of the validators should find the same heaviest fork. But
-we are only sending slots instead of bank hashes in LastVotedForkSlots, so it's possible
-that a duplicate block can make the cluster unable to reach consensus. If at least
-2/3 of the people agree on one slot, they should proceed to restart from this slot.
-Otherwise validators should halt and send alerts for human attention.
+we are only sending slots instead of bank hashes in LastVotedForkSlots, so it's
+possible that a duplicate block can make the cluster unable to reach consensus. If
+at least 2/3 of the people agree on one slot, they should proceed to restart from
+this slot. Otherwise validators should halt and send alerts for human attention.
 
 ## Impact
 
