@@ -25,22 +25,22 @@ stakes, the restart is successful, and the cluster continues from the hard fork
 slot. So hard fork is a tool to intentionally fork off the nodes not
 participating in the restart effort.
 
-Dapp developers may find it useful to know that a hard fork has recently
+Program developers may find it useful to know that a hard fork has recently
 occurred. This information can help them prevent arbitrage and liquidation
 caused by outdated oracle price account states. However, the cluster's restart
 process takes several hours; in that time, the world can change, causing asset
-prices to fluctuate. As the cluster updates the state of all accounts,
-malicious actors could take advantage of the delay by conducting trades using
-outdated prices, anticipating that they will soon catch up to the actual
-prices of real-world assets. Knowing that hard fork has been done recently,
-dapps can manage these cases more appropriately.
+prices to fluctuate. As the cluster updates the state of all accounts, malicious
+actors could take advantage of the delay by conducting trades using outdated
+prices, anticipating that they will soon catch up to the actual prices of
+real-world assets. Knowing that hard fork has been done recently, programs can
+manage these cases more appropriately.
 
 ## Alternatives Considered
 
 No alternate considerations; we need to have the value of last hard fork slot
-while executing the dapp to correctly treat this case. We cannot have an account
-because then it should be updated just after the restart is successful, which
-will add complexity. The best way is to create a new syscall to get this
+while executing the program to correctly treat this case. We cannot have an
+account because then it should be updated just after the restart is successful,
+which will add complexity. The best way is to create a new syscall to get this
 information during execution of transaction, which will help us get last
 hardfork slot without any interface changes for the instruction.
 
@@ -51,10 +51,11 @@ hardfork slot without any interface changes for the instruction.
 The implementation of this syscall is pretty straitforward. In solana client all
 the hardforks for a cluster are stored in the bank structure. The last hard fork
 slot can be retrieved and then stored in invoke context, so that the executing
-dapp can access it.
+program can access it.
 
 For other clients, we have to get the last hard fork slot information and make
-it accessible to the runtime of the dapp.
+it accessible to the runtime of the program. If there is no hard fork done yet
+on the cluster we consider that the first hard for is at Slot `0`.
 
 ### Overview of changes for solana client
 
@@ -74,12 +75,12 @@ in this functions implementation.
 
 ## Impact
 
-Dapps will start using this new syscall to correctly address the security
+Programs will start using this new syscall to correctly address the security
 concerns during network restart. This will increase the reliability of solana
-cluster as whole and make dapps more confident to handle edge cases during
-such extreme events.
+cluster as whole and make programs developers more confident to handle edge
+cases during such extreme events.
 
-As the method is syscall the dapp developers do not need to pass any new
+As the method is syscall the developers do not need to pass any new
 accounts or sysvars to the instruction to use this feature.
 
 ## Security Consideration
@@ -88,6 +89,6 @@ None
 
 ## Backwards Compatibility
 
-The dapps using the new syscall could not be used on solana version which does
-not implement this feature. Existing dapps which do not use this feature are
-not impacted at all.
+The programs using the new syscall could not be used on solana version which
+does not implement this feature. Existing programs which do not use this feature
+are not impacted at all.
