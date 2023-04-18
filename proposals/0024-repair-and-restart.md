@@ -96,12 +96,15 @@ restart after the outage lasted more than 12 hours.
 ### Aggregate, repair, and replay the slots in LastVotedForkSlots
 
 Aggregate the slots in received LastVotedForkSlots messages, whenever some slot
-has more than 34% stake and it's missing locally, start the repair process for
-this slot. 34% is chosen because we don't want to miss any optimistically
-confirmed slot, those slots have at least 67% votes, there can be 33% validators
-not giving out dependable answers (for example, claim they didn't vote for a slot
-when they actually did), so we need to repair all slots with at least
-67% - 33% = 34% votes.
+has enough stake to be optimistically confirmed and it's missing locally, start
+the repair process for this slot.
+
+We calculate "enough" stake as follows. When there are 80% validators joining
+the restart, assuming 5% restarted validators can make mistakes in voting, any
+block with more than 67% - 5% - (100-80)% = 42% could potentially be
+optimistically confirmed before the restart. If there are 85% validators in the
+restart, then any block with more than 67% - 5% - (100-85)% = 47% could be
+optimistically confirmed before the restart.
 
 ### Gossip current heaviest fork
 
