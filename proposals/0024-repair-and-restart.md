@@ -139,6 +139,10 @@ Also, there might be 5% of the validators not sending Heaviest, so we only requi
 that 75% of the people received 75% of the Heaviest messages and they all agree on
 one block and hash.
 
+So after a validator sees that 75% of the validators received 75% of the votes,
+wait for 10 more minutes so that the message it sent out have propagated, then
+restart from the Heaviest slot everyone agreed on.
+
 ## Impact
 
 This proposal adds a new RepairAndRestart mode to validators, during this phase
