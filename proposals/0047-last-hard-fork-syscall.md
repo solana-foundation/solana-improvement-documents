@@ -46,11 +46,15 @@ which will add complexity. The best way is to create a new syscall to get this
 information during execution of transaction, which will help us get last
 restart slot without any interface changes for the instruction.
 
+## New Terminology
+
+None
+
 ## Detailed Design
 
-Currently in solana client validator `hard fork` slots are a good indicator when
-cluster was restarted. This may change in the future following criteas should be
-met to choose restart slot.
+Currently in Solana Labs validator client `hard fork` slots are a good indicator
+when cluster was restarted. This may change in the future following criteas
+should be met to choose restart slot.
 
 * Should be indicative of when cluster was restarted
 * Should be monotonically increasing
@@ -60,14 +64,14 @@ The next part will consider hardfork slot is equal to restart slot.
 
 ### Creation of a new syscall
 
-The implementation of this syscall is pretty straitforward. In solana client all
-the hardforks for a cluster are stored in the bank structure. The last hard fork
-slot can be retrieved and then stored in invoke context, so that the executing
-program can access it.
+The implementation of this syscall is pretty straitforward. In Solana Labs
+validator client all the hardforks for a cluster are stored in the bank
+structure. The last hard fork slot can be retrieved and then stored in invoke
+context, so that the executing program can access it.
 
-For other clients, we have to get the last hard fork slot information and make
-it accessible to the runtime of the program. If there is no hard fork done yet
-on the cluster we consider that the first hard for is at Slot `0`.
+For other validator clients, we have to get the last hard fork slot information
+and make it accessible to the runtime of the program. If there is no hard fork
+done yet on the cluster we consider that the first hard for is at Slot `0`.
 
 ### Overview of changes for solana client
 
