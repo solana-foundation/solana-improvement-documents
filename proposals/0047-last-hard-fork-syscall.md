@@ -1,6 +1,6 @@
 ---
 simd: '0047'
-title: Syscall to get the last hardfork
+title: Syscall to get the last restart slot
 authors:
   - Godmode Galactus (Mango Markets)
 category: Standard
@@ -11,9 +11,10 @@ created: 2023-04-15
 
 ## Summary
 
-Create a new syscall which can be used to get the last hard fork slot.
+Create a new syscall which can be used to get the last restart slot (currently
+the last time hard fork was done on the cluster).
 
-`fn sol_get_last_hardfork_slot() -> Slot`
+`fn sol_get_last_restart_slot() -> Slot`
 
 ## Motivation
 
@@ -23,7 +24,8 @@ restart their validator specifying the hard fork slot. Once all nodes
 participating in the restart effort on the hard fork exceed 80% of the total
 stakes, the restart is successful, and the cluster continues from the hard fork
 slot. So hard fork is a tool to intentionally fork off the nodes not
-participating in the restart effort.
+participating in the restart effort. Currently can consider the slot on which
+hardfork was done as a restart slot.
 
 Program developers may find it useful to know that a hard fork has recently
 occurred. This information can help them prevent arbitrage and liquidation
@@ -32,19 +34,29 @@ process takes several hours; in that time, the world can change, causing asset
 prices to fluctuate. As the cluster updates the state of all accounts, malicious
 actors could take advantage of the delay by conducting trades using outdated
 prices, anticipating that they will soon catch up to the actual prices of
-real-world assets. Knowing that hard fork has been done recently, programs can
-manage these cases more appropriately.
+real-world assets. Knowing that cluster restart has been done recently, programs
+can manage these cases more appropriately.
 
 ## Alternatives Considered
 
-No alternate considerations; we need to have the value of last hard fork slot
+No alternate considerations; we need to have the value of last restart slot
 while executing the program to correctly treat this case. We cannot have an
 account because then it should be updated just after the restart is successful,
 which will add complexity. The best way is to create a new syscall to get this
 information during execution of transaction, which will help us get last
-hardfork slot without any interface changes for the instruction.
+restart slot without any interface changes for the instruction.
 
 ## Detailed Design
+
+Currently in solana client validator `hard fork` slots are a good indicator when
+cluster was restarted. This may change in the future following criteas should be
+met to choose restart slot.
+
+* Should be indicative of when cluster was restarted
+* Should be monotonically increasing
+* Sould be less than equal to current slot
+
+The next part will consider hardfork slot is equal to restart slot.
 
 ### Creation of a new syscall
 
@@ -67,7 +79,7 @@ pass it to invoke context structure. We can register new syscall in the file
 `definitions.rs` where other syscalls are defined.
 
 ```rust
-define_syscall!(fn sol_get_last_hardfork_slot() -> Slot);
+define_syscall!(fn sol_get_last_restart_slot() -> Slot);
 ```
 
 We can then return the data of last hardfork slot passed to the invoke context
