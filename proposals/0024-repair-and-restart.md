@@ -23,10 +23,10 @@ Currently during a cluster restart, validator operators need to decide latest
 optimistically confirmed slot, then restart the validators with new commandline
 arguments.
 
-The current process involves a lot of human intenvention, if people make a
+The current process involves a lot of human intervention, if people make a
 mistake in deciding the highest optimistically confirmed slot, it could mean
-rollback of user transactions after they have been confirmed, which is not
-acceptable.
+rollback of user transactions after those transactions have been confirmed,
+which is not acceptable.
 
 We aim to automate the finding of highest optimistically confirmed slot and
 block data distribution, so that we can lower the possibility of human mistakes
@@ -108,9 +108,24 @@ optimistically confirmed before the restart.
 
 ### Gossip current heaviest fork
 
-After receiving LastVotedForkSlots from 80% of the validators and reparing all
-slots with more than 34% votes, count the heaviest fork and Gossip
-Heaviest(X, Hash(X)) out, where X is the tip of the heaviest fork.
+After receiving LastVotedForkSlots from 80% of the validators and reparing slots
+with "enough" stake, replay all blocks and pick the heaviest fork as follows:
+
+1. Pick block and update root for all blocks with more than 67% votes
+
+2. If a picked block has more than one children, compare the votes on two
+heaviest children:
+
+2.1 If vote_on_child_B + stake_on_validators_not_in_restart < vote_on_child_A,
+pick child A. For example, if 80% validators are in restart, child B has 33%
+stakes, child A has 54% stakes, then 33 + (100-80) = 53 < 54, pick child A.
+
+2.2 Otherwise stop traversing the tree and use last picked block.
+
+After deciding heaviest block, Gossip
+Heaviest(X, Hash(X), received_heaviest_stake) out, where X is the latest picked
+block. We also send out stake of received Heaviest messages so that we can proceed
+to next step when enough validators are ready.
 
 ### Proceed to restart if everything looks okay, halt otherwise
 
@@ -119,6 +134,10 @@ we are only sending slots instead of bank hashes in LastVotedForkSlots, so it's
 possible that a duplicate block can make the cluster unable to reach consensus. If
 at least 2/3 of the people agree on one slot, they should proceed to restart from
 this slot. Otherwise validators should halt and send alerts for human attention.
+
+Also, there might be 5% of the validators not sending Heaviest, so we only require
+that 75% of the people received 75% of the Heaviest messages and they all agree on
+one block and hash.
 
 ## Impact
 
