@@ -10,12 +10,23 @@ type: Core
 status: Draft
 created: 2022-12-12
 ---
-### Problem
+## Summary
 
-There's currently no comprehensive method to catch validators that submit votes
-which violate lockouts. This potentially hurts consensus in the cluster.
+An algorithm designed to catch validators that violate lockout rules when
+voting.
 
-### Lockout Violation Detection
+## Motivation
+
+Validators that violate lockout rules unfairly earn rewards and put cluster
+consensus at risk
+
+## Alternatives Considered
+
+Snitching and social ostracization.
+
+## New Terminology
+
+## Detailed Design
 
 Assume:
 1. A database that we will store vote information ingested from
@@ -116,3 +127,12 @@ Here we add `{1, 3}` to the rooted set, but 4 doesn't get added because `4 + 2^1
 
 - If we see a vote `{root: 0, 1: 3, 3: 2, 5: 1}` on another fork, this is only known to be slashable by seeing this interval `(4, 4 + 2^1)` (because it doesn't include `4` in the vote, but `4's` lockout should have prevented it from being popped off)
 - We don't want to add `4` to the rooted set to prevent slashing a valid vote  on a different fork like `{root: 0, 1, 3, 10}`. If `4` was present in the rooted set, we would report an error because `10` should not have popped off `4`
+
+## Impact
+
+Validators snitching on voting misbehavior will be more effective.
+
+## Security Considerations
+
+Snitches get stitches
+
