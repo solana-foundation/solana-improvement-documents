@@ -99,7 +99,7 @@ cases during such extreme events.
 As the method is syscall the developers do not need to pass any new
 accounts or sysvars to the instruction to use this feature.
 
-## Security Consideration
+## Security Considerations
 
 None
 
