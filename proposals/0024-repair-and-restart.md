@@ -113,12 +113,13 @@ with "enough" stake, replay all blocks and pick the heaviest fork as follows:
 
 1. Pick block and update root for all blocks with more than 67% votes
 
-2. If a picked block has more than one children, compare the votes on two
-heaviest children:
+2. If a picked block has more than one children, compare the votes on the
+heaviest child:
 
-2.1 If vote_on_child_B + stake_on_validators_not_in_restart < vote_on_child_A,
-pick child A. For example, if 80% validators are in restart, child B has 33%
-stakes, child A has 54% stakes, then 33 + (100-80) = 53 < 54, pick child A.
+2.1 If vote_on_child + stake_on_validators_not_in_restart >= 62%, pick child.
+For example, if 80% validators are in restart, child has 42% votes, then
+42 + (100-80) = 62%, pick child. 62% is chosen instead of 67% because 5%
+could make the wrong votes.
 
 2.2 Otherwise stop traversing the tree and use last picked block.
 
