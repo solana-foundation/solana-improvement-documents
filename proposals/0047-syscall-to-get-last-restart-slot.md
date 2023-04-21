@@ -11,7 +11,7 @@ created: 2023-04-15
 
 ## Summary
 
-Create a new syscall which can be used to get the last restart slot (currently
+Create a new syscall that can be used to get the last restart slot (currently
 the last time hard fork was done on the cluster).
 
 `fn sol_get_last_restart_slot() -> Slot`
@@ -24,8 +24,8 @@ restart their validator specifying the hard fork slot. Once all nodes
 participating in the restart effort on the hard fork exceed 80% of the total
 stakes, the restart is successful, and the cluster continues from the hard fork
 slot. So hard fork is a tool to intentionally fork off the nodes not
-participating in the restart effort. Currently can consider the slot on which
-hardfork was done as a restart slot.
+participating in the restart effort. Currently, we can consider the slot on
+which hard fork was done as a restart slot.
 
 Program developers may find it useful to know that a hard fork has recently
 occurred. This information can help them prevent arbitrage and liquidation
@@ -39,12 +39,15 @@ can manage these cases more appropriately.
 
 ## Alternatives Considered
 
-No alternate considerations; we need to have the value of last restart slot
-while executing the program to correctly treat this case. We cannot have an
-account because then it should be updated just after the restart is successful,
-which will add complexity. The best way is to create a new syscall to get this
-information during execution of transaction, which will help us get last
-restart slot without any interface changes for the instruction.
+We need to have the value of the last restart slot while executing the program.
+We cannot use an account because then it should be updated just after the
+restart is successful, which will add complexity. The best way is to create a
+new syscall or sysvar to get this information during the execution of a
+transaction, which will help us get the last restart slot. We prefer syscall
+over sysvar because the newly created sysvar has to be passed in the instruction
+this takes up transaction accounts space. This will break existing program
+interfaces, and the transaction account space is limited which is already a pain
+point for many DeFi projects.
 
 ## New Terminology
 
@@ -52,26 +55,26 @@ None
 
 ## Detailed Design
 
-Currently in Solana Labs validator client `hard fork` slots are a good indicator
-when cluster was restarted. This may change in the future following criteas
-should be met to choose restart slot.
+Currently, in Solana Labs validator client `hard fork` slots are good indicators
+when the cluster was restarted. This may change in the future following criteria
+that should be met to choose a restart slot.
 
-* Should be indicative of when cluster was restarted
+* Should be indicative of when the cluster was restarted
 * Should be monotonically increasing
-* Sould be less than equal to current slot
+* Should be less than equal to the current slot
 
-The next part will consider hardfork slot is equal to restart slot.
+The next part will consider hard fork slot is equal to the restart slot.
 
 ### Creation of a new syscall
 
-The implementation of this syscall is pretty straitforward. In Solana Labs
-validator client all the hardforks for a cluster are stored in the bank
+The implementation of this syscall is pretty straightforward. In Solana Labs
+validator client all the hard forks for a cluster are stored in the bank
 structure. The last hard fork slot can be retrieved and then stored in invoke
 context, so that the executing program can access it.
 
 For other validator clients, we have to get the last hard fork slot information
 and make it accessible to the runtime of the program. If there is no hard fork
-done yet on the cluster we consider that the first hard for is at Slot `0`.
+done yet on the cluster we consider that the first hard fork is at Slot `0`.
 
 ### Overview of changes for solana client
 
@@ -86,14 +89,14 @@ pass it to invoke context structure. We can register new syscall in the file
 define_syscall!(fn sol_get_last_restart_slot() -> Slot);
 ```
 
-We can then return the data of last hardfork slot passed to the invoke context
-in this functions implementation.
+We can then return the data of the last hard fork slot passed to the invoke
+context in this function's implementation.
 
 ## Impact
 
 Programs will start using this new syscall to correctly address the security
 concerns during network restart. This will increase the reliability of solana
-cluster as whole and make programs developers more confident to handle edge
+cluster as a whole and make program developers more confident to handle edge
 cases during such extreme events.
 
 As the method is syscall the developers do not need to pass any new
@@ -106,5 +109,5 @@ None
 ## Backwards Compatibility
 
 The programs using the new syscall could not be used on solana version which
-does not implement this feature. Existing programs which do not use this feature
+does not implement this feature. Existing programs that do not use this feature
 are not impacted at all.
