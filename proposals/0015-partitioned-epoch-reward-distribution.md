@@ -27,7 +27,7 @@ epoch rewards over multiple blocks.
 
 ## New Terminology
 
-   - rewards calculation: calculate the epoch rewards for all activate stake
+   - rewards calculation: calculate the epoch rewards for all active stake
      accounts
 
    - rewards distribution: distribute the epoch rewards for the active stake
