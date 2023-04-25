@@ -35,18 +35,26 @@ epoch rewards over multiple blocks.
 
 ## Alternatives Considered
 
-We have discussed two alternative approaches.
+We have discussed three alternative approaches.
 
-The first approach is to set a threshold on stake balance, and limit the epoch
+- The first approach is to set a threshold on stake balance, and limit the epoch
 rewards to the accounts with stake balance above the threshold. This will
 effectively reduce the number of stake rewards to be distributed, and reduce
 reward distribution time at the epoch boundary. However, this will impact stake
 accounts with small balance. To receive rewards, the small stake accounts will
 be forced to join stake pools, which some may be hesitant to do.
 
-The second approach is to handle reward distributions through transactions with
+- The second approach is to handle reward distributions through transactions with
 specialized native reward programs. While this approach is optimal, it requires
 significant modifications and doesn't align with the current reward code.
+
+- The third approach is a completely asynchronous epoch rewards calculation and
+distribution, in which both reward computation and rewards distribution are
+asynchronous. This is a more general approach. However, it is also a more
+complex approach. The reward computation states would have to be maintained
+across multiple blocks. The transition between the reward calculation and
+reward distribution would need to be synchronized in the cluster. And cluster
+restart during reward computation would have to be handled specially.
 
 ## Detailed Design
 
@@ -70,44 +78,35 @@ boundary by dividing the process into two distinct phases:
    1. rewards distribution phase - during which the calculated epoch rewards
       for the active stake accounts are distributed.
 
+To help track and verify the reward distribution in the next phase, two new
+kinds of SysVar accounts are proposed : (a) `EpochRewardHistory` SysVar
+account and (b) `EpochRewardReserve` SysVar accounts. These SysVar accounts are
+updated at the boundary blocks (i.e. first and last blocks) in the reward
+calculation phase. More details of these two kinds of SysVar accounts are
+described in the following sections.
+
 ### Rewards Calculation
 
 Reward calculation phase computes all the rewards that need to be distributed
 for the active stake accounts, and partitions the reward into a number of
 chunks for distribution in the next phase.
 
-To help track and verify the reward distribution in the next phase, two new
-kinds of sysvar accounts are introduced: (a) `EpochRewardHistory` sysvar
-account and (b) `EpochRewardReserve` sysvar accounts. These sysvar accounts are
-updated at the boundary blocks (i.e. first and last blocks) in the reward
-calculation phase. More details of these two kinds of sysvar accounts are
-described in the following sections.
+Currently, on Solana Mainnet Beta with ~550K active stake accounts, it shows
+that epoch reward calculation takes around 10 seconds on average. This will
+make it impossible to perform rewards computation synchronous within one block.
+To make this work, a design of complete async reward computation is required.
 
-The reward computation phase lasts *exactly* for `N` block heights since
-the beginning of the epoch. When reaching block height `N` after the start
-block of the `reward calculation phase`, the bank will mark it the end the
-`reward calculation phase`.
+However, there are quite a few promising optimizations that can cut down the
+reward computation time. An experiment for reward calculation optimization
+(https://github.com/solana-labs/solana/pull/31193) showed that we can achieve
+the reward calculation time down to **40ms**. This is well below the 400ms
+block time.
 
-On Solana Mainnet Beta with ~550K active stake accounts, the 90% cut-off of the
-epoch reward time for all the nodes is around 40 seconds. Note that this time
-includes both reward computation and reward distribution. The actual reward
-computation time could be less. However, to be conservative, we can safely
-assume the reward computation time to 40s.
-
-If we target 10% of the total block time for reward computation, this will give
-us `N=1000`, i.e. 40s/(400ms*10%). This parameter will be feature-gated and
-maybe updated in future.
-
-At the end of the `reward calculation phase`, aka. `Epoch_start + N` block
-height, the reward computation process is "barrier synchronized" with the bank
-replay process. If the reward calculation is slow and hasn't complete the
-computation at block-height `Epoch_start + N`, the bank replay process will
-block and wait until the reward computation is finished, before processing any
-blocks with height greater than `N`.
-
-After the full rewards result is calculated, the result is partitioned into
-distribution chunks, which will be distributed during the `reward distribution`
-phase.
+Therefore, the following of the design is based on the above optimization. The
+reward calculation will be performed at the first block of the epoch. The full
+rewards result is calculated, the result is partitioned into distribution
+chunks stored in the bank, which will then be distributed during the `reward
+distribution` phase.
 
 To ensure that each block distributes a subset of the rewards in a
 deterministic manner for the current epoch, while also randomizing the
@@ -288,20 +287,17 @@ for the preceding epoch. Such queries will be unavailable during reward period,
 and only available after reward distribution completes.
 
 To help to determine when the reward period completes, a new RPC API,
-`getRewardPeriodInfo`,  will be added. This API will returns:
+`getNumOfRewardDistributionBlocks`,  will be added. This API will returns:
 
-   - `rewardStartBlock: u64`
-   - `numOfRewardComputationBlocks: u64`
    - `numOfRewardDistributionBlocks: u64`
-   - `totalNumOfBlocksInRewardPeriod: u64`.
 
 To query the reward received for individual account, user Apps will first make
-a query to `getRewardPeriodInfo`, and wait for `totalNumOfBlocksInRewardPeriod`
+a query to `getNumOfRewardDistributionBlocks`, and wait for that many
 of blocks since the start of the epoch. Then, the App can call
 `getInflationReward` to query the rewards as before.
 
-`getRewardPeriodInfo` will also be exposed via sysvar/syscall to support on
-chain Dapp program usage.
+`getNumOfRewardDistributionBlocks` will also be exposed via sysvar/syscall to
+support on chain Dapp program usage.
 
 
 ### Restrict Stake Account Access
@@ -322,31 +318,6 @@ happening, loading stake accounts from on-chain programs during reward period
 will be disabled. However, reading the stake account through RPC will still be
 available.
 
-
-### Snapshot and Cluster Restart
-
-Due to the fact that rewards are now distributed over multiple blocks, accounts
-snapshots that are taken during reward distribution phase, need to store the
-reward calculation result.
-
-```
-struct RewardCalculationResult {
-   partitions: Vec<[(Pubkey, u64); 4096]>,
-}
-```
-
-The bank snapshot data file inside snapshot archives will have a new optional
-field, `Option<RewardCalculationResult>`, at the end. All snapshots taken
-during the reward period will have this field populated.
-
-If the snapshot is taken by the `AccountsBackgroundService`, when the reward
-computation is still pending  (i.e. during reward calculation phase), the
-`AccountsBackgroundService` will wait for the completion of reward calculation
-to store `RewardCalculationResult`.
-
-When a node restarts from those snapshots, it will pick up the
-`RewardCalculationResult` from the snapshot and resume the left-over reward
-distribution.
 
 ## Impact
 
@@ -387,5 +358,5 @@ will not be compatible with the old approach.
 
 ## Open Questions
 
-1. How many blocks should be targeted for reward computation?
-   1000 blocks at 10% of the block time seems to be a good trade off.
+1. Should we just store the full rewards directly instead of the chunked
+   `EpochRewardReserve` SysVar accounts?
