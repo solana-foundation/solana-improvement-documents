@@ -12,8 +12,7 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-Improve the current [cluster restart]
-(https://docs.solana.com/running-validator/restart-cluster)
+Improve the current [cluster restart](https://docs.solana.com/running-validator/restart-cluster)
 procedure such that validators can automatically figure out confirmed slots
 and then proceed to restart if everything looks fine.
 
@@ -34,8 +33,7 @@ in the cluster restart process.
 
 ## Alternatives Considered
 
-See [Handling Common Solana Outages]
-(https://docs.google.com/document/d/1RkNAyz-5aKvv5FF44b8SoKifChKB705y5SdcEoqMPIc)
+See [Handling Common Solana Outages](https://docs.google.com/document/d/1RkNAyz-5aKvv5FF44b8SoKifChKB705y5SdcEoqMPIc)
 for details.
 
 There are many proposals about automatically detecting that the cluster is
@@ -46,13 +44,6 @@ automaticlly restarting the whole cluster still seems risky. Because if
 the recovery process itself doesn't work, it might be some time before
 we can get human's attention. And it doesn't solve the cases where new binary
 is needed. So for now we still plan to have human in the loop.
-
-## New Terminology
-
-* SilentRepairMode - when validators restart in this new mode, they will
-talk with each other to find the highest optimistically confirmed slot and
-repair all necessary blocks. To improve speed and guarantee simplicity,
-Turbine, vote, and new block generation are paused in this mode.
 
 ## Detailed Design
 
@@ -77,21 +68,29 @@ and hash) to restart from
 
 4.2 If no, freeze and print out what you think is wrong, wait for human
 
-A new command line arg --RepairAndRestart <optional_slots_to_send> is added.
-When the cluster is in need of a restart, we assume at least 80% will restart
-with this arg. Any validators restarted with this arg does not participate in
-the normal Turbine protocol, update its vote, or generate new blocks until all
-of the following steps are completed.
+A new command line arg --RepairAndRestart is added. When the cluster is in need
+of a restart, we assume at least 80% will restart with this arg. Any validators
+restarted with this arg does not participate in the normal Turbine protocol,
+update its vote, or generate new blocks until all of the following steps are
+completed.
 
 ### Gossip last vote before the restart and ancestors on that fork
 
-Send Gossip message LastVotedForkSlots to everyone, it contains the last voted
+Send direct message LastVotedForkSlots to everyone, it contains the last voted
 slot on its tower and the ancestor slots on the last voted fork and is sent in
-a bitmap like the EpicSlots data structure. The number of ancestor slots sent
-is determined by <optional_slots_to_send_on_last_voted_fork>. By default this
-number is 108000, because that's 400ms * 10800 = 12 hours, we assume most
-restart decisions to be made in half a day. You can increase this number if you
-restart after the outage lasted more than 12 hours.
+a compressed bitmap like the EpicSlots data structure. The number of ancestor
+slots sent is hard coded at 81000, because that's 400ms * 8100 = 9 hours, we
+assume most restart decisions to be made in 9 hours. If a validator restarts
+after 9 hours past the outage, it cannot join the restart this way. If enough
+validators failed to restart within 9 hours, then use the old restart method.
+
+The fields of LastVotedForkSlots are:
+
+- `last_voted_slot`: the slot last voted, this also serves as last_slot for the
+bit vector.
+- `last_voted_hash`: the bank hash of the slot last voted slot.
+- `slots`: compressed bit vector representing the slots on the last voted fork,
+last slot is always last_voted_slot, first slot is last_voted_slot-8100.
 
 ### Aggregate, repair, and replay the slots in LastVotedForkSlots
 
@@ -108,8 +107,9 @@ optimistically confirmed before the restart.
 
 ### Gossip current heaviest fork
 
-After receiving LastVotedForkSlots from 80% of the validators and reparing slots
-with "enough" stake, replay all blocks and pick the heaviest fork as follows:
+After receiving LastVotedForkSlots from 80% of the validators and reparing
+slots with "enough" stake, replay all blocks and pick the heaviest fork as
+follows:
 
 1. Pick block and update root for all blocks with more than 67% votes
 
@@ -125,8 +125,15 @@ could make the wrong votes.
 
 After deciding heaviest block, Gossip
 Heaviest(X, Hash(X), received_heaviest_stake) out, where X is the latest picked
-block. We also send out stake of received Heaviest messages so that we can proceed
-to next step when enough validators are ready.
+block. We also send out stake of received Heaviest messages so that we can
+proceed to next step when enough validators are ready.
+
+The fields of the Heaviest message is:
+
+- `slot`: slot of the picked block.
+- `hash`: bank hash of the picked block.
+- `received`: total of stakes of the validators it received Heaviest messages
+from.
 
 ### Proceed to restart if everything looks okay, halt otherwise
 
@@ -143,7 +150,10 @@ all agree on one block and hash.
 
 So after a validator sees that 75% of the validators received 75% of the votes,
 wait for 10 more minutes so that the message it sent out have propagated, then
-restart from the Heaviest slot everyone agreed on.
+do the following:
+
+- Issue a hard fork at the highest oc slot and change shred version in Gossip.
+- Execute the current --wait-for-supermajority logic and wait for 75%.
 
 ## Impact
 
