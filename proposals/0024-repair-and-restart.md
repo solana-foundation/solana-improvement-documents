@@ -70,8 +70,8 @@ before the freeze propagate to everyone
 3. Make restart participants' last votes before the freeze propagate to
 everyone
 
-4. Now see if enough people can optimistically agree on one block (same
-slot and hash) to restart from
+4. Now see if enough people can optimistically agree on one block (same slot
+and hash) to restart from
 
 4.1 If yes, proceed and restart
 
@@ -113,8 +113,8 @@ with "enough" stake, replay all blocks and pick the heaviest fork as follows:
 
 1. Pick block and update root for all blocks with more than 67% votes
 
-2. If a picked block has more than one children, compare the votes on the
-heaviest child:
+2. If a picked block has more than one children, check if the votes on the
+heaviest child is over threshold:
 
 2.1 If vote_on_child + stake_on_validators_not_in_restart >= 62%, pick child.
 For example, if 80% validators are in restart, child has 42% votes, then
@@ -130,15 +130,16 @@ to next step when enough validators are ready.
 
 ### Proceed to restart if everything looks okay, halt otherwise
 
-If things go well, all 80% of the validators should find the same heaviest fork. But
-we are only sending slots instead of bank hashes in LastVotedForkSlots, so it's
-possible that a duplicate block can make the cluster unable to reach consensus. If
-at least 2/3 of the people agree on one slot, they should proceed to restart from
-this slot. Otherwise validators should halt and send alerts for human attention.
+If things go well, all 80% of the validators should find the same heaviest
+fork. But we are only sending slots instead of bank hashes in
+LastVotedForkSlots, so it's possible that a duplicate block can make the
+cluster unable to reach consensus. If at least 2/3 of the people agree on one
+slot, they should proceed to restart from this slot. Otherwise validators
+should halt and send alerts for human attention.
 
-Also, there might be 5% of the validators not sending Heaviest, so we only require
-that 75% of the people received 75% of the Heaviest messages and they all agree on
-one block and hash.
+Also, there might be 5% of the validators not sending Heaviest, so we only
+require that 75% of the people received 75% of the Heaviest messages and they
+all agree on one block and hash.
 
 So after a validator sees that 75% of the validators received 75% of the votes,
 wait for 10 more minutes so that the message it sent out have propagated, then
@@ -149,25 +150,26 @@ restart from the Heaviest slot everyone agreed on.
 This proposal adds a new RepairAndRestart mode to validators, during this phase
 the validators will not participate in normal cluster activities, which is the
 same as now. Compared to today's cluster restart, the new mode may mean more
-network bandwidth and memory on the restarting validators, but it guarantees the
-safety of optimistically confirmed user transactions, and validator admins don't
-need to manually generate and download snapshots again. 
+network bandwidth and memory on the restarting validators, but it guarantees
+the safety of optimistically confirmed user transactions, and validator admins
+don't need to manually generate and download snapshots again. 
 
 ## Security Considerations
 
-The two added Gossip messages LastVotedForkSlots and Heavist will only be sent and
-processed when the validator is restarted in RepairAndRestart mode. So random validator
-restarting in the new mode will not bring extra burden to the system.
+The two added Gossip messages LastVotedForkSlots and Heavist will only be sent
+and processed when the validator is restarted in RepairAndRestart mode. So
+random validator restarting in the new mode will not bring extra burden to the
+system.
 
 Non-conforming validators could send out wrong LastVotedForkSlots and Heaviest
-messages to mess with cluster restarts, these should be included in the Slashing
-rules in the future.
+messages to mess with cluster restarts, these should be included in the
+Slashing rules in the future.
 
 ## Backwards Compatibility
 
-This change is backward compatible with previous versions, because validators only
-enter the new mode during new restart mode which is controlled by a command line
-argument. All current restart arguments like  --wait-for-supermajority and
---expected-bank-hash will be kept as is for now.
-However, this change does not work until at least 80% installed the new binary and
-they are willing to use the new methods for restart.
+This change is backward compatible with previous versions, because validators
+only enter the new mode during new restart mode which is controlled by a
+command line argument. All current restart arguments like
+--wait-for-supermajority and --expected-bank-hash will be kept as is for now.
+However, this change does not work until at least 80% installed the new binary
+and they are willing to use the new methods for restart.
