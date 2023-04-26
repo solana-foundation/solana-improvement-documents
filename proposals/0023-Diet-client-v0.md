@@ -60,9 +60,9 @@ pub struct BlockHeader {
 }
 ```
 This function will return a BlockHeader, a data structure storing a list of:
-    - Signatures of validators who voted on that block
-    - The public keys or 'identities' of the validators who voted on that block.
-    - The stake amounts of each of those validators.
+ - Signatures of validators who voted on that block
+ - The public keys or 'identities' of the validators who voted on that block.
+ - The stake amounts of each of those validators.
 
 Explain the feature as if it was already implemented and you're explaining it
 to another Solana core contributor. The generally means:
