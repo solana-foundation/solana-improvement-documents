@@ -1,6 +1,6 @@
 ---
 simd: '0024'
-title: Automatially repair and start for a cluster restart
+title: Repair and start in a cluster restart
 authors:
   - Wen Xu (Solana Labs)
 category: Standard
