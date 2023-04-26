@@ -10,7 +10,7 @@ status: Draft
 created:  2023-04-26
 ---
 
-#WIP
+# WIP
 ## Summary
 Add two new RPC calls `getShreds()` and `getBlockHeaders()` to add support for diet clients as first described in this [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
 
