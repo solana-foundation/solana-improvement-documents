@@ -11,7 +11,7 @@ created:  2023-04-26
 ---
 
 ## Summary
-Add two new RPC calls `getShreds()` and `getBlockHeaders()` to add support for diet clients as first described in this (SIMD)[https://github.com/solana-foundation/solana-improvement-documents/pull/10]
+Add two new RPC calls `getShreds()` and `getBlockHeaders()` to add support for diet clients as first described in this [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
 
 ## Motivation
 For light clients to be possible on Solana, there is a need to access ledger data in the form of shreds for Data Availability 
