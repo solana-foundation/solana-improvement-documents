@@ -1,6 +1,6 @@
 ---
 simd: '0015'
-title: Partitioned Epoch Reward Distribution
+title: Partitioned Epoch Rewards Distribution
 authors:
   - Haoran Yi (Solana Labs)
 category: Standard
