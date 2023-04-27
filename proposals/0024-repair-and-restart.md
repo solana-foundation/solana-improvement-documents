@@ -79,7 +79,7 @@ completed.
 Send direct message LastVotedForkSlots to everyone, it contains the last voted
 slot on its tower and the ancestor slots on the last voted fork and is sent in
 a compressed bitmap like the EpicSlots data structure. The number of ancestor
-slots sent is hard coded at 81000, because that's 400ms * 8100 = 9 hours, we
+slots sent is hard coded at 81000, because that's 400ms * 81000 = 9 hours, we
 assume most restart decisions to be made in 9 hours. If a validator restarts
 after 9 hours past the outage, it cannot join the restart this way. If enough
 validators failed to restart within 9 hours, then use the old restart method.
@@ -90,7 +90,7 @@ The fields of LastVotedForkSlots are:
 bit vector.
 - `last_voted_hash`: the bank hash of the slot last voted slot.
 - `slots`: compressed bit vector representing the slots on the last voted fork,
-last slot is always last_voted_slot, first slot is last_voted_slot-8100.
+last slot is always last_voted_slot, first slot is last_voted_slot-81000.
 
 ### Aggregate, repair, and replay the slots in LastVotedForkSlots
 
