@@ -35,26 +35,36 @@ epoch rewards over multiple blocks.
 
 ## Alternatives Considered
 
-We have discussed three alternative approaches.
+We have discussed the following alternative approaches.
 
-- The first approach is to set a threshold on stake balance, and limit the epoch
-rewards to the accounts with stake balance above the threshold. This will
-effectively reduce the number of stake rewards to be distributed, and reduce
-reward distribution time at the epoch boundary. However, this will impact stake
-accounts with small balance. To receive rewards, the small stake accounts will
-be forced to join stake pools, which some may be hesitant to do.
+1. Simply set a threshold on stake balance, and limit the epoch rewards to the
+   accounts with stake balance above the threshold. This will effectively
+   reduce the number of stake rewards to be distributed, and reduce reward
+   distribution time at the epoch boundary. However, this will impact stake
+   accounts with small balance. To receive rewards, the small stake accounts
+   will be forced to join stake pools, which some may be hesitant to do.
 
-- The second approach is to handle reward distributions through transactions with
-specialized native reward programs. While this approach is optimal, it requires
-significant modifications and doesn't align with the current reward code.
+2. Handle reward distributions through transactions with specialized native
+   reward programs. While this approach is optimal, it requires significant
+   modifications and doesn't align with the current reward code.
 
-- The third approach is a completely asynchronous epoch rewards calculation and
-distribution, in which both reward computation and rewards distribution are
-asynchronous. This is a more general approach. However, it is also a more
-complex approach. The reward computation states would have to be maintained
-across multiple blocks. The transition between the reward calculation and
-reward distribution would need to be synchronized in the cluster. And cluster
-restart during reward computation would have to be handled specially.
+3. A completely asynchronous epoch rewards calculation and distribution, in
+   which both reward computation and rewards distribution are asynchronous.
+   This is the most general approach. However, it is also the most complex
+   approach. The reward computation states would have to be maintained across
+   multiple blocks. The transition between the reward calculation and reward
+   distribution would need to be synchronized across the cluster. And cluster
+   restart during reward computation would have to be handled specially.
+
+4. An other approach is similar to the current proposal with additional
+   per-block reward reserve sysvar accounts. Those sysvar accounts are
+   introduced to track and verify the rewards distributed per block. The
+   per-block reward reserve sysvar accounts add additional checks and safety
+   for reward distribution. However, they also add addition cost to block
+   processing, especially for the first block in the epoch. The first block is
+   already computationally heavily - it is responsible for processing all the
+   reward computation. The additional cost of those sysvars puts more burden
+   onto that block and hurt the timing for it.
 
 ## Detailed Design
 
@@ -78,12 +88,10 @@ boundary by dividing the process into two distinct phases:
    1. rewards distribution phase - during which the calculated epoch rewards
       for the active stake accounts are distributed.
 
-To help track and verify the reward distribution in the next phase, two new
-kinds of SysVar accounts are proposed : (a) `EpochRewardHistory` SysVar
-account and (b) `EpochRewardReserve` SysVar accounts. These SysVar accounts are
-updated at the boundary blocks (i.e. first and last blocks) in the reward
-calculation phase. More details of these two kinds of SysVar accounts are
-described in the following sections.
+To help maintain the total capital balance and track/verify the reward
+distribution during rewarding phases, a new SysVar account, `EpochReward`, is
+proposed.
+
 
 ### Rewards Calculation
 
@@ -98,7 +106,7 @@ To make this work, a design of complete async reward computation is required.
 
 However, there are quite a few promising optimizations that can cut down the
 reward computation time. An experiment for reward calculation optimization
-(https://github.com/solana-labs/solana/pull/31193) showed that we can achieve
+(https://github.com/solana-labs/solana/pull/31193) showed that we can cut
 the reward calculation time down to **40ms**. This is well below the 400ms
 block time.
 
@@ -128,154 +136,47 @@ formula to avoid using floating point value arithmetic:
 M = ((4096 - 1)+num_stake_accounts)/4096
 ```
 
-### `EpochRewardHistory` Sysvar Account
+### `EpochReward` Sysvar Account
 
-`EpochRewardHistory` sysvar account maintains a history of epoch rewards. The
-internal format of `EpochRewardHistory` is an array of `RewardHistoryEntry`,
-where each entry corresponds to the reward for one particular epoch. The
-maximum depth of the history is chosen to be the same as the depth of stake
-history for consistency, which is 512.
+`EpochReward` sysvar account records the total rewards plus some other reward
+related information internally. And the account balance reflects the amount of
+pending rewards to distribute.
 
-The layout of `EpochRewardHistory` sysvar is shown in the following pseudo code.
+The layout of `EpochReward` sysvar is shown in the following pseudo code.
 
 ```
-struct RewardHistoryEntry {
+struct RewardReward{
    total_reward_in_lamport: u64,          // total rewards for this epoch
    distributed_reward_in_lamport: u64,    // already distributed reward amount
    num_stake_accounts: u64,  // number of reward receiving stake accounts
+   num_vote_accounts: u64,   // number of reward receiving vote accounts
    total_vote_points: u128,  // accrued vote points in the epoch
-   root_hash: Option<Hash>,  // hash computed from all EpochRewardReserves
 }
 
-type EpochReward = (Epoch, RewardHistoryEntry);
-
-struct RewardHistory {
-   rewards: [EpochReward; 512],
-}
 ```
 
-The `EpochRewardHistory` is updated at the start of the first block of the
-epoch (before any transactions are processed), as both the total epoch rewards
-and vote account rewards become available at this time. Once the vote account
-rewards have been distributed, a `RewardHistoryEntry` will be added to the
-`EpochRewardHistory` array with the total amount of rewards and the amount
-distributed, which is equal to the sum of the vote account rewards. If the
-length of the history array exceeds the maximum depth (512), the oldest entries
-will be removed from the array (i.e., "popped").
-
-The `root_hash` is the hash of all the `EpochRewardReserve` accounts hashes.
-Initially, at the start of the epoch's first block, the `root_hash` is set to
-`None`. Once all the `EpochRewardReserve` accounts are filled and the reward
-computation phase is complete, the `root_hash` is calculated by hashing all the
-`EpochRewardReserve` hashes, which is defined below.
-
-```
-root_hash = Hash(EpochRewardReserve[..].reserve_hash)
-
-
-
-                     +-------------+
-                     |             |
-                     |  root_hash  |
-                     |             |
-                     +------+------+
-                            |
-    +--------------+--------+-----------+
-    |              |                    |
-+---+----+   +-----+--+             +---+-----+
-|reserve |   | reserve|   ......    | reserve |
-| hash   |   |  hash  |             |  hash   |
-+--------+   +--------+             +---------+
-
-```
-
-### `EpochRewardReserve` Sysvar Account
-
-`EpochRewardReserve` sysvar accounts track the rewards to be distributed for each
-individual block in the `reward distribution phase`.
-
-The address of `EpochRewardReserve` account for a particular block is specified
-by PDA as follows
-
-```
-fn get_epoch_reward_reserve_addr(epoch: u64, distribution_phase_index: u64)
-   -> (Pubkey, u8)
-{
-   let (address, bump_seed) = Pubkey::find_program_address(&[
-        b"inflation-rewards-distributor",
-        b"stake",
-        &epoch.to_le_bytes(),
-        &distribution_phase_index.to_le_bytes(),
-    ],
-    &sysvar::id(),
-   );
-   (address, bump_seed)
-}
-```
-
-where `distribution_phase_index` is the block height offset since the start of
-reward distribution phase.
-
-
-```
-struct EpochRewardReserve {
-   reserve_hash: Hash,
-   reward_balance: u64,
-}
-```
-
-The `reward_balance` field is equal to the total amount of all rewards to be
-distributed in a block.
-
-And the account balance of `EpochRewardsReserve` (aka. `AccountInfo::lamports`)
-should be equal to `reward_balance`. However, the `reward_balance` could be so
-small that it is less than the threshold for `rent exemption`. To prevent that
-from happening,  the account balance of `EpochRewardsReserve` (aka.
-`AccountInfo::lamports`) is set to `max(reward_balance, rent_exemption)`.
-
-When the reward distribution completes, any extra lamports in
-`EpochRewardReserve` account's `AccountInfo::lamports`- due to unforeseen
-deposits or the extra amount for rent exemption, will be burned.
-
-The `reserve_hash` is computed from the rewards in the block as follows.
-
-```
-reserve_hash = hash([(stake_account_key, reward_amount)])
-```
-
-At the end of reward computation phase, `M` `EpochRewardsReserve` sysvar
-accounts are updated, where `M` corresponds to how many blocks will be in
-the reward distribution phase, which is described in the next section.
-
+The `EpochReward` is updated at the start of the first block of the epoch
+(before any transactions are processed), as both the total epoch rewards and
+vote account rewards become available at this time. The
+`distributed_reward_in_lamport` field is updated per reward distribution for
+each block in the reward distribution phase.
 
 ### Reward Distribution
 
-Reward distribution phase happens right after reward computation phase and
-lasts for `M` blocks. Each of the `M` blocks is responsible for distributing
-the reward from one partition of the rewards stored in the `EpochRewardReserve`
-account with the address specified by the `get_epoch_reward_reserve_addr`
-function above. Once all rewards have been distributed, the balance of the
-`EpochRewardReserve` account and shadow balance field `reward_balance` both
-MUST be reduced to `0` (or something has gone wrong). Any extra lamports in
-`EpochRewardReserve` accounts will be burned.
+Reward distribution phase happens after reward computation phase, which starts
+after the first block in the epoch for this proposal. It lasts for `M` blocks.
+Each of the `M` blocks is responsible for distributing the reward from one
+partition of the rewards from the `EpochReward` account.
 
-Before each reward distribution, the `EpochRewardReserve` account's
-`reserve_balance` is checked to make sure there is enough balance to distribute
-the reward. After a reward is distributed, the balance and `reserve_balance` in
-`EpochRewardReserve` account is decreased by the amount of the reward that was
-distributed. The hash of reward account address and reward amount is
-accumulated when rewards are distributed. After all the rewards are distributed
-from the reserve account for the block, the hash computed from all the rewards
-distribution is verified against the hash stored in the `EpochRewardReserve`
-account to make sure they match.
+Once all rewards have been distributed, the balance of the `EpochReward`
+account MUST be reduced to `0` (or something has gone wrong). For safety, Any
+extra lamports in `EpochReward` accounts will be burned after reward
+distribution phase.
 
-During the reward distribution phase, there is a "root accumulator hash" that
-starts empty and is gradually filled by adding each hash of a
-`EpochRewardReserve`. The distribution process continues until the "root
-accumulator hash" matches the "root hash" stored in `EpochRewardHistory`. At this
-point, the reward distribution for the current epoch is complete and we can
-safely assume that there will be no further distributions for the remainder of
-the epoch.
+Before each reward distribution, the `EpochReward` account's `balance` is
+checked to make sure there is enough balance to distribute the reward. After a
+reward is distributed, the balance in `EpochReward` account is decreased by the
+amount of the reward that was distributed.
 
 ### RPC API Changes
 
@@ -357,6 +258,3 @@ This is a breaking change.  The new epoch calculation and distribution approach
 will not be compatible with the old approach.
 
 ## Open Questions
-
-1. Should we just store the full rewards directly instead of the chunked
-   `EpochRewardReserve` SysVar accounts?
