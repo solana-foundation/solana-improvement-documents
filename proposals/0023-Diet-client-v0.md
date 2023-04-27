@@ -18,9 +18,10 @@ Add two new RPC calls `getShreds()` and `getBlockHeaders()` to add support for d
 For light clients to be possible on Solana, there is a need to access ledger data in the form of shreds for Data Availability 
 sampling to verify ledger data. In addition to verifying the ledger, we also need to verify the consensus for a particular block.
 Solana doesn't have the concept of blockheaders like Ethereum, so we added a new data structure in the solana-transaction-status 
-crate to address this issue. 
+crate to address this issue.
+
 ## Alternatives Considered
-Currently there are no other alternatives 
+Currently there are no other alternatives to retrieving 
 
 
 ## New Terminology
@@ -41,7 +42,8 @@ We introduce two RPC calls:
   ```
 This call would allow for data availability sampling, this is specifically added to the `rpc.rs` file as an additional method to
 `JsonRpcRequestProcessor` where we pass in the slot, the indices of the required shreds and the config which contains the
-CommitmentConfig of the block. 
+CommitmentConfig of the block. Apart from this we also made the shred data structures accessible to other crates from
+`pub(crate)` => `pub`.
 
 - #### getBlockHeaders
 ```
@@ -64,14 +66,6 @@ This function will return a BlockHeader, a data structure storing a list of:
  - The public keys or 'identities' of the validators who voted on that block.
  - The stake amounts of each of those validators.
 
-Explain the feature as if it was already implemented and you're explaining it
-to another Solana core contributor. The generally means:
-
-- Explain the proposed change and how it works
-- Where the feature fits in to the runtime, core, or relevant sub-system
-- How this feature was/could be implemented
-- Interaction with other features
-- Edge cases
 
 ## Impact
 
