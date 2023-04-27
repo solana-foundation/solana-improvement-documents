@@ -89,7 +89,7 @@ boundary by dividing the process into two distinct phases:
       for the active stake accounts are distributed.
 
 To help maintain the total capital balance and track/verify the reward
-distribution during rewarding phases, a new SysVar account, `EpochReward`, is
+distribution during rewarding phases, a new SysVar account, `EpochRewards`, is
 proposed.
 
 
