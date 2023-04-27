@@ -136,7 +136,7 @@ formula to avoid using floating point value arithmetic:
 M = ((4096 - 1)+num_stake_accounts)/4096
 ```
 
-### `EpochReward` Sysvar Account
+### `EpochRewards` Sysvar Account
 
 `EpochReward` sysvar account records the total rewards plus some other reward
 related information internally. And the account balance reflects the amount of
