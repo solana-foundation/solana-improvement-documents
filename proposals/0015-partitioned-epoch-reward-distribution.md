@@ -138,14 +138,14 @@ M = ((4096 - 1)+num_stake_accounts)/4096
 
 ### `EpochRewards` Sysvar Account
 
-`EpochReward` sysvar account records the total rewards plus some other reward
+`EpochRewards` sysvar account records the total rewards plus some other reward
 related information internally. And the account balance reflects the amount of
 pending rewards to distribute.
 
-The layout of `EpochReward` sysvar is shown in the following pseudo code.
+The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 
 ```
-struct RewardReward{
+struct RewardRewards{
    total_reward_in_lamport: u64,          // total rewards for this epoch
    distributed_reward_in_lamport: u64,    // already distributed reward amount
    num_stake_accounts: u64,  // number of reward receiving stake accounts
@@ -155,7 +155,7 @@ struct RewardReward{
 
 ```
 
-The `EpochReward` is updated at the start of the first block of the epoch
+The `EpochRewards` is updated at the start of the first block of the epoch
 (before any transactions are processed), as both the total epoch rewards and
 vote account rewards become available at this time. The
 `distributed_reward_in_lamport` field is updated per reward distribution for
@@ -166,16 +166,16 @@ each block in the reward distribution phase.
 Reward distribution phase happens after reward computation phase, which starts
 after the first block in the epoch for this proposal. It lasts for `M` blocks.
 Each of the `M` blocks is responsible for distributing the reward from one
-partition of the rewards from the `EpochReward` account.
+partition of the rewards from the `EpochRewards` account.
 
-Once all rewards have been distributed, the balance of the `EpochReward`
+Once all rewards have been distributed, the balance of the `EpochRewards`
 account MUST be reduced to `0` (or something has gone wrong). For safety, Any
-extra lamports in `EpochReward` accounts will be burned after reward
+extra lamports in `EpochRewards` accounts will be burned after reward
 distribution phase.
 
-Before each reward distribution, the `EpochReward` account's `balance` is
+Before each reward distribution, the `EpochRewards` account's `balance` is
 checked to make sure there is enough balance to distribute the reward. After a
-reward is distributed, the balance in `EpochReward` account is decreased by the
+reward is distributed, the balance in `EpochRewards` account is decreased by the
 amount of the reward that was distributed.
 
 ### RPC API Changes
