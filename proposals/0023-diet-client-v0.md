@@ -80,8 +80,3 @@ Are there any implementation-specific guidance or pitfalls?
 ## Drawbacks *(Optional)*
 
 Why should we not do this?
-
-## Backwards Compatibility *(Optional)*
-
-Does the feature introduce any breaking changes? All incompatibilities and
-consequences should be listed.
