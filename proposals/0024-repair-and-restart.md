@@ -13,7 +13,7 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 Improve the current [cluster restart](https://docs.solana.com/running-validator/restart-cluster)
-procedure such that validators can automatically figure out confirmed slots
+procedure such that validators can automatically figure out the highest optimistically confirmed slot
 and then proceed to restart if everything looks fine.
 
 ## Motivation
