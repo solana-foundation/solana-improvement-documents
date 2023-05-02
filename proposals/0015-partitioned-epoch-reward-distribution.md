@@ -90,7 +90,8 @@ boundary by dividing the process into two distinct phases:
 
 To help maintain the total capital balance and track/verify the reward
 distribution during rewarding phases, a new SysVar account, `EpochRewards`, is
-proposed.
+proposed. The `EpochRewards` Sysvar holds the balance of the rewards that are
+pending for distribution.
 
 
 ### Rewards Calculation
@@ -106,13 +107,15 @@ To make this work, a design of complete async reward computation is required.
 
 However, there are quite a few promising optimizations that can cut down the
 reward computation time. An experiment for reward calculation optimization
-(https://github.com/solana-labs/solana/pull/31193) showed that we can cut
-the reward calculation time down to **40ms**. This is well below the 400ms
-block time.
+(https://github.com/solana-labs/solana/pull/31193) showed that we can cut the
+reward calculation time plus vote reward distribution time to around 1s. This
+makes synchronous reward computation and asynchronous reward distribution a
+feasible approach. We also believe that there is still more rooms for more
+optimization to further cut down the above timing.
 
 Therefore, the following of the design is based on the above optimization. The
-reward calculation will be performed at the first block of the epoch. The full
-rewards result is calculated, the result is partitioned into distribution
+reward calculation will be performed at the first block of the epoch. Once, the
+full rewards are calculated, the rewards are partitioned into distribution
 chunks stored in the bank, which will then be distributed during the `reward
 distribution` phase.
 
@@ -138,68 +141,43 @@ M = ((4096 - 1)+num_stake_accounts)/4096
 
 ### `EpochRewards` Sysvar Account
 
-`EpochRewards` sysvar account records the total rewards plus some other reward
-related information internally. And the account balance reflects the amount of
-pending rewards to distribute.
+`EpochRewards` sysvar account records the total rewards and the amount of
+distributed rewards for the current epoch internally. And the account balance
+reflects the amount of pending rewards to distribute.
 
 The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 
 ```
 struct RewardRewards{
-   total_rewards_in_lamport: u64,          // total rewards for the current epoch
-   distributed_rewards_in_lamport: u64,    // distributed rewards for the current epoch
-   num_stake_accounts: u64,  // number of reward receiving stake accounts
-   num_vote_accounts: u64,   // number of reward receiving vote accounts
-   total_vote_points: u128,  // accrued vote points in the epoch
+   total_rewards_in_lamport: u64,          // total rewards for the
+                                           // current epoch
+   distributed_rewards_in_lamport: u64,    // distributed rewards for
+                                           // the current epoch
 }
-
 ```
 
-The `EpochRewards` is updated at the start of the first block of the epoch
-(before any transactions are processed), as both the total epoch rewards and
-vote account rewards become available at this time. The
+The `EpochRewards` sysvar is created at the start of the first block of the
+epoch (before any transactions are processed), as both the total epoch rewards
+and vote account rewards become available at this time. The
 `distributed_reward_in_lamport` field is updated per reward distribution for
 each block in the reward distribution phase.
+
+Once all rewards have been distributed, the balance of the `EpochRewards`
+account MUST be reduced to `0` (or something has gone wrong). For safety, Any
+extra lamports in `EpochRewards` accounts will be burned after reward
+distribution phase, and the SysVar account will be deleted.
 
 ### Reward Distribution
 
 Reward distribution phase happens after reward computation phase, which starts
 after the first block in the epoch for this proposal. It lasts for `M` blocks.
 Each of the `M` blocks is responsible for distributing the reward from one
-partition of the rewards from the `EpochRewards` account.
-
-Once all rewards have been distributed, the balance of the `EpochRewards`
-account MUST be reduced to `0` (or something has gone wrong). For safety, Any
-extra lamports in `EpochRewards` accounts will be burned after reward
-distribution phase.
+partition of the rewards from the `EpochRewards` Sysvar account.
 
 Before each reward distribution, the `EpochRewards` account's `balance` is
 checked to make sure there is enough balance to distribute the reward. After a
 reward is distributed, the balance in `EpochRewards` account is decreased by the
 amount of the reward that was distributed.
-
-### RPC API Changes
-
-To accommodate the new reward distribution approach, there are a few changes
-to the rewards related RPC APIs.
-
-In particular, `getInflationReward` RPC API will change when query the reward
-for the preceding epoch. Such queries will be unavailable during reward period,
-and only available after reward distribution completes.
-
-To help to determine when the reward period completes, a new RPC API,
-`getNumOfRewardDistributionBlocks`,  will be added. This API will returns:
-
-   - `numOfRewardDistributionBlocks: u64`
-
-To query the reward received for individual account, user Apps will first make
-a query to `getNumOfRewardDistributionBlocks`, and wait for that many
-of blocks since the start of the epoch. Then, the App can call
-`getInflationReward` to query the rewards as before.
-
-`getNumOfRewardDistributionBlocks` will also be exposed via sysvar/syscall to
-support on chain Dapp program usage.
-
 
 ### Restrict Stake Account Access
 
