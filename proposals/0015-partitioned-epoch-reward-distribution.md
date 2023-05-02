@@ -13,8 +13,8 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 A new way to distribute epoch rewards across multiple blocks is proposed to
-address the current performance problems associated with the reward
-distribution in a single block at the start of the epoch.
+address the current performance problems associated with epoch reward
+distribution in a first block of a new epoch.
 
 ## Motivation
 
@@ -121,7 +121,7 @@ deterministic manner for the current epoch, while also randomizing the
 distribution across different epochs, the partitioning of all rewards will be
 done as follows.
 
-First, the reward results are sorted by account's Pubkey, and randomly shuffled
+The reward results are sorted by Stake Account address, and randomly shuffled
 with a fast `rng` seeded by current epoch. The shuffled reward results are then
 divided into `M` chunks. This process will ensure that the reward distribution
 is deterministic for the current epoch, while also introducing a degree of
@@ -146,8 +146,8 @@ The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 
 ```
 struct RewardRewards{
-   total_reward_in_lamport: u64,          // total rewards for this epoch
-   distributed_reward_in_lamport: u64,    // already distributed reward amount
+   total_rewards_in_lamport: u64,          // total rewards for the current epoch
+   distributed_rewards_in_lamport: u64,    // distributed rewards for the current epoch
    num_stake_accounts: u64,  // number of reward receiving stake accounts
    num_vote_accounts: u64,   // number of reward receiving vote accounts
    total_vote_points: u128,  // accrued vote points in the epoch
@@ -204,7 +204,7 @@ support on chain Dapp program usage.
 ### Restrict Stake Account Access
 
 To avoid the complexity and potential rewards in unexpected stake accounts,
-the stake program is disabled during the epoch reward period.
+the stake program is disabled during the epoch reward distribution period.
 
 Any transaction that invokes staking program during this period will fail with
 a new unique error code - `StakeProgramUnavailable`.
