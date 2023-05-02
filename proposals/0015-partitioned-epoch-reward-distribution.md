@@ -165,7 +165,11 @@ each block in the reward distribution phase.
 Once all rewards have been distributed, the balance of the `EpochRewards`
 account MUST be reduced to `0` (or something has gone wrong). For safety, Any
 extra lamports in `EpochRewards` accounts will be burned after reward
-distribution phase, and the SysVar account will be deleted.
+distribution phase, and the SysVar account will be deleted. Because of the
+lifetime of `EpochRewards` Sysvar coincides with the reward distribution
+interval, user can explicitly query the existence of this sysvar to determine
+whether a block is in reward interval. Therefore, no new RPC method for reward
+interval is needed.
 
 ### Reward Distribution
 
