@@ -160,6 +160,9 @@ do the following:
 - Issue a hard fork at the highest oc slot and change shred version in Gossip.
 - Execute the current --wait-for-supermajority logic and wait for 75%.
 
+Before a validator enters restart, it will still respond to LastVotedForkSlots
+and send Heaviest messages periodically.
+
 ## Impact
 
 This proposal adds a new RepairAndRestart mode to validators, during this phase
