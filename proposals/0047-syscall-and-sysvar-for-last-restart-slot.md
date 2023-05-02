@@ -70,8 +70,8 @@ The following criteria should be met to choose a restart slot.
 In Solana client `hard fork` variable satisfies nearly all the conditions except
 it is not indicative of slow block, it is a good candidate.
 
-The syscall and sysvar will be available in architectures eBPF and SBF. Only the
-sysvar will be available from architectures SBFv2.
+The syscall and sysvar will be available in architectures eBPF and SBF.
+For now, this functionality is left undefined in program runtime v2.
 
 ### Feature Gate
 
@@ -79,8 +79,8 @@ This feature should be protected by the feature gate this is because this
 feature can create differences in consensus. Solana core developers should
 create a new keypair and use it to enable this feature on the cluster.
 
-Upon activation, the functionality described below immediately becomes
-available.
+Upon activation, the functionality described below becomes available in the next
+epoch.
 
 ### Creation of a new sysvar
 
@@ -128,13 +128,12 @@ COMPUTE_UNITS_LIMIT = 2 * COMPUTE_UNIT_TO_US_RATIO
 
 ## Impact
 
-Programs will start using this new syscall to correctly address the security
-concerns during network restart. This will increase the reliability of solana
-cluster as a whole and make program developers more confident to handle edge
-cases during such extreme events.
+Programs managing time-sensitive states may upgrade to use this syscall to
+better manage exceptional events like restarts. We expect this change to improve
+the robustness of Solana's financial markets as outlined above.
 
-As the method is syscall the developers do not need to pass any new
-accounts or sysvars to the instruction to use this feature.
+Programs will need to be recompiled and redeployed (upgraded) to adopt this
+feature. Interface changes (e.g. account inputs) are not required.
 
 ## Security Considerations
 
