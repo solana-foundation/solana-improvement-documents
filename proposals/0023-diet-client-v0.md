@@ -1,6 +1,6 @@
 ---
 simd: '0023'
-title: Diet client v0
+title: Diet Client V0(Consensus Client)
 authors:
   - Harsh Patel (Tinydancer)
   - Anoushk Kharangate (Tinydancer)
@@ -11,13 +11,15 @@ created:  2023-04-26
 ---
 
 ## Summary
-Add two new RPC calls `getShreds()` and `getBlockHeaders()` to add support for diet clients as first described in this [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
+Add a new RPC call and `getBlockHeaders()` to add support for consenus verifying clients as first described in this [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
 
 ## Motivation
-For light clients to be possible on Solana, there is a need to access ledger data in the form of shreds for Data Availability 
-sampling to verify ledger data. In addition to verifying the ledger, we also need to verify the consensus for a particular block.
-Solana doesn't have the concept of blockheaders like Ethereum, so we added a new data structure in the solana-transaction-status 
-crate to address this issue.
+For a user to validate whether their transaction is valid and included in a block it needs to trust the confirmation from the RPC. This has been a glaring attack vector for malicious actors that could lie to users if it's in their own interest. To combat this mature entities like exchanges run full nodes that process the entire ledger and can verify entire blocks. The downside of that being very high cost to run a full node making it less accessible to everyday users, in effect exposing users to potential attacks from mailicious nodes. 
+
+This is where diet clients come in, users run the client to verify confirmation of their transaction without trusting the RPC. The SIMD is the first step towards implementing the diet client by proposing a small change to the rpc service that allows the client to validate if supermajority stake actually signed off on a block. 
+
+This ensures that at-least the user doesn't have to trust the RPC service that is centralised and can rather trust the supermajority of the network which is less propable to be corrupt than a malicious RPC. However it is not impossible, hence the full diet clietn implementation discusses further steps to counter that and this is only the consensus verifying stage of the client.
+
 
 ## Alternatives Considered
 Another solution is to use the gossip plane to read votes out of the CRDS optimistically and then confirm by verifying inclusion with the blockhash. The advantage being that no changes are required to the validator to read the votes. However this has a couple of drawbacks:
@@ -27,24 +29,9 @@ Another solution is to use the gossip plane to read votes out of the CRDS optimi
 
 ## New Terminology
 
-BlockHeader
+BlockHeader: A structure containing all vote identities, vote signatures and stake amounts that has voted on a block.
 
 ## Detailed Design
-
-We introduce two RPC calls:
-- #### getShreds
-  ```
-  pub async fn get_shreds(
-          &self,
-          slot: Slot,
-          shred_indices: Vec<u64>,
-          config: Option<RpcShredConfig>,
-      ) -> Result<GetShredResponse>
-  ```
-This call would allow for data availability sampling, this is specifically added to the `rpc.rs` file as an additional method to
-`JsonRpcRequestProcessor` where we pass in the slot, the indices of the required shreds and the config which contains the
-CommitmentConfig of the block. Apart from this we also made the shred data structures accessible to other crates from
-`pub(crate)` => `pub`.
 
 - #### getBlockHeaders
 ```
