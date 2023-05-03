@@ -153,6 +153,7 @@ struct RewardRewards{
                                            // current epoch
    distributed_rewards_in_lamport: u64,    // distributed rewards for
                                            // the current epoch
+    distribution_complete_block_height: u64, // distribution of all staking rewards for the current epoch will be completed before this block height
 }
 ```
 
