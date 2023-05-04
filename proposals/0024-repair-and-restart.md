@@ -157,6 +157,7 @@ So after a validator sees that 75% of the validators received 75% of the votes,
 wait for 10 more minutes so that the message it sent out have propagated, then
 do the following:
 
+- Generate a snapshot at the highest oc slot.
 - Issue a hard fork at the highest oc slot and change shred version in Gossip.
 - Execute the current --wait-for-supermajority logic and wait for 75%.
 
