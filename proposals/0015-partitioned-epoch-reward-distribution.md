@@ -89,8 +89,8 @@ boundary by dividing the process into two distinct phases:
       for the active stake accounts are distributed.
 
 To help maintain the total capital balance and track/verify the reward
-distribution during rewarding phases, a new SysVar account, `EpochRewards`, is
-proposed. The `EpochRewards` Sysvar holds the balance of the rewards that are
+distribution during rewarding phases, a new sysvar account, `EpochRewards`, is
+proposed. The `EpochRewards` sysvar holds the balance of the rewards that are
 pending for distribution.
 
 
@@ -103,7 +103,6 @@ chunks for distribution in the next phase.
 Currently, on Solana Mainnet Beta with ~550K active stake accounts, it shows
 that epoch reward calculation takes around 10 seconds on average. This will
 make it impossible to perform rewards computation synchronous within one block.
-To make this work, a design of complete async reward computation is required.
 
 However, there are quite a few promising optimizations that can cut down the
 reward computation time. An experiment for reward calculation optimization
@@ -170,8 +169,8 @@ each block in the reward distribution phase.
 Once all rewards have been distributed, the balance of the `EpochRewards`
 account MUST be reduced to `0` (or something has gone wrong). For safety, any
 extra lamports in `EpochRewards` accounts will be burned after reward
-distribution phase, and the SysVar account will be deleted. Because of the
-lifetime of `EpochRewards` Sysvar coincides with the reward distribution
+distribution phase, and the sysvar account will be deleted. Because of the
+lifetime of `EpochRewards` sysvar coincides with the reward distribution
 interval, user can explicitly query the existence of this sysvar to determine
 whether a block is in reward interval. Therefore, no new RPC method for reward
 interval is needed.
@@ -181,7 +180,7 @@ interval is needed.
 Reward distribution phase happens after reward computation phase, which starts
 after the first block in the epoch for this proposal. It lasts for `M` blocks.
 Each of the `M` blocks is responsible for distributing the reward from one
-partition of the rewards from the `EpochRewards` Sysvar account.
+partition of the rewards from the `EpochRewards` sysvar account.
 
 Before each reward distribution, the `EpochRewards` account's `balance` is
 checked to make sure there is enough balance to distribute the reward. After a
