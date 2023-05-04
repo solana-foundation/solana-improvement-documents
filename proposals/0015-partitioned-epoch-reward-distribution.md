@@ -113,9 +113,9 @@ makes synchronous reward computation and asynchronous reward distribution a
 feasible approach. We also believe that there is still more rooms for more
 optimization to further cut down the above timing.
 
-Therefore, the following of the design is based on the above optimization. The
-reward calculation will be performed at the first block of the epoch. Once, the
-full rewards are calculated, the rewards are partitioned into distribution
+Therefore, the following design is based on the above optimization. The
+reward calculation will be performed at the first block of the epoch. Once the
+full rewards are calculated, the rewards will be partitioned into distribution
 chunks stored in the bank, which will then be distributed during the `reward
 distribution` phase.
 
@@ -149,11 +149,11 @@ The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 
 ```
 struct RewardRewards{
-   // total rewards for the current epoch
-   total_rewards_in_lamport: u64,
+   // total rewards for the current epoch, in lamports
+   total_rewards: u64,
 
-   // distributed rewards for  the current epoch
-   distributed_rewards_in_lamport: u64,
+   // distributed rewards for  the current epoch, in lamports
+   distributed_rewards: u64,
 
    // distribution of all staking rewards for the current
    // epoch will be completed before this block height
@@ -168,7 +168,7 @@ and vote account rewards become available at this time. The
 each block in the reward distribution phase.
 
 Once all rewards have been distributed, the balance of the `EpochRewards`
-account MUST be reduced to `0` (or something has gone wrong). For safety, Any
+account MUST be reduced to `0` (or something has gone wrong). For safety, any
 extra lamports in `EpochRewards` accounts will be burned after reward
 distribution phase, and the SysVar account will be deleted. Because of the
 lifetime of `EpochRewards` Sysvar coincides with the reward distribution
