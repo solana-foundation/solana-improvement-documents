@@ -18,13 +18,12 @@ This SIMD will discuss additional fees called Application Fees. These fees are
 decided and set by the dapp developer to interact with the dapp. Dapp developers
 then can decide to rebate these fees if a user interacts with the dapp as
 intended and disincentivize the users which do not. These fees will be applied
-even if the transaction eventually fails and are collected on the writable
-account. The owner of the account can do lamport transfer to recover these
-fees. So instead of fees going to the validator, these fees go to the **dapp
-developers**. It will be dapp developer's responsibility to advertise the
-required application fees to its users.
-
-Discussion for the issue: <https://github.com/solana-labs/solana/issues/21883>
+even if the transaction eventually fails and are collected on the account on
+which they were set. These fees would be only applied if the account is write
+locked by the transaction. The owner of the account can do lamport transfer to
+recover these fees. So instead of fees going to the validator, these fees go to
+the **dapp developers**. It will be dapp developer's responsibility to advertise
+the required application fees to its users.
 
 ## Motivation
 
@@ -32,10 +31,10 @@ Currently, there is no way for dapp developers to enforce appropriate behavior
 and the way their contracts should be used. Bots spamming on dapps make them
 unusable and dapps lose their users/clients because the UX is laggy and
 inefficient. Unsuccessful transactions deny block space to potentially valid
-transactions which reduces activity on the dapp. For dapps like mango or
-openbook increasing fees without any rebates or dynamically based other proposed
+transactions which reduces activity on the dapp. For dapps like mango markets or
+Openbook increasing fees without any rebates or dynamically based other proposed
 mechanisms will punish potentially thousands of users because of a handful of
-malicious users. Giving dapp's authority more control to incentivize proper
+malicious users. Giving dapps authority more control to incentivize proper
 utilization of its contract is the primary motivation for this proposal.
 
 During network congestion, many transactions in the network cannot be processed
@@ -47,18 +46,18 @@ next slot. With all the forwarding and retrying the validator is choked by the
 transactions write-locking the same accounts and effectively processing valid
 transactions sequentially.
 
-There are multiple accounts of OpenBook (formerly serum), mango markets, etc
-which are used in high-frequency trading. During the event of extreme
-congestion, we observe that specialized trading programs write lock these
-accounts but never CPI into the respective programs unless they can extract
-profit, effectively starving the actual users for access. With current low
-cluster fees, it incentivizes spammers to spam the network with transactions.
+There are multiple accounts of OpenBook, mango markets, etc which are used in
+high-frequency trading. During the event of extreme congestion, we observe that
+specialized trading programs write lock these accounts but never CPI into the
+respective programs unless they can extract profit, effectively starving the
+actual users for access. With current low cluster fees, it incentivizes spammers
+to spam the network with transactions.
 
-Without any proper rebate mechanism for users, Solana gas fees will increase and
-it will lose the edge for being low fees cluster. For entities like market
-makers, Solana must remain a low-fee cluster as they have a thin profit margin
-and have to quote quite often. The goal of this proposal is to reduce spamming
-without really increasing fees for everyone. Encourage users to create proper
+Without any proper rebate mechanism for users, Solana fees will increase and it
+will lose the edge for being low fees cluster. For entities like market makers,
+Solana must remain a low-fee cluster as they have a thin profit margin and have
+to quote quite often. The goal of this proposal is to reduce spamming without
+really increasing fees for everyone. Encourage users to create proper
 transactions. Read the cluster state before creating transactions instead of
 spamming. We are motivated to improve the user experience, and user activity and
 keep Solana a low gas fee blockchain. Keeping gas fees low and increasing user
@@ -96,11 +95,6 @@ to the user if certain conditions decided by dapp developers are met.
 
 ### Other terminology
 
-`Owner` of an account: It is the account owner as specified in the `owner`
-field in the account structure. In the case of an externally owned account
-(i.e, keypair) owner is a `system program` and in case of a Program derived
-address owner is usually the program.
-
 Account `Authority`: The true authority for the account. Let's take an example
 of associated token account. A associated token account is a `PDA` derived
 from associated token program, where the owner is token program. But the
@@ -127,9 +121,9 @@ nonpayment or partial payment, the program is never executed. This instruction
 cannot be CPI'ed into.
 
 Application developers will be able to rebate these fees through a new runtime
-mechanism, but only if the transaction actually succeeds, this way CU heavy
-simulation of the program while write-locking the respective accounts will
-require full fee payment.
+mechanism, but only if the transaction succeeds, this way transactions
+write-locking the respective accounts will require full fee payment before
+program is executed.
 
 ### Payment
 
@@ -160,21 +154,28 @@ Application fees should be considered as set and forget kind of fees by dapp
 developers. They are not aimed to control congestion over the network instead
 they aim to reduce spamming.
 
-The ledger will need to store the amount of lamports required for every account.
-Hence changes should be constrained like any account write to the owner of the
-account. All programs will need to implement special instructions so that the
-authority of the accounts can sign to update application fees on the accounts.
+The accounts database will need to store the amount of lamports required for
+every account. Hence changes should be constrained like any account write to the
+owner of the account. All programs will need to implement special instructions
+so that the authority of the accounts can sign to update application fees on the
+accounts.
 
-Setting the amount to `0` disables application fees. The maximum amount of
-application fees that can be set for an account will be limited to a constant
-amount of SOL (e.g. 20 SOL) so that accounts cannot become inaccessible through
-simple programming errors.
+A new syscall and sysvar should be added to set application fees; syscall to
+support current runtime and sysvar for future runtimes when syscalls would be
+deprecated. Setting the amount to `0` disables application fees. The maximum
+amount of application fees that can be set for an account will be limited to a
+constant amount of SOL so that accounts cannot become inaccessible through
+simple programming errors. The maximum limit should be U32::MAX which comes
+about to be 4.294967296 SOLs which should be affordable for most dapps incase of
+human errors setting application fees, while at the same time punishing
+malicious write locks on highly read-locked accounts. This limit will have added
+advantage of requiring only 4 bytes to store application fees.
 
 ### Rebate
 
 The owner of the account can issue a rebate of the application fees paid to
 write lock a specific account. Similar to the configuration this will need to be
-exposed through special instructions so that programs can implement custom
+exposed through a syscall and sysvar so that programs can implement custom
 authorization and delegate the decision to composing programs.
 
 Simple rebate schemes will verify merely signers, e.g an oracle preventing 3rd
@@ -299,7 +300,7 @@ enable users to protect their accounts against malicious read and write locks.
 This feature will encourage everyone to write better-quality code to help
 avoid congestion.
 
-It is the DApp's responsibility to publish the application fee required for each
+It is the dapp's responsibility to publish the application fee required for each
 account and instruction. They should also add appropriate `PayApplicationFee`
 instruction in their client library while creating transactions or provide
 visible API to get these application fees. We expect these fees to be set and
@@ -307,7 +308,7 @@ forget kind of fees and do not expect them to be changed frequently. Some
 changes have to be done in web3.js client library to get application fees when
 we request the account. Additional instructions should be added to the known
 programs like Token Program, to enable this feature on the TokenAccounts. The
-DApp developer have to also take into account application fees on the programs
+dapp developer have to also take into account application fees on the programs
 they are dependent on.
 
 The cluster is currently vulnerable to a different kind of attack where an
@@ -362,14 +363,14 @@ rebate so that a malicious user could not use this feature to bypass
 application fees. Dapp developers also have to implement additional
 instruction to collect these fees using lamport transfers.
 
-DApp developers have to consider the following way to bypass application fees
+Dapp developers have to consider the following way to bypass application fees
 is possible: A Defi smart contract with two instructions IxA and IxB. Both IxA
 and IxB issue a rebate. IxA is an instruction that places an order on the
 market which can be used to extract profit. IxB is an instruction that just
 does some bookkeeping like settling funds overall harmless instruction.
 Malicious users then can create a custom smart contract to bypass the
 application fees where it CPI's IxA only if they can extract profit or else
-they use IxB to issue a rebate for the application fees. So DApp developers
+they use IxB to issue a rebate for the application fees. So dapp developers
 have to be sure when to do rebates usually white listing and black listing
 instruction sequence would be ideal.
 
@@ -396,7 +397,7 @@ use. In case of openbook the intent is to avoid spamming.
 Most of the OpenBook accounts like asks, bids and event queues are used in
 write mode only we can disable read-locks on these accounts. Now we can
 consider there are 48 M CU's per block and 2.5 blocks per second. Considering
-each instruction takes 200 CUs so around 600 transactions per second.
+each instruction takes 200K CUs so around 600 transactions per second.
 Currently, base fees are around 0.00005 SOLs, with so low gas fees spammers
 have the advantage to spam the cluster. A reasonable application fee could be
 around 0.1 SOLs per transaction that could be distributed among different
