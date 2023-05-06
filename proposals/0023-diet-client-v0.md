@@ -24,7 +24,7 @@ This ensures that at-least the user doesn't have to trust the RPC service that i
 ## Alternatives Considered
 Another solution is to use the gossip plane to read votes out of the CRDS optimistically and then confirm by verifying inclusion with the blockhash. The advantage being that no changes are required to the validator to read the votes. However this has a couple of drawbacks:
 - Votes have a high probability of getting dropped after being inserted into the CRDS as sometimes validators can vote on older slots after voting on the newer slot.
-- Validators aren't obligated to propagate gossip changes and have reason to do so as it reduces egress costs.
+- Validators aren't obligated to propagate gossip changes and have reason to not do so as it reduces egress costs.
 
 
 ## New Terminology
