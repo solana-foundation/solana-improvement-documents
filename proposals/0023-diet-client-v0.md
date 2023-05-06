@@ -26,6 +26,8 @@ Another solution is to use the gossip plane to read votes out of the CRDS optimi
 - Votes have a high probability of getting dropped after being inserted into the CRDS as sometimes validators can vote on older slots after voting on the newer slot.
 - Validators aren't obligated to propagate gossip changes and have reason to not do so as it reduces egress costs.
 
+We could also just directly make these calls from the client itself but its much faster and more convenient to do it on server side.
+
 
 ## New Terminology
 
@@ -33,17 +35,16 @@ BlockHeader: A structure containing all vote identities, vote signatures and sta
 
 ## Detailed Design
 The protocol interaction will be as follows:
-- User makes a transaction using their wallet in slot N.
-- The client then reads the validator set from gossip and requests BlockHeader for slot N + 1, N + 2, N + 3
-- It first validates whether the validator identities match the set from gossip.
-- Then proceeds to validate the vote signatures.
-- The client also has to sync the epoch stake history from genesis from the entrypoint light client.
-- Next it checks if the stake weights in the block header are within reasonable boundaries of the epoch history.
-- If so, it checks if the stake weights add up to > 67% of the total stake
-- If all these checks are valid the slot can be marked as confirmed under a supermajority trust assumption.
+1. User makes a transaction using their wallet in slot N.
+2. The client then reads the validator set from gossip and requests BlockHeader for slot N + 1, N + 2, N + 3
+3. It first validates whether the validator identities match the set from gossip.
+4. Then proceeds to validate the vote signatures.
+5. The client also has to sync the epoch stake history from genesis from the entrypoint light client(eventually can be requested from multiple other light clients).
+6. Next it checks if the stake weights in the block header are within reasonable boundaries of the epoch history. More specifically the stake difference between epoch N and N-1 is not > 20 % of epoch N - 1.
+8. If all these checks are valid the slot can be marked as confirmed under a supermajority trust assumption.
 
 
-- #### getBlockHeaders
+#### New RPC Methods
 ```
 pub async fn get_block_headers(
         &self,
@@ -59,7 +60,7 @@ pub struct BlockHeader {
     pub validator_stake: Vec<Option<u64>>,
 }
 ```
-This function will return a BlockHeader, a data structure storing a list of:
+This method will return a BlockHeader, a data structure storing a list of:
  - Signatures of validators who voted on that block
  - The public keys or 'identities' of the validators who voted on that block.
  - The stake amounts of each of those validators.
@@ -67,13 +68,9 @@ This function will return a BlockHeader, a data structure storing a list of:
 
 ## Impact
 
-How will the implemented proposal impacts dapp developers, validators, and core contributors?
+This proposal will improve the overall security and decentralisation of the Solana network allowing users to access the blockchain in a trust
+minimised way unlike traditionally where users had to fully trust their RPC providers. Dapp developers don't have to make any changes as wallets can easily integrate the client making it compatible with any dapp.
 
 ## Security Considerations
 
-What security implications/considerations come with implementing this feature?
-Are there any implementation-specific guidance or pitfalls?
-
-## Drawbacks *(Optional)*
-
-Why should we not do this?
+None
