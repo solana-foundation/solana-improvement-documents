@@ -32,6 +32,16 @@ Another solution is to use the gossip plane to read votes out of the CRDS optimi
 BlockHeader: A structure containing all vote identities, vote signatures and stake amounts that has voted on a block.
 
 ## Detailed Design
+The protocol interaction will be as follows:
+- User makes a transaction using their wallet in slot N.
+- The client then reads the validator set from gossip and requests BlockHeader for slot N + 1, N + 2, N + 3
+- It first validates whether the validator identies match the set from gossip.
+- Then proceeds to validate the vote signatures.
+- The client also has to sync the epoch stake history from genesis from the entrypoint light client.
+- Next it checks if the stake weights in the block header are within reasonable boundaries of the epoch history.
+- If so, it checks if the stake weights add up to > 67% of the total stake
+- If all these checks are valid the slot can be marked as confirmed under a supermajority trust assumption.
+
 
 - #### getBlockHeaders
 ```
