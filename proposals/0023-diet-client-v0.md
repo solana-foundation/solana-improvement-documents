@@ -35,7 +35,7 @@ BlockHeader: A structure containing all vote identities, vote signatures and sta
 The protocol interaction will be as follows:
 - User makes a transaction using their wallet in slot N.
 - The client then reads the validator set from gossip and requests BlockHeader for slot N + 1, N + 2, N + 3
-- It first validates whether the validator identies match the set from gossip.
+- It first validates whether the validator identities match the set from gossip.
 - Then proceeds to validate the vote signatures.
 - The client also has to sync the epoch stake history from genesis from the entrypoint light client.
 - Next it checks if the stake weights in the block header are within reasonable boundaries of the epoch history.
