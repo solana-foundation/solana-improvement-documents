@@ -11,7 +11,7 @@ created:  2023-04-26
 ---
 
 ## Summary
-Add a new RPC call and `getBlockHeaders()` to add support for consenus verifying clients as first described in this [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
+Add a new RPC call and `getBlockHeaders()` to add support for consensus verifying clients as first described in this [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
 
 ## Motivation
 For a user to validate whether their transaction is valid and included in a block it needs to trust the confirmation from the RPC. This has been a glaring attack vector for malicious actors that could lie to users if it's in their own interest. To combat this mature entities like exchanges run full nodes that process the entire ledger and can verify entire blocks. The downside of that being very high cost to run a full node making it less accessible to everyday users, in effect exposing users to potential attacks from malicious nodes. 
