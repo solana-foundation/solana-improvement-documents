@@ -81,13 +81,14 @@ completed.
 
 ### Gossip last vote before the restart and ancestors on that fork
 
-Send direct message LastVotedForkSlots to everyone, it contains the last voted
-slot on its tower and the ancestor slots on the last voted fork and is sent in
-a compressed bitmap like the EpicSlots data structure. The number of ancestor
-slots sent is hard coded at 81000, because that's 400ms * 81000 = 9 hours, we
-assume most restart decisions to be made in 9 hours. If a validator restarts
-after 9 hours past the outage, it cannot join the restart this way. If enough
-validators failed to restart within 9 hours, then use the old restart method.
+Send Gossip message LastVotedForkSlots to everyone in restart, it contains the
+last voted slot on its tower and the ancestor slots on the last voted fork and
+is sent in a compressed bitmap like the EpicSlots data structure. The number of
+ancestor slots sent is hard coded at 81000, because that's 400ms * 81000 = 9
+hours, we assume most restart decisions to be made in 9 hours. If a validator
+restarts after 9 hours past the outage, it cannot join the restart this way. If
+enough validators failed to restart within 9 hours, then use the old restart
+method.
 
 The fields of LastVotedForkSlots are:
 
@@ -96,6 +97,10 @@ bit vector.
 - `last_voted_hash`: the bank hash of the slot last voted slot.
 - `slots`: compressed bit vector representing the slots on the last voted fork,
 last slot is always last_voted_slot, first slot is last_voted_slot-81000.
+
+When a validator enters restart, it increments its current shred_version, so
+the Gossip messages used in restart will not interfere with those outside the
+restart.
 
 ### Aggregate, repair, and replay the slots in LastVotedForkSlots
 
@@ -161,8 +166,9 @@ do the following:
 - Issue a hard fork at the highest oc slot and change shred version in Gossip.
 - Execute the current --wait-for-supermajority logic and wait for 75%.
 
-Before a validator enters restart, it will still respond to LastVotedForkSlots
-and send Heaviest messages periodically.
+Before a validator enters restart, it will still propagate LastVotedForkSlots
+and Heaviest messages in Gossip. After the restart,its shred_version will be
+updated so it will no longer send or propagate Gossip messages for restart.
 
 ## Impact
 
