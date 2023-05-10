@@ -154,17 +154,17 @@ cluster unable to reach consensus. If at least 2/3 of the people agree on one
 slot, they should proceed to restart from this slot. Otherwise validators
 should halt and send alerts for human attention.
 
-Also, there might be 5% of the validators not sending Heaviest, so we only
-require that 75% of the people received 75% of the Heaviest messages and they
-all agree on one block and hash.
+We require that at least 80% of the people received the Heaviest messages from
+validators with at least 80% stake, and that the Heaviest messages all agree on
+one block and hash.
 
-So after a validator sees that 75% of the validators received 75% of the votes,
+So after a validator sees that 80% of the validators received 80% of the votes,
 wait for 10 more minutes so that the message it sent out have propagated, then
 do the following:
 
 - Generate a snapshot at the highest oc slot.
 - Issue a hard fork at the highest oc slot and change shred version in Gossip.
-- Execute the current --wait-for-supermajority logic and wait for 75%.
+- Execute the current --wait-for-supermajority logic and wait for 80%.
 
 Before a validator enters restart, it will still propagate LastVotedForkSlots
 and Heaviest messages in Gossip. After the restart,its shred_version will be
