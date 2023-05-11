@@ -100,7 +100,10 @@ last slot is always last_voted_slot, first slot is last_voted_slot-81000.
 
 When a validator enters restart, it increments its current shred_version, so
 the Gossip messages used in restart will not interfere with those outside the
-restart.
+restart. There is slight chance that (current_shred_version+1) % 0xffff would
+collide with the new shred_version calculated after the restart, but even if
+this rare case occured, we plan to flush the CRDS table on successful restart,
+so Gossip messages used in restart will be removed.
 
 ### Aggregate, repair, and replay the slots in LastVotedForkSlots
 
@@ -153,6 +156,11 @@ LastVotedForkSlots, so it's possible that a duplicate block can make the
 cluster unable to reach consensus. If at least 2/3 of the people agree on one
 slot, they should proceed to restart from this slot. Otherwise validators
 should halt and send alerts for human attention.
+
+We will also perform some safety checks, if the voted slot does not satisfy
+safety checks, then the validators will panic and halt:
+
+- The voted slot is equal or a child of local optimistically confirmed slot.
 
 We require that at least 80% of the people received the Heaviest messages from
 validators with at least 80% stake, and that the Heaviest messages all agree on
