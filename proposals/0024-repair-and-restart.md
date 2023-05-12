@@ -32,7 +32,7 @@ mistake in deciding the highest optimistically confirmed slot, it could mean
 rollback of user transactions after those transactions have been confirmed,
 which is not acceptable.
 
-We aim to automate the finding of highest optimistically confirmed slot and
+We aim to automate the negotiation of highest optimistically confirmed slot and
 block data distribution, so that we can lower the possibility of human mistakes
 in the cluster restart process.
 
