@@ -95,8 +95,9 @@ The fields of LastVotedForkSlots are:
 - `last_voted_slot`: the slot last voted, this also serves as last_slot for the
 bit vector.
 - `last_voted_hash`: the bank hash of the slot last voted slot.
-- `slots`: compressed bit vector representing the slots on the last voted fork,
-last slot is always last_voted_slot, first slot is last_voted_slot-81000.
+- `ancestors`: bit vector representing the compressed slots which produced
+a block on the last voted fork. the most significant bit is always
+last_voted_slot, least significant bit is last_voted_slot-81000.
 
 When a validator enters restart, it increments its current shred_version, so
 the Gossip messages used in restart will not interfere with those outside the
