@@ -63,7 +63,7 @@ The steps roughly look like this:
 2. Make all blocks which can potentially have been optimistically confirmed
 before the freeze propagate to everyone
 
-3. Make restart participants' last votes before the freeze propagate to
+3. Make restart participants' last vote prior to the freeze propagate to
 everyone
 
 4. Now see if enough nodes can optimistically agree on one block (same slot
