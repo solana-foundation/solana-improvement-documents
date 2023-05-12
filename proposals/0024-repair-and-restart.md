@@ -83,7 +83,7 @@ completed.
 
 Send Gossip message LastVotedForkSlots to everyone in restart, it contains the
 last voted slot on its tower and the ancestor slots on the last voted fork and
-is sent in a compressed bitmap like the EpicSlots data structure. The number of
+is sent in a compressed bitmap like the `EpochSlots` data structure. The number of
 ancestor slots sent is hard coded at 81000, because that's 400ms * 81000 = 9
 hours, we assume most restart decisions to be made in 9 hours. If a validator
 restarts after 9 hours past the outage, it cannot join the restart this way. If
