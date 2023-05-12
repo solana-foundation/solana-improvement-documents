@@ -159,7 +159,7 @@ slot, they should proceed to restart from this slot. Otherwise validators
 should halt and send alerts for human attention.
 
 We will also perform some safety checks, if the voted slot does not satisfy
-safety checks, then the validators will panic and halt:
+safety checks, then the restart will be aborted:
 
 - The voted slot is equal or a child of local optimistically confirmed slot.
 
