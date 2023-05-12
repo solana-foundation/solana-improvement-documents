@@ -69,9 +69,9 @@ everyone
 4. Now see if enough people can optimistically agree on one block (same slot
 and hash) to restart from
 
-4.1 If yes, proceed and restart
+   1. If yes, proceed and restart
 
-4.2 If no, freeze and print out what you think is wrong, wait for human
+   1. If no, freeze and print out what it thinks is wrong, wait for human
 
 A new command line arg --RepairAndRestart is added. When the cluster is in need
 of a restart, we assume at least 80% will restart with this arg. Any validators
