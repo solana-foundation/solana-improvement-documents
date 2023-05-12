@@ -66,7 +66,7 @@ before the freeze propagate to everyone
 3. Make restart participants' last votes before the freeze propagate to
 everyone
 
-4. Now see if enough people can optimistically agree on one block (same slot
+4. Now see if enough nodes can optimistically agree on one block (same slot
 and hash) to restart from
 
    1. If yes, proceed and restart
