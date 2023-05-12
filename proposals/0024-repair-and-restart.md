@@ -154,7 +154,7 @@ from.
 If things go well, all 80% of the validators should find the same heaviest
 fork. But we are only sending slots instead of bank hashes in
 LastVotedForkSlots, so it's possible that a duplicate block can make the
-cluster unable to reach consensus. If at least 2/3 of the people agree on one
+cluster unable to reach consensus. If at least 2/3 of the nodes agree on one
 slot, they should proceed to restart from this slot. Otherwise validators
 should halt and send alerts for human attention.
 
