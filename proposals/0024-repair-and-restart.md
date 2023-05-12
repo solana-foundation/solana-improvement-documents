@@ -87,8 +87,8 @@ is sent in a compressed bitmap like the `EpochSlots` data structure. The number 
 ancestor slots sent is hard coded at 81000, because that's 400ms * 81000 = 9
 hours, we assume most restart decisions to be made in 9 hours. If a validator
 restarts after 9 hours past the outage, it cannot join the restart this way. If
-enough validators failed to restart within 9 hours, then use the old restart
-method.
+enough validators failed to restart within 9 hours, then fallback to the
+manual, interactive cluster restart method.
 
 The fields of LastVotedForkSlots are:
 
