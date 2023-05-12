@@ -1,6 +1,6 @@
 ---
 simd: '0024'
-title: Repair and start in a cluster restart
+title: Optimistic cluster restart automation
 authors:
   - Wen Xu (Solana Labs)
 category: Standard
