@@ -49,7 +49,7 @@ The current process involves a lot of human intervention, if people make a
 mistake in deciding the highest optimistically confirmed slot, it is
 detrimental to the viability of the ecosystem.
 
-We aim to automate the finding of highest optimistically confirmed slot and
+We aim to automate the negotiation of highest optimistically confirmed slot and
 block data distribution, so that we can lower the possibility of human mistakes
 in the cluster restart process. This also reduces the burden on validator
 operators, because they don't have to stay around while the validators
@@ -107,15 +107,15 @@ The steps roughly look like this:
 2. Make all blocks which can potentially have been optimistically confirmed
 before the freeze propagate to everyone
 
-3. Make restart participants' last votes before the freeze propagate to
+3. Make restart participants' last vote prior to the freeze propagate to
 everyone
 
-4. Now see if enough people can agree on one block (same slot and hash) to
+4. Now see if enough nodes can agree on one block (same slot and hash) to
 restart from
 
-4.1 If yes, proceed and restart
+   1. If yes, proceed and restart
 
-4.2 If no, freeze and print out what you think is wrong, wait for human
+   2. If no, freeze and print out what it thinks is wrong, wait for human
 
 A new command line arg will be added. When the cluster is in need
 of a restart, we assume validators holding at least `RESTART_STAKE_THRESHOLD`
@@ -128,20 +128,21 @@ completed.
 
 Send gossip message LastVotedForkSlots to everyone in restart, it contains the
 last voted slot on its tower and the ancestor slots on the last voted fork and
-is sent in a compressed bitmap like the EpicSlots data structure. The number of
+is sent in a compressed bitmap like the `EpochSlots` data structure. The number of
 ancestor slots sent is hard coded at 81000, because that's 400ms * 81000 = 9
 hours, we assume most restart decisions to be made in 9 hours. If a validator
 restarts after 9 hours past the outage, it cannot join the restart this way. If
-enough validators failed to restart within 9 hours, then use the old restart
-method.
+enough validators failed to restart within 9 hours, then fallback to the
+manual, interactive cluster restart method.
 
 The fields of LastVotedForkSlots are:
 
 - `last_voted_slot`: the slot last voted, this also serves as last_slot for the
 bit vector.
 - `last_voted_hash`: the bank hash of the slot last voted slot.
-- `slots`: compressed bit vector representing the slots on the last voted fork,
-last slot is always last_voted_slot, first slot is last_voted_slot-81000.
+- `ancestors`: compressed bit vector representing the slots which produced
+a block on the last voted fork. the most significant bit is always
+last_voted_slot, least significant bit is last_voted_slot-81000.
 
 When a validator enters restart, it increments its current shred_version, so
 the gossip messages used in restart will not interfere with those outside the
@@ -199,12 +200,12 @@ from.
 If things go well, all of the validators in restart should find the same
 heaviest fork. But we are only sending slots instead of bank hashes in
 LastVotedForkSlots, so it's possible that a duplicate block can make the
-cluster unable to reach consensus. If at least 2/3 of the people agree on one
+cluster unable to reach consensus. If at least 2/3 of the nodes agree on one
 slot, they should proceed to restart from this slot. Otherwise validators
 should halt and send alerts for human attention.
 
 We will also perform some safety checks, if the voted slot does not satisfy
-safety checks, then the validators will panic and halt:
+safety checks, then the restart will be aborted:
 
 - The voted slot is equal or a child of local optimistically confirmed slot.
 
