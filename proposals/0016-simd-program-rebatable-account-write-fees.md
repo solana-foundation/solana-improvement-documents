@@ -95,21 +95,21 @@ applied even if the transaction fails contrary to lamport transfers. The program
 can decide to rebate these fees back to the user if certain conditions decided
 by dapp developers are met.
 
-Millilamports: 1/1000 lamports or 10^-3 lamports.
+Millilamports: 1/1000 lamports or 10^-3 lamports. PRAW fees are set and used in
+milli-lamports per CU.
 
 ### Other terminology
 
 Account `Authority`: The true authority for the account. Let's take an example
-of associated token account. A associated token account is a `PDA` derived
-from associated token program, where the owner is token program. But the
-program internally saves who has the authority over the account. Only token
-program can change the data of a token account. For operations like
-withdrawing tokens, the authority of the associated token account has to be
-the signer for the transaction containing transfer instruction. To receive
-tokens from another account, the authority's signature is not required.
+of associated token account. A associated token account is a `PDA` derived from
+associated token program, where the owner is token program. But the program
+internally saves who has the authority over the account. Only token program can
+change the data of a token account. For operations like withdrawing tokens, the
+authority of the associated token account has to be the signer for the
+transaction containing transfer instruction. To receive tokens from another
+account, the authority's signature is not required.
 
-`Other Fees`: Fees other than PRAW fees
-`base fees + prioritization fees`.
+`Other Fees`: Fees other than PRAW fees `base fees + prioritization fees`.
 
 ## Detailed Design
 
@@ -136,14 +136,15 @@ transaction, even if the same account is write-locked in multiple instructions.
 ### Payment
 
 `SetProgramRebatableAccountWriteFees` will be part of the updated compute budget
-program. Instead of having separate instructions for each compute budget
-parameter we will have a single instruction that will set all the compute budget
-parameters. Compute budget parameters could be considered as transaction header
-that sets some parameters for the transaction. We create a new instruction that
-takes a vector of parameters. If similar transaction header parameters appear
-multiple times then we just take the first one and ignore the other occurrences.
-In case of multiple transaction headers in the transaction, we take the first
-occurrence and ignore the others.
+program. `SetProgramRebatableAccountWriteFees` will take a u64 parameter to set
+millilamports per requested CU as the PRAW fees. Instead of having separate
+instructions for each compute budget parameter we will have a single instruction
+that will set all the compute budget parameters. Compute budget parameters could
+be considered as transaction header that sets some parameters for the
+transaction. We create a new instruction that takes a vector of parameters. If
+similar transaction header parameters appear multiple times then we just take
+the first one and ignore the other occurrences. In case of multiple transaction
+headers in the transaction, we take the first occurrence and ignore the others.
 
 ```
 enum TransactionHeaderParameter {
@@ -152,6 +153,7 @@ enum TransactionHeaderParameter {
   SetComputeUnitPrice(u64),
   SetLoadedAccountsDataSizeLimit(u32),
   // Limit on maximum of PRAW fees to be paid
+  // Fees is set in milli lamports per CU
   SetProgramRebatableAccountWriteFees(u64),
 }
 
@@ -164,11 +166,17 @@ When the cluster receives a new transaction, with `TransactionHeaderParameter`
 instruction is decoded to get the `SetProgramRebatableAccountWriteFees` and then
 calculates the total fees required for the transaction message. Then we verify
 that the fee-payer has a minimum balance of: `per-transaction base fees` +
-`prioritization fees` + `maximum PRAW fees to be paid`
+`prioritization fees` +
+`Millilamports per CU set by SetProgramRebatableAccountWriteFees` *
+`requested CUs set by SetComputeUnitLimit`.
 
-If the payer does not have enough balance, the transaction is not scheduled
-and fails with an error `InsufficientFunds`. Consider this case the same as if
-the payer does not have enough funds to pay `other fees`.
+Where PRAW fees is :
+`Millilamports per CU set by SetProgramRebatableAccountWriteFees` *
+`requested CUs set by SetComputeUnitLimit`.
+
+If the payer does not have enough balance, the transaction is not scheduled and
+fails with an error `InsufficientFunds`. Consider this case the same as if the
+payer does not have enough funds to pay `other fees`.
 
 Before processing the message, we check if any loaded account has associated
 PRAW fees. For all accounts with PRAW fees, the fees paid should be greater than
@@ -197,15 +205,16 @@ fn update_program_rebatable_account_write_fees(
 ) -> bool;
 ```
 
-The syscall will take account on which fee should be updated and the
-millilamports per cu that should be charged and return a true if the changes
-were successful else will return false.
+The syscall will take as arguments the account on which fee should be updated
+and the millilamports per cu that should be charged and return a true if the
+changes were successful else will return false.
 
-The accounts database will need to store the millilamports per CU. Changes to
-update the PRAW fees could be done only by the authority program. All programs
-will need to implement special instructions so that the program admin can use
-this syscall to update PRAW fees on the required accounts. Program admin should
-always be signer for these instructions.
+The accounts database will need to store the value of millilamports per
+requested CU for the account. Changes to update the PRAW fees could be done only
+by the authority program. All programs will need to implement special
+instructions so that the program admin can use this syscall to update PRAW fees
+on the required accounts. Program admin should always be signer for these
+instructions.
 
 Setting the millilamports per CU to `0` disables PRAW fees. The maximum amount
 of millilamports per CU that could be set will be u32::MAX. Lets assume that the
@@ -243,7 +252,7 @@ Simple rebate schemes will verify merely signers, e.g an oracle preventing 3rd
 parties from write-locking their price feed. Dexes will need more complex rebate
 schemes based on instruction sysvar introspection.
 
-Syscall defination for rebate is:
+Syscall definition of the rebate mechanism is:
 
 ```
 fn rebate_program_rebatable_account_write_fees(
@@ -262,45 +271,53 @@ are rebated. The rebate amount cannot be negative.
 
 ### Calculation of PRAW Fees and rebates.
 
-User creates a transaction by setting maximum PRAW fees (`M`) and requested CU's
-(`C`). Solana runtime will check if user has enough balance to pay all the fees
+User creates a transaction by setting maximum PRAW fees in terms of
+millilamports per requested CUs (`m`) and requested CUs (`C`). Solana runtime
+will multiply `m` and `C` to calculate total maximum PRAW fees (`M`) payer is
+willing to pay, then check if user has enough balance to pay all the fees
 including PRAW fees then it will load the accounts required by the transaction.
 
 Then we iterate on accounts to calculate total PRAW fees required (`T`).
-Let (`Pi`) be PRAW fee for ith account.
+Let (`Pi`) be PRAW fee set for ith account.
 Let number of accounts loaded be (`L`)
 
 ```
 T = sum(Pi * C) for i in 0 to L.
 ```
 
-If M>=T we continue to execute else transaction fails with an error.
+If M>=T we continue to execute else the transaction fails with an error
+`ProgramRebatableAccountWriteFeesNotPaid`.
 
 Let Overpaid amount (`O = M - T`)
 
-After execution, we iterate on the rabates on PRAW account to calculate total
-rabated amount (R): For and account I there could be multiple rebates during a
-transaction. Consider that there are `N` rebates on ith account. Each rebate will
-be represented as `Rin`.
+After execution, we iterate on the rebates issued to calculate total rebated
+amount (`R`), For an account there could be multiple rebates during a
+transaction. Consider that there are `N` rebates on ith account. Each rebate
+will be represented as `Rin`.
 
 ```
 R = Sum( min(Pi, max(Rin where n=0 to N)) * C )
 ```
 
-We then transfer `(Pi - Ri) * C` into ith account and `O + R` back to the payer.
+We then transfer `(Pi - Ri) * C` into each writable account and `O + R` back to
+the payer.
 
 ### Looking at common cases
 
+For simplicity, we have written examples in total PRAW fees instead of
+millilamports per requested CUs.
+
 #### No PRAW fees enabled
 
-* A payer does not include `SetProgramRebatableAccountWriteFees` in the transaction. The
-  transaction does not write lock any accounts with PRAW fees. Then the
-  transaction is executed without the PRAW fee feature. The payer ends up
-  paying other fees.
+* A payer does not include `SetProgramRebatableAccountWriteFees` in the
+  transaction. The transaction does not write lock any accounts with PRAW fees.
+  Then the transaction is executed without the PRAW fee feature. The payer ends
+  up paying other fees.
 
-* A payer includes `SetProgramRebatableAccountWriteFees(PRAW fees)` in the transaction but none of
-  the accounts have any PRAW fees. This case is considered an overpay
-  case. The payer balance is checked for `other fees + PRAW fees`.
+* A payer includes `SetProgramRebatableAccountWriteFees(PRAW fees)` in the
+  transaction but none of the accounts have any PRAW fees. This case is
+  considered an overpay case. The payer balance is checked for
+  `other fees + PRAW fees`.
   1. The payer does not have enough balance: Transaction fails with an error
     `Insufficient Balance` and the transaction is not even scheduled for
     execution.
@@ -335,63 +352,63 @@ We then transfer `(Pi - Ri) * C` into ith account and `O + R` back to the payer.
   A payer includes instruction `SetProgramRebatableAccountWriteFees(100)` in the
   transaction. There is an accounts `accA` which is write-locked by the
   transaction and it has an PRAW fees fee of `100` lamports. Consider during
-  execution the program will rebate the PRAW fees fee on the account. Then
-  payer should have a minimum balance of `other fees` + `100` lamports to
-  execute the transaction. After successful execution of the transaction, the
-  `100` lamports will be rebated by the program and then Solana runtime will
-  transfer them back to the payer. So the payer will finally end up paying
-  `other fees` only.
+  execution the program will rebate the PRAW fees fee on the account. Then payer
+  should have a minimum balance of `other fees` + `100` lamports to execute the
+  transaction. After successful execution of the transaction, the `100` lamports
+  will be rebated by the program and then Solana runtime will transfer them back
+  to the payer. So the payer will finally end up paying `other fees` only.
 
 * Fees paid multiple partial rebates case:
 
-  A payer includes instruction `SetProgramRebatableAccountWriteFees(200)` in the transaction. The
-  transaction has three instructions (`Ix1`, `Ix2`, `Ix3`). There are accounts
-  (`accA`, `accB`) that are write-locked by the transaction and each of them has
-  an PRAW fees fee of `100` lamports. Lets consider `Ix1` rebates 25 lamports
-  on both accounts, `Ix2` rebates 75 lamports on `accA` and `Ix3` rebates 10
-  lamports on `accB`. In the case of multiple rebates only the maximum of all
-  the rebates is applied. Consider the transaction is executed successfully. The
-  maximum of all the rebates for `accA` is 75 lamports and `accB` is 25
-  lamports. So a total of 100 lamports are rebated back to the payer, `accA`
-  gets 25 lamports and `accB` gets 75 lamports. The payer will end up paying
-  `other fees` + `100` lamports.
+  A payer includes instruction `SetProgramRebatableAccountWriteFees(200)` in the
+  transaction. The transaction has three instructions (`Ix1`, `Ix2`, `Ix3`).
+  There are accounts (`accA`, `accB`) that are write-locked by the transaction
+  and each of them has an PRAW fees fee of `100` lamports. Lets consider `Ix1`
+  rebates 25 lamports on both accounts, `Ix2` rebates 75 lamports on `accA` and
+  `Ix3` rebates 10 lamports on `accB`. In the case of multiple rebates only the
+  maximum of all the rebates is applied. Consider the transaction is executed
+  successfully. The maximum of all the rebates for `accA` is 75 lamports and
+  `accB` is 25 lamports. So a total of 100 lamports are rebated back to the
+  payer, `accA` gets 25 lamports and `accB` gets 75 lamports. The payer will end
+  up paying `other fees` + `100` lamports.
 
 * Fees paid full rebates but the execution failed case:
 
-  A payer includes instruction `SetProgramRebatableAccountWriteFees(100)` in the transaction.
-  There is an account `accA` which is write-locked by the transaction and it has
-  an PRAW fees fee of `100` lamports. Consider during execution the program
-  will rebate all the PRAW fees on the account but later the execution
-  failed. Then payer should have a minimum balance of `other fees` + `100`
-  lamports to execute the transaction. The program rebated PRAW fees but
+  A payer includes instruction `SetProgramRebatableAccountWriteFees(100)` in the
+  transaction. There is an account `accA` which is write-locked by the
+  transaction and it has an PRAW fees fee of `100` lamports. Consider during
+  execution the program will rebate all the PRAW fees on the account but later
+  the execution failed. Then payer should have a minimum balance of `other fees`
+  + `100` lamports to execute the transaction. The program rebated PRAW fees but
   as executing the transaction failed, no rebate will be issued. The PRAW fees
   fees will be transferred to respective accounts, and the payer will finally
   end up paying `other fees` + `100` lamports as PRAW fees.
 
 * Fees are over paid case:
 
-  A payer includes instruction `SetProgramRebatableAccountWriteFees(1000)` in the transaction.
-  There is an account `accA` that is write-locked by the transaction and it has
-  an PRAW fees fee of `100` lamports. The minimum balance required by payer
-  will be `other fees` + `1000` lamports as PRAW fees. So the payer pays
-  100 lamports for the account as PRAW fees and 900 lamports is an
+  A payer includes instruction `SetProgramRebatableAccountWriteFees(1000)` in
+  the transaction. There is an account `accA` that is write-locked by the
+  transaction and it has an PRAW fees fee of `100` lamports. The minimum balance
+  required by payer will be `other fees` + `1000` lamports as PRAW fees. So the
+  payer pays 100 lamports for the account as PRAW fees and 900 lamports is an
   overpayment. The 900 lamports will be transferred back to the user even if the
   transaction succeeds or fails. The 100 lamports will be transferred to `accA`
-  in all cases except if the transaction is successful and the program issued
-  a rebate.
+  in all cases except if the transaction is successful and the program issued a
+  rebate.
 
 * Fees underpaid case:
 
-  A payer includes instruction `SetProgramRebatableAccountWriteFees(150)` in the transaction.
-  There is an accounts `accA` that is write-locked by the transaction and it has
-  an PRAW fees of `300` lamports. The minimum balance required by payer will be
-  `other fees` + `150` lamports as PRAW fees to load accounts and schedule
-  transactions for execution. Here payer has insufficiently paid the PRAW fees
-  paying 150 lamports instead of 300 lamports. So before program execution, we
-  detect that the PRAW fees are not sufficiently paid and execution fails with
-  the error `ProgramRebatableAccountWriteFeesNotPaid` and the partially paid
-  amount is transferred back to the payer. So the payer pays only `base fees` in
-  the end but the transaction is unsuccessful.
+  A payer includes instruction `SetProgramRebatableAccountWriteFees(150)` in the
+  transaction. There is an accounts `accA` that is write-locked by the
+  transaction and it has an PRAW fees of `300` lamports. The minimum balance
+  required by payer will be `other fees` + `150` lamports as PRAW fees to load
+  accounts and schedule transactions for execution. Here payer has
+  insufficiently paid the PRAW fees paying 150 lamports instead of 300 lamports.
+  So before program execution, we detect that the PRAW fees are not sufficiently
+  paid and execution fails with the error
+  `ProgramRebatableAccountWriteFeesNotPaid` and the partially paid amount is
+  transferred back to the payer. So the payer pays only `base fees` in the end
+  but the transaction is unsuccessful.
 
 ## Impact
 
@@ -432,10 +449,12 @@ they will consume their SOL tokens more rapidly to maintain the attack.
 
 ## Security Considerations
 
-If the PRAW fees fee for an account is set too high then we cannot ever
-mutate that account anymore. Even updating the PRAW fees for the
-account will need a very high amount of balance. This issue can be easily
-solved by setting a maximum limit to the PRAW fees.
+If the PRAW fees fee for an account is set too high then we cannot ever mutate
+that account anymore. Maximum fees can be set to around 4.2949 * 10^9 milli
+lamports per CU, assuming that instruction that updates the PRAW fees on the
+accounts will use around 1000 CUs, program owner will need roughly 4.2949 SOLs
+to reupdate the PRAW fees. Optimizing the instruction to update the PRAW fees is
+a must for dapp developers.
 
 For an account that has collected PRAW fees, to transfer these fees
 collected to another account we have to pay PRAW fees to write lock the
@@ -496,25 +515,30 @@ PRAW fees too high means dapp users need more balance to interact with
 the dapps and if they are too low then it won't prevent spamming or malicious
 use. In case of openbook the intent is to avoid spamming.
 
-Most of the OpenBook accounts like asks, bids and event queues are used in
-write mode only we can disable read-locks on these accounts. Now we can
-consider there are 48 M CU's per block and 2.5 blocks per second. Considering
-each instruction takes 200K CUs so around 600 transactions per second.
-Currently, base fees are around 0.00005 SOLs, with so low gas fees spammers
-have the advantage to spam the cluster. A reasonable PRAW fees fee could be
-around 0.1 SOLs per transaction that could be distributed among different
-accounts. For a user interacting with dapp with 0.1 SOLs in the account seems
-reasonable assuming that the transactions are executed successfully and the
-fees are rebated. This will make spammers spend their SOLs 2000 times more
-rapidly than before. The thumb rule for dapps to set PRAW fees on their
-accounts is `More important the account = Higher PRAW fees`.
+Most of the OpenBook accounts like asks, bids and event queues are used in write
+mode only we can disable read-locks on these accounts. Now we can consider there
+are 48 M CUs per block and 2.5 blocks per second. Considering each instruction
+takes 200K CUs so around 600 transactions per second. Currently, base fees are
+around 0.00005 SOLs, with so low gas fees spammers have the advantage to spam
+the cluster. A reasonable PRAW fees fee could be around 0.1 SOLs per transaction
+that could be distributed among different accounts. For a user interacting with
+dapp with 0.1 SOLs in the account seems reasonable assuming that the
+transactions are executed successfully and the fees are rebated. This will make
+spammers spend their SOLs 2000 times more rapidly than before. The thumb rule
+for dapps to set PRAW fees on their accounts is
+`More important the account = Higher PRAW fees`.
 
 ### Pyth Usecase
 
 Pyth's price feeds currently serve around 33M CU peak read load. An attacker
 could write lock those for 12M CU and cause scheduling issues by crowding out
-the majority of the block. A high PRAW fees fee of 10 SOL could prevent anyone
-except price feed publishers from write locking a price feed account.
+the majority of the block. A high PRAW fees fee of u32::MAX could prevent anyone
+except price feed publishers from write-locking a price feed account.
+
+To effectively block DeFi protocols from using Pyth oracles a malicious attacker
+needs to write lock Pyth oracles with a large amount of CUs. With current
+limits of CUs per writable account of around 10 million CUs the attacker has to
+spend around 4294 SOLs to block PYTH oracle for a block.
 
 ### Mango V4 Usecase
 
