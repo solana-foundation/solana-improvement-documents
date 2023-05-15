@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0048'
 title: Syscall for verifying secp256r1 signatures
 authors:
   - SirIsaac (Bunkr)
