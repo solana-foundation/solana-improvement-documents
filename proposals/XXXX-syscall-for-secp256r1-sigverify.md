@@ -65,7 +65,9 @@ Should be analog to what exists for `secp256k1_recover()` , except without `reco
 The crates `ecdsa` and `p256` are a good starting point for the implementation. Due to a current dependency version conflict of `zeroize` between `curve25519-dalek` and `solana-program`, using these crates will require a fix/bump of `zeroize` inside `curve25519-dalek`. See issue [#26688](https://github.com/solana-labs/solana/issues/26688)
 
 ### Compute Cost
-Once the implementation is finished, benchmarking should take place on a sufficiently powerful machine in order to determine average compute time. For the sake of ensuring proper efficiency, a comparison to similar implementations on polygon/optimism/ethereum would be conducted.
+Once the implementation is finished, benchmarking should take place on a sufficiently powerful machine in order to determine average compute time. For the sake of ensuring proper efficiency, a comparison to similar implementations on polygon/optimism/ethereum would be conducted. 
+
+This is in line with how previous syscalls for EC group operations and arithmetic were evaluated/benchmarked. See [PR#27961](https://github.com/solana-labs/solana/pull/27961) & [PR#28503](https://github.com/solana-labs/solana/pull/28503)
 
 
 ## Impact
