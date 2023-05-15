@@ -239,6 +239,7 @@ fn get_program_rebatable_account_write_fees(
   account: Pubkey
 ) -> u32;
 ```
+
 The syscall will take writable account as import and return millilamports per CU.
 
 ### Syscall to Rebate
@@ -536,9 +537,9 @@ the majority of the block. A high PRAW fees fee of u32::MAX could prevent anyone
 except price feed publishers from write-locking a price feed account.
 
 To effectively block DeFi protocols from using Pyth oracles a malicious attacker
-needs to write lock Pyth oracles with a large amount of CUs. With current
-limits of CUs per writable account of around 10 million CUs the attacker has to
-spend around 4294 SOLs to block PYTH oracle for a block.
+needs to write lock Pyth oracles with a large amount of CUs. With current limits
+of CUs per writable account of around 10 million CUs the attacker has to spend
+around 4294 SOLs to block PYTH oracle for a block.
 
 ### Mango V4 Usecase
 
