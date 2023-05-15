@@ -1,6 +1,6 @@
 ---
 simd: '0016'
-title: Program Rebatable Account Write Fees (PRAW Fees)
+title: Program Rebatable Account Write Fees
 authors:
   - Godmode Galactus (Mango Markets)
   - Maximilian Schneider (Mango Markets)
@@ -379,11 +379,11 @@ millilamports per requested CUs.
   transaction. There is an account `accA` which is write-locked by the
   transaction and it has an PRAW fees fee of `100` lamports. Consider during
   execution the program will rebate all the PRAW fees on the account but later
-  the execution failed. Then payer should have a minimum balance of `other fees`
-  + `100` lamports to execute the transaction. The program rebated PRAW fees but
-  as executing the transaction failed, no rebate will be issued. The PRAW fees
-  fees will be transferred to respective accounts, and the payer will finally
-  end up paying `other fees` + `100` lamports as PRAW fees.
+  the execution failed. Then payer should have a minimum balance of 
+  `other fees` + `100` lamports to execute the transaction. The program rebated
+  PRAW fees but as executing the transaction failed, no rebate will be issued.
+  The PRAW fees fees will be transferred to respective accounts, and the payer
+  will finally end up paying `other fees` + `100` lamports as PRAW fees.
 
 * Fees are over paid case:
 
