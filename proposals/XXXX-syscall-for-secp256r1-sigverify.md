@@ -70,13 +70,13 @@ Once the implementation is finished, benchmarking should take place on a suffici
 
 ## Impact
 
-General outcome would be to enable implementing the on-chain usage of Passkeys and the WebAuthn Standard.
+Would enable the on-chain usage of Passkeys and the WebAuthn Standard. 
 
 By extension this would also enable the creation of account abstractions and forms of Two-Factor Authentication around those keypairs.
 
 ## Security Considerations
 
-- Ensure parity of tests and parameters with those found in [SEC2](https://www.secg.org/sec2-v2.pdf) for the secp256r1 curve
+- Ensure parity of test results and parameters with those found in [SEC2](https://www.secg.org/sec2-v2.pdf) for the secp256r1 curve
 - Ensure signature malleability is prevented/accounted for
 
 ## Backwards Compatibility
