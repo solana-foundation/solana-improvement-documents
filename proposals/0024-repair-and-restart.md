@@ -33,6 +33,19 @@ normally start from the highest optimistically confirmed block, but it's also
 okay to start from a child of the highest optimistcially confirmed block as
 long as consensus can be reached.
 
+* "silent repair phase": In the new repair and restart plan, the validators in
+restart will first spend some time to exchange information, repair missing
+blocks, and finally reach consensus. The validators only continue normal block
+production and voting after consensus is reached. We call this preparation
+phase where block production and voting are paused the silent repair phase.
+
+* "ephemeral shred version": right now we update `shred_version` during a
+cluster restart, it is used to verify received shreds and filter Gossip peers. 
+In the new repair and restart plan, we introduce a new temporary shred version 
+in the silent repair phase so validators in restart don't interfere with those 
+not in restart. Currently this ephemeral shred version is calculated using
+`(current_shred_version + 1) % 0xffff`.
+
 * `RESTART_STAKE_THRESHOLD`: We need enough validators to participate in a
 restart so they can make decision for the whole cluster. If everything works
 perfect, we only need 2/3 of the total stake. However, validators could die
@@ -98,20 +111,23 @@ this proposal.
 
 The new protocol tries to make all restarting validators get the same
 data blocks and the same set of last votes among them, then they will almost
-certainly make the same decision and proceed.
+certainly make the same decision on the canonical fork and proceed.
 
 The steps roughly look like this:
 
-1. Everyone freezes, no new blocks, no new votes, and no Turbine
+1. The validator boots into the silent repair phase, it will not make new 
+blocks or change its votes. The validator propagates its local voted fork to 
+all other validators in restart.
 
-2. Make all blocks which can potentially have been optimistically confirmed
-before the freeze propagate to everyone
+2. While counting local vote information from all others in restart, the
+validator repairs all blocks which could potentially have been optimistically
+confirmed.
 
-3. Make restart participants' last vote prior to the freeze propagate to
-everyone
+3. After repair is complete, the validator counts votes on each fork and
+sends out local heaviest fork.
 
-4. Now see if enough nodes can agree on one block (same slot and hash) to
-restart from
+4. Each validator counts if enough nodes can agree on one block (same slot and
+hash) to restart from:
 
    1. If yes, proceed and restart
 
@@ -124,52 +140,85 @@ restarted with this arg does not participate in the normal Turbine protocol,
 update its vote, or generate new blocks until all of the following steps are
 completed.
 
-### Gossip last vote before the restart and ancestors on that fork
+### 1. Gossip last vote before the restart and ancestors on that fork
 
-Send gossip message LastVotedForkSlots to everyone in restart, it contains the
-last voted slot on its tower and the ancestor slots on the last voted fork and
-is sent in a compressed bitmap like the `EpochSlots` data structure. The number of
-ancestor slots sent is hard coded at 81000, because that's 400ms * 81000 = 9
-hours, we assume most restart decisions to be made in 9 hours. If a validator
-restarts after 9 hours past the outage, it cannot join the restart this way. If
-enough validators failed to restart within 9 hours, then fallback to the
-manual, interactive cluster restart method.
+The main goal of this step is to propagate the locally selected fork to all
+others in restart.
 
-The fields of LastVotedForkSlots are:
+We use a new Gossip message `LastVotedForkSlots`, its fields are:
 
-- `last_voted_slot`: the slot last voted, this also serves as last_slot for the
-bit vector.
-- `last_voted_hash`: the bank hash of the slot last voted slot.
-- `ancestors`: compressed bit vector representing the slots which produced
-a block on the last voted fork. the most significant bit is always
-last_voted_slot, least significant bit is last_voted_slot-81000.
+- `last_voted_slot`: `u64` the slot last voted, this also serves as last_slot
+for the bit vector.
+- `last_voted_hash`: `Hash` the bank hash of the slot last voted slot.
+- `ancestors`: `BitVec<u8>` compressed bit vector representing the slots on
+sender's last voted fork. the most significant bit is always
+`last_voted_slot`, least significant bit is `last_voted_slot-81000`.
 
-When a validator enters restart, it increments its current shred_version, so
-the gossip messages used in restart will not interfere with those outside the
-restart. There is slight chance that (current_shred_version+1) % 0xffff would
-collide with the new shred_version calculated after the restart, but even if
-this rare case occured, we plan to flush the CRDS table on successful restart,
-so gossip messages used in restart will be removed.
+The number of ancestor slots sent is hard coded at 81000, because that's
+400ms * 81000 = 9 hours, we assume most restart decisions to be made in 9 
+hours. If a validator restarts after 9 hours past the outage, it cannot join 
+the restart this way. If enough validators failed to restart within 9 hours, 
+then fallback to the manual, interactive cluster restart method.
 
-### Aggregate, repair, and replay the slots in LastVotedForkSlots
+When a validator enters restart, it uses ephemeral shred version to avoid
+interfering with those outside the restart. There is slight chance that 
+the ephemeral shred version would collide with the shred version after the
+silent repair phase, but even if this rare case occured, we plan to flush the 
+CRDS table on successful restart, so gossip messages used in restart will be 
+removed.
 
-Aggregate the slots in received LastVotedForkSlots messages, whenever some slot
-has enough stake to be optimistically confirmed and it's missing locally, start
-the repair process for this slot.
+### 2. Repair ledgers up to the restart slot
 
-We calculate "enough" stake as follows. Assume `RESTART_STAKE_THRESHOLD` is
-80%. When there are 80% validators joining the restart, assuming 5% restarted 
-validators can make mistakes in voting, any block with more than
-67% - 5% - (100-80)% = 42% could potentially be optimistically confirmed before
-the restart. If there are 85% validators in the restart, then any block with
-more than 67% - 5% - (100-85)% = 47% could be optimistically confirmed before
-the restart.
+The main goal of this step is to repair all blocks which could potentially be
+optimistically confirmed. So during next step each validator can select its
+own heaviest fork.
 
-### Gossip current heaviest fork
+We need to prevent false negative at all costs, because we can't rollback an 
+optimistcially confirmed block. However, false positive is okay. Because when 
+we select the heaviest fork in the next step, we should see all the potential 
+candidates for optimistically confirmed slots, there we can count the votes and
+remove some false positive cases.
 
-After receiving LastVotedForkSlots from the validators holding stake more than 
-`RESTART_STAKE_THRESHOLD` and repairing slots with "enough" stake, replay all
-blocks and pick the heaviest fork as follows:
+However, it's also overkill to repair every block presented by others. When
+`LastVotedForkSlots` messages are being received and aggregated, a validator
+can categorize blocks missing locally into 3 categories: ignored, unsure,
+and must-have. Depending on the stakes of validators currently in restart, some
+slots with too few stake can be safely ignored, some have enough stake they
+should definitely be repaired, and the rest would need more confirmation before
+those blocks are worth repairing.
+
+Assume `RESTART_STAKE_THRESHOLD` is 80% and that 5% restarted validators can
+make mistakes in voting.
+
+When only 5% validators are in restart, everything is in "unsure" category.
+
+When 67% validators are in restart, any slot with less than
+67% - 5% - (100-67%) = 29% is in "ignored" category, because even if all 
+validators join the restart, the slot will not get 67% stake. Any slot with
+more than 33% stake can potentially affect heaviest fork choice, so it is in
+"must-have" category. Any slot with between 29% and 33% stake is "unsure".
+
+When 80% validators are in restart, any slot with less than
+67% - 5% - (100-80%) = 42% is in "ignored" category, the rest is "must-have".
+
+From above examples, we can see the "must-have" threshold changes dynamically 
+depending on how many validators are in restart. The main benefit is that a
+block will only move from "must-have/unsure" to "ignored" as more validators 
+join the restart, not vice versa. So validators will have an unchanged list of
+blocks to repair when >71% validators joined the restart.
+
+### 3. Gossip current heaviest fork
+
+We use a new Gossip message `HeaviestFork`, its fields are:
+
+- `slot`: `u64` slot of the picked block.
+- `hash`: `Hash` bank hash of the picked block.
+- `received`: `u8` total percentage of stakes of the validators it received
+`HeaviestFork` messages from.
+
+After receiving `LastVotedForkSlots` from the validators holding stake more 
+than  `RESTART_STAKE_THRESHOLD` and repairing slots with "enough" stake, replay
+all blocks and pick the heaviest fork as follows:
 
 1. Pick block and update root for all blocks with more than 67% votes
 
@@ -181,49 +230,49 @@ For example, if 80% validators are in restart, child has 42% votes, then
 42 + (100-80) = 62%, pick child. 62% is chosen instead of 67% because 5%
 could make the wrong votes.
 
+It's okay to use 62% here because the goal is to prevent false negative rather
+than false positive. If validators pick a child of optimistically confirmed
+block to start from, it's okay because if 75% of the validators all choose this
+block, this block will be instantly confirmed on the chain. While not having
+any optimistically confirmed block rolled back is the number one goal here.
+
 2.2 Otherwise stop traversing the tree and use last picked block.
 
 After deciding heaviest block, gossip
-Heaviest(X, Hash(X), received_heaviest_stake) out, where X is the latest picked
-block. We also send out stake of received Heaviest messages so that we can
-proceed to next step when enough validators are ready.
+`HeaviestFork(X, Hash(X), received_heaviest_stake)` out, where X is the latest
+picked block. We also send out stake of received `HeaviestFork` messages so 
+that we can proceed to next step when enough validators are ready.
 
-The fields of the Heaviest message is:
+### 4. Proceed to restart if everything looks okay, halt otherwise
 
-- `slot`: slot of the picked block.
-- `hash`: bank hash of the picked block.
-- `received`: total of stakes of the validators it received Heaviest messages
-from.
+All validators in restart keep counting the number of Heaviest where
+`received_heaviest_stake` is higher than 80%. Once a validator counts that 80%
+of the validators send out Heaviest where `received_heaviest_stake` is higher
+than 80%, it starts the following checks:
 
-### Proceed to restart if everything looks okay, halt otherwise
-
-If things go well, all of the validators in restart should find the same
-heaviest fork. But we are only sending slots instead of bank hashes in
-LastVotedForkSlots, so it's possible that a duplicate block can make the
-cluster unable to reach consensus. If at least 2/3 of the nodes agree on one
-slot, they should proceed to restart from this slot. Otherwise validators
-should halt and send alerts for human attention.
-
-We will also perform some safety checks, if the voted slot does not satisfy
-safety checks, then the restart will be aborted:
+- Whether all `HeaviestFork` have the same slot and same block Hash. Because
+validators are only sending slots instead of bank hashes in 
+`LastVotedForkSlots`, it's possible that a duplicate block can make the
+cluster unable to reach consensus. So block hash needs to be checked as well.
 
 - The voted slot is equal or a child of local optimistically confirmed slot.
 
-We require that at least 80% of the people received the Heaviest messages from
-validators with at least 80% stake, and that the Heaviest messages all agree on
-one block and hash.
+If the above check passes, the validator immediately starts generation of
+snapshot at the agreed upon slot.
 
-So after a validator sees that 80% of the validators received 80% of the votes,
-wait for 10 more minutes so that the message it sent out have propagated, then
-do the following:
+While the snapshot generation is in progress, the validator also checks to see
+2 minutes has passed since agreement has been reached, to guarantee its 
+`HeaviestFork` message propagates to everyone, then proceeds to restart:
 
-- Generate a snapshot at the highest oc slot.
-- Issue a hard fork at the highest oc slot and change shred version in gossip.
-- Execute the current --wait-for-supermajority logic and wait for 80%.
+1. Issue a hard fork at the highest oc slot and change shred version in gossip.
+2. Execute the current tasks involved in --wait-for-supermajority and wait for 80%.
 
-Before a validator enters restart, it will still propagate LastVotedForkSlots
-and Heaviest messages in gossip. After the restart,its shred_version will be
-updated so it will no longer send or propagate gossip messages for restart.
+Before a validator enters restart, it will still propagate `LastVotedForkSlots`
+and `HeaviestFork` messages in gossip. After the restart,its shred_version will 
+be updated so it will no longer send or propagate gossip messages for restart.
+
+If any of the checks fails, the validator immediately prints out all debug info,
+sends out metrics so that people can be paged, and then halts.
 
 ## Impact
 
@@ -236,14 +285,14 @@ don't need to manually generate and download snapshots again.
 
 ## Security Considerations
 
-The two added gossip messages LastVotedForkSlots and Heaviest will only be sent
-and processed when the validator is restarted in RepairAndRestart mode. So
-random validator restarting in the new mode will not bring extra burden to the
-system.
+The two added gossip messages `LastVotedForkSlots` and `HeaviestFork` will only
+be sent and processed when the validator is restarted in RepairAndRestart mode.
+So random validator restarting in the new mode will not bring extra burden to
+the system.
 
-Non-conforming validators could send out wrong LastVotedForkSlots and Heaviest
-messages to mess with cluster restarts, these should be included in the
-Slashing rules in the future.
+Non-conforming validators could send out wrong `LastVotedForkSlots` and
+`HeaviestFork` messages to mess with cluster restarts, these should be included
+in the Slashing rules in the future.
 
 ## Backwards Compatibility
 
