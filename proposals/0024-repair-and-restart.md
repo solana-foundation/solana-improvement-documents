@@ -33,18 +33,19 @@ are performing cluster restart, we normally start from the highest
 optimistically confirmed block, but it's also okay to start from a child of the 
 highest optimistically confirmed block as long as consensus can be reached.
 
-* "silent repair phase": During the proposed optimistic cluster restart automation process, the validators in
-restart will first spend some time to exchange information, repair missing
-blocks, and finally reach consensus. The validators only continue normal block
-production and voting after consensus is reached. We call this preparation
-phase where block production and voting are paused the silent repair phase.
+* "silent repair phase": During the proposed optimistic cluster restart
+automation process, the validators in restart will first spend some time to
+exchange information, repair missing blocks, and finally reach consensus. The 
+validators only continue normal block production and voting after consensus is 
+reached. We call this preparation phase where block production and voting are 
+paused the silent repair phase.
 
-* "ephemeral shred version": right now we update `shred_version` during a
+* "silent repair shred version": right now we update `shred_version` during a
 cluster restart, it is used to verify received shreds and filter Gossip peers. 
-In the new repair and restart plan, we introduce a new temporary shred version 
-in the silent repair phase so validators in restart don't interfere with those 
-not in restart. Currently this ephemeral shred version is calculated using
-`(current_shred_version + 1) % 0xffff`.
+In the proposed optimistic cluster restart plan, we introduce a new temporary
+shred version in the silent repair phase so validators in restart don't 
+interfere with those not in restart. Currently this silent repair shred version 
+is calculated using `(current_shred_version + 1) % 0xffff`.
 
 * `RESTART_STAKE_THRESHOLD`: We need enough validators to participate in a
 restart so they can make decision for the whole cluster. If everything works
@@ -66,8 +67,9 @@ We aim to automate the negotiation of highest optimistically confirmed slot and
 the distribution of all blocks on that fork, so that we can lower the 
 possibility of human mistakes in the cluster restart process. This also reduces 
 the burden on validator operators, because they don't have to stay around while 
-the validators automatically try to reach consensus, they will be paged if 
-things go wrong.
+the validators automatically try to reach consensus, the validator will halt
+and print debug information if anything goes wrong, and operators can set up
+their own monitoring accordingly.
 
 ## Alternatives Considered
 
@@ -86,9 +88,9 @@ After we gain more experience with the restart approach in this proposal, we
 may slowly try to automate more parts to improve cluster reliability.
 
 ### Use gossip and consensus to figure out restart slot before the restart
-The main difference between current proposal and this proposal is that this
-proposal will automatically enter restart preparation phase without human 
-intervention.
+The main difference between this and the current proposal is this alternative
+tries to make the cluster automatically enter restart preparation phase without 
+human intervention.
 
 While getting human out of the loop improves recovery speed, there are concerns 
 about recovery gossip messages interfering with normal gossip messages, and 
@@ -159,12 +161,15 @@ hours. If a validator restarts after 9 hours past the outage, it cannot join
 the restart this way. If enough validators failed to restart within 9 hours, 
 then fallback to the manual, interactive cluster restart method.
 
-When a validator enters restart, it uses ephemeral shred version to avoid
+When a validator enters restart, it uses silent repair shred version to avoid
 interfering with those outside the restart. There is slight chance that 
-the ephemeral shred version would collide with the shred version after the
+the silent repair shred version would collide with the shred version after the
 silent repair phase, but even if this rare case occurred, we plan to flush the 
 CRDS table on successful restart, so gossip messages used in restart will be 
 removed.
+
+To be extra cautious, we will also filter out `LastVotedForkSlots` and
+`HeaviestFork` in gossip if a validator is not in silent repair phase.
 
 ### 2. Repair ledgers up to the restart slot
 
@@ -186,7 +191,8 @@ should definitely be repaired, and the rest would be undecided pending more
 confirmations.
 
 Assume `RESTART_STAKE_THRESHOLD` is 80% and that 5% restarted validators can
-make mistakes in voting.
+change their votes from what they voted before the restart due to mistakes or 
+malicious behavior.
 
 When only 5% validators are in restart, everything is in "unsure" category.
 
@@ -280,15 +286,16 @@ This proposal adds a new silent repair mode to validators, during this phase
 the validators will not participate in normal cluster activities, which is the
 same as now. Compared to today's cluster restart, the new mode may mean more
 network bandwidth and memory on the restarting validators, but it guarantees
-the safety of optimistically confirmed user transactions, and validator admins
-don't need to manually generate and download snapshots again. 
+the safety of optimistically confirmed user transactions, and validator 
+operators don't need to manually generate and download snapshots again. 
 
 ## Security Considerations
 
 The two added gossip messages `LastVotedForkSlots` and `HeaviestFork` will only
-be sent and processed when the validator is restarted in RepairAndRestart mode.
-So random validator restarting in the new mode will not bring extra burden to
-the system.
+be sent and processed when the validator is restarted in the new proposed 
+optimistic cluster restart mode. They will also be filtered out if a validator
+is not in this mode. So random validator restarting in the new mode will not 
+bring extra burden to the system.
 
 Non-conforming validators could send out wrong `LastVotedForkSlots` and
 `HeaviestFork` messages to mess with cluster restarts, these should be included
