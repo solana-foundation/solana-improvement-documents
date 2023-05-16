@@ -11,7 +11,8 @@ created:  2023-04-26
 ---
 
 ## Summary
-Add a new RPC call and `getBlockHeaders()` to add support for consensus verifying clients as first described in this [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
+Users can verify that supermajority has voted on the slot that their transaction was included in without fully trusting the RPC provider. The user
+will be running a consenus verifying client as first described in [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
 
 ## Motivation
 For a user to validate whether their transaction is valid and included in a block it needs to trust the confirmation from the RPC. This has been a glaring attack vector for malicious actors that could lie to users if it's in their own interest. To combat this mature entities like exchanges run full nodes that process the entire ledger and can verify entire blocks. The downside of that being very high cost to run a full node making it less accessible to everyday users, in effect exposing users to potential attacks from malicious nodes. 
@@ -36,13 +37,17 @@ BlockHeader: A structure containing all vote identities, vote signatures and sta
 ## Detailed Design
 The protocol interaction will be as follows:
 1. User makes a transaction using their wallet in slot N.
-2. The client then reads the validator set from gossip and requests BlockHeader for slot N + 1, N + 2, N + 3
+2. The client then reads the validator set from gossip and requests BlockHeader for slot N to (N+32) given the 32 block depth finality.  
 3. It first validates whether the validator identities match the set from gossip.
 4. Then proceeds to validate the vote signatures.
-5. The client also has to sync the epoch stake history from genesis from the entrypoint light client(eventually can be requested from multiple other light clients).
-6. Next it checks if the stake weights in the block header are within reasonable boundaries of the epoch history. More specifically the stake difference between epoch N and N-1 is not > 20 % of epoch N - 1.
+5. The client also has to sync the epoch stake history from genesis from the entrypoint light clients eventually can be requested from multiple other light clients).
+6. Next it checks if the stake weights in the block header are valid with the local stake history that wasy synced from entrypoint and if the stake is >= 67% of the total stake.
 8. If all these checks are valid the slot can be marked as confirmed under a supermajority trust assumption.
 
+#### Types of Light Clients
+1. **Entrypoint / Hub Clients** - These will be holding the snapshot with the stake history from genesis to current slot and be periodically syncing with the latest epoch.
+   
+3. **Ultra Light Clients** - These will be clients running in wallets on mobile or browser that will TOFU(Trust On First Use) the stake from the entrypoint clients and verify if the user transactions are voted on by the supermajority.
 
 #### New RPC Methods
 ```
@@ -73,4 +78,5 @@ minimised way unlike traditionally where users had to fully trust their RPC prov
 
 ## Security Considerations
 
-None
+### Trust Assumptions
+The light client makes certain trust assumptions that reduce reliance on RPC but these assumptions have tradeoffs. The ultra light clients verify if the supermajority has voted on the block, this is could be an issue if the supermajority itself is corrupt and is trying to vote on an invalid transaction. The future iterations of the light client that include data availability sampling and fraud proving should address this issue reduce the trust assumption to single honest node. We also rely on a entrypoint light client that has the snapshot and serves the stake history which is also a point of trust.
