@@ -74,6 +74,7 @@ their own monitoring accordingly.
 ## Alternatives Considered
 
 ### Automatically detect outage and perform cluster restart
+
 The reaction time of a human in case of emergency is measured in minutes,
 while a cluster restart where human initiate validator restarts takes hours.
 We considered various approaches to automatically detect outage and perform
@@ -88,6 +89,7 @@ After we gain more experience with the restart approach in this proposal, we
 may slowly try to automate more parts to improve cluster reliability.
 
 ### Use gossip and consensus to figure out restart slot before the restart
+
 The main difference between this and the current proposal is this alternative
 tries to make the cluster automatically enter restart preparation phase without 
 human intervention.
@@ -97,6 +99,7 @@ about recovery gossip messages interfering with normal gossip messages, and
 automatically start a new message in gossip seems risky.
 
 ### Automatically reduce block production in an outage
+
 Right now we have vote-only mode, a validator will only pack vote transactions
 into new blocks if the tower distance (last_vote - local_root) is greater than
 400 slots.
@@ -121,7 +124,8 @@ of a restart, we assume validators holding at least `RESTART_STAKE_THRESHOLD`
 percentage of stakes will restart with this arg. Then the following steps
 will happen:
 
-1. The operator restarts the validator with a new command-line argument to cause it to enter the silent repair phase at boot, where it will not make new 
+1. The operator restarts the validator with a new command-line argument to
+cause it to enter the silent repair phase at boot, where it will not make new 
 blocks or vote. The validator propagates its local voted fork
 information to all other validators in restart.
 
@@ -135,9 +139,9 @@ sends out local heaviest fork.
 4. Each validator counts if enough nodes can agree on one block (same slot and
 hash) to restart from:
 
-  1. If yes, proceed and restart
+   1. If yes, proceed and restart
 
-  2. If no, print out what it thinks is wrong, halt and wait for human
+   2. If no, print out what it thinks is wrong, halt and wait for human
 
 See each step explained in details below.
 
@@ -148,10 +152,10 @@ others in restart.
 
 We use a new Gossip message `LastVotedForkSlots`, its fields are:
 
-- `last_voted_slot`: `u64` the slot last voted, this also serves as last_slot
+* `last_voted_slot`: `u64` the slot last voted, this also serves as last_slot
 for the bit vector.
-- `last_voted_hash`: `Hash` the bank hash of the slot last voted slot.
-- `ancestors`: `BitVec<u8>` compressed bit vector representing the slots on
+* `last_voted_hash`: `Hash` the bank hash of the slot last voted slot.
+* `ancestors`: `BitVec<u8>` compressed bit vector representing the slots on
 sender's last voted fork. the most significant bit is always
 `last_voted_slot`, least significant bit is `last_voted_slot-81000`.
 
@@ -218,9 +222,9 @@ The main goal of this step is to "vote" the heaviest fork to restart from.
 
 We use a new Gossip message `HeaviestFork`, its fields are:
 
-- `slot`: `u64` slot of the picked block.
-- `hash`: `Hash` bank hash of the picked block.
-- `received`: `u8` total percentage of stakes of the validators it received
+* `slot`: `u64` slot of the picked block.
+* `hash`: `Hash` bank hash of the picked block.
+* `received`: `u8` total percentage of stakes of the validators it received
 `HeaviestFork` messages from.
 
 After receiving `LastVotedForkSlots` from the validators holding stake more 
@@ -232,7 +236,7 @@ replay all blocks and pick the heaviest fork as follows:
 2. If a picked block has more than one children, check if the votes on the
 heaviest child is over threshold:
 
-  1. If vote_on_child + stake_on_validators_not_in_restart >= 62%, pick child.
+   1. If vote_on_child + stake_on_validators_not_in_restart >= 62%, pick child.
 For example, if 80% validators are in restart, child has 42% votes, then
 42 + (100-80) = 62%, pick child. 62% is chosen instead of 67% because 5%
 could make the wrong votes.
@@ -242,7 +246,7 @@ than false positive. If validators pick a child of optimistically confirmed
 block to start from, it's okay because if 80% of the validators all choose this
 block, this block will be instantly confirmed on the chain.
 
-  2. Otherwise stop traversing the tree and use last picked block.
+   2. Otherwise stop traversing the tree and use last picked block.
 
 After deciding heaviest block, gossip
 `HeaviestFork(X, Hash(X), received_heaviest_stake)` out, where X is the latest
@@ -256,12 +260,12 @@ All validators in restart keep counting the number of `HeaviestFork` where
 of the validators send out `HeaviestFork` where `received_heaviest_stake` is 
 higher than 80%, it starts the following checks:
 
-- Whether all `HeaviestFork` have the same slot and same block Hash. Because
+* Whether all `HeaviestFork` have the same slot and same block Hash. Because
 validators are only sending slots instead of bank hashes in 
 `LastVotedForkSlots`, it's possible that a duplicate block can make the
 cluster unable to reach consensus. So block hash needs to be checked as well.
 
-- The voted slot is equal or a child of local optimistically confirmed slot.
+* The voted slot is equal or a child of local optimistically confirmed slot.
 
 If all checks pass, the validator immediately starts generation of snapshot at
 the agreed upon slot.
