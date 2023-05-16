@@ -119,7 +119,7 @@ of a restart, we assume validators holding at least `RESTART_STAKE_THRESHOLD`
 percentage of stakes will restart with this arg. Then the following steps
 will happen:
 
-1. The validator boots into the silent repair phase, it will not make new 
+1. The operator restarts the validator with a new command-line argument to cause it to enter the silent repair phase at boot, where it will not make new 
 blocks or change its votes. The validator propagates its local voted fork
 information to all other validators in restart.
 
