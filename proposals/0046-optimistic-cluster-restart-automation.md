@@ -1,5 +1,5 @@
 ---
-simd: '0024'
+simd: '0046'
 title: Optimistic cluster restart automation
 authors:
   - Wen Xu (Solana Labs)
