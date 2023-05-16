@@ -120,7 +120,7 @@ percentage of stakes will restart with this arg. Then the following steps
 will happen:
 
 1. The operator restarts the validator with a new command-line argument to cause it to enter the silent repair phase at boot, where it will not make new 
-blocks or change its votes. The validator propagates its local voted fork
+blocks or vote. The validator propagates its local voted fork
 information to all other validators in restart.
 
 2. While counting local vote information from all others in restart, the
