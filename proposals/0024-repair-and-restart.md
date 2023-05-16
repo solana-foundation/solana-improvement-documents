@@ -33,7 +33,7 @@ are performing cluster restart, we normally start from the highest
 optimistically confirmed block, but it's also okay to start from a child of the 
 highest optimistically confirmed block as long as consensus can be reached.
 
-* "silent repair phase": In the new repair and restart plan, the validators in
+* "silent repair phase": During the proposed optimistic cluster restart automation process, the validators in
 restart will first spend some time to exchange information, repair missing
 blocks, and finally reach consensus. The validators only continue normal block
 production and voting after consensus is reached. We call this preparation
