@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0049'
 title: Add a syscall for getting the remaining number of compute units in a transaction
 authors:
   - Christian Kamm
