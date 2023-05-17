@@ -78,7 +78,13 @@ Initial direction would be as follows:
 
 ### Function
 
-`fn secp256r1_verify(pubkey: &[u8], message: &[u8], signature: &[u8]) -> Result<(), Secp256r1Error>`
+```rust
+fn secp256r1_verify(
+  pubkey: &[u8],
+  message: &[u8],
+  signature: &[u8]
+  ) -> Result<(), Secp256r1Error>
+```
 
 Should be analog to what exists for `secp256k1_recover()` , except without
 `recovery_id`. Should enable verifying one signature at a time.
