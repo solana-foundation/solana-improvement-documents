@@ -12,10 +12,11 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-During a cluster restart following an outage, use gossip to exchange local
-status and automatically reach consensus on the block to restart from. Proceed
-to restart if validators in the restart can reach agreement, or print debug
-information and halt otherwise.
+During a cluster restart following an outage, make validators enter a separate
+recovery protocol that uses gossip to exchange local status and automatically 
+reach consensus on the block to restart from. Proceed to restart if validators
+in the restart can reach agreement, or print debug information and halt
+otherwise.
 
 ## New Terminology
 
@@ -38,12 +39,12 @@ automation process, the validators in restart will first spend some time to
 exchange information, repair missing blocks, and finally reach consensus. The 
 validators only continue normal block production and voting after consensus is 
 reached. We call this preparation phase where block production and voting are 
-paused the silent repair phase.
+paused the "silent repair phase".
 
 * "silent repair shred version": right now we update `shred_version` during a
 cluster restart, it is used to verify received shreds and filter Gossip peers. 
 In the proposed optimistic cluster restart plan, we introduce a new temporary
-shred version in the silent repair phase so validators in restart don't 
+shred version in the "silent repair phase" so validators in restart don't 
 interfere with those not in restart. Currently this silent repair shred version 
 is calculated using `(current_shred_version + 1) % 0xffff`.
 
@@ -90,13 +91,13 @@ may slowly try to automate more parts to improve cluster reliability.
 
 ### Use gossip and consensus to figure out restart slot before the restart
 
-The main difference between this and the current proposal is this alternative
-tries to make the cluster automatically enter restart preparation phase without 
-human intervention.
+The main difference between this and the current restart proposal is this 
+alternative tries to make the cluster automatically enter restart preparation 
+phase without human intervention.
 
-While getting human out of the loop improves recovery speed, there are concerns 
-about recovery gossip messages interfering with normal gossip messages, and 
-automatically start a new message in gossip seems risky.
+While getting humans out of the loop improves recovery speed, there are
+concerns about recovery gossip messages interfering with normal gossip 
+messages, and automatically start a new message in gossip seems risky.
 
 ### Automatically reduce block production in an outage
 
@@ -116,8 +117,8 @@ this proposal for now.
 ## Detailed Design
 
 The new protocol tries to make all restarting validators get the same data
-blocks and the same set of last votes, then they will almost certainly make the 
-same decision on the canonical fork and proceed.
+blocks and the same set of last votes, so that they will with high probability
+converge on the same canonical fork and proceed.
 
 A new command line arg will be added. When the cluster is in need
 of a restart, we assume validators holding at least `RESTART_STAKE_THRESHOLD`
@@ -125,11 +126,11 @@ percentage of stakes will restart with this arg. Then the following steps
 will happen:
 
 1. The operator restarts the validator with a new command-line argument to
-cause it to enter the silent repair phase at boot, where it will not make new 
+cause it to enter the "silent repair phase" at boot, where it will not make new 
 blocks or vote. The validator propagates its local voted fork
 information to all other validators in restart.
 
-2. While counting local vote information from all others in restart, the
+2. While aggregating local vote information from all others in restart, the
 validator repairs all blocks which could potentially have been optimistically
 confirmed.
 
@@ -147,8 +148,8 @@ See each step explained in details below.
 
 ### 1. Gossip last vote before the restart and ancestors on that fork
 
-The main goal of this step is to propagate the locally selected fork to all
-others in restart.
+The main goal of this step is to propagate the last `n` ancestors of the last
+voted fork to all others in restart.
 
 We use a new Gossip message `LastVotedForkSlots`, its fields are:
 
@@ -168,12 +169,11 @@ then fallback to the manual, interactive cluster restart method.
 When a validator enters restart, it uses silent repair shred version to avoid
 interfering with those outside the restart. There is slight chance that 
 the silent repair shred version would collide with the shred version after the
-silent repair phase, but even if this rare case occurred, we plan to flush the 
-CRDS table on successful restart, so gossip messages used in restart will be 
-removed.
+"silent repair phase", but even if this rare case occurred, we plan to flush 
+gossip on successful restart before entering normal validator operation.
 
 To be extra cautious, we will also filter out `LastVotedForkSlots` and
-`HeaviestFork` in gossip if a validator is not in silent repair phase.
+`HeaviestFork` in gossip if a validator is not in "silent repair phase".
 
 ### 2. Repair ledgers up to the restart slot
 
@@ -215,6 +215,10 @@ depending on how many validators are in restart. The main benefit is that a
 block will only move from "must-have/unsure" to "ignored" as more validators 
 join the restart, not vice versa. So the list of blocks a validator needs to
 repair will never grow bigger when more validators join the restart.
+
+Once the validator gets LastVotedForkSlots, it can draw a line which are the
+"must-have" blocks. When all the "must-have" blocks are repaired and replayed,
+it can proceed to step 3.
 
 ### 3. Gossip current heaviest fork
 
@@ -260,10 +264,10 @@ All validators in restart keep counting the number of `HeaviestFork` where
 of the validators send out `HeaviestFork` where `received_heaviest_stake` is 
 higher than 80%, it starts the following checks:
 
-* Whether all `HeaviestFork` have the same slot and same block Hash. Because
+* Whether all `HeaviestFork` have the same slot and same bank Hash. Because
 validators are only sending slots instead of bank hashes in 
 `LastVotedForkSlots`, it's possible that a duplicate block can make the
-cluster unable to reach consensus. So block hash needs to be checked as well.
+cluster unable to reach consensus. So bank hash needs to be checked as well.
 
 * The voted slot is equal or a child of local optimistically confirmed slot.
 
