@@ -95,9 +95,6 @@ applied even if the transaction fails contrary to lamport transfers. The program
 can decide to rebate these fees back to the user if certain conditions decided
 by dapp developers are met.
 
-Millilamports: 1/1000 lamports or 10^-3 lamports. PRAW fees are set and used in
-milli-lamports per CU.
-
 ### Other terminology
 
 Account `Authority`: The true authority for the account. Let's take an example
@@ -137,28 +134,42 @@ transaction, even if the same account is write-locked in multiple instructions.
 
 `SetProgramRebatableAccountWriteFees` will be part of the updated compute budget
 program. `SetProgramRebatableAccountWriteFees` will take a u64 parameter to set
-millilamports per requested CU as the PRAW fees. Instead of having separate
-instructions for each compute budget parameter we will have a single instruction
-that will set all the compute budget parameters. Compute budget parameters could
-be considered as transaction header that sets some parameters for the
-transaction. We create a new instruction that takes a vector of parameters. If
-similar transaction header parameters appear multiple times then we just take
-the first one and ignore the other occurrences. In case of multiple transaction
-headers in the transaction, we take the first occurrence and ignore the others.
+microlamports per requested CU as the PRAW fees. Instead of having separate
+instructions for each compute budget parameter and PRAW fee we will have a
+single instruction that will set all the compute budget and PRAW fee parameters.
+Compute budget parameters could be considered as transaction header that sets
+some parameters for the transaction. We create a new solana native program
+`TransactionHeaderProgram` that decodes the instruction data using a type length
+value structure (`TLV`) format and computes the required
+`TransactionHeaderParameter`s for the transaction. The `TLV` structure is well
+defined for accounts in solana program library repository we will extend the
+definition for instruction data. As we have multiple transaction header
+parameters we convert instruction data into a list of
+`TransactionHeaderParameter`. In case we fail to deserialize the transaction
+data, the transaction will fail with an error `InvalidInstructionData`. If same
+`TransactionHeaderParameter` is used multiple times or has multiple instructions
+using `TransactionHeaderProgram` we return an error `DuplicateInstruction`.
+Similarly, if we use old Compute Budget instructions with the new instruction to
+set the same parameters we return an error `DuplicateInstruction`.
+
+Program Id for the program `TransactionHeaderProgram`:
+
+```
+TrasactionHeader111111111111111111111111111
+```
+
+Definition for transaction header parameters:
 
 ```
 enum TransactionHeaderParameter {
   // existing compute budget parameters
+  RequestHeapFrame(u32),
   SetComputeUnitLimit(u32),
   SetComputeUnitPrice(u64),
   SetLoadedAccountsDataSizeLimit(u32),
   // Limit on maximum of PRAW fees to be paid
-  // Fees is set in milli lamports per CU
+  // Fees is set in micro lamports per CU
   SetProgramRebatableAccountWriteFees(u64),
-}
-
-enum TransactionHeaderInstruction {
-  parameter: Vec<TransactionHeaderParameter>
 }
 ```
 
@@ -167,11 +178,11 @@ instruction is decoded to get the `SetProgramRebatableAccountWriteFees` and then
 calculates the total fees required for the transaction message. Then we verify
 that the fee-payer has a minimum balance of: `per-transaction base fees` +
 `prioritization fees` +
-`Millilamports per CU set by SetProgramRebatableAccountWriteFees` *
+`Microlamports per CU set by SetProgramRebatableAccountWriteFees` *
 `requested CUs set by SetComputeUnitLimit`.
 
 Where PRAW fees is :
-`Millilamports per CU set by SetProgramRebatableAccountWriteFees` *
+`Microlamports per CU set by SetProgramRebatableAccountWriteFees` *
 `requested CUs set by SetComputeUnitLimit`.
 
 If the payer does not have enough balance, the transaction is not scheduled and
@@ -201,30 +212,30 @@ A new syscall will be added to update the PRAW fees:
 ```
 fn update_program_rebatable_account_write_fees(
   account: Pubkey, 
-  milli_lamports_per_cu: u32
+  microlamports_per_requested_cu: u64
 ) -> bool;
 ```
 
 The syscall will take as arguments the account on which fee should be updated
-and the millilamports per cu that should be charged and return a true if the
+and the microlamports per cu that should be charged and return a true if the
 changes were successful else will return false.
 
-The accounts database will need to store the value of millilamports per
+The accounts database will need to store the value of microlamports per
 requested CU for the account. Changes to update the PRAW fees could be done only
 by the authority program. All programs will need to implement special
 instructions so that the program admin can use this syscall to update PRAW fees
 on the required accounts. Program admin should always be signer for these
 instructions.
 
-Setting the millilamports per CU to `0` disables PRAW fees. The maximum amount
-of millilamports per CU that could be set will be u32::MAX. Lets assume that the
+Setting the microlamports per CU to `0` disables PRAW fees. The maximum amount
+of microlamports per CU that could be set will be 2 ^ 42. Lets assume that the
 maximum CU required to update these fees on an account is 1,000 CU. So the
 maximum PRAW fees required to update an account (`M`) is
 
 ```
-M = u32::MAX * 1000 CU * (1/1000) lamports
-M = 4.294967296×10^9 * 1000 / 1000
-M = 4.294967296 SOLs
+M = 2^42 * 1000 CU * 10^-6 lamports
+M = 4.398046511104 * 10^12 * 1000 * 10^-6
+M = 4.398046511104 SOLs
 ```
 
 So this makes sure that admin does not lock itself out from changing the PRAW
@@ -237,10 +248,12 @@ A new syscall will be added to read PRAW fees on an account.
 ```
 fn get_program_rebatable_account_write_fees(
   account: Pubkey
-) -> u32;
+) -> Result<()>;
 ```
 
-The syscall will take writable account as import and return millilamports per CU.
+The syscall will take writable account as import and return microlamports per
+CU. It will return an error `InvalidAccountOwner` if the program calling the
+syscall is not the owner of the account.
 
 ### Syscall to Rebate
 
@@ -258,22 +271,37 @@ Syscall definition of the rebate mechanism is:
 ```
 fn rebate_program_rebatable_account_write_fees(
   account: Pubkey, 
-  milli_lamports_per_cu: u32
-) -> bool;
+  microlamports_per_requested_cu: u64
+) -> Result<()>;
 ```
 
-Rebate takes account on which rebate is issued and the amount of millilamports
+Rebate takes account on which rebate is issued and the amount of microlamports
 per CU that needs to be rebated as input. It returns true of rebate was
 successful false otherwise. In case of multiple rebates on the same account only
 the highest amount of rebate will be taken into account. The rebated amount is
-always the minimum of rebate issued by the program and the PRAW fees on the
+always the minimum of the largest call to
+`rebate_program_rebatable_account_write_fees()` and the PRAW fees on the
 account. If program rebates `U64::MAX` it means all the PRAW fees on the account
-are rebated. The rebate amount cannot be negative.
+are rebated. The rebate amount cannot be negative. It will return an error
+`InvalidAccountOwner` if the program calling the syscall is not the owner of the
+account.
+
+### Changes in JSON RPC
+
+Currently JSON RPC service is used to fetch account data from RPC endpoint by
+the clients. We extend the http method `getAccountInfo` to also return the PRAW
+fee in microlamports per CU requested for the account. The http method
+`getFeeForMessage` should be extended to decode the instruction data for the
+program `TransactionHeaderProgram` into `TransactionHeaderParameter`s and then
+calculate the total fees correctly including the PRAW fees. For purpose of
+security we assume that program never rebates the PRAW fees on the accounts.
+Wallets should be extended to use these two methods to display user the correct
+information.
 
 ### Calculation of PRAW Fees and rebates.
 
 User creates a transaction by setting maximum PRAW fees in terms of
-millilamports per requested CUs (`m`) and requested CUs (`C`). Solana runtime
+microlamports per requested CUs (`m`) and requested CUs (`C`). Solana runtime
 will multiply `m` and `C` to calculate total maximum PRAW fees (`M`) payer is
 willing to pay, then check if user has enough balance to pay all the fees
 including PRAW fees then it will load the accounts required by the transaction.
@@ -306,7 +334,7 @@ the payer.
 ### Looking at common cases
 
 For simplicity, we have written examples in total PRAW fees instead of
-millilamports per requested CUs.
+microlamports per requested CUs.
 
 #### No PRAW fees enabled
 
@@ -411,6 +439,32 @@ millilamports per requested CUs.
   transferred back to the payer. So the payer pays only `base fees` in the end
   but the transaction is unsuccessful.
 
+#### Edge cases
+
+  * In a transaction, PRAW fee is set on an account, and then rebate is called on
+    the same account. Then there will be no rebates as no PRAW fees were paid
+    yet for the transaction.
+
+  * In a transaction on an account with PRAW fees, the PRAW fee is changed and
+    rebate is issued on the incorrect value of PRAW fees. The rebate will always
+    be paid on `min(max(all rebates), PRAW fee paid for the account)`.
+
+  * If PRAW fee is changed multiple times in the transaction, only last update
+    will be taken into account.
+  
+  * In a transaction on an account with PRAW fees, a instruction that call
+    `update_program_rebatable_account_write_fees` to set PRAW fee to 0. Then the
+    fee PRAW fee requirement will be dropped from the next transactions and all
+    the transactions with PRAW fees on the account will be considered as
+    overpayment and reverted back to the payer.
+
+  * In a transaction on an account with PRAW fees, with a instruction that call
+    `update_program_rebatable_account_write_fees` to update the PRAW fee. When
+    we do the syscall to get the PRAW fees
+    `get_program_rebatable_account_write_fees`, it will always return the PRAW
+    fee before any updates. The maximum rebate will be the initial PRAW fee for
+    the account. This should be the case even if the PRAW fee is updated to 0.
+
 ## Impact
 
 Overall this feature will incentivize the creation of proper transactions and
@@ -451,11 +505,11 @@ they will consume their SOL tokens more rapidly to maintain the attack.
 ## Security Considerations
 
 If the PRAW fees fee for an account is set too high then we cannot ever mutate
-that account anymore. Maximum fees can be set to around 4.2949 * 10^9 milli
-lamports per CU, assuming that instruction that updates the PRAW fees on the
-accounts will use around 1000 CUs, program owner will need roughly 4.2949 SOLs
-to reupdate the PRAW fees. Optimizing the instruction to update the PRAW fees is
-a must for dapp developers.
+that account anymore. Maximum fees should be set to around 4.398046511104 *
+10^12 or 2^42 microlamports per CU, assuming that instruction that updates the
+PRAW fees on the accounts will use around 1000 CUs, program owner will need
+roughly 4.3980 SOLs to reupdate the PRAW fees. Optimizing the instruction to
+update the PRAW fees is a must for dapp developers.
 
 For an account that has collected PRAW fees, to transfer these fees
 collected to another account we have to pay PRAW fees to write lock the
@@ -533,13 +587,14 @@ for dapps to set PRAW fees on their accounts is
 
 Pyth's price feeds currently serve around 33M CU peak read load. An attacker
 could write lock those for 12M CU and cause scheduling issues by crowding out
-the majority of the block. A high PRAW fees fee of u32::MAX could prevent anyone
-except price feed publishers from write-locking a price feed account.
+the majority of the block. A high PRAW fees fee of 2^42 microlamports per CU
+could prevent anyone except price feed publishers from write-locking a price
+feed account.
 
 To effectively block DeFi protocols from using Pyth oracles a malicious attacker
 needs to write lock Pyth oracles with a large amount of CUs. With current limits
 of CUs per writable account of around 10 million CUs the attacker has to spend
-around 4294 SOLs to block PYTH oracle for a block.
+around 4398 SOLs to block PYTH oracle for a block.
 
 ### Mango V4 Usecase
 
