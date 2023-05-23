@@ -25,6 +25,7 @@ paying extra fee. When used properly, it helps to reduce network congestion.
 where compute_unit_price has unit of microlamport. 
 
 The small unit of compute_unit_price manifests into:
+
 1. Prioritization_fee is proportionally insignificant to base fee;
 2. Therefore, some payers set priority even there is no contention, potentially
    leaves other users at a disadvantage;
@@ -55,7 +56,8 @@ when users migrate to new instruction.
   used by bank to calculate prioritization fee.
 
 ### Implementation
-#31469
+
+PoC https://github.com/solana-labs/solana/pull/31469
 
 ## Impact
 
