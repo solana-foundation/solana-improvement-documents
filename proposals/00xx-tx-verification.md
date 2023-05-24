@@ -13,7 +13,7 @@ created:  2023-05-24
 
 ## Summary
 
-Add a new RPC method which returns data which proves that a transaction is included in a specific slot. 
+Add a new RPC method that returns data to prove a transaction is included in a specific slot. 
 
 ## Motivation
 
