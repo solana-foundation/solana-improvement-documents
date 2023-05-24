@@ -32,6 +32,8 @@ None
 The new RPC method would be called `get_transaction_proof` which would take a slot number as input and return the following struct: 
 
 ```rust 
+pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof>;
+
 // new RPC struct to verify tx inclusion
 pub struct TransactionProof {
   // used to verify hash([start_blockhash, entires]) = bank_hash
