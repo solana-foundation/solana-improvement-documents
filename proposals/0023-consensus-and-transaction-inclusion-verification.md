@@ -13,17 +13,17 @@ created:  2023-05-25
 
 ## Summary
 
-Add a new RPC method that returns a proof that a transaction (tx) is included in a specific slot. 
+Add a new RPC method that returns proof that a transaction (tx) is included in a specific slot. 
 
-With this new RPC method, users can verify that supermajority has voted on the slot that their transaction was included in without fully trusting the RPC provider. This is the first step in implementing a consenus verifying client as first described in [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10).
+With this new RPC method, users can verify that a supermajority has voted on the slot that their transaction was included in without fully trusting the RPC provider. This is the first step in implementing a consensus-verifying client as first described in [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10).
 
 ## Motivation
 
-Currently, for a user to validate whether their transaction was included in a block, it needs to trust the confirmation from an RPC provider. This is a glaring attack vector for malicious RPC actors that could lie to users if it's in their own interest. 
+Currently, for a user to validate whether their transaction was included in a block, it needs to trust the confirmation from an RPC provider. This is a glaring attack vector for malicious RPC actors that could lie to users if it's in their interest. 
 
-To combat this, a user must run a full node to process the entire ledger and verify the blocks and votes themselves. The downside of this is that its very costly to run a full node which makes inaccessible to everyday users. 
+To combat this, a user must run a full node to process the entire ledger and verify the blocks and votes themselves. The downside of this is that it's very costly to run a full node which makes it inaccessible to everyday users. 
 
-One solution to this problem is to use diet clients to verify transaction confirmations without fully trusting the RPC. This SIMD is the first step towards implementing diet clients for Solana and provides a way for users to verify their transaction is included in a block and that the block has recieved a supermajority of votes.
+One solution to this problem is to use diet clients to verify transaction confirmations without fully trusting the RPC. This SIMD is the first step towards implementing diet clients for Solana and provides a way for users to verify their transaction is included in a block and that the block has received a supermajority of votes.
 
 ## Alternatives Considered
 
@@ -31,7 +31,7 @@ None
 
 ## New Terminology
 
-`TransactionProof`: A structure containing necessary information to verify if a transaction was included in the bankhash of a slot.
+`TransactionProof`: A structure containing the necessary information to verify if a transaction was included in the bankhash of a slot.
 
 #### New RPC Methods
 The new RPC method would be called `get_transaction_proof` which would take a slot number as input and return a `TransactionProof` struct
@@ -82,13 +82,13 @@ pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof
 }
 ```
 Using the `get_transaction_proof` RPC call, a client can verify a transaction with the following steps:
-- first, for a given transaction signature, find the slot which its included in
+- first, for a given transaction signature, find the slot which it is included in
 - call the `get_transaction_proof` RPC method with that slot as input
 - verify the `entries` are valid PoH hashes starting with the hash `start_blockhash`
 - verify that the transaction signature is included in one of the `entries`
 - reconstruct the expected bankhash using the other variables in the struct and the final entry's hash
 
-Below is client pseudocode for verifying a transaction:
+Below is the client pseudocode for verifying a transaction:
 ```rust 
 let tx_sig = "..."; // tx signature of interest
 let slot = 19; // slot which includes the tx
@@ -132,14 +132,13 @@ Once we computed the expected bankhash, we can parse vote transactions which vot
 
 ## Impact
 
-This proposal will improve the overall security and decentralisation of the Solana network allowing users to access the blockchain in a trust
-minimised way unlike traditionally where users had to fully trust their RPC providers. Dapp developers don't have to make any changes as wallets can easily integrate the client making it compatible with any dapp.
+This proposal will improve the overall security and decentralisation of the Solana network allowing users to access the blockchain in a trust-minimised way unlike traditionally where users had to fully trust their RPC providers. Dapp developers don't have to make any changes as wallets can easily integrate the client making it compatible with any Dapp.
 
 ## Security Considerations
 
 ### Trust Assumptions
 
-While this SIMD greatly increases the user's trustlessness required to an RPC, the light client will still needs to make certain trust assumptions. This includes finding a trusted source for the validator set per epoch (including their pubkeys and stake weights) and trusting that all transactions are valid (incase the supermajority is corrupt). We plan to solve these problems in future SIMDs to provide a full trustless setup including data availability sampling and fraud proving which will only require a single honest full node.
+While this SIMD greatly reduces the user's trust in an RPC, the light client will still need to make certain trust assumptions. This includes finding a trusted source for the validator set per epoch (including their pubkeys and stake weights) and trusting that all transactions are valid (in case the supermajority is corrupt). We plan to solve these problems in future SIMDs to provide a full trustless setup including data availability sampling and fraud proving which will only require a single honest full node.
 
 ## Future Work
 
