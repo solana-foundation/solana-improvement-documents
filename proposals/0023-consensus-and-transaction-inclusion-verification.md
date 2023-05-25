@@ -19,12 +19,11 @@ With this new RPC method, users can verify that supermajority has voted on the s
 
 ## Motivation
 
-For a user to validate whether their transaction is valid and included in a block it needs to trust the confirmation from the RPC. This has been a glaring attack vector for malicious actors that could lie to users if it's in their own interest. To combat this mature entities like exchanges run full nodes that process the entire ledger and can verify entire blocks. The downside of that being very high cost to run a full node making it less accessible to everyday users, in effect exposing users to potential attacks from malicious nodes. 
+Currently, for a user to validate whether their transaction was included in a block, it needs to trust the confirmation from an RPC provider. This is a glaring attack vector for malicious RPC actors that could lie to users if it's in their own interest. 
 
-This is where diet clients come in, users run the client to verify confirmation of their transaction without trusting the RPC. The SIMD is the first step towards implementing the diet client by proposing a small change to the rpc service that allows the client to validate if supermajority stake actually signed off on a block. 
+To combat this, a user must run a full node to process the entire ledger and verify the blocks and votes themselves. The downside of this is that its very costly to run a full node which makes inaccessible to everyday users. 
 
-This ensures that at-least the user doesn't have to trust the RPC service that is centralised and can rather trust the supermajority of the network which is less probable to be corrupt than a malicious RPC. However it is not impossible, hence the full diet client implementation discusses further steps to counter that and this is only the consensus verifying stage of the client.
-
+One solution to this problem is to use diet clients to verify transaction confirmations without fully trusting the RPC. This SIMD is the first step towards implementing diet clients for Solana and provides a way for users to verify their transaction is included in a block and that the block has recieved a supermajority of votes.
 
 ## Alternatives Considered
 Another solution is to use the gossip plane to read votes out of the CRDS optimistically and then confirm by verifying inclusion with the blockhash. The advantage being that no changes are required to the validator to read the votes. However this has a couple of drawbacks:
