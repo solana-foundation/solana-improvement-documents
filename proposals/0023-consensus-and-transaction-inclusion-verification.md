@@ -31,27 +31,7 @@ None
 
 ## New Terminology
 
-TransactionProof: A structure containing necessary information to verify if a transaction was included in the bank hash of a slot.
-
-## Detailed Design
-The protocol interaction will be as follows:
-1. User makes a transaction using their wallet in slot N.
-2. The client then reads the validator set from gossip and requests vote signatures and stake commitments for slot N to (N+32) given the 32 block depth finality.  
-3. It first validates whether the validator identities match the set from gossip.
-4. Then proceeds to validate the vote signatures.
-5. The client also has to sync the epoch stake history from genesis from the entrypoint light clients eventually can be requested from multiple other light clients).
-6. Next it checks if the stake weights returned are valid with the local stake history that wasy synced from entrypoint and if the stake is >= 67% of the total stake.
-7. Next it will request the transaction proof using the slot and transaction signature. It will then perform the following checks:
-  -  Verify the entries by checking that hashing the start hash of the slot `num_hash` times results in the same hash as the entry.
-  -  Check if the transaction signature is included in any of the slots entries.
-  -  Check if transaction is included in the poh hash by calculating `hash(prev_hash,hash(transaction_signatures))` and if it matches the entry hash.
-8. Reconstruct the bank hash with blockhash(entry hash), parent_hash, accounts_delta_hash and signature_count and check if all votes voted on this bank hash by parsing them.
-9. If all these checks are valid the slot can be marked as confirmed under a supermajority trust assumption.
-
-#### Types of Light Clients
-1. **Entrypoint / Hub Clients** - These will be holding the snapshot with the stake history from genesis to current slot and be periodically syncing with the latest epoch.
-   
-3. **Ultra Light Clients** - These will be clients running in wallets on mobile or browser that will TOFU(Trust On First Use) the stake from the entrypoint clients and verify if the user transactions are voted on by the supermajority.
+`TransactionProof`: A structure containing necessary information to verify if a transaction was included in the bankhash of a slot.
 
 #### New RPC Methods
 The new RPC method would be called `get_transaction_proof` which would take a slot number as input and return a `TransactionProof` struct
