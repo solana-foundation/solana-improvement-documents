@@ -26,12 +26,8 @@ To combat this, a user must run a full node to process the entire ledger and ver
 One solution to this problem is to use diet clients to verify transaction confirmations without fully trusting the RPC. This SIMD is the first step towards implementing diet clients for Solana and provides a way for users to verify their transaction is included in a block and that the block has recieved a supermajority of votes.
 
 ## Alternatives Considered
-Another solution is to use the gossip plane to read votes out of the CRDS optimistically and then confirm by verifying inclusion with the blockhash. The advantage being that no changes are required to the validator to read the votes. However this has a couple of drawbacks:
-- Votes have a high probability of getting dropped after being inserted into the CRDS as sometimes validators can vote on older slots after voting on the newer slot.
-- Validators aren't obligated to propagate gossip changes and have reason to not do so as it reduces egress costs.
 
-We could also just directly make these calls from the client itself but its much faster and more convenient to do it on server side.
-
+None
 
 ## New Terminology
 
