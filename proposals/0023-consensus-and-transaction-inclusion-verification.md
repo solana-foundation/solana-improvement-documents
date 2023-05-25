@@ -138,10 +138,9 @@ minimised way unlike traditionally where users had to fully trust their RPC prov
 ## Security Considerations
 
 ### Trust Assumptions
-The light client makes certain trust assumptions that reduce reliance on RPC but these assumptions have tradeoffs. The ultra light clients verify if the supermajority has voted on the block, this is could be an issue if the supermajority itself is corrupt and is trying to vote on an invalid transaction.
+
+While this SIMD greatly increases the user's trustlessness required to an RPC, the light client will still needs to make certain trust assumptions. This includes finding a trusted source for the validator set per epoch (including their pubkeys and stake weights) and trusting that all transactions are valid (incase the supermajority is corrupt). We plan to solve these problems in future SIMDs to provide a full trustless setup including data availability sampling and fraud proving which will only require a single honest full node.
 
 ## Future Work
-The future iterations of the light client that include data availability sampling and fraud proving should address this issue reduce the trust assumption to single honest node. We also rely on a entrypoint light client that has the snapshot and serves the stake history which is also a point of trust.
 
-Additionally, while there are improvements and additional features that can be made (as mentioned in [this proposal](https://docs.solana.com/proposals/simple-payment-and-state-verification)), including using merkle trees to compute the blockhash (instead of the current sequential implementation), transaction status codes, and validator set verification, we chose to keep this SIMD self-contained and only add a new RPC method with no changes to the protocol. Optimizations will be left to future SIMDs which will build off of this one.
-
+While there are improvements and additional features that can be made (as mentioned in [this proposal](https://docs.solana.com/proposals/simple-payment-and-state-verification)), including using merkle trees to compute the blockhash (instead of the current sequential implementation), transaction status codes, and validator set verification, we chose to keep this SIMD self-contained and only add a new RPC method with no changes to the protocol. Optimizations will be left to future SIMDs which will build off of this one.
