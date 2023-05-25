@@ -12,10 +12,13 @@ created:  2023-05-25
 ---
 
 ## Summary
-Users can verify that supermajority has voted on the slot that their transaction was included in without fully trusting the RPC provider. The user
-will be running a consenus verifying client as first described in [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
+
+Add a new RPC method that returns a proof that a transaction (tx) is included in a specific slot. 
+
+With this new RPC method, users can verify that supermajority has voted on the slot that their transaction was included in without fully trusting the RPC provider. This is the first step in implementing a consenus verifying client as first described in [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10).
 
 ## Motivation
+
 For a user to validate whether their transaction is valid and included in a block it needs to trust the confirmation from the RPC. This has been a glaring attack vector for malicious actors that could lie to users if it's in their own interest. To combat this mature entities like exchanges run full nodes that process the entire ledger and can verify entire blocks. The downside of that being very high cost to run a full node making it less accessible to everyday users, in effect exposing users to potential attacks from malicious nodes. 
 
 This is where diet clients come in, users run the client to verify confirmation of their transaction without trusting the RPC. The SIMD is the first step towards implementing the diet client by proposing a small change to the rpc service that allows the client to validate if supermajority stake actually signed off on a block. 
