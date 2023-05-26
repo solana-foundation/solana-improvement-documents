@@ -33,28 +33,92 @@ None
 
 `TransactionProof`: A structure containing the necessary information to verify if a transaction was included in the bankhash of a slot.
 
+`EntryProof`: An enum representing proof information about an entry of a slot. The enum will either contain a `MerkleEntry` which includes a merkle proof that a transaction is included in its entry hash, or a `PartialEntry` which only contains a hash of its transactions. 
+
 #### New RPC Methods
-The new RPC method would be called `get_transaction_proof` which would take a slot number as input and return a `TransactionProof` struct
+
+The new RPC method would be called `get_transaction_proof` which would take a slot number and a transaction signature as input and return a `TransactionProof` struct
+
 ```rs
 // new RPC method 
-pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof>;
+pub async fn get_transaction_proof(&self, slot: Slot, signature: Signature) -> Result<TransactionProof>;
 
 // new RPC struct to verify tx inclusion
 pub struct TransactionProof {
-  pub entries: Vec<Entry>,
+  pub entries: Vec<EntryProof>,
   pub start_blockhash: Hash,
   pub parent_hash: Hash, 
   pub accounts_delta_hash: Hash, 
   pub signature_count_buf: [u8; 8],
 }
+
+// entry proof information
+pub enum EntryProof { 
+    MerkleEntry(MerkleEntry), 
+    PartialEntry(PartialEntry),
+}
+
+// only for the entry which contains the transaction of interest 
+pub struct MerkleEntry {
+    pub hash: Hash,
+    pub num_hashes: u64,
+    pub proof: Proof, // uses solana-merkle-tree's Proof as a merkle proof
+}
+
+pub struct PartialEntry {
+    pub num_hashes: u64,
+    pub hash: Hash,
+    pub transaction_hash: Option<Hash>,
+}
 ```
+
 All the variables are accessible from the rpc's blockstore and bank_forks variables, so no changes to the rest of the codebase will be required. The following is psuedocode of the RPC method:
+
 ```rs
-pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof> {
+pub async fn get_transaction_proof(&self, slot: Slot, signature: Signature) -> Result<TransactionProof> {
   // first retrieve all the entries 
   let (entries, _, is_full) = self.blockstore.get_slot_entries_with_shred_info(slot, 0, false)
   // require all of the entries 
   assert!(is_full)
+
+  // parse the entires to only include the required information for the proof
+  let mut proof_entries = Vec::with_capacity(entries.len());
+  for entry in entries.iter() { 
+      let contains_sig = entry.transactions.iter().any(|tx| { 
+          tx.signatures.contains(&signature)
+      });
+
+      let proof_entry = if contains_sig { 
+          // create merkle proof for the entry which contains the tx of interest
+          let signatures: Vec<_> = entry.transactions
+              .iter()
+              .flat_map(|tx| tx.signatures.iter())
+              .collect();
+
+          let merkle_tree = MerkleTree::new(&signatures);
+          let proof: Proof = merkle_tree.create_proof(&signature).unwrap();
+
+          EntryProof::MerkleEntry(MerkleEntry { 
+              hash: entry.hash,
+              num_hashes: entry.num_hashes,
+              proof,
+          })
+      } else { 
+          // only include the required tx hash of other entries
+          let tx_hash = if !entry.transactions.is_empty() {
+              Some(hash_transactions(&entry.transactions))
+          } else { 
+              None
+          };
+
+          EntryProof::PartialEntry(PartialEntry { 
+              hash: entry.hash, 
+              num_hashes: entry.num_hashes, 
+              transaction_hash: tx_hash,
+          })
+      };
+      proof_entries.push(proof_entry);
+  }
 
   let bank_forks = self.bank_forks.read().unwrap();
   let bank = bank_forks.get(slot);
@@ -73,7 +137,7 @@ pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof
   let start_blockhash = self.blockstore.get_slot_entries_with_shred_info(slot-1, 0, false).last().hash;
 
   Ok(TransactionProof{ 
-      entries,
+      entries: proof_entries,
       start_blockhash,
       parent_hash, 
       accounts_delta_hash, 
@@ -83,9 +147,9 @@ pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof
 ```
 Using the `get_transaction_proof` RPC call, a client can verify a transaction with the following steps:
 - first, for a given transaction signature, find the slot which it is included in
-- call the `get_transaction_proof` RPC method with that slot as input
+- call the `get_transaction_proof` RPC method with that slot and transaction signature as input
 - verify the `entries` are valid PoH hashes starting with the hash `start_blockhash`
-- verify that the transaction signature is included in one of the `entries`
+- verify that the transaction signature is included in one of the `entries` and the merkle proof is valid
 - reconstruct the expected bankhash using the other variables in the struct and the final entry's hash
 
 Below is the client pseudocode for verifying a transaction:
@@ -104,18 +168,17 @@ assert!(verified);
 let mut start_hash = &tx_proof.start_blockhash;
 let mut was_verified = false; 
 for entry in entries.iter() {
-    // find Entry which includes tx sig
-    let tx_is_in = entry.transactions.iter().any(|tx| { 
-        tx.signatures.contains(&tx_sig)
-    });
-    if tx_is_in { 
-      // verify Entry includes tx 
-      let hash = next_hash(start_hash, entry.num_hashes, &entry.transactions);
-      assert!(hash == entry.hash);
-      was_verified = true;
-      break;
-    }
-    start_hash = &entry.hash;
+    match entry { 
+        EntryProof::MerkleEntry(x) => {
+            // verify merkle proof
+            let verified = x.proof.verify(tx_sig);
+            assert!(verified);
+
+            was_verified = true;
+            break;
+        }, 
+        _ => {}
+    };
 }
 assert!(was_verified);
 
