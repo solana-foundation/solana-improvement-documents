@@ -8,7 +8,7 @@ authors:
 category: Standard
 type: Core
 status: Draft
-created:  2023-05-25
+created:  2023-05-26
 ---
 
 ## Summary
@@ -36,6 +36,9 @@ We could also just directly make these calls from the client itself but its much
 
 TransactionProof: A structure containing necessary information to verify if a transaction was included in the bank hash of a slot.
 
+`EntryProof`: An enum representing proof information that a transaction is included in an entry of a slot. The enum will either contain a `MerkleEntry` which includes a merkle proof that a transaction is included in its entry hash, or a `PartialEntry` which contains the root hash of its transactions. 
+
+*Note:* Compared to sending the full list of `Entry` structs, this approach includes only the necessary information to validate 1) the hashpath from a transaction signature to an `Entry` and 2) the hashpath from the array of entries to the blockhash.
 ## Detailed Design
 The protocol interaction will be as follows:
 1. User makes a transaction using their wallet in slot N.
@@ -46,7 +49,7 @@ The protocol interaction will be as follows:
 6. Next it checks if the stake weights returned are valid with the local stake history that wasy synced from entrypoint and if the stake is >= 67% of the total stake.
 7. Next it will request the transaction proof using the slot and transaction signature. It will then perform the following checks:
   -  Verify the `entries` by checking that hashing the start hash of the slot `num_hash` times results in the same hash as the entry.
-  -  Check if the transaction signature is included in any of the slots entries.
+  -  Check if the transaction signature is included in any of the slots entries and the merkle proof is valid.
   -  Check if transaction is included in the poh hash by calculating `hash(prev_hash,hash(transaction_signatures))` and if it matches the entry hash.
 8. Reconstruct the bankhash with `blockhash(entry hash)`, `parent_hash`, `accounts_delta_hash` and `signature_count` and check if all votes voted on this bankhash by parsing them.
 9. If all these checks are valid the slot can be marked as confirmed under a supermajority trust assumption.
@@ -71,13 +74,52 @@ pub struct TransactionProof {
   pub signature_count_buf: [u8; 8],
 }
 ```
-All the variables are accessible from the rpc's blockstore and bank_forks variables, so no changes to the rest of the codebase will be required. The following is psuedocode of the RPC method:
+All the variables are accessible from the rpc's blockstore and `bank_forks` variables, so no changes to the rest of the codebase will be required. The following is psuedocode of the RPC method:
 ```rs
-pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof> {
+pub async fn get_transaction_proof(&self, slot: Slot, signature: Signature) -> Result<TransactionProof> {
   // first retrieve all the entries 
   let (entries, _, is_full) = self.blockstore.get_slot_entries_with_shred_info(slot, 0, false)
   // require all of the entries 
   assert!(is_full)
+
+  // parse the entires to only include the required information for the proof
+  let mut proof_entries = Vec::with_capacity(entries.len());
+  for entry in entries.iter() { 
+      let contains_sig = entry.transactions.iter().any(|tx| { 
+          tx.signatures.contains(&signature)
+      });
+
+      let proof_entry = if contains_sig { 
+          // create merkle proof for the entry which contains the tx of interest
+          let signatures: Vec<_> = entry.transactions
+              .iter()
+              .flat_map(|tx| tx.signatures.iter())
+              .collect();
+
+          let merkle_tree = MerkleTree::new(&signatures);
+          let proof: Proof = merkle_tree.create_proof(&signature).unwrap();
+
+          EntryProof::MerkleEntry(MerkleEntry { 
+              hash: entry.hash,
+              num_hashes: entry.num_hashes,
+              proof,
+          })
+      } else { 
+          // only include the required tx hash of other entries
+          let tx_hash = if !entry.transactions.is_empty() {
+              Some(hash_transactions(&entry.transactions))
+          } else { 
+              None
+          };
+
+          EntryProof::PartialEntry(PartialEntry { 
+              hash: entry.hash, 
+              num_hashes: entry.num_hashes, 
+              transaction_hash: tx_hash,
+          })
+      };
+      proof_entries.push(proof_entry);
+  }
 
   let bank_forks = self.bank_forks.read().unwrap();
   let bank = bank_forks.get(slot);
@@ -96,7 +138,7 @@ pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof
   let start_blockhash = self.blockstore.get_slot_entries_with_shred_info(slot-1, 0, false).last().hash;
 
   Ok(TransactionProof{ 
-      entries,
+      entries: proof_entries,
       start_blockhash,
       parent_hash, 
       accounts_delta_hash, 
@@ -105,10 +147,10 @@ pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof
 }
 ```
 Using the `get_transaction_proof` RPC call, a client can verify a transaction with the following steps:
-- first, for a given transaction signature, find the slot which its included in
-- call the `get_transaction_proof` RPC method with that slot as input
+- first, for a given transaction signature, find the slot which it is included in
+- call the `get_transaction_proof` RPC method with that slot and transaction signature as input
 - verify the `entries` are valid PoH hashes starting with the hash `start_blockhash`
-- verify that the transaction signature is included in one of the `entries`
+- verify that the transaction signature is included in one of the `entries` and the merkle proof is valid
 - reconstruct the expected bankhash using the other variables in the struct and the final entry's hash
 
 Below is client pseudocode for verifying a transaction:
