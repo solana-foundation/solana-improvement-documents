@@ -45,10 +45,10 @@ The protocol interaction will be as follows:
 5. The client also has to sync the epoch stake history from genesis from the entrypoint light clients eventually can be requested from multiple other light clients).
 6. Next it checks if the stake weights returned are valid with the local stake history that wasy synced from entrypoint and if the stake is >= 67% of the total stake.
 7. Next it will request the transaction proof using the slot and transaction signature. It will then perform the following checks:
-  -  Verify the entries by checking that hashing the start hash of the slot `num_hash` times results in the same hash as the entry.
+  -  Verify the `entries` by checking that hashing the start hash of the slot `num_hash` times results in the same hash as the entry.
   -  Check if the transaction signature is included in any of the slots entries.
   -  Check if transaction is included in the poh hash by calculating `hash(prev_hash,hash(transaction_signatures))` and if it matches the entry hash.
-8. Reconstruct the bank hash with blockhash(entry hash), parent_hash, accounts_delta_hash and signature_count and check if all votes voted on this bank hash by parsing them.
+8. Reconstruct the bankhash with `blockhash(entry hash)`, `parent_hash`, `accounts_delta_hash` and `signature_count` and check if all votes voted on this bankhash by parsing them.
 9. If all these checks are valid the slot can be marked as confirmed under a supermajority trust assumption.
 
 #### Types of Light Clients
