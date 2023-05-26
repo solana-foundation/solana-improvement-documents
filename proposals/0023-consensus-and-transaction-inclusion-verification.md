@@ -33,7 +33,9 @@ None
 
 `TransactionProof`: A structure containing the necessary information to verify if a transaction was included in the bankhash of a slot.
 
-`EntryProof`: An enum representing proof information about an entry of a slot. The enum will either contain a `MerkleEntry` which includes a merkle proof that a transaction is included in its entry hash, or a `PartialEntry` which only contains a hash of its transactions. 
+`EntryProof`: An enum representing proof information that a transaction is included in an entry of a slot. The enum will either contain a `MerkleEntry` which includes a merkle proof that a transaction is included in its entry hash, or a `PartialEntry` which contains the root hash of its transactions. 
+
+*Note:* Compared to sending the full list of `Entry` structs, this approach includes only the necessary information to validate 1) the hashpath from a transaction signature to an `Entry` and 2) the hashpath from the array of entries to the blockhash.
 
 #### New RPC Methods
 
