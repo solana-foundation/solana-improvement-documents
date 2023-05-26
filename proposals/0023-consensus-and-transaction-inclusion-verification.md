@@ -162,7 +162,7 @@ let slot = 19; // slot which includes the tx
 // call the new RPC
 let tx_proof: TransactionProof = get_tx_proof(slot, endpoint);
 
-// verify the entires are valid
+// verify the entires form a valid hashpath 
 let verified = tx_proof.entries.verify(&tx_proof.start_blockhash);
 assert!(verified);
 
