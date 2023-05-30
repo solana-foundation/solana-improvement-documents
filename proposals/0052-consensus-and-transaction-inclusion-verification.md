@@ -1,5 +1,5 @@
 ---
-simd: '0023'
+simd: '0052'
 title: Consensus and Transaction Inclusion Verification
 authors:
   - Harsh Patel (Tinydancer)
