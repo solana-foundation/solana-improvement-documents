@@ -169,10 +169,6 @@ assert!(supermajority_verified)
 This proposal will improve the overall security and decentralisation of the Solana network allowing users to access the blockchain in a trust
 minimised way unlike traditionally where users had to fully trust their RPC providers. Dapp developers don't have to make any changes as wallets can easily integrate the client making it compatible with any dapp.
 
-## Impact
-
-This proposal will improve the overall security and decentralization of the Solana network allowing users to access the blockchain in a trust minimized way unlike traditionally where users had to fully trust their RPC providers. Dapp developers don't have to make any changes as wallets can easily integrate the client making it compatible with any dapp.
-
 ## Security Considerations
 
 ### Trust Assumptions and Future Work
