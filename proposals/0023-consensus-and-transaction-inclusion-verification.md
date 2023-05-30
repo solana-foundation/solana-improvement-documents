@@ -8,123 +8,110 @@ authors:
 category: Standard
 type: Core
 status: Draft
-created:  2023-05-26
+created:  2023-05-30
 ---
 
 ## Summary
 
-This SIMD describes the overall design and changes required that allows users to verify that supermajority has voted on the slot that their transaction was included in the block without fully trusting the RPC provider.  This is the first step in implementing a consenus verifying client as first described in [SIMD](https://github.com/solana-foundation/solana-improvement-documents/pull/10)
+This SIMD describes the overall design and changes required that allows users to verify that supermajority has voted on the slot that their transaction was included in the block without fully trusting the RPC provider.
+
+This includes two main changes: 
+1) Adding a new RPC method which provides a proof that a transaction has been included in a slot and 
+2) Modifying the blockhash to be computed as a Merkle Tree and include transaction statuses
+
+This SIMD is the first step in implementing a consensus verifying client as first described in [SIMD #10](https://github.com/solana-foundation/solana-improvement-documents/pull/10) and a majority of the changes mentioned in the accepted [Simple Payment and State Verification
+proposal](https://docs.solana.com/proposals/simple-payment-and-state-verification).
 
 ## Motivation
 
-For a user to validate whether their transaction is valid and included in a block it needs to trust the confirmation from the RPC. This has been a glaring attack vector for malicious actors that could lie to users if it's in their own interest. To combat this, mature entities like exchanges run full nodes that process the entire ledger and can verify entire blocks. The downside of that being very high cost to run a full node making it less accessible to everyday users, in effect exposing users to potential attacks from malicious nodes. 
+Currently, for a user to validate whether their transaction is valid and included in a block it needs to trust the confirmation from the RPC. This has been a glaring attack vector for malicious actors that could lie to users if it's in their own interest. 
 
-This is where diet clients come in, users run the client to verify confirmation of their transaction without trusting the RPC. The SIMD is the first step towards implementing the diet client by proposing a small change to the rpc service that allows the client to validate if supermajority stake actually signed off on a block and that their transaction was included in. 
+To combat this, mature entities like exchanges run full nodes that process the entire ledger and can verify entire blocks. The downside of this is that it's very costly to run a full node which makes it inaccessible to everyday users,exposing users to potential attacks from malicious nodes.
 
-However it is not impossible, hence the full diet client implementation discusses further steps to counter that and this is only the consensus verifying stage of the client.
+This is where diet clients come in, users run the client to verify confirmation of their transaction without trusting the RPC. This SIMD is the first step towards implementing the diet client by proposing a small change to the rpc service that allows the client to validate if a supermajority of the total stake has voted for a block which includes their transaction. 
 
+However, this is only the consensus verifying stage of the client, and with only these changes, the RPC provider can still trick users, hence  we also discuss  future work that will be implemented in future SIMDs to provide a fully trustless setup. 
 
 ## Alternatives Considered
-Another solution is to use the gossip plane to read votes out of the CRDS optimistically and then confirm by verifying inclusion with the blockhash. The advantage being that no changes are required to the validator to read the votes. However this has a couple of drawbacks:
-- Votes have a high probability of getting dropped after being inserted into the CRDS as sometimes validators can vote on older slots after voting on the newer slot.
-- Validators aren't obligated to propagate gossip changes and have reason to not do so as it reduces egress costs.
 
-We could also just directly make these calls from the client itself but its much faster and more convenient to do it on server side.
+None
 
 
 ## New Terminology
 
 TransactionProof: A structure containing necessary information to verify if a transaction was included in the bank hash of a slot.
 
-`EntryProof`: An enum representing proof information that a transaction is included in an entry of a slot. The enum will either contain a `MerkleEntry` which includes a merkle proof that a transaction is included in its entry hash, or a `PartialEntry` which contains the root hash of its transactions. 
-
-*Note:* Compared to sending the full list of `Entry` structs, this approach includes only the necessary information to validate 1) the hashpath from a transaction signature to an `Entry` and 2) the hashpath from the array of entries to the blockhash.
-## Detailed Design
-The protocol interaction will be as follows:
-1. User makes a transaction using their wallet in slot N.
-2. The client then reads the validator set from gossip and requests vote signatures and stake commitments for slot N to (N+32) given the 32 block depth finality.  
-3. It first validates whether the validator identities match the set from gossip.
-4. Then proceeds to validate the vote signatures.
-5. The client also has to sync the epoch stake history from genesis from the entrypoint light clients eventually can be requested from multiple other light clients).
-6. Next it checks if the stake weights returned are valid with the local stake history that wasy synced from entrypoint and if the stake is >= 67% of the total stake.
-7. Next it will request the transaction proof using the slot and transaction signature. It will then perform the following checks:
-  -  Verify the `entries` by checking that hashing the start hash of the slot `num_hash` times results in the same hash as the entry.
-  -  Check if the transaction signature is included in any of the slots entries and the merkle proof is valid.
-  -  Check if transaction is included in the poh hash by calculating `hash(prev_hash,hash(transaction_signatures))` and if it matches the entry hash.
-8. Reconstruct the bankhash with `blockhash(entry hash)`, `parent_hash`, `accounts_delta_hash` and `signature_count` and check if all votes voted on this bankhash by parsing them.
-9. If all these checks are valid the slot can be marked as confirmed under a supermajority trust assumption.
-
-#### Types of Light Clients
-1. **Entrypoint / Hub Clients** - These will be holding the snapshot with the stake history from genesis to current slot and be periodically syncing with the latest epoch.
-   
-3. **Ultra Light Clients** - These will be clients running in wallets on mobile or browser that will TOFU(Trust On First Use) the stake from the entrypoint clients and verify if the user transactions are voted on by the supermajority.
-
-#### New RPC Methods
-The new RPC method would be called `get_transaction_proof` which would take a slot number as input and return a `TransactionProof` struct
 ```rs
-// new RPC method 
-pub async fn get_transaction_proof(&self, slot: Slot) -> Result<TransactionProof>;
-
 // new RPC struct to verify tx inclusion
 pub struct TransactionProof {
-  pub entries: Vec<Entry>,
-  pub start_blockhash: Hash,
-  pub parent_hash: Hash, 
-  pub accounts_delta_hash: Hash, 
+  pub proof: Vec<Hash >,
+
+  pub parent_hash: Hash,
+  pub accounts_delta_hash: Hash,
   pub signature_count_buf: [u8; 8],
 }
 ```
-All the variables are accessible from the rpc's blockstore and `bank_forks` variables, so no changes to the rest of the codebase will be required. The following is psuedocode of the RPC method:
+
+The proof variable will provide a Merkle hashpath from the transaction to the blockhash; which is then used with the other variables to compute the bankhash.
+
+## Detailed Design
+
+The protocol interaction will be as follows:
+- A user sends a transaction and it lands in slot N
+- The user requests proof that the transaction is included in slot N using the new RPC method 
+- The user verifies the proof: 
+    - Verifies the entries form a valid hashpath starting with the `start_blockhash` hash and ending with the last entry (which is the blockhash)
+    - Verifies a MerkleEntry exists and contains a hash path from the transaction signature and its status to the entry’s hash
+    - Then computes the expected bankhash using the last entries hash, `parent_hash`, `accounts_delta_hash` and `signature_count`
+- The user retrieves the epoch’s current validator set and stake amounts from a trusted source (making this step trustless is future work) 
+- The user requests blocks from slots > N (up to 32 slots past N given the 32 block depth finality) 
+- The user parses vote transactions from the blocks, verifying their signature, and computing the sum of stake which voted on the bankhash they computed in step 3 
+- If the sum of stake is greater than or equal to 2/3 of the total stake then their transaction has been finalized under a supermajority trust assumption (making this assumption require only a single honest validator is also future work) 
+
+
+#### Modifying the Blockhash
+
+We also propose modifying the blockhash computation to 
+1) Compute the blockhash using a Merkle Tree of entries and 
+2) Include the status (either succeeding or failing) of each transaction
+
+To produce the blockhash for a slot, the current implementation hashes Entries in a sequential way which requires a O(N) proof size to provide a hashpath from a transaction to a blockhash. Implementing change 1) would allow for a more efficient O(log(N)) proof size. The current Entry implementation already hashes transaction signatures using a Merkle Tree to get the Entry’s hash, so this change would only modify how the Entry’s hashes are hashed together to get a blockhash.
+
+For change 2), the blockhash is currently computed using only transaction signatures, and does not include transaction statuses which means we are unable to prove if a transaction has succeeded or failed. Implementing 2) would enable verifying a transactions status, as mentioned in the [accepted proposal](https://docs.solana.com/proposals/simple-payment-and-state-verification#transaction-merkle) and in a [previous github issue](https://github.com/solana-labs/solana/issues/7053)).
+
+Fig #1 shows an example hashpath from a transaction and its signature to a bankhash with both of the proposed changes implemented.
+<figure>
+  <img width="468" alt="Figure showing the hashpath to the transaction" src="https://github.com/tinydancer-io/solana-improvement-documents/assets/32778608/5370950d-e27b-4c1b-9f04-6e9164789e65">
+  <figcaption>Fig #1</figcaption>
+</figure>
+
+
+#### New RPC Methods
+
+The new RPC method would be called `get_transaction_proof` which would take a transaction signature as input and return a `TransactionProof` struct
+
 ```rs
-pub async fn get_transaction_proof(&self, slot: Slot, signature: Signature) -> Result<TransactionProof> {
-  // first retrieve all the entries 
-  let (entries, _, is_full) = self.blockstore.get_slot_entries_with_shred_info(slot, 0, false)
-  // require all of the entries 
+// new RPC method
+pub async fn get_transaction_proof(&self, signature: Signature) -> Result<TransactionProof>;
+```
+
+Below is psuedocode of the RPC method:
+
+```rs
+pub async fn get_transaction_proof(&self, signature: Signature) -> Result<TransactionProof> {
+  // first retrieve all the entries
+  let slot = self.get_slot_of_signature(&signature);
+  let (entries, _, is_full) = self.blockstore.get_slot_entries_with_shred_info(slot, 0, false)  
+  // require all of the entries
   assert!(is_full)
 
-  // parse the entires to only include the required information for the proof
-  let mut proof_entries = Vec::with_capacity(entries.len());
-  for entry in entries.iter() { 
-      let contains_sig = entry.transactions.iter().any(|tx| { 
-          tx.signatures.contains(&signature)
-      });
+  // compute the Merkle hashpath from the signature and status to the blockhash 
+  let proof = entries.get_merkle_proof(signature);
 
-      let proof_entry = if contains_sig { 
-          // create merkle proof for the entry which contains the tx of interest
-          let signatures: Vec<_> = entry.transactions
-              .iter()
-              .flat_map(|tx| tx.signatures.iter())
-              .collect();
-
-          let merkle_tree = MerkleTree::new(&signatures);
-          let proof: Proof = merkle_tree.create_proof(&signature).unwrap();
-
-          EntryProof::MerkleEntry(MerkleEntry { 
-              hash: entry.hash,
-              num_hashes: entry.num_hashes,
-              proof,
-          })
-      } else { 
-          // only include the required tx hash of other entries
-          let tx_hash = if !entry.transactions.is_empty() {
-              Some(hash_transactions(&entry.transactions))
-          } else { 
-              None
-          };
-
-          EntryProof::PartialEntry(PartialEntry { 
-              hash: entry.hash, 
-              num_hashes: entry.num_hashes, 
-              transaction_hash: tx_hash,
-          })
-      };
-      proof_entries.push(proof_entry);
-  }
-
+  // get variables used to compute the bankhash
   let bank_forks = self.bank_forks.read().unwrap();
   let bank = bank_forks.get(slot);
 
-  // get variables used to compute bank hash 
   let parent_hash = bank.parent_hash();
   let accounts_delta_hash = bank
       .rc
@@ -134,79 +121,60 @@ pub async fn get_transaction_proof(&self, slot: Slot, signature: Signature) -> R
   let mut signature_count_buf = [0u8; 8];
   LittleEndian::write_u64(&mut signature_count_buf[..], bank.signature_count());
 
-  // get the start_hash for the slot (will be the last entry's hash from slot-1)
-  let start_blockhash = self.blockstore.get_slot_entries_with_shred_info(slot-1, 0, false).last().hash;
-
-  Ok(TransactionProof{ 
-      entries: proof_entries,
-      start_blockhash,
-      parent_hash, 
-      accounts_delta_hash, 
+  Ok(TransactionProof{
+      proof,
+      parent_hash,
+      accounts_delta_hash,
       signature_count_buf,
   })
 }
 ```
-Using the `get_transaction_proof` RPC call, a client can verify a transaction with the following steps:
-- first, for a given transaction signature, find the slot which it is included in
-- call the `get_transaction_proof` RPC method with that slot and transaction signature as input
-- verify the `entries` are valid PoH hashes starting with the hash `start_blockhash`
-- verify that the transaction signature is included in one of the `entries` and the merkle proof is valid
-- reconstruct the expected bankhash using the other variables in the struct and the final entry's hash
 
 Below is client pseudocode for verifying a transaction:
-```rust 
+
+```rust
 let tx_sig = "..."; // tx signature of interest
 let slot = 19; // slot which includes the tx
 
 // call the new RPC
-let tx_proof: TransactionProof = get_tx_proof(slot, endpoint);
+let tx_proof: TransactionProof = get_tx_proof(&tx_sig, endpoint);
 
-// verify the entires are valid
-let verified = tx_proof.entries.verify(&tx_proof.start_blockhash);
+// verify the transaction signature proof is valid and status is success
+let leaf = hash_leaf!([tx_sig, TxStatus::Success]);
+let verified = tx_proof.proof.verify_path(&leaf);
 assert!(verified);
 
-// verify that the transaction signature is included in one of the `entries`
-let mut start_hash = &tx_proof.start_blockhash;
-let mut was_verified = false; 
-for entry in entries.iter() {
-    // find Entry which includes tx sig
-    let tx_is_in = entry.transactions.iter().any(|tx| { 
-        tx.signatures.contains(&tx_sig)
-    });
-    if tx_is_in { 
-      // verify Entry includes tx 
-      let hash = next_hash(start_hash, entry.num_hashes, &entry.transactions);
-      assert!(hash == entry.hash);
-      was_verified = true;
-      break;
-    }
-    start_hash = &entry.hash;
-}
-assert!(was_verified);
+// compute the blockhash
+let last_blockhash = tx_proof.proof.get_root();
 
-// recompute the bank hash 
-let last_blockhash = entries.last().unwrap().hash;
+// compute the expected bankhash
 let bankhash = hashv(&[
     tx_proof.parent_hash.as_ref(),
     tx_proof.accounts_delta_hash.as_ref(),
-    tx_proof.signature_count_buf.as_ref(), 
+    tx_proof.signature_count_buf.as_ref(),
     last_blockhash.as_ref()
 ]);
+
+// parse vote transactions and stake amounts on expected bankhash
+let (voted_stake_amount, total_stake_amount) = parse_votes_from_blocks(slot, bankhash)
+
+// validate supermajority voted for expected bankhash
+let supermajority_verified = 3 * voted_stake_amount >= 2 * total_stake_amount;
+assert!(supermajority_verified)
 ```
-Once we computed the expected bankhash, we can parse vote transactions which vote on that bankhash, and assert that a supermajority (>= 2/3 of stake) has voted on it.
+
 
 ## Impact
 
 This proposal will improve the overall security and decentralisation of the Solana network allowing users to access the blockchain in a trust
 minimised way unlike traditionally where users had to fully trust their RPC providers. Dapp developers don't have to make any changes as wallets can easily integrate the client making it compatible with any dapp.
 
+## Impact
+
+This proposal will improve the overall security and decentralization of the Solana network allowing users to access the blockchain in a trust minimized way unlike traditionally where users had to fully trust their RPC providers. Dapp developers don't have to make any changes as wallets can easily integrate the client making it compatible with any dapp.
+
 ## Security Considerations
 
-### Trust Assumptions
-The light client makes certain trust assumptions that reduce reliance on RPC but these assumptions have tradeoffs. The ultra light clients verify if the supermajority has voted on the block, this is could be an issue if the supermajority itself is corrupt and is trying to vote on an invalid transaction.
+### Trust Assumptions and Future Work
 
-## Future Work
-The future iterations of the light client that include data availability sampling and fraud proving should address this issue reduce the trust assumption to single honest node. We also rely on a entrypoint light client that has the snapshot and serves the stake history which is also a point of trust.
-
-Additionally, while there are improvements and additional features that can be made (as mentioned in [this proposal](https://docs.solana.com/proposals/simple-payment-and-state-verification)), including using merkle trees to compute the blockhash (instead of the current sequential implementation), transaction status codes, and validator set verification, we chose to keep this SIMD self-contained and only add a new RPC method with no changes to the protocol. Optimizations will be left to future SIMDs which will build off of this one.
-
+While this SIMD greatly reduces the user's trust in an RPC, the light client will still need to make certain trust assumptions. This includes finding a trusted source for the validator set per epoch (including their pubkeys and stake weights) and trusting that all transactions are valid (in case the supermajority is corrupt). We plan to solve these problems in future SIMDs to provide a full trustless setup including data availability sampling and fraud proving which will only require a single honest full node.
