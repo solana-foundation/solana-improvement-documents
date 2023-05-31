@@ -1,6 +1,6 @@
 ---
 simd: '0049'
-title: Add a syscall for getting the remaining number of compute units in a transaction
+title: Syscall for remaining compute units
 authors:
   - Christian Kamm
 category: Standard
@@ -35,6 +35,7 @@ own whether another round of processing would fit or not, leading to better
 utilization of requested compute.
 
 Example:
+
 ```
 fn process_events() {
   while (true) {
@@ -65,8 +66,6 @@ shows how it would be preferable to "process events for all the 150k CU that rem
 
 ## Alternatives Considered
 
-### Alternative: Access compute used by the current instruction
-
 Instead of knowing the transaction-wide remaining budget, instructions could be
 allowed to access the amount of compute they have already used.
 
@@ -82,6 +81,8 @@ None
 Add a syscall `sol_remaining_compute_units() -> u64` that returns the remaining
 compute budget for the current transaction.
 
+The syscall must cost no more than the syscall base cost of 100 CU.
+
 The PR is at https://github.com/solana-labs/solana/pull/31640.
 
 ## Impact
@@ -92,13 +93,9 @@ The PR is at https://github.com/solana-labs/solana/pull/31640.
 ## Security Considerations
 
 Programs having access to the remaining compute budget would allow them to:
+
 - Check if they are the first instruction, but they can already do that via
   introspection.
 - Guess the effect of a CPI call by observing how much compute it used. But since
   program and data bytes are public, that shouldn't create new capabilities.
 
-The compute budget would change from something invisible to programs to
-something accessible. Currently validators might be able to run transactions with
-half the requested budget only and then discard those that don't fit? Since the
-evaluation result of passing transactions currently doesn't depend on the compute
-budget? (not sure about this)
