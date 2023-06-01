@@ -29,7 +29,7 @@ These fees will depend on the CU requested by the transaction.
 ## Motivation
 
 Currently, there is no way for dapp developers to enforce appropriate behavior
-and the way their contracts should be used. Bots spamming on dapps make them
+in the way their contracts should be used. Bots spamming on dapps make them
 unusable and dapps lose their users/clients because the UX is laggy and
 inefficient. Unsuccessful transactions deny block space to potentially valid
 transactions which reduces activity on the dapp. For dapps like mango markets or
@@ -115,11 +115,12 @@ through runtime features. In particular, programs needs to be able to penalize,
 even if the application is not CPI'd to.
 
 The checks on the PRAW fees will be taken care of by Solana runtime. Total PRAW
-fees paid will be included in the transaction through a special
-`SetProgramRebatableAccountWriteFees` similar to the `ComputeBudget` program so
-that it is easier to calculate the total amount of fees that will be paid. In
-case of nonpayment or partial payment, the program is never executed. This
-instruction cannot be CPI'ed into.
+fees committed will be included in the transaction through a special parameter
+called `SetProgramRebatableAccountWriteFees` so that it is easier to calculate
+the total amount of fees that will be paid by the transaction. This parameter will be part of a new
+`TransactionHeaderProgram` where all the transaction parameters will be set
+through TVL. In case of nonpayment or partial payment, the program is never
+executed. This instruction cannot be CPI'ed into.
 
 Addition of new syscalls to get, set and rebate PRAW fees during program
 runtime. Application developers will be able to rebate these fees through the
@@ -134,7 +135,7 @@ transaction, even if the same account is write-locked in multiple instructions.
 
 `SetProgramRebatableAccountWriteFees` will be part of the updated compute budget
 program. `SetProgramRebatableAccountWriteFees` will take a u64 parameter to set
-microlamports per requested CU as the PRAW fees. Instead of having separate
+lamports per requested CU as the PRAW fees. Instead of having separate
 instructions for each compute budget parameter and PRAW fee we will have a
 single instruction that will set all the compute budget and PRAW fee parameters.
 Compute budget parameters could be considered as transaction header that sets
@@ -168,7 +169,7 @@ enum TransactionHeaderParameter {
   SetComputeUnitPrice(u64),
   SetLoadedAccountsDataSizeLimit(u32),
   // Limit on maximum of PRAW fees to be paid
-  // Fees is set in micro lamports per CU
+  // Fees is set in microlamports per CU
   SetProgramRebatableAccountWriteFees(u64),
 }
 ```
