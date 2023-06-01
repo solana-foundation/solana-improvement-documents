@@ -99,3 +99,6 @@ Programs having access to the remaining compute budget would allow them to:
 - Guess the effect of a CPI call by observing how much compute it used. But since
   program and data bytes are public, that shouldn't create new capabilities.
 
+## Backwards Compatibility
+
+Not applicable.
