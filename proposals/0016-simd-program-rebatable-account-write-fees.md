@@ -117,10 +117,10 @@ even if the application is not CPI'd to.
 The checks on the PRAW fees will be taken care of by Solana runtime. Total PRAW
 fees committed will be included in the transaction through a special parameter
 called `SetProgramRebatableAccountWriteFees` so that it is easier to calculate
-the total amount of fees that will be paid by the transaction. This parameter will be part of a new
-`TransactionHeaderProgram` where all the transaction parameters will be set
-through TVL. In case of nonpayment or partial payment, the program is never
-executed. This instruction cannot be CPI'ed into.
+the total amount of fees that will be paid by the transaction. This parameter
+will be part of a new `TransactionHeaderProgram` where all the transaction
+parameters will be set through a TVL. In case of nonpayment or partial payment,
+the program is never executed. This instruction cannot be CPI'ed into.
 
 Addition of new syscalls to get, set and rebate PRAW fees during program
 runtime. Application developers will be able to rebate these fees through the
