@@ -17,17 +17,28 @@ across cluster.
 
 ## Motivation
 
-* The Solana protocol currently uses an datagram-based block distribution mechanism (Turbine/UDP) using out-of-band peer discovery
-* We find that Turbine/UDP lacks important features to support reliable block data distribution over WAN, namely:
-  * Turbine/UDP does not specify congestion control mechanism and thus lacks the ability to dynamically adapt to packet corruption/loss (currently mitigated via forward error correction with a hardcoded ratio) 
-  * Turbine/UDP lacks data authentication and a mechanism to reject incoming block data streams
-  * This makes Turbine/UDP recipients susceptible to packet floods
-  * Commercial DDoS protection solutions are considered ineffective for custom UDP protocols like Turbine/UDP
-* QUIC is an Internet standard defining a protocol for a UDP-based multiplexed, authenticated, and encrypted transport.
-  * QUIC is already in use in other parts of the Solana protocol
-  * QUIC implements many of the features required that Turbine/UDP currently lacks
-  * We expect wider specialization of network infrastructure towards QUIC from internet service providers and datacenter operators
-* Migrating the Turbine protocol to a QUIC-based transport is considered the most effective path towards improving block distribution security and quality of service  
+* The Solana protocol currently uses an datagram-based block distribution
+  mechanism (Turbine/UDP) using out-of-band peer discovery.
+* We find that Turbine/UDP lacks important features to support reliable block
+  data distribution over WAN, namely:
+  * Turbine/UDP does not specify congestion control mechanism and thus lacks
+    the ability to dynamically adapt to packet corruption/loss (currently
+    mitigated via forward error correction with a hardcoded ratio).
+  * Turbine/UDP lacks data authentication and a mechanism to reject incoming
+    block data streams.
+  * This makes Turbine/UDP recipients susceptible to packet floods.
+  * Commercial DDoS protection solutions are considered ineffective for custom
+    UDP protocols like Turbine/UDP.
+* QUIC is an Internet standard defining a protocol for a UDP-based multiplexed,
+  authenticated, and encrypted transport.
+  * QUIC is already in use in other parts of the Solana protocol.
+  * QUIC implements many of the features required that Turbine/UDP currently
+    lacks.
+  * We expect wider specialization of network infrastructure towards QUIC from
+    internet service providers and datacenter operators.
+* Migrating the Turbine protocol to a QUIC-based transport is considered the
+  most effective path towards improving block distribution security and quality
+  of service.
 
 ## Alternatives Considered
 
@@ -90,7 +101,7 @@ security and QoS of the block propagation protocol.
 ## Drawbacks
 
 Obviously QUIC will add extra overheads compared to a bare UDP implementation.
-We expects these overheads will be mitigated by using a large enough
+We expect these overheads will be mitigated by using a large enough
 connection-cache to reuse the same connections and minimize handshake costs.
 
 
