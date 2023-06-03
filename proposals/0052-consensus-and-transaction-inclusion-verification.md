@@ -114,10 +114,7 @@ and in a [previous github issue](https://github.com/solana-labs/solana/issues/70
 
 Fig #1 shows an example hashpath from a transaction and its signature to a
 bankhash with both of the proposed changes implemented.
-<figure>
-  <img width="468" alt="Figure showing the hashpath to the transaction" src="https://github.com/tinydancer-io/solana-improvement-documents/assets/32778608/5370950d-e27b-4c1b-9f04-6e9164789e65">
-  <figcaption>Fig #1</figcaption>
-</figure>
+![Fig #1](https://github.com/tinydancer-io/solana-improvement-documents/assets/32778608/5370950d-e27b-4c1b-9f04-6e9164789e65)
 
 #### New RPC Methods
 
@@ -133,16 +130,16 @@ pub async fn get_transaction_proof(&self, signature: Signature) -> Result<Transa
 Below is psuedocode of the RPC method:
 
 ```rs
-pub async fn get_transaction_proof(&self, signature: Signature) -> Result<TransactionProof> {
+async fn get_transaction_proof(&self, s: Signature) -> Result<TransactionProof> {
   // first retrieve all the entries
-  let slot = self.get_slot_of_signature(&signature);
+  let slot = self.get_slot_of_signature(&s);
   let (entries, _, is_full) = 
     self.blockstore.get_slot_entries_with_shred_info(slot, 0, false)  
   // require all of the entries
   assert!(is_full)
 
   // compute the Merkle hashpath from the signature and status to the blockhash 
-  let proof = entries.get_merkle_proof(&signature);
+  let proof = entries.get_merkle_proof(&s);
 
   // get variables used to compute the bankhash
   let bank_forks = self.bank_forks.read().unwrap();
