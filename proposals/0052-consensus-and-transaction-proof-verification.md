@@ -1,6 +1,6 @@
 ---
 simd: '0052'
-title: Consensus and Transaction Inclusion Verification
+title: Consensus and Transaction Proof Verification
 authors:
   - Harsh Patel (Tinydancer)
   - Anoushk Kharangate (Tinydancer)
