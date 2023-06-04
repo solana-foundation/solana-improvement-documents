@@ -28,14 +28,14 @@ The small unit of compute_unit_price manifests into:
 
 1. Prioritization_fee is proportionally insignificant to base fee;
 2. Therefore, some payers set priority even there is no contention, potentially
-   leaves other users at a disadvantage;
+   distorts local fee market, leaves other users at a disadvantage;
 3. Little consideration was given to compute_unit_limit when setting priority;
 These are being documented in https://github.com/solana-labs/solana/issues/31755.
 
 To encourage prioritization fee to be used as intended as congestion control
 tool, it propose to regulate `compute_unit_price` by rounding down to its
-nearest lamports. The effect is user should set `compute_unit_price` in
-increment of 1_000_000 microlamports. Transaction has less then 1_000_000
+nearest 1_000 microlamports. The effect is user should set `compute_unit_price` in
+increment of 1_000 microlamports. Transaction has less then 1_000
 `compute_unit_price` will have no priority nor be charged a priority fee.
 
 ## Alternatives Considered
@@ -51,7 +51,7 @@ when users migrate to new instruction.
 - No change to how prioritization fee is calculated;
 - No change to how banking_stage prioritization works;
 - Add feature gated function to round user specified `compute_unit_price` down
-  to its nearest lamports.
+  to its nearest 1_000 microlamports.
 - The rounded `compute_unit_price` will be used by leader in prioritizing, and
   used by bank to calculate prioritization fee.
 
@@ -62,16 +62,25 @@ PoC https://github.com/solana-labs/solana/pull/31469
 ## Impact
 
 - To vote transactions, no impact;
-- To transactions don't set `compute_unit_price` (which is 90+% of non-vote
+- To transactions don't set `compute_unit_price` (which is ~32% of non-vote
   transactions) , no impact;
-- To transactions set `compute_unit_price`, user need to reevaluate strategy
-  of when to use priority, and how much. Specifically,
+- To transactions set `compute_unit_price`, user needs to reevaluate strategy
+  of when to use priority, and how much. Specifically:
   - user might want to set `compute_unit_price` only when block or account
     contention increase;
+
+    User can do that by either check RPC endpoint `getRecentPrioritizationFees`
+    for minimal fee to block or specific accounts when constructing transaction; 
+
+    User can also continuously pull RPC endpoint to built up prioritization
+    fee historical stats locally, then generate adquent prioritization fee
+    algorithmically when constructing transactions.
   - when setting `compute_unit_price`, it is advised to set in increment of
-    1_000_000 microlamports (eg 1 lamport);
+    1_000 microlamports (eg 0.001 lamport);
   - When setting `compute_unit_price`, it is important to also evaluate
-    value for `compute_unit_limit` to avoid paying too high prioritization fee.
+    value for `compute_unit_limit` to avoid paying too high prioritization fee;
+    especially for ~50% non-vote transactions currently not setting
+    `compute_unit_limit` at all.
 
 ### Examples
 
