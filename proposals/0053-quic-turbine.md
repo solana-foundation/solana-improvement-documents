@@ -40,6 +40,16 @@ across cluster.
   most effective path towards improving block distribution security and quality
   of service.
 
+From a design standpoint, we require a protocol that offers the following
+functionalities:
+
+1. Protect against IP address spoofing and substantial traffic amplification
+   for unverified addresses.
+2. Obtain and authenticate the sender's public key during the connection
+   establishment, ensuring that the sender truly possesses the corresponding
+   private key.
+3. Ability to rate-limit senders by their pubkey.
+
 ## Alternatives Considered
 
 An alternative would be to keep current UDP implementation but,
