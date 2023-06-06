@@ -82,6 +82,26 @@ Until then, similar to QUIC migration for TPU, we will use the port at
 [`QUIC_PORT_OFFSET`](https://github.com/solana-labs/solana/blob/2fc1dc1bf/sdk/src/quic.rs#L4)
 from the TVU socket for QUIC connections.
 
+In terms of specific components of QUIC:
+
+* 4-way handshake via Retry: We'd want to enable this because the QUIC
+  handshake logic is much more expensive than the current gossip-based flow.
+  The retry mechanism reduces server load when hit with IP spoofed DDoS
+  attacks.
+* QUIC connection state management: It increases memory requirements and limits
+  the number of peers that the cluster can scale to.
+* Curve25519 peer authentication: Required for obtaining and authenticating
+  the sender's public key.
+* X25519 KEX Key exchange algorithm is required by QUIC-TLS.
+* AES-128-GCM Authenticated encryption: Encryption mandated by QUIC-TLS.
+  AES-128-GCM has native x86 instructions
+* Congestion control: Required for rate-limiting senders.
+* Key renegotiation: Ideally this would be optional, if that would be
+  compatible with the quinn library.
+* Connection migration: Optional, and doesn't have to be supported.
+* Restrictions on connection IDs: We regain ~8 bytes by disabling connection
+  IDs, if that is supported by the quinn library.
+
 For the initial implementation in the Solana Labs client we will use the same
 constructs as TPU QUIC implementation so the specs are the same. See [TPU/QUIC
 Protocol v1](https://github.com/solana-foundation/specs/blob/42f2058b7/p2p/tpu.md#tpuquic-protocol-v1).
