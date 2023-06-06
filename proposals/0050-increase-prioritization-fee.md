@@ -34,8 +34,8 @@ These are being documented in https://github.com/solana-labs/solana/issues/31755
 
 To encourage prioritization fee to be used as intended as congestion control
 tool, it propose to regulate `compute_unit_price` by rounding down to its
-nearest 1_000 microlamports. The effect is user should set `compute_unit_price` in
-increment of 1_000 microlamports. Transaction has less then 1_000
+nearest 1_000 microlamports. The effect is user should set `compute_unit_price`
+in increment of 1_000 microlamports. Transaction has less then 1_000
 `compute_unit_price` will have no priority nor be charged a priority fee.
 
 ## Alternatives Considered
@@ -70,7 +70,8 @@ PoC https://github.com/solana-labs/solana/pull/31469
     contention increase;
 
     User can do that by either check RPC endpoint `getRecentPrioritizationFees`
-    for minimal fee to block or specific accounts when constructing transaction; 
+    for minimal fee to land to block or write lock specific accounts when
+    constructing transaction; 
 
     User can also continuously pull RPC endpoint to built up prioritization
     fee historical stats locally, then generate adquent prioritization fee
