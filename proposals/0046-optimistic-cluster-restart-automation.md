@@ -146,8 +146,7 @@ hash) to restart from:
 
 See each step explained in details below.
 
-### 1. "silent repair phase": Gossip last vote before the restart and ancestors 
-on that fork
+### 1. "silent repair phase": Gossip last vote and ancestors on that fork
 
 The main goal of this step is to propagate the last `n` ancestors of the last
 voted fork to all others in restart.
@@ -262,8 +261,7 @@ After deciding heaviest block, gossip
 picked block. We also send out stake of received `HeaviestFork` messages so 
 that we can proceed to next step when enough validators are ready.
 
-### 4. Exit "silent repair phase": Proceed to restart if everything looks okay, 
-halt otherwise
+### 4. Exit "silent repair phase": Restart if everything okay, halt otherwise
 
 All validators in restart keep counting the number of `HeaviestFork` where
 `received_heaviest_stake` is higher than 80%. Once a validator counts that 80%
