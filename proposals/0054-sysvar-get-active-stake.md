@@ -1,5 +1,5 @@
 ---
-simd: '0000'
+simd: '0054'
 title: Sysvar for active stake
 authors:
   - x19
