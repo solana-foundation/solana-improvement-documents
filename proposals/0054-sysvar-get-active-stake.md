@@ -41,6 +41,31 @@ None
 - sysvar structure: `Vec<(vote_account: Pubkey, active_stake_in_lamports: u64)>`
 - sysvar address: `SysvarStakeWeight11111111111111111111111111`
 
+
+### Ordering
+
+The sysvar structure would be sorted by `vote_account` in ascending order
+to improve look-up speeds. There will also never be any 
+duplicate `vote_account` entries.
+
+### Serialization
+
+The serialization format of the sysvar will use a u64 
+for the vector's length, followed by 40 bytes per entry 
+(32 bytes for the Pubkey and 8 for the active stake). 
+
+### Maximum Sysvar Size
+
+We also need to consider a maximum data size for the sysvar. 
+Currently, there are 3422 vote accounts on mainnet (1818 active and 1604 delinquint),
+so we can use a maximum limit of 4096 entries and still include 
+all the vote accounts for now.
+Using 4096 as the max number of entries the size would be (8 + 40 * 4096) = 
+163,848 bytes. Once the number of entries exceeds the max allowed, 
+vote accounts with the least amount of stake will be removed from the sysvar. 
+
+### Changes Required
+
 Stake weight information should already be available on full node clients 
 since it's required to construct the leader schedule. Since stake weights 
 can only be
