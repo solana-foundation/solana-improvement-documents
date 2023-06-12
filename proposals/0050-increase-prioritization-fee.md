@@ -19,7 +19,8 @@ Cost of prioritizing should be a meaningful portion of transaction base fee.
 Prioritization fee is intended to be used sensitively during congestion,
 provides advanced users a tool to access particular resources when contented
 with a meaningful fee, while other users may opt to delay access to avoid
-paying extra fee. When used properly, it helps to reduce network congestion.
+paying extra fee. When local fee market functions as designed, it provides
+economic incentives to reduce congestion.
 
 `Prioritization_fee = compute_unit_limit * compute_unit_price`,
 where compute_unit_price has unit of microlamport. 
@@ -40,10 +41,13 @@ in increment of 1_000 microlamports. Transaction has less then 1_000
 
 ## Alternatives Considered
 
-1. to change `compute_unit_price` unit from microlamports to lamport. This
-approach will require a new version of compute_budget instruction that uses
-`lamport` as unit, to coexist with existing instruction, later to be deprecated
-when users migrate to new instruction.
+1. to change `compute_unit_price` unit from microlamports to milli-lamport.
+This approach will require a new version of compute_budget instruction that
+uses `milli-lamport` as unit, to coexist with existing instruction,
+later to be deprecated when users migrate to new instruction. It requires
+significantly more work on rolling out the change.
+
+Current approach avoid changing API, nor introducing an additional terminology.
 
 ## Detailed Design
 
