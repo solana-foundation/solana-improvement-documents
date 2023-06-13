@@ -79,6 +79,7 @@ Discriminator - a unique 8 byte hash of a method signature or data type
 ## Detailed Design
 
 In order to log an event, the SVM runtime should adopt a new syscall:
+
 ```
 #include <sol/emit.h>
 void sol_emit_(/* r1 */ uint64_t len,
