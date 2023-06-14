@@ -67,7 +67,7 @@ Leaders are scheduled to build blocks as they are currently by
 the LeaderSchedule.
 
 Builder's are scheduled along side leaders to build UserBlocks -
-blocks of non vote transactions. N number of builders can be scheudled
+blocks of non vote transactions. N number of builders can be scheduled
 concurrently to build blocks.
 
 While a leader is scheduled, they receive and encode votes as normal.
@@ -75,10 +75,11 @@ Any well formed UserBlocks that were received from the previous or
 current UserBlockSlot are added to the leaders PoH ledger as
 UserBlockEntry.
 
-The N concurrent Builder create blocks out of user transactions.
-These are transmitted to the cluster via turbine.  The leader
-receives and decodes them and generates a UserBlockEntry, and adds
-it to PoH as soon as the leaders PoH has started the UserBlockSlot.
+The N concurrent builders create blocks out of user transactions.
+These are transmitted to the cluster via turbine concurrently with
+the scheduled leader and other builders.  The leader receives and
+decodes them and generates a UserBlockEntry, and adds it to PoH as
+soon as the leaders PoH has started the UserBlockSlot.
 
 Validators can vote on leader blocks by executing the votes, but
 before completing the execution of UserBlock transactions.
@@ -89,26 +90,63 @@ If a validator doesn't have the builder's UserBlock, the validator
 doesn't vote on the proposed block and tries to repair the UserBlock.
 That fork is ignored for fork choice.
 
-Otherwise the validator evaluates the forks as usual. 
+Otherwise the validator evaluates the forks as usual.
 
-### UserBlock schedule
+### UserBlock builder schedule
 
-There are 2 UserBlockSlots per slot. Builders produce 1 UserBlock
-per UserBlockSlot. So if the cluster is configured with 3 Builders,
-each leader slot would see a total of 6 UserBlocks per slot.  3 in
-the first half of the leaders slot, and 3 in the second half.
+Each block is sloted to support N user blocks. Some of these builders
+are randomly scheduled, some of these are persistent. For example,
+there are 10 UserBlock builders per network block, that means 10
+builders are each assigned 10% of the shreds and 10% of the compute
+available to the block.
 
-The current leader schedule rotates each leader every 4 slots, but
-builders could be rotated at a different schedule then the leaders
-and rotation could be staggered.
+#### Randomized UserBlock builders
 
-### UserBlock Compute Limits
+Randomized UserBlock builders are assigned at the same time as the
+leader schedule is created based on stake weighted leader distribution.
+
+The benefit to more than 1 random UserBlock builder per leader
+block is that they are likely geographically distributed and users
+will be able to pick the closest one.
+
+The downside is that resource management becomes more complex. Each
+builder has 1/N compute and shred capacity and users have no idea
+which one is saturated when sending their transaction.  It's likely
+that priority fee floor will be different at each UserBlock builder.
+
+#### Persistent UserBlock slots
+
+Persistent UserBlock slots for the epoch are auctioned of to the top
+N bidders who burn the most lamports.
+
+In the first half of the epoch each builder deposits the lamports
+they are planning on burning, in the second half the builders may
+withdraw excess lamports.  The top N builders are assigned the slots
+in a dutch auction according to their remaining bids. If there are
+no bidders the capacity is relinquished to the randomized UserBlock
+builders.
+
+The benefit to persistent UserBlock builders is predictability of
+scheduling.  Applications can request the percentage of block
+bandwidth they need for operation and create dedicated sequencers
+that guarantee eventual settlement into the chain.  The drawback
+is censorship, but because some space is available for
+randomized UserBlock builders there is no way for the persistent
+block builders to prevent transactions from eventually landing into
+the chain or to be outbid in the next epoch.
+
+Future work may include assigning program state to a specific
+persistent builder so only those builders can schedule transactions
+that call those programs.
+
+#### UserBlock Compute Limits
 
 If the overall compute capacity for user transactions per leader
-block is 48m CU, and cluster is configured with 2 builders, then
-each UserBlock can use no more then 48m/4 or 12m CU.
+block is 48m CU, and cluster is configured with 2 builders and
+UserBlockSlots are configured to 200ms, then each UserBlock can
+use no more then 48m/4 or 12m CU.
 
-### UserBlock execution
+### Priority ordering for UserBlock transaction execution
 
 Execution of UserBlocks can happen asynchronously to voting.  When
 voting validators transmit their most recent BankHash, but it may
@@ -273,7 +311,16 @@ user transactions.
 
 ## Drawbacks
 
-[TBD]
+The major drawback is figuring out how to manage resource allocation
+between UserBlocks. If each UserBlock has 1/N capacity, each one
+is much more likely to saturate and have a higher priority fee floor
+then if the capacity was aggregated into 1 builder.
+
+The design should consider rolling some unused compute capacity
+forward, because of asynchronous execution the network is able to
+deal with bursts of greater than expected demand on compute as long
+as the average demand allows all the nodes to create a snapshot
+hash at least once an epoch.
 
 ## Backwards Compatibility
 
