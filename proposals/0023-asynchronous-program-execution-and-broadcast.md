@@ -114,7 +114,7 @@ builder has 1/N compute and shred capacity and users have no idea
 which one is saturated when sending their transaction.  It's likely
 that priority fee floor will be different at each UserBlock builder.
 
-#### Persistent UserBlock slots
+#### Persistent UserBlock builders
 
 Persistent UserBlock slots for the epoch are auctioned of to the top
 N bidders who burn the most lamports.
