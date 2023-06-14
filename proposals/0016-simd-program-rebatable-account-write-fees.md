@@ -211,19 +211,19 @@ they aim to reduce spamming.
 A new syscall will be added to update the PRAW fees:
 
 ```
-fn update_program_rebatable_account_write_fees(
-  account: Pubkey, 
+fn update_program_rebatable_account_write_fee(
+  address: Pubkey, 
   microlamports_per_requested_cu: u64
-) -> bool;
+) -> Result<()>;
 ```
 
 The syscall will take as arguments the account on which fee should be updated
-and the microlamports per cu that should be charged and return a true if the
-changes were successful else will return false.
+and the microlamports per cu that should be charged and return a `Ok` if the
+changes were successful else will return `Err`.
 
 The accounts database will need to store the value of microlamports per
 requested CU for the account. Changes to update the PRAW fees could be done only
-by the authority program. All programs will need to implement special
+by the account owner. All programs will need to implement special
 instructions so that the program admin can use this syscall to update PRAW fees
 on the required accounts. Program admin should always be signer for these
 instructions.
@@ -247,14 +247,15 @@ fees.
 A new syscall will be added to read PRAW fees on an account.
 
 ```
-fn get_program_rebatable_account_write_fees(
-  account: Pubkey
-) -> Result<()>;
+fn get_program_rebatable_account_write_fee(
+  address: Pubkey
+) -> Result<u64>;
 ```
 
 The syscall will take writable account as import and return microlamports per
-CU. It will return an error `InvalidAccountOwner` if the program calling the
-syscall is not the owner of the account.
+CU. It will return 0 if not PRAW fee is set. It will return an error
+`InvalidAccountOwner` if the program calling the syscall is not the owner of the
+account.
 
 ### Syscall to Rebate
 
@@ -270,15 +271,15 @@ schemes based on instruction sysvar introspection.
 Syscall definition of the rebate mechanism is:
 
 ```
-fn rebate_program_rebatable_account_write_fees(
-  account: Pubkey, 
+fn rebate_program_rebatable_account_write_fee(
+  address: Pubkey, 
   microlamports_per_requested_cu: u64
 ) -> Result<()>;
 ```
 
 Rebate takes account on which rebate is issued and the amount of microlamports
-per CU that needs to be rebated as input. It returns true of rebate was
-successful false otherwise. In case of multiple rebates on the same account only
+per CU that needs to be rebated as input. It returns `Ok` if rebate was
+successful `Err` otherwise. In case of multiple rebates on the same account only
 the highest amount of rebate will be taken into account. The rebated amount is
 always the minimum of the largest call to
 `rebate_program_rebatable_account_write_fees()` and the PRAW fees on the
