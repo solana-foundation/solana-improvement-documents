@@ -212,7 +212,7 @@ they aim to reduce spamming.The runtime will automatically set the PRAW fee to
 A new syscall will be added to update the PRAW fees:
 
 ```
-fn update_program_rebatable_account_write_fee(
+fn set_program_rebatable_account_write_fee(
   address: Pubkey, 
   microlamports_per_requested_cu: u64
 ) -> Result<()>;
@@ -259,10 +259,10 @@ CU. It will return `0` if no PRAW is set on the address.
 
 The owner of the account can issue a rebate of the PRAW fees paid to write lock
 a specific account. The rebate issued will be transferred back to the payer at
-the end of transaction if it is successfully executed. Similar to the update and
-read PRAW fees this will need to be exposed through a syscall so that programs
-can implement custom authorization and delegate the decision to composing
-programs.
+the end of the transaction if it is successfully executed. Similar to the set
+and read PRAW fees this will need to be exposed through a syscall so that
+programs can implement custom authorization and delegate the decision to
+composing programs.
 
 Simple rebate schemes will verify merely signers, e.g an oracle preventing 3rd
 parties from write-locking their price feed. Dexes will need more complex rebate
@@ -282,7 +282,7 @@ per CU that needs to be rebated as input. It returns void but the transaction
 will fail for invalid inputs. In case of multiple rebates on the same account
 only the highest amount of rebate will be taken into account. The rebated amount
 is always the minimum of the largest call to
-`rebate_program_rebatable_account_write_fees()` and the PRAW fees on the
+`rebate_program_rebatable_account_write_fee()` and the PRAW fees on the
 account. If program rebates `U64::MAX` it means all the PRAW fees on the account
 are rebated. The rebate amount cannot be negative. It will return an error
 `InvalidAccountOwner` if the program calling the syscall is not the owner of the
@@ -455,15 +455,15 @@ microlamports per requested CUs.
     will be taken into account.
   
   * In a transaction on an account with PRAW fees, a instruction that call
-    `update_program_rebatable_account_write_fees` to set PRAW fee to 0. Then the
+    `set_program_rebatable_account_write_fee` to set PRAW fee to 0. Then the
     fee PRAW fee requirement will be dropped from the next transactions and all
     the transactions with PRAW fees on the account will be considered as
     overpayment and reverted back to the payer.
 
   * In a transaction on an account with PRAW fees, with a instruction that call
-    `update_program_rebatable_account_write_fees` to update the PRAW fee. When
+    `set_program_rebatable_account_write_fee` to update the PRAW fee. When
     we do the syscall to get the PRAW fees
-    `get_program_rebatable_account_write_fees`, it will always return the PRAW
+    `get_program_rebatable_account_write_fee`, it will always return the PRAW
     fee before any updates. The maximum rebate will be the initial PRAW fee for
     the account. This should be the case even if the PRAW fee is updated to 0.
 
