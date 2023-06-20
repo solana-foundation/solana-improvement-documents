@@ -1,3 +1,12 @@
+---
+simd: '0058'
+title: Transaction Receipts
+category: Standard
+type: Core
+status: Draft
+created: 2023-06-20
+---
+
 # SIMD-0058: Transaction Receipts
 
 ## Summary
