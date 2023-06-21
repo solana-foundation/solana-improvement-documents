@@ -36,7 +36,7 @@ These are being documented in https://github.com/solana-labs/solana/issues/31755
 To encourage prioritization fee to be used as intended as congestion control
 tool, it propose to regulate `compute_unit_price` by rounding down to its
 nearest 1_000 microlamports. The effect is user should set `compute_unit_price`
-in increment of 1_000 microlamports. Transaction has less then 1_000
+in increments of 1_000 microlamports. Transaction with less than 1_000
 `compute_unit_price` will have no priority nor be charged a priority fee.
 
 ## Alternatives Considered
