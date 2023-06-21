@@ -29,7 +29,7 @@ The small unit of compute_unit_price manifests into:
 
 1. Prioritization_fee is proportionally insignificant to base fee;
 2. Therefore, some payers set priority even there is no contention, potentially
-   distorts local fee market, leaves other users at a disadvantage;
+   distorting local fee market, and leaving other users at a disadvantage;
 3. Little consideration was given to compute_unit_limit when setting priority;
 These are being documented in https://github.com/solana-labs/solana/issues/31755.
 
