@@ -77,9 +77,9 @@ PoC https://github.com/solana-labs/solana/pull/31469
   - user might want to set `compute_unit_price` only when block or account
     contention increase;
 
-    User can do that by either check RPC endpoint `getRecentPrioritizationFees`
-    for minimal fee to land to block or write lock specific accounts when
-    constructing transaction; 
+    Users can do that by either checking the RPC endpoint `getRecentPrioritizationFees`
+    for the minimum fee to land in a block, or specific write locked accounts when
+    constructing the transaction;
 
     User can also continuously pull RPC endpoint to built up prioritization
     fee historical stats locally, then generate adquent prioritization fee
