@@ -1,5 +1,5 @@
 ---
-simd: 0050
+simd: '0050'
 title: Increase Prioritization Fee
 authors:
   - Tao Zhu
@@ -48,6 +48,10 @@ later to be deprecated when users migrate to new instruction. It requires
 significantly more work on rolling out the change.
 
 Current approach avoid changing API, nor introducing an additional terminology.
+
+## New Terminology
+
+None
 
 ## Detailed Design
 
