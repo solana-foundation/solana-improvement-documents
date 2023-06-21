@@ -82,7 +82,7 @@ PoC https://github.com/solana-labs/solana/pull/31469
     constructing the transaction;
 
     User can also continuously pull RPC endpoint to built up prioritization
-    fee historical stats locally, then generate adquent prioritization fee
+    fee historical stats locally, then generate adequate prioritization fee
     algorithmically when constructing transactions.
   - when setting `compute_unit_price`, it is advised to set in increment of
     1_000 microlamports (eg 0.001 lamport);
