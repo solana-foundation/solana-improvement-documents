@@ -28,8 +28,9 @@ where compute_unit_price has unit of microlamport.
 The small unit of compute_unit_price manifests into:
 
 1. Prioritization_fee is proportionally insignificant to base fee;
-2. Therefore, some payers set priority even there is no contention, potentially
-   distorting local fee market, and leaving other users at a disadvantage;
+2. Therefore, some payers set priority even if there is no contention,
+   potentially distorting local fee market, and leaving other users at a
+   disadvantage;
 3. Little consideration was given to compute_unit_limit when setting priority;
 These are being documented in https://github.com/solana-labs/solana/issues/31755.
 
@@ -81,7 +82,7 @@ PoC https://github.com/solana-labs/solana/pull/31469
     for the minimum fee to land in a block, or specific write locked accounts when
     constructing the transaction;
 
-    User can also continuously pull RPC endpoint to built up prioritization
+    User can also continuously poll RPC endpoint to built up prioritization
     fee historical stats locally, then generate adequate prioritization fee
     algorithmically when constructing transactions.
   - when setting `compute_unit_price`, it is advised to set in increment of
@@ -95,8 +96,7 @@ PoC https://github.com/solana-labs/solana/pull/31469
 
 - 31.27% non-vote transactions in mainnet-beta set `compute_unit_price` when
   both block and account CUs are below 75% of limit (eg., not congested).
-  They are
-  currently paying an insignificant prioritization fee; With this
+  They are currently paying an insignificant prioritization fee; With this
   proposal, the payers of these transactions would have to consider only
   paying prioritization fee when truly needed.
 
