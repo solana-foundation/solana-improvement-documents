@@ -105,6 +105,9 @@ PoC https://github.com/solana-labs/solana/pull/31469
   with this proposal, payers of these transactions would have to consider
   setting accurate/reasonable `compute_unit_limit`.
 
+## Security Considerations
+
+None
 
 ## Backwards Compatibility
 
