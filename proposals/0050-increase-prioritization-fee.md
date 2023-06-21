@@ -97,7 +97,7 @@ PoC https://github.com/solana-labs/solana/pull/31469
   both block and account CUs are below 75% of limit (eg., not congested).
   They are
   currently paying an insignificant prioritization fee; With this
-  proposal, the payers of these transaction would have to consider only
+  proposal, the payers of these transactions would have to consider only
   paying prioritization fee when truly needed.
 
 - about 6% non-vote transactions in mainnet-beta that set `compute_unit_price`
