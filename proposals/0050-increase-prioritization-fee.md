@@ -100,10 +100,10 @@ PoC https://github.com/solana-labs/solana/pull/31469
   proposal, the payers of these transactions would have to consider only
   paying prioritization fee when truly needed.
 
-- about 6% non-vote transactions in mainnet-beta that set `compute_unit_price`
-  but either not setting `compute_unit_limit` or setting it _above_ Max 1.4M.
-  with this proposal, payers of these transactions would have to consider
-  setting accurate/reasonable `compute_unit_limit`.
+- about 6% of non-vote transactions in mainnet-beta that set `compute_unit_price`
+  are either not setting `compute_unit_limit` or setting it _above_ Max 1.4M.
+  With this proposal, payers of these transactions would have to consider
+  setting an accurate/reasonable `compute_unit_limit`.
 
 ## Security Considerations
 
