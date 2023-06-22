@@ -84,11 +84,13 @@ Implementation would be as follows:
 ID: `Secp256r1SigVerify1111111111111111111111111`
 
 The program instruction will be composed of the following:
+
 - A first u8 as the count for the number of signatures to check
 - Single byte of padding
 - The following struct serialized, for each signature to verify
-```rust
 
+  
+```rust
 struct Secp256r1SignatureOffsets {
     signature_offset: u16,             // offset to secp256r1 signature of 64 bytes
     signature_instruction_index: u16,  // instruction index to find signature
@@ -96,7 +98,7 @@ struct Secp256r1SignatureOffsets {
     public_key_instruction_index: u16, // instruction index to find public key
     message_data_offset: u16,          // offset to start of message data
     message_data_size: u16,            // size of message data
-    message_instruction_index: u16,    // index of instruction data to get message data
+    message_instruction_index: u16,    // index of instruction data to get msg data
 }
 ```
 Multiple signatures can be verified. If any of the signatures fail to verify,
