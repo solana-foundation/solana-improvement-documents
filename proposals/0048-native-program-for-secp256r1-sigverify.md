@@ -38,7 +38,7 @@ element of their mobile device. To authenticate with those services, the user
 uses their biometrics to sign a message with the stored private key.
 
 And although this is meant to enable password-less logins in web2, it makes for
-an excellent canditate as a second factor of on-chain authentication.
+an excellent candidate as a second factor of on-chain authentication.
 
 Going past just securing funds, this would support other beneficial account
 abstractions that make use of the simple UX of WebAuthn and Passkeys.
