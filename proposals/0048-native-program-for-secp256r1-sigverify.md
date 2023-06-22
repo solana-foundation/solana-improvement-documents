@@ -101,6 +101,7 @@ struct Secp256r1SignatureOffsets {
     message_instruction_index: u16,    // index of instruction data to get msg data
 }
 ```
+
 Multiple signatures can be verified. If any of the signatures fail to verify,
 an error is returned.
 
