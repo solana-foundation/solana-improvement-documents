@@ -53,7 +53,8 @@ Although WebAuthn supports the following curves:
 - ed25519
 
 P-256 is the only one suported by both Android & IOS (IOS being the more
-restrictive of the two), hence the goal being to implement secp256r1 signature verification
+restrictive of the two), hence the goal being to implement secp256r1 signature
+verification
 
 General Documentation:
 
@@ -79,6 +80,7 @@ None
 Implementation would be as follows:
 
 ### Program
+
 ID: `Secp256r1SigVerify1111111111111111111111111`
 
 The program instruction will be composed of the following:
@@ -86,6 +88,7 @@ The program instruction will be composed of the following:
 - Single byte of padding
 - The following struct serialized, for each signature to verify
 ```rust
+
 struct Secp256r1SignatureOffsets {
     signature_offset: u16,             // offset to secp256r1 signature of 64 bytes
     signature_instruction_index: u16,  // instruction index to find signature
