@@ -1,6 +1,6 @@
 ---
 simd: "0048"
-title: Native Program for verifying secp256r1 signatures
+title: Native Program for verifying secp256r1 sig.
 authors:
   - Orion (Bunkr)
   - Jstnw (Bunkr)
