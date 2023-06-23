@@ -63,6 +63,7 @@ format.
 ## Detailed Design
 
 ### Overview
+
 Leaders are scheduled to build blocks as they are currently by
 the LeaderSchedule.
 
@@ -302,6 +303,16 @@ Leader could censor or delay the builder.
 Under heavy forking, validators will skip executing all the
 UserBlocks on minor forks.
 
+## Slashing UserBlock Builders
+
+There shouldn't be a reason to slash UserBlock builders.  Duplicate
+UserBlocks will be resolved by the leader, and it is up to the
+leader to pick one.  If turbine failed and the rest of the network
+has a different UserBlock, the leaders proposed block is dropped.
+
+If slashing is required, then stakeweighted or a bond based auction
+would be necessary.
+
 ## Economic Considerations
 
 Builders should be shuffled and scheduled according to stake weight.
@@ -309,19 +320,52 @@ Builders should be shuffled and scheduled according to stake weight.
 TBD, deciding how should builders and leaders split the fees from
 user transactions.
 
+## Capacity Management
+
+Because capacity is split between UserBlocks, max UserBlock size
+as well as max account limit per UserBlock must be 1/N CUs, where
+N is the number of concurrent builders.
+
+To prevent under-utilization, unused resources from blocks that are
+partially filled can be used by future blocks up at most N * (block
+or account limit). This would allow the network to handle bursts
+of demand and on average maintain the desired load.
+
+## Multi leader spam
+
+Spammers would be motivated to send the same message to every
+leader.
+
+1. builders censor fee payers by most significant bit of the fee
+payer public key
+
+2. users generate N fee payers for N concurrent builders and use
+the fee payer that is geographically closest.
+
+If spammers want to send messages to multiple nodes, they would
+need to use multiple fee payers and pay per node.
+
 ## Drawbacks
 
-The major drawback is figuring out how to manage resource allocation
-between UserBlocks. If each UserBlock has 1/N capacity, each one
-is much more likely to saturate and have a higher priority fee floor
-then if the capacity was aggregated into 1 builder.
-
-The design should consider rolling some unused compute capacity
-forward, because of asynchronous execution the network is able to
-deal with bursts of greater than expected demand on compute as long
-as the average demand allows all the nodes to create a snapshot
-hash at least once an epoch.
+[TBD]
 
 ## Backwards Compatibility
 
 [TBD]
+
+## Implementation Roadmap
+
+1. Bankless leaders - separate out leader functionality such that
+it doesn't depend on state.  This would require relaxing that all
+fee payers must be valid in a block.
+
+2. Fixed sized voting committees - configure network to run with
+400 nodes voting per epoch, this requires consensus changes. Consensus
+then has a fixed resource cost on the network.
+
+3. UserBlocks - separate votes from non votes, and transmit non-votes
+in user blocks. Execution is still synchronous.
+
+4. Asynchronous execution - nodes skip user block execution before voting.
+
+5. Multiple builders - requires capacity management
