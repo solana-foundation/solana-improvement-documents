@@ -126,7 +126,9 @@ Addition of new syscalls to get, set and rebate PRAW fees during program
 runtime. Application developers will be able to rebate these fees through the
 new syscall, but only if the transaction succeeds, this way transactions
 write-locking the respective accounts will require full fee payment before
-program is executed.
+starting the execution of the transaction. Rebates will be issued to the payer
+after the transaction is executed. During transaction execution, the rebates
+will not be reflected in the payer's balance.
 
 Once PRAW fees are paid on an account by the payer they are valid for the whole
 transaction, even if the same account is write-locked in multiple instructions.
@@ -207,7 +209,8 @@ then the rest would be transferred back to the payer.
 PRAW fees should be considered as set and forget kind of fees by dapp
 developers. They are not aimed to control congestion over the network instead
 they aim to reduce spamming.The runtime will automatically set the PRAW fee to
-`0` on account creation.
+`0` on account creation. PRAW fee will not be changed if the ownership of the
+account changes.
 
 A new syscall will be added to update the PRAW fees:
 
