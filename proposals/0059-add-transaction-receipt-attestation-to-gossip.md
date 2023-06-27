@@ -87,6 +87,7 @@ pub struct TransactionReceiptAttestation{
 ```
 
 WIP
+
 ## Impact
 
 CRDS will have transaction receipt attestations which can be subscribed to by
@@ -103,4 +104,3 @@ WIP
 ## Drawbacks *(Optional)*
 
 WIP
-
