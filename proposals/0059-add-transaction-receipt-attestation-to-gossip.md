@@ -57,32 +57,16 @@ root and the signature of the validator attesting to the slot and receipt root.
 
 ## Detailed Design
 
-We propose a new variant in the CrdsData enum that stores the receipt root, slot
-and an attestation to the root and slot from the validator.
+We propose a new variant in the CrdsData enum that stores
+the receipt root, slot,an attestation to the root and slot
+from the validator and the signer's public key.
 
 ```rust
-pub enum CrdsData {
-    LegacyContactInfo(LegacyContactInfo),
-    Vote(VoteIndex, Vote),
-    LowestSlot(/*DEPRECATED:*/ u8, LowestSlot),
-    LegacySnapshotHashes(LegacySnapshotHashes),
-    AccountsHashes(AccountsHashes),
-    EpochSlots(EpochSlotsIndex, EpochSlots),
-    LegacyVersion(LegacyVersion),
-    Version(Version),
-    NodeInstance(NodeInstance),
-    DuplicateShred(DuplicateShredIndex, DuplicateShred),
-    SnapshotHashes(SnapshotHashes),
-    ContactInfo(ContactInfo),
-  + TransactionReceiptAttestation(TransactionReceiptAttestation)  
-}
-```
-
-```rust
-pub struct TransactionReceiptAttestation{
-  slot: Slot // The slot that the receipt is generated for
-  attestation: Signature, // A message signed by node with the root and slot as data
-  root: Hash, // The transaction receipt root
+pub struct ReceiptRoot{
+  slot: u64 // The slot that the receipt is generated for
+  signature: [u8;64], // A message signed by node with the root and slot as data
+  root: [u8;32], // The transaction receipt root
+  pubkey: [u8;32] // The public key of the validator
 }
 ```
 
