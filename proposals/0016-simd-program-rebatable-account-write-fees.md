@@ -180,9 +180,7 @@ When the cluster receives a new transaction, with `TransactionHeaderParameter`
 instruction is decoded to get the `SetProgramRebatableAccountWriteFees` and then
 calculates the total fees required for the transaction message. Then we verify
 that the fee-payer has a minimum balance of: `per-transaction base fees` +
-`prioritization fees` +
-`Microlamports per CU set by SetProgramRebatableAccountWriteFees` *
-`requested CUs set by SetComputeUnitLimit`.
+`prioritization fees` + `PRAW fees`.
 
 Where PRAW fees is :
 `Microlamports per CU set by SetProgramRebatableAccountWriteFees` *
@@ -348,10 +346,10 @@ microlamports per requested CUs.
   Then the transaction is executed without the PRAW fee feature. The payer ends
   up paying other fees.
 
-* A payer includes `SetProgramRebatableAccountWriteFees(PRAW fees)` in the
-  transaction but none of the accounts have any PRAW fees. This case is
-  considered an overpay case. The payer balance is checked for
-  `other fees + PRAW fees`.
+* A payer includes `SetProgramRebatableAccountWriteFees(PRAW fees)` with
+  non-zero microlamports per CU as PRAW fees in the transaction but none of the
+  accounts have any PRAW fees. This case is considered an overpay case. The
+  payer balance is checked for `other fees + PRAW fees`.
   1. The payer does not have enough balance: Transaction fails with an error
     `Insufficient Balance` and the transaction is not even scheduled for
     execution.
@@ -369,7 +367,7 @@ microlamports per requested CUs.
   A payer does not include `SetProgramRebatableAccountWriteFees` in the
   transaction. The transaction includes one or more accounts with PRAW fees.
   Then the transaction is failed with an error
-  `ProgramRebatableAccountWriteFeesNotPaid`. The program is not executed at all.
+  `ProgramRebatableAccountWriteFeesNotPaid`. The transaction is not executed.
   The payer ends up paying only other fees.
 
 * Fees paid no rebates case:
