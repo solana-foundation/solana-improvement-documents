@@ -70,7 +70,22 @@ pub struct ReceiptRoot{
 }
 ```
 
-WIP
+### Eviction Policy
+
+The standard eviction policy for a gossip entry is to store one record per node.
+However it would be problematic in our case since as one record holds only one
+commitment and the duration for a gossip entry (time taken to push and pull) can
+easily exceed the slot time of 400ms. The following options offer potential solutions
+but it essentially comes down to a tradeoff between gossip bandwidth and memory.
+
+- Use a custom eviction policy (store last 30 records per node)
+- Increase the poll rate of gossip to push and pull records more frequently
+  (increases bandwidth)
+- Batch multiple receipt roots in one record (increases latency)
+
+Our research suggests that deploying the custom eviction policy and batching roots
+is a good choice given that validators reserve instances with high ram upfront and
+solana nodes are notorious for taking up more bandwidth due to gossip.
 
 ## Impact
 
