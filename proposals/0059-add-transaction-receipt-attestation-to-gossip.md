@@ -57,11 +57,18 @@ root and the signature of the validator attesting to the slot and receipt root.
 
 ## Detailed Design
 
-We propose a new variant in the CrdsData enum that stores
+We propose a new structure in the Gossip CRDS that stores
 the receipt root, slot,an attestation to the root and slot
 from the validator and the signer's public key.
 
+This struct would be called ReceiptRoot and to store commitments
+for multiple slots we would push them into BatchReceiptRoots.
+
 ```rust
+pub struct BatchReceiptRoot{
+  roots: [ReceiptRoot; N] // an array of upto N commitments
+}
+
 pub struct ReceiptRoot{
   slot: u64 // The slot that the receipt is generated for
   signature: [u8;64], // A message signed by node with the root and slot as data
@@ -86,6 +93,24 @@ but it essentially comes down to a tradeoff between gossip bandwidth and memory.
 Our research suggests that deploying the custom eviction policy and batching roots
 is a good choice given that validators reserve instances with high ram upfront and
 solana nodes are notorious for taking up more bandwidth due to gossip.
+
+### Why do we need BatchReceiptRoot?
+
+The gossip protocol pushes a new message every 7500ms, the time taken by a slot
+is 400ms, if we were to push a new message that would consume more bandwidth.
+
+Additionally the CRDS is not designed to handle multiple of the same record types
+for a particular node hence it doesn't allow us to store records for as long as
+we need to.
+
+Note: We think batching 9 slots at a time is good considering that's only 6 seconds
+and the max packet size is 1232 bytes(1280 with metadata) before it starts
+getting fragmented over ethernet.
+
+### Performance and Memory
+
+ReceiptRoot - `8 + 64 + 32 + 32 = 136 Bytes`
+BatchReceiptRoot - `136 * 9 = 1224 Bytes (1.224 kB)`
 
 ## Impact
 
