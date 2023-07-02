@@ -12,7 +12,7 @@ created: (2023-06-27)
 
 ## Summary
 
-This SIMD introduces a new variant in the CrdsData enum called TransactionReceiptAttestation.
+This SIMD introduces a new variant in the CrdsData enum called ReceitRoot.
 It uses the new receipt tree commitment scheme introduced in [SIMD-0058](https://github.com/firedancer-io/solana-improvement-documents/blob/ripatel/transaction-receipts/proposals/0058-transaction-receipts.md?plain=1)
 
 ## Motivation
@@ -52,7 +52,7 @@ This has certain problems:
 
 ## New Terminology
 
-TransactionReceiptAttestation - A structure containing the slot, transaction receipt
+ReceiptRoot - A structure containing the slot, transaction receipt
 root and the signature of the validator attesting to the slot and receipt root.
 
 ## Detailed Design
@@ -89,7 +89,7 @@ solana nodes are notorious for taking up more bandwidth due to gossip.
 
 ## Impact
 
-CRDS will have transaction receipt attestations which can be subscribed to by
+CRDS will have receit roots which can be subscribed to by
 light clients and this will be consistent across the entire cluster.
 Verifying receipts by comparing the locally computed receipt with the cluster
 wide receipt would be much more convenient.
