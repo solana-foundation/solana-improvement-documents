@@ -81,7 +81,7 @@ but it essentially comes down to a tradeoff between gossip bandwidth and memory.
 - Use a custom eviction policy (store last 30 records per node)
 - Increase the poll rate of gossip to push and pull records more frequently
   (increases bandwidth)
-- Batch multiple receipt roots in one record (increases latency)
+- Batch multiple receipt roots in one message (increases latency)
 
 Our research suggests that deploying the custom eviction policy and batching roots
 is a good choice given that validators reserve instances with high ram upfront and
