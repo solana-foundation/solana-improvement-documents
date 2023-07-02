@@ -112,6 +112,10 @@ getting fragmented over ethernet.
 ReceiptRoot - `8 + 64 + 32 + 32 = 136 Bytes`
 BatchReceiptRoot - `136 * 9 = 1224 Bytes (1.224 kB)`
 
+Since we are not changing the poll rate of gossip to be in sync with
+the latest slot we would save on the gossip egress bandwidth and there
+wouldn't be any significant changes in node operations and costs.
+
 ## Impact
 
 CRDS will have receit roots which can be subscribed to by
@@ -119,12 +123,22 @@ light clients and this will be consistent across the entire cluster.
 Verifying receipts by comparing the locally computed receipt with the cluster
 wide receipt would be much more convenient.
 
-WIP
-
 ## Security Considerations
 
-WIP
+While this SIMD greatly reduces the user's trust in an RPC, the light client will
+still need to make certain trust assumptions. This includes finding a trusted
+source for the validator set per epoch (including their pubkeys and stake weights)
+and trusting that all transactions are valid (in case the supermajority is corrupt).
+We plan to solve these problems in future SIMDs to provide a full trustless setup
+including data availability sampling and fraud proving which will only require a
+single honest full node.
 
-## Drawbacks *(Optional)*
+Additonally, the advantage of using gossip is that not changing the consensus
+commitment scheme doesn't risk bringing liveness failures to the network in the
+future.
 
-WIP
+## Drawbacks
+
+Currently there is no mechanism built in the spec to incentivise making commitments
+and nodes may choose not to, however this is something that can be introduced
+in the future.
