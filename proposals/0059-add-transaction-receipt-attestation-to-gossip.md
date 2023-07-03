@@ -77,6 +77,9 @@ pub struct ReceiptRoot{
 }
 ```
 
+Each node would push the batch every N slots and then every node in the network
+especially RPCs can aggregate these and serve them to light clients.
+
 ### Eviction Policy
 
 The standard eviction policy for a gossip entry is to store one record per node.
