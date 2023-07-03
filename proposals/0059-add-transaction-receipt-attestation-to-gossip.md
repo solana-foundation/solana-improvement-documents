@@ -100,7 +100,8 @@ solana nodes are notorious for taking up more bandwidth due to gossip.
 ### Why do we need BatchReceiptRoot?
 
 The gossip protocol pushes a new message every 7500ms, the time taken by a slot
-is 400ms, if we were to push a new message that would consume more bandwidth.
+is 400ms, if we were to push a new message for every slot then that would
+consume more bandwidth.
 
 Additionally the CRDS is not designed to handle multiple of the same record types
 for a particular node hence it doesn't allow us to store records for as long as
@@ -121,17 +122,15 @@ wouldn't be any significant changes in node operations and costs.
 
 ## Impact
 
-CRDS will have receit roots which can be subscribed to by
-light clients and this will be consistent across the entire cluster.
-Verifying receipts by comparing the locally computed receipt with the cluster
-wide receipt would be much more convenient.
+This would enable SPV light clients that can locally verify confirmation of their
+transaction without blindly trusting the RPC server and would greatly improve
+the security and decentralization of the solana network.
 
 ## Security Considerations
 
 While this SIMD greatly reduces the user's trust in an RPC, the light client will
-still need to make certain trust assumptions. This includes finding a trusted
-source for the validator set per epoch (including their pubkeys and stake weights)
-and trusting that all transactions are valid (in case the supermajority is corrupt).
+still need to make certain trust assumptions. This includes finding trusting that
+all transactions are valid (in case the supermajority is corrupt).
 We plan to solve these problems in future SIMDs to provide a full trustless setup
 including data availability sampling and fraud proving which will only require a
 single honest full node.
