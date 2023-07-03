@@ -1,6 +1,6 @@
 ---
 simd: '0059'
-title: Add Transaction Receipt Attestation to Gossip
+title: Add Receipt Root to Gossip
 authors:
   - Anoushk Kharangate (Tinydancer)
   - Harsh Patel (Tinydancer)
