@@ -67,20 +67,20 @@ transaction termination events into poh stream.
 also, derive stake-weighted average transaction execution thread count
 (`TC_stake_weighted`).
 
-so, full is when `ATC == TETC` at any given moment (this is updated at ~10ms or
-so).
+so, full is defined as the duration when  `TC_a == TC_stake_weighted` (this is
+updated at ~10ms intervals).
 
 when not full, maximize throughput of each of any single threaded transaction
 executions. note that, this mode exponentially cools down any hot addresses if
 any.
 
 when full, effectively pause any txes touching the hot state by exponentially
-increasing the local base fees.
+increasing the local base fees. so casual txes can be executed.
 
-so, leaders are incentivised to manipulate in this plain form.
+so, leaders are incentivised to manipulate in this naive form.
 
-so, split priority fee. into two parts: (1) collected, (2) accured for the next
-tx's base fee.  the portion of (1) is calculated as if tx's cu *
+so, split priority fee into two parts: (1) collected, (2) accrued for the next
+tx's base fee payment. The portion of (1) is calculated as if tx's cu *
 `TC_stake_weighted`. (i.e. as if validator stuffed spam txes to capture the
 exessive part (2) of prirotiy fee)
 
@@ -97,6 +97,9 @@ cu.
   - so that users want txes fail fast (want to decrease actual CU)
   - 25% is burntd and 25% is collected to leaders
     - so, avoid too much requested cu.
+
+finally, when substantial blocks are full for extended duration, the global base-fee
+will naturally starts ceiling up. That's unavoidable no matter what.
 
 ## Impact
 
