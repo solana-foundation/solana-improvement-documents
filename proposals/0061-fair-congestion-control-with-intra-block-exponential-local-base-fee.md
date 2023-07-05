@@ -12,24 +12,27 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-This feature is a congestion-control mechanism in the form of an extension to
-local fee markets while leaving their locality of transaction fee dynamics
+This feature is a fair congestion-control mechanism in the form of an extension
+to local fee markets while leaving their locality of transaction fee dynamics
 intact.
 
-To that end, it introduces a dynamic base fees to individual local fee markets.
-It also attains very short feedback loop of intra block frequency to maintain
-full efficacy of Solana's peculiar execution model compared to other
-blockchains: multi-threaded and low latency.
+To that end, it introduces a exponentially-scaled dynamic base fees to
+individual local fee markets.  It also attains very short feedback loop of
+intra block frequency to maintain full efficacy of Solana's peculiar execution
+model compared to other blockchains: multi-threaded and low latency.
 
-This is realized with some incentive tweak to combat against the obvious base fee
-manipulation with such short interval.
+This is realized by means of some incentive tweaks to combat against the
+obvious base fee manipulation with such short intervals
 
 ## Motivation
 
 - Write lock cu limit is bad (bot can lock out at the very first of block for
   the entire duration of whole blocktime (400ms)
-- Increased Defi activity around any volatile financial markets could starve
+- Increased Defi activities around any volatile financial markets could starve
   payment transactions for extended time
+- Inter-block and linear Voluntary fee escalation with vanilla fee market
+  auction can't guarantee the scheduling deadline of casual payment txes (which
+  needs 99.99% sub-second confirmation at very minimum).
 
 ## Alternatives Considered
 
@@ -43,20 +46,56 @@ https://github.com/solana-foundation/solana-improvement-documents/pull/16
 
 https://github.com/solana-foundation/solana-improvement-documents/pull/45
 
+bankless
+
 ## New Terminology
 
 Is there any new terminology introduced with this proposal?
 
+casual tx:
+fairness:
+block fullness in terms of number of actively-execution threads
+
 ## Detailed Design
 
-Explain the feature as if it was already implemented and you're explaining it
-to another Solana core contributor. The generally means:
+(i jotted this down in 10min before going to bed! pardon for being so random
+writings...)
 
-- Explain the proposed change and how it works
-- Where the feature fits in to the runtime, core, or relevant sub-system
-- How this feature was/could be implemented
-- Interaction with other features
-- Edge cases
+to *determiniscally* define active thread count (`TC_a`), additionally record
+transaction termination events into poh stream.
+
+also, derive stake-weighted average transaction execution thread count
+(`TC_stake_weighted`).
+
+so, full is when `ATC == TETC` at any given moment (this is updated at ~10ms or
+so).
+
+when not full, maximize throughput of each of any single threaded transaction
+executions. simple story.
+
+when full, effectively pause any txes touching the hot state by exponentially
+increasing the local base fees.
+
+so, leaders are incentivised to manipulate in this plain form.
+
+so, split priority fee. into two parts: (1) collected, (2) accured for the next
+tx's base fee.  the portion of (1) is calculated as if tx's cu *
+`TC_stake_weighted`. (i.e. as if validator stuffed spam txes to capture the
+exessive part (2) of prirotiy fee)
+
+in this way, there's no meaning to spam blocks by leaders. at the same time,
+it's still incentivied to pack txes according to p.f. desceding order, because
+leaders and clients alike are want to increse of their single threaded tps)
+
+also requested fee is basis for fee cals, block fullness calc, not the actual
+cu.
+- to prevent bad behavior, rebate 50% of (requested CU - actual CU)?
+  - so that leaders want txes success (want to increase actual CU) => usually
+    execute in the order
+  - specified by user
+  - so that users want txes fail fast (want to decrease actual CU)
+  - 25% is burntd and 25% is collected to leaders
+    - so, avoid too much requested cu.
 
 ## Impact
 
