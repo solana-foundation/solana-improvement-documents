@@ -26,9 +26,10 @@ manipulation with such short interval.
 
 ## Motivation
 
-- Write lock cu limit is bad (bot can lock out at the very first of block for the entire duration of whole blocktime (400ms)
-- Increased Defi activity around any volatile financial markets could starve payment transactions for extended time
-
+- Write lock cu limit is bad (bot can lock out at the very first of block for
+  the entire duration of whole blocktime (400ms)
+- Increased Defi activity around any volatile financial markets could starve
+  payment transactions for extended time
 
 ## Alternatives Considered
 
