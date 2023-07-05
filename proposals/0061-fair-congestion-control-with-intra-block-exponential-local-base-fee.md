@@ -71,7 +71,8 @@ so, full is when `ATC == TETC` at any given moment (this is updated at ~10ms or
 so).
 
 when not full, maximize throughput of each of any single threaded transaction
-executions. simple story.
+executions. note that, this mode exponentially cools down any hot addresses if
+any.
 
 when full, effectively pause any txes touching the hot state by exponentially
 increasing the local base fees.
