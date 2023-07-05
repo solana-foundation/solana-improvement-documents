@@ -13,7 +13,7 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 This feature is a congestion-control mechanism in the form of an extension to
-local fee markets while leaving its locality of transaction fee dynamics
+local fee markets while leaving their locality of transaction fee dynamics
 intact.
 
 To that end, it introduces a dynamic base fees to individual local fee markets.
@@ -26,8 +26,9 @@ manipulation with such short interval.
 
 ## Motivation
 
-Why are we doing this? What use cases does it support? What is the expected
-outcome?
+- Write lock cu limit is bad (bot can lock out at the very first of block for the entire duration of whole blocktime (400ms)
+- Increased Defi activity around any volatile financial markets could starve payment transactions for extended time
+
 
 ## Alternatives Considered
 
@@ -38,6 +39,8 @@ Related proposals:
 https://github.com/solana-foundation/solana-improvement-documents/pull/4
 
 https://github.com/solana-foundation/solana-improvement-documents/pull/16
+
+https://github.com/solana-foundation/solana-improvement-documents/pull/45
 
 ## New Terminology
 
