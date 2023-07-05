@@ -1,18 +1,28 @@
 ---
-simd: 'XXXX'
-title: Title of SIMD
+simd: '0061'
+title: Fair congestion control with intra-block exponential local base fee
 authors:
-  - (fill in with names of authors)
+  - Ryo Onodera (Solana Labs)
 category: Standard/Meta
-type: Core/Networking/Interface/Meta
+type: Core
 status: Draft
-created: (fill me in with today's date, YYYY-MM-DD)
+created: 2023-07-05
 feature: (fill in with feature tracking issues once accepted)
 ---
 
 ## Summary
 
-A brief summary of what the feature is.
+This feature is a congestion-control mechanism in the form of an extension to
+local fee markets while leaving its locality of transaction fee dynamics
+intact.
+
+To that end, it introduces a dynamic base fees to individual local fee markets.
+It also attains very short feedback loop of intra block frequency to maintain
+full efficacy of Solana's peculiar execution model compared to other
+blockchains: multi-threaded and low latency.
+
+This is realized with some incentive tweak to combat against the obvious base fee
+manipulation with such short interval.
 
 ## Motivation
 
@@ -21,8 +31,13 @@ outcome?
 
 ## Alternatives Considered
 
-What alternative designs were considered and what pros/cons does this feature
-have relative to them?
+Related proposals:
+
+(TODO: add any relation of this to them)
+
+https://github.com/solana-foundation/solana-improvement-documents/pull/4
+
+https://github.com/solana-foundation/solana-improvement-documents/pull/16
 
 ## New Terminology
 
