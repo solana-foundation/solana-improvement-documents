@@ -40,13 +40,20 @@ Related proposals:
 
 (TODO: add any relation of this to them)
 
+dynamic base fees
 https://github.com/solana-foundation/solana-improvement-documents/pull/4
 
+program rebatable account write fees:
 https://github.com/solana-foundation/solana-improvement-documents/pull/16
 
+asynchronous program execution:
 https://github.com/solana-foundation/solana-improvement-documents/pull/45
 
+increase prioritization fee:
+https://github.com/solana-foundation/solana-improvement-documents/pull/50
+
 bankless
+https://github.com/solana-foundation/solana-improvement-documents/pull/5
 
 ## New Terminology
 
