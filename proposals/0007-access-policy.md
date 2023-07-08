@@ -109,17 +109,21 @@ repository.
 Users with Maintain access are responsible for managing the SIMD repository and
 granting user access based on the above requirements.
 
-### Vouching Process 
+### Requesting Access
 
-To receive a level of access as defined in SIMD-0007, follow these steps:
-
-1. Open an issue on the [Solana Improvement
+To receive a level of access as defined in SIMD-0007, Open an issue on the 
+[Solana Improvement
 Documents](https://github.com/solana-foundation/solana-improvement-documents)
 repository with a title in the following format: "Request Access (Level [X])
 for [Username]". Add information that can help identify you such as your 
 discord id in the issue.
-2. Gather your vouchers to add a comment on the issue expressing their support.
-3. Once the issue has received enough support, notify the users with Maintain
+
+### Vouching Process 
+
+The vouching process is as follows:
+
+1. Gather your vouchers to add a comment on the issue expressing their support.
+2. Once the issue has received enough support, notify the users with Maintain
 access by adding a comment tagging
 [`@SIMD-Maintainers`](https://github.com/orgs/solana-foundation/teams/simd-maintainers)
 and you will be granted the requested level of access.
