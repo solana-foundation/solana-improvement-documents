@@ -334,6 +334,19 @@ R = Sum( min(Pi, max(Rin where n=0 to N)) * C )
 We then transfer `(Pi - Ri) * C` into each writable account and `O + R` back to
 the payer.
 
+### Consumption of CUs
+
+Currently `DEFAULT_COMPUTE_UNITS` assigned to `ComputeBudgetProgram` and
+`SystemProgram` is 150 CUs. Considering these costs, `TransactionHeaderProgram`
+will consume a fixed 300 CUs to decode one or more
+`TransactionHeaderParameters`. An additional 150 CUs per writable account which
+has a PRAW fee will be charged for the transaction which is equivalent to
+`transfer` instruction in `SystemProgram`. There will be a cost of 150 CUs per
+call to rebate syscall and set PRAW fee syscall. These costs could change and
+the future development related to the consumption of CUs while loading writable
+accounts can additionally take into consideration if PRAW fees are enabled on
+the loaded accounts.
+
 ### Looking at common cases
 
 For simplicity, we have written examples in total PRAW fees instead of
