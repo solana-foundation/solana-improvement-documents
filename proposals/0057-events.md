@@ -6,7 +6,7 @@ authors:
   - Nicholas Clarke (nicholasgclarke@mango.markets)
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2023-06-13
 feature: (fill in with feature tracking issues once accepted)
 ---
@@ -21,11 +21,20 @@ events.
 ## Motivation
 
 Application developers need an easy way to reliably track the on-chain state
-of their programs. Common use-cases for this would be: executing a market order
-and reporting the filled price to the user. Collect all orders on a market and
-aggregate them to an hourly candles. A specialized API exposed to the runtime
-and RPC would allow dapps to reliably record historical data as well as RPC
-providers to serve it effectively to any web client.
+of their programs. In theory all account updates can be streamed at line-rate
+out of a validator, but clients often lack the bandwith to consume those.
+
+Common use-cases for this would be: executing a market order and reporting the
+filled price to the user. Collect all orders on a market and aggregate them to
+hourly candles. Allow UIs to listen to L3 order updates instead of streaming
+full account updates for a large orderbook account.
+
+A new syscall exposed to the runtime should allow dapps to reliably record
+semantic and materialized (not raw) historical data, which clients subscribe
+to via RPC. Clients can filter the events subscribed to with various rules,
+to only receive the updates that are needed for a consistent client experience.
+For CLOBs UI bandwidth requirements would reduce from 4MB/s to below 300kB/s.
+
 
 ## Alternatives Considered
 
@@ -34,27 +43,25 @@ structs as string to the `sol_log_` syscall. The issue with this process is
 that the sol_log_ destination buffer is truncated on many RPCs for complex
 transactions with a lot of logs. As the setting is an operator setting
 some of them choose to have very large log buffers, but not every RPC operator
-provides this service to their customers. There is a further issue with RPCs
-and log truncation in that you also need to ensure that the RPCs feeding the
-bigtable historical transactions also had a large log buffer otherwise you can
-experience truncation fetching logs older than the RPCs local history even when
-you're pointed at an RPC with a large log buffer. Another issue is that these
-logs are used to also record runtime information (compute units consumed) and
-plaintext debug message, hence become very difficult to parse, which is why
-many developers avoid structured event logging via anchor and just use
-formatted strings.
+provides this service to their customers. It's actually important to ensure
+that the RPCs feeding the bigtable historical transactions also had a large
+buffer otherwise you will experience truncation fetching logs older than the
+RPCs local history, even when you configured your own RPC with a large log
+buffer. Another issue is that these logs are used to also record runtime
+information (compute units consumed) and plaintext debug messages, hence become
+very difficult to parse, which is why many developers avoid structured event
+logging and just use formatted strings.
 
 A lot of developers would prefer a reliable and universally compatible solution
 so recently Anchor has added a new feature called cpi_events. This is a
 convention on how to call your own program via CPI and encode a binary string
-as instruction data. This can be indexed via the RPC Transaction response, as
+as instruction data. It can be indexed via the RPC Transaction response, as
 innerInstruction data is always persisted. It is more reliable than sol_log_
 but it effectively reduces runtime limits like maximum CPI call depth for the
 actual application. It also causeses unnecessary overhead in replay as a new
 execution context neeeds to be created, for something as trivial as a log
-message. There is a potential security risk in the this system in that external
-programs could spoof anchor events (and the program emitting them) with CPI
-as anchor event parsing is completely text based.
+message. For the average program (1-2mb) that would be around 5000-9000 CU per
+1kb log message.
 
 In comparison to ethereum and cosmos, solana's preferred access for transaction
 meta-data is via address filtering, e.g. `getSignaturesForAddress` call.
@@ -84,9 +91,17 @@ signature or data type, that should be used to tag the type of a data structure
 and encoded always in the very first bytes of an event, account or instruction
 for the sake of efficient parsing.
 
+POA - Program Owned Account
+
+EOA - Externally Owned Account
+
 ## Detailed Design
 
-In order to log an event, the SVM runtime must implement a new syscall:
+### Runtime 
+
+In order to log an event, the SVM runtime must implement a new syscall
+`sol_emit_`. The runtime must charge 100 + ceil(48 * len / 1024) CU per
+invocation.
 
 ```
 #include <sol/emit.h>
@@ -94,10 +109,18 @@ void sol_emit_(/* r1 */ uint64_t len,
                /* r2 */ const char *message);
 ```
 
-RPC must allow users to subscribe to events emitted with various filters:
+The validator should preserve these events similar to transaction history
+and deliver them to it's operators via RPC & Geyser interfaces. Although
+those are technically not part of the SIMD specification process, it's
+important to publish a recommended spec for 3rd party providers so that Solana
+Dapps don't run into vendor lock-in issues.
+
+### RPC-Client
+
+Clients should be able subscribe to events emitted with various filters:
 
 ```
-conn.onEvents(
+rpc.onEvents(
     callback: EventCallback,
     commitment?: Commitment,
     filters?: EventsFilter[]);
@@ -111,7 +134,7 @@ they are needed for indexing.
 
 ```
 EventCallback: ((
-    event: Buffer,
+    message: Buffer,
     instructionContext: {
         transactionSignature: TransactionSignature,
         outerInstructionIndex: number,
@@ -155,17 +178,64 @@ SignatureFilter : {
 }
 ```
 
+Clients should be able to query signatures that emitted events with various
+filters. Any query must be constrained to a single programId to allow for
+efficient indexing. Options must allow to paginate the result so that response
+size and latency for programs with a lot of confirmed transactions can be
+controlled.
 
-## TODO
+```
+EventLookupFilter: (DataSizeFilter|MemcmpFilter|AccountMetaFilter)
 
-1. implementation: query event history
-1. implementation: geyser interface
-1. decide on:
-POA signers are currently not exposed via RPC, AccountMetaFilters could expose
-them accidentally. The signer flag could be limited on purpose to be used with
-EOA to prevent access. Or alternatively the signer information could be added
-to the Inner Instructions Structure.
+rpc.getSignaturesForEvent(
+    programId: PublicKey,
+    filters?: EventLookupFilter[],
+    options?: {
+        commitment?: Commitment,
+        minContextSlot?: number,
+        limit?: number,
+        before?: Signature,
+        until?: Signature
+    }
+)
+```
 
+
+### Geyser client
+
+Clients should be able receive all events emitted, as part of the transaction
+notification:
+
+```
+#[derive(Clone, Debug, PartialEq)]
+pub struct Event {
+    pub message: Vec<u8>;
+    pub outerInstructionIndex: usize,
+    pub innerInstructionIndex: Option<usize>,
+    pub eventIndexInBlock: usize,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TransactionStatusMeta {
+    pub status: TransactionResult<()>,
+    pub fee: u64,
+    pub pre_balances: Vec<u64>,
+    pub post_balances: Vec<u64>,
+    pub inner_instructions: Option<Vec<InnerInstructions>>,
+    pub log_messages: Option<Vec<String>>,
+    pub pre_token_balances: Option<Vec<TransactionTokenBalance>>,
+    pub post_token_balances: Option<Vec<TransactionTokenBalance>>,
+    pub rewards: Option<Rewards>,
+    pub loaded_addresses: LoadedAddresses,
+    pub return_data: Option<TransactionReturnData>,
+    pub compute_units_consumed: Option<u64>,
+    pub events: Option<Vec<Event>>
+}
+```
+
+Once the current spl-token program has been migrated to emit events, the
+transaction status meta should no longer contain the pre and post token
+balances.
 
 ## Impact
 
@@ -182,7 +252,6 @@ related custom rpc features, like token balance changes etc.
 The CU limit for sol_emit_ needs to be carefully adjusted given the heightened
 indexing requirements for the RPC node. Events should never be truncated and
 fully persist.
-
 
 ## Backwards Compatibility *(Optional)*
 
