@@ -311,7 +311,7 @@ including PRAW fees then it will load the accounts required by the transaction.
 
 Then we iterate on accounts to calculate total PRAW fees required (`T`).
 Let (`Pi`) be PRAW fee set for ith account.
-Let number of accounts loaded be (`L`)
+Let number of accounts loaded writable be (`L`)
 
 ```
 T = sum(Pi * C) for i in 0 to L.
