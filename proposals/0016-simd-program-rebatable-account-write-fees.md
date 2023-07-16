@@ -192,8 +192,8 @@ payer does not have enough funds to pay `other fees`.
 
 Before processing the message, we check if any loaded account has associated
 PRAW fees. For all accounts with PRAW fees, the fees paid should be greater than
-the required fees. In case of overpayment, the difference is stored in a
-variable and will be paid back to the payer in any case. In case the PRAW fees
+the required fees. In case of overpayment, the difference
+will be paid back to the payer in any case. In case the PRAW fees
 are insufficiently paid or not paid then the transaction fails with an error
 `ProgramRebatableAccountWriteFeesNotPaid`. The payer will pay just `other fees`.
 This failure is before the execution of the transaction.
