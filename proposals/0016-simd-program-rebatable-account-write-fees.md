@@ -258,7 +258,7 @@ CU. It will return `0` if no PRAW is set on the address.
 
 ### Syscall to Rebate
 
-The owner of the account can issue a rebate of the PRAW fees paid to write lock
+The admin of the program can issue a rebate of the PRAW fees paid to write lock
 a specific account. The rebate issued will be transferred back to the payer at
 the end of the transaction if it is successfully executed. Similar to the set
 and read PRAW fees this will need to be exposed through a syscall so that
