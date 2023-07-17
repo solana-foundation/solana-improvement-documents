@@ -105,10 +105,10 @@ Right now we have vote-only mode, a validator will only pack vote transactions
 into new blocks if the tower distance (last_vote - local_root) is greater than
 400 slots.
 
-Unfortunately in the previous outages vote-only mode isn't enough to save the
-cluster. There are proposals of more aggressive block production reduction to
-save the cluster. For example, a leader could produce only one block in four
-consecutive slots allocated to it.
+Unfortunately as previous outages demonstrate, vote-only mode isn't enough to
+save the cluster in all situations. There are proposals of more aggressive block
+production reduction to save the cluster. For example, a leader could produce
+only one block in four consecutive slots allocated to it.
 
 However, this only solves the problem in specific type of outage, and it seems
 risky to aggressively reduce block production, so we are not proceeding with
