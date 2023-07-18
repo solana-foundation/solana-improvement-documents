@@ -157,6 +157,11 @@ we can make this limit dynamic and charge more CU for more logs but that would
 be a separate change.
 
 ### Receipt Tree Specification
+We construct a deterministic tree over a list of Receipts per slot. The tree needs to be strictly deterministic 
+as any other cryptographic primitive to ensure that trees are exactly identical when individually constructed by 
+different nodes.
+
+
 ```
 Receipt tree with four receipts as leaf nodes [R1, R2, R3, R4] where R1, R2, R3 and R4 are the  
 receipts of transactions 1, 2, 3, and 4.
