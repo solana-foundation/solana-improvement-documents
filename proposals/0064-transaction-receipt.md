@@ -157,14 +157,20 @@ we can make this limit dynamic and charge more CU for more logs but that would
 be a separate change.
 
 ### Receipt Tree Specification
-We construct a deterministic tree over a list of Receipts per slot. The tree needs to be strictly deterministic 
-as any other cryptographic primitive to ensure that trees are exactly identical when individually constructed by 
-different nodes.
+
+The receipt tree is a binary merkle tree of receipts, where each node is a 32 byte hash of 
+the Receipt data structure. 
+
+We construct a deterministic tree over a list of Receipts per slot. The tree needs to 
+be strictly deterministic as any other cryptographic primitive to ensure that trees are 
+exactly identical when individually constructed by different nodes. For membership proofs 
+and inclusion checks one should be able to provide a path from the leaf node (Receipt) to 
+the root of the tree. The locally computed root is compared for equality.
 
 
 ```
-Receipt tree with four receipts as leaf nodes [R1, R2, R3, R4] where R1, R2, R3 and R4 are the  
-receipts of transactions 1, 2, 3, and 4.
+Receipt tree with four receipts as leaf nodes [R1, R2, R3, R4] where R1, R2, R3 and R4 are 
+the receipts of transactions 1, 2, 3, and 4. R is the root.
 
         R
       /  \
