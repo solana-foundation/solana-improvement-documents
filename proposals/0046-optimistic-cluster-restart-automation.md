@@ -254,9 +254,9 @@ heaviest child is over threshold:
    2. Otherwise stop traversing the tree and use last picked block.
 
 After deciding heaviest block, gossip
-`HeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X is the latest
-picked block. We also gossip stake of received `HeaviestFork` messages so 
-that we can proceed to next step when enough validators are ready.
+`HeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X is the
+latest picked block. We also gossip stake of received `HeaviestFork` messages
+so that we can proceed to next step when enough validators are ready.
 
 ### 4. Exit `silent repair phase`: Restart if everything okay, halt otherwise
 
