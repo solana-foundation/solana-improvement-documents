@@ -31,22 +31,23 @@ for details.
 majority of the validators in a cluster (> 2/3 stake). Our algorithm tries to
 guarantee that an optimistically confirmed will never be rolled back. When we 
 are performing `cluster restart`, we normally start from the highest 
-`optimistically confirmed block`, but it's also okay to start from a child of the 
-highest `optimistically confirmed block` as long as consensus can be reached.
+`optimistically confirmed block`, but it's also okay to start from a child of
+the highest `optimistically confirmed block` as long as consensus can be
+reached.
 
 * `silent repair phase`: During the proposed optimistic `cluster restart`
 automation process, the validators in restart will first spend some time to
 exchange information, repair missing blocks, and finally reach consensus. The 
-validators only continue normal block production and voting after consensus is 
-reached. We call this preparation phase where block production and voting are 
+validators only continue normal block production and voting after consensus is
+reached. We call this preparation phase where block production and voting are
 paused the `silent repair phase`.
 
 * `silent repair shred version`: right now we update `shred_version` during a
-`cluster restart`, it is used to verify received shreds and filter Gossip peers. 
-In the proposed optimistic `cluster restart` plan, we introduce a new temporary
-shred version in the `silent repair phase` so validators in restart don't 
-interfere with those not in restart. Currently this `silent repair shred version` 
-is calculated using `(current_shred_version + 1) % 0xffff`.
+`cluster restart`, it is used to verify received shreds and filter Gossip
+peers. In the proposed optimistic `cluster restart` plan, we introduce a new
+temporary shred version in the `silent repair phase` so validators in restart
+don't interfere with those not in restart. Currently this `silent repair shred
+version` is calculated using `(current_shred_version + 1) % 0xffff`.
 
 * `RESTART_STAKE_THRESHOLD`: We need enough validators to participate in a
 restart so they can make decision for the whole cluster. If everything works
@@ -66,11 +67,11 @@ detrimental to the viability of the ecosystem.
 
 We aim to automate the negotiation of highest optimistically confirmed slot and
 the distribution of all blocks on that fork, so that we can lower the 
-possibility of human mistakes in the `cluster restart` process. This also reduces 
-the burden on validator operators, because they don't have to stay around while 
-the validators automatically try to reach consensus, the validator will halt
-and print debug information if anything goes wrong, and operators can set up
-their own monitoring accordingly.
+possibility of human mistakes in the `cluster restart` process. This also
+reduces the burden on validator operators, because they don't have to stay
+around while the validators automatically try to reach consensus, the validator
+will halt and print debug information if anything goes wrong, and operators can
+set up their own monitoring accordingly.
 
 ## Alternatives Considered
 
@@ -168,9 +169,9 @@ then fallback to the manual, interactive `cluster restart` method.
 
 When a validator enters restart, it uses `silent repair shred version` to avoid
 interfering with those outside the restart. There is slight chance that 
-the `silent repair shred version` would collide with the shred version after the
-`silent repair phase`, but even if this rare case occurred, we plan to flush 
-gossip on successful restart before entering normal validator operation.
+the `silent repair shred version` would collide with the shred version after
+the `silent repair phase`, but even if this rare case occurred, we plan to
+flush gossip on successful restart before entering normal validator operation.
 
 To be extra cautious, we will also filter out `LastVotedForkSlots` and
 `HeaviestFork` in gossip if a validator is not in `silent repair phase`.
@@ -185,7 +186,7 @@ The main goal of this step is to repair all blocks which could potentially be
 optimistically confirmed.
 
 We need to prevent false negative at all costs, because we can't rollback an 
-`optimistically confirmed block`. However, false positive is okay. Because when 
+`optimistically confirmed block`. However, false positive is okay. Because when
 we select the heaviest fork in the next step, we should see all the potential 
 candidates for optimistically confirmed slots, there we can count the votes and
 remove some false positive cases.
@@ -207,7 +208,7 @@ When only 5% validators are in restart, everything is in "unsure" category.
 When 67% validators are in restart, any slot with less than
 67% - 5% - (100-67%) = 29% is in "ignored" category, because even if all 
 validators join the restart, the slot will not get 67% stake. When this 
-threshold is less than 33%, we temporarily put all blocks with >33% stake into  
+threshold is less than 33%, we temporarily put all blocks with >33% stake into 
 "must-have" category to speed up repairing. Any slot with between 29% and 33% 
 stake is "unsure".
 
@@ -305,13 +306,13 @@ operators don't need to manually generate and download snapshots again.
 
 The two added gossip messages `LastVotedForkSlots` and `HeaviestFork` will only
 be sent and processed when the validator is restarted in the new proposed 
-optimistic `cluster restart` mode. They will also be filtered out if a validator
-is not in this mode. So random validator restarting in the new mode will not 
-bring extra burden to the system.
+optimistic `cluster restart` mode. They will also be filtered out if a
+validator is not in this mode. So random validator restarting in the new mode
+will not bring extra burden to the system.
 
 Non-conforming validators could send out wrong `LastVotedForkSlots` and
-`HeaviestFork` messages to mess with `cluster restart`s, these should be included
-in the Slashing rules in the future.
+`HeaviestFork` messages to mess with `cluster restart`s, these should be
+included in the Slashing rules in the future.
 
 ## Backwards Compatibility
 
