@@ -157,3 +157,16 @@ we can make this limit dynamic and charge more CU for more logs but that would
 be a separate change.
 
 ### Receipt Tree Specification
+```
+Receipt tree with four receipts as leaf nodes [R1, R2, R3, R4] where R1, R2, R3 and R4 are the  
+receipts of transactions 1, 2, 3, and 4.
+
+        R
+      /  \
+     /    \
+   Ri      Ri'
+  / |     / \
+ /  |    /   \
+R1  R2   R3  R4
+
+```
