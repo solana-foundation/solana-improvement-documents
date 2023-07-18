@@ -136,7 +136,7 @@ The transaction receipt must contain the following information related to the tr
 The receipt would be a structure defined as:
 
 ```rust
-pub struct TransactionReceipt{
+pub struct Receipt{
     pub signature: [u8;64],
     pub status: u8 // 1 or 0 would determine the post execution status
     pub logs: [String;50] 
