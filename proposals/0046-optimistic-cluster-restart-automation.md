@@ -176,10 +176,6 @@ flush gossip on successful restart before entering normal validator operation.
 To be extra cautious, we will also filter out `LastVotedForkSlots` and
 `HeaviestFork` in gossip if a validator is not in `silent repair phase`.
 
-`LastVotedForkSlots` message will be written into gossip and then be
-distributed to all others in restart. Meanwhile the validator can immediately
-enter next step.
-
 ### 2. `silent repair phase`: Repair ledgers up to the restart slot
 
 The main goal of this step is to repair all blocks which could potentially be
