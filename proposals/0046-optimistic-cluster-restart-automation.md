@@ -229,7 +229,7 @@ We use a new Gossip message `HeaviestFork`, its fields are:
 
 * `slot`: `u64` slot of the picked block.
 * `hash`: `Hash` bank hash of the picked block.
-* `received`: `u8` total percentage of stakes of the validators it received
+* `stake_committed_percent`: `u8` total percentage of stakes of the validators it received
 `HeaviestFork` messages from.
 
 After receiving `LastVotedForkSlots` from the validators holding stake more 
