@@ -121,10 +121,9 @@ The new protocol tries to make all restarting validators get the same data
 blocks and the same set of last votes, so that they will with high probability
 converge on the same canonical fork and proceed.
 
-A new command line arg will be added. When the cluster is in need
-of a restart, we assume validators holding at least `RESTART_STAKE_THRESHOLD`
-percentage of stakes will restart with this arg. Then the following steps
-will happen:
+When the cluster is in need of a restart, we assume validators holding at least
+`RESTART_STAKE_THRESHOLD` percentage of stakes will enter the restart mode.
+Then the following steps will happen:
 
 1. The operator restarts the validator with a new command-line argument to
 cause it to enter the `silent repair phase` at boot, where it will not make new 
