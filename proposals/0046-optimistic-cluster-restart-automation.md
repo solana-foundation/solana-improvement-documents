@@ -241,18 +241,18 @@ replay all blocks and pick the heaviest fork as follows:
 
 1. For all blocks with more than 67% votes, they must be on picked fork.
 
-2. If a picked block has more than one children, check if the votes on the
+2. If a picked block has more than one child, check if the votes on the
 heaviest child is over threshold:
 
    1. If vote_on_child + stake_on_validators_not_in_restart >= 62%, pick child.
-For example, if 80% validators are in restart, child has 42% votes, then
-42 + (100-80) = 62%, pick child. 62% is chosen instead of 67% because 5%
-could make the wrong votes.
+      For example, if 80% validators are in restart, child has 42% votes, then
+      42 + (100-80) = 62%, pick child. 62% is chosen instead of 67% because 5%
+      could make the wrong votes.
 
-It's okay to use 62% here because the goal is to prevent false negative rather
-than false positive. If validators pick a child of optimistically confirmed
-block to start from, it's okay because if 80% of the validators all choose this
-block, this block will be instantly confirmed on the chain.
+   It's okay to use 62% here because the goal is to prevent false negative
+   rather than false positive. If validators pick a child of optimistically
+   confirmed block to start from, it's okay because if 80% of the validators
+   all choose this block, this block will be instantly confirmed on the chain.
 
    2. Otherwise stop traversing the tree and use last picked block.
 
