@@ -210,7 +210,7 @@ for now.
 
 If
 `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
-is not positive, then the validators don't have to start any repairs.
+is less than 10%, then the validators don't have to start any repairs.
 
 We obviously want to repair all blocks above `OPTIMISTIC_CONFIRMED_THRESHOLD`
 before the restart. The validators in `MALICIOUS_SET` could lie about their
@@ -223,7 +223,7 @@ never miss any block we should have repaired.
 For example, when only 5% validators are in restart, `PERCENT_NOT_IN_RESTART`
 is 100% - 5% = 95%.
 `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
-= 67% - 5% - 95% < 0, so no validators would repair any block.
+= 67% - 5% - 95% < 10%, so no validators would repair any block.
 
 When 70% validators are in restart, `PERCENT_NOT_IN_RESTART`
 is 100% - 70% = 30%.
@@ -288,9 +288,10 @@ so that we can proceed to next step when enough validators are ready.
 ### 4. Exit `silent repair phase`: Restart if everything okay, halt otherwise
 
 All validators in restart keep counting the number of `HeaviestFork` where
-`received_heaviest_stake` is higher than 80%. Once a validator counts that 80%
-of the validators send out `HeaviestFork` where `received_heaviest_stake` is 
-higher than 80%, it starts the following checks:
+`received_heaviest_stake` is higher than `RESTART_STAKE_THRESHOLD`. Once a
+validator counts that `RESTART_STAKE_THRESHOLD` of the validators send out
+`HeaviestFork` where `received_heaviest_stake` is higher than
+`RESTART_STAKE_THRESHOLD`, it starts the following checks:
 
 * Whether all `HeaviestFork` have the same slot and same bank Hash. Because
 validators are only sending slots instead of bank hashes in 
@@ -307,7 +308,8 @@ whether two minutes has passed since agreement has been reached, to guarantee
 its `HeaviestFork` message propagates to everyone, then proceeds to restart:
 
 1. Issue a hard fork at the designated slot and change shred version in gossip.
-2. Execute the current tasks in --wait-for-supermajority and wait for 80%.
+2. Execute the current tasks in --wait-for-supermajority and wait for
+   `RESTART_STAKE_THRESHOLD` of the total validators to be in ready state.
 
 Before a validator enters restart, it will still propagate `LastVotedForkSlots`
 and `HeaviestFork` messages in gossip. After the restart,its shred_version will 
