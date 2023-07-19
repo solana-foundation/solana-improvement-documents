@@ -163,10 +163,11 @@ sender's last voted fork. the most significant bit is always
 `last_voted_slot`, least significant bit is `last_voted_slot-81000`.
 
 The number of ancestor slots sent is hard coded at 81000, because that's
-400ms * 81000 = 9 hours, we assume most restart decisions to be made in 9 
-hours. If a validator restarts after 9 hours past the outage, it cannot join 
-the restart this way. If enough validators failed to restart within 9 hours, 
-then fallback to the manual, interactive `cluster restart` method.
+400ms * 81000 = 9 hours, we assume that optimistic confirmation must halt
+within 81k slots of the last finalized block. If a validator restarts after 9
+hours past the outage, it cannot join the restart this way. If enough
+validators failed to restart within 9 hours, then fallback to the manual,
+interactive `cluster restart` method.
 
 When a validator enters restart, it uses `silent repair shred version` to avoid
 interfering with those outside the restart. There is slight chance that 
