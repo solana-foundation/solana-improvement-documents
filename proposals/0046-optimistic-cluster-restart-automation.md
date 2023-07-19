@@ -188,31 +188,57 @@ remove some false positive cases.
 
 However, it's also overkill to repair every block presented by others. When
 `LastVotedForkSlots` messages are being received and aggregated, a validator
-can categorize blocks missing locally into 3 categories: ignored, must-have, 
-and unsure. Depending on the stakes of validators currently in restart, some
-slots with too few stake can be safely ignored, some have enough stake they
-should definitely be repaired, and the rest would be undecided pending more
-confirmations.
+can categorize blocks missing locally into 2 categories: must-have and ignored.
+Depending on the stakes of validators currently in restart, some slots with too
+few stake can be safely ignored, while others will be repaired.
 
-Assume `RESTART_STAKE_THRESHOLD` is 80% and that 5% restarted validators can
-change their votes from what they voted before the restart due to mistakes or 
-malicious behavior.
+In the following analysis, we assume:
+* `RESTART_STAKE_THRESHOLD` is 80%
+* `MALICIOUS_SET` which is validators which can disobey the protocol, is 5%.
+   For example, these validators can change their votes from what they
+   previously voted on.
+* `OPTIMISTIC_CONFIRMED_THRESHOLD` is 67%, which is the percentage of stake
+   required to be a `optimistically confirmed block`.
 
-When only 5% validators are in restart, everything is in "unsure" category.
+At any point in restart, let's call percentage of validators not in restart
+`PERCENT_NOT_IN_RESTART`. We can draw a line at
+`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`.
 
-When 67% validators are in restart, any slot with less than
-67% - 5% - (100-67%) = 29% is in "ignored" category, because even if all 
-validators join the restart, the slot will not get 67% stake. When this 
-threshold is less than 33%, we temporarily put all blocks with >33% stake into 
-"must-have" category to speed up repairing. Any slot with between 29% and 33% 
-stake is "unsure".
+Any slot above this line should be repaired, while other slots can be ignored
+for now.
 
-When 80% validators are in restart, any slot with less than
-67% - 5% - (100-80%) = 42% is in "ignored" category, the rest is "must-have".
+If
+`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
+is not positive, then the validators don't have to start any repairs.
+
+We obviously want to repair all blocks above `OPTIMISTIC_CONFIRMED_THRESHOLD`
+before the restart. The validators in `MALICIOUS_SET` could lie about their
+votes, so we need to be conservative and lower the line accordingly. Also,
+we don't know what the validators not in restart have voted, so we need to
+be even more conservative and assume they voted for this block. Being
+conservative means we might repair blocks which we didn't need, but we will
+never miss any block we should have repaired.
+
+For example, when only 5% validators are in restart, `PERCENT_NOT_IN_RESTART`
+is 100% - 5% = 95%.
+`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
+= 67% - 5% - 95% < 0, so no validators would repair any block.
+
+When 70% validators are in restart, `PERCENT_NOT_IN_RESTART`
+is 100% - 70% = 30%.
+`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
+= 67% - 5% - 30% = 32%, so slots with above 32% votes in `LastVotedForkSlots`
+would be repaired.
+
+When 80% validators are in restart, `PERCENT_NOT_IN_RESTART`
+is 100% - 80% = 20%.
+`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
+= 67% - 5% - 20% = 42%, so slots with above 42% votes in `LastVotedForkSlots`
+would be repaired.
 
 From above examples, we can see the "must-have" threshold changes dynamically 
 depending on how many validators are in restart. The main benefit is that a
-block will only move from "must-have/unsure" to "ignored" as more validators 
+block will only move from "must-have" to "ignored" as more validators 
 join the restart, not vice versa. So the list of blocks a validator needs to
 repair will never grow bigger when more validators join the restart.
 
@@ -235,10 +261,11 @@ After receiving `LastVotedForkSlots` from the validators holding stake more
 than  `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have" category,
 replay all blocks and pick the heaviest fork as follows:
 
-1. For all blocks with more than 67% votes, they must be on picked fork.
+1. For all blocks with more than 67% stake in `LastVotedForkSlots` messages,
+   they must be on the heaviest fork.
 
-2. If a picked block has more than one child, check if the votes on the
-heaviest child is over threshold:
+2. If a picked block has more than one child, check if the heaviest child
+   should be picked using the following rule:
 
    1. If vote_on_child + stake_on_validators_not_in_restart >= 62%, pick child.
       For example, if 80% validators are in restart, child has 42% votes, then
