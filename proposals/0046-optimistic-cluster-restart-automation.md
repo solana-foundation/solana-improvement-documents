@@ -220,19 +220,18 @@ be even more conservative and assume they voted for this block. Being
 conservative means we might repair blocks which we didn't need, but we will
 never miss any block we should have repaired.
 
-For example, when only 5% validators are in restart, `PERCENT_NOT_IN_RESTART`
-is 100% - 5% = 95%.
+Next we illustrate the system behavior using concrete numbers:
+
+* 5% validators in restart: `PERCENT_NOT_IN_RESTART` is 100% - 5% = 95%.
 `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
 = 67% - 5% - 95% < 10%, so no validators would repair any block.
 
-When 70% validators are in restart, `PERCENT_NOT_IN_RESTART`
-is 100% - 70% = 30%.
+* 70% validators in restart: `PERCENT_NOT_IN_RESTART` is 100% - 70% = 30%.
 `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
 = 67% - 5% - 30% = 32%, so slots with above 32% votes accumulated from
 `RestartLastVotedForkSlots` would be repaired.
 
-When 80% validators are in restart, `PERCENT_NOT_IN_RESTART`
-is 100% - 80% = 20%.
+* 80% validators are in restart, `PERCENT_NOT_IN_RESTART` is 100% - 80% = 20%.
 `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
 = 67% - 5% - 20% = 42%, so slots with above 42% votes accumulated from
 `RestartLastVotedForkSlots` would be repaired.
@@ -304,13 +303,11 @@ If all checks pass, the validator immediately starts generation of snapshot at
 the agreed upon slot.
 
 While the snapshot generation is in progress, the validator also checks to see
-whether two minutes has passed since agreement has been reached, to guarantee 
-its `RestartHeaviestFork` message propagates to everyone, then proceeds to
-restart:
-
-1. Issue a hard fork at the designated slot and change shred version in gossip.
-2. Execute the current tasks in --wait-for-supermajority and wait for
-   `RESTART_STAKE_THRESHOLD` of the total validators to be in ready state.
+whether a full two minutes interval passed since agreement had been reached,
+to guarantee its `RestartHeaviestFork` message propagates to everyone, and
+whether the snapshot generation is complete. When above checks pass, it then
+proceeds to issue a hard fork at the designated slot and change shred version
+in gossip. After that it restarts into the normal (non-restart) state.
 
 Before a validator enters restart, it will still propagate
 `RestartLastVotedForkSlots` and `RestartHeaviestFork` messages in gossip. After
