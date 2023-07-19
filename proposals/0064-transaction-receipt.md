@@ -131,7 +131,7 @@ The transaction receipt must contain the following information related to the tr
 
 - Signature
 - Execution Status
-- Truncated Logs
+- Logs
 
 The receipt would be a structure defined as:
 
@@ -139,7 +139,7 @@ The receipt would be a structure defined as:
 pub struct Receipt{
     pub signature: [u8;64],
     pub status: u8 // 1 or 0 would determine the post execution status
-    pub logs: [String;50] 
+    pub logs: Vec<String> 
 }
 ```
 
@@ -152,25 +152,25 @@ that logs the stake weights, it then requests for a proof from the receipt
 to the bankhash. We can do this because the receipt includes the logs and the validators
 vote on the bankhash.
 
-Due to performance and compute concerns the logs would be truncated to a max of 50,
-we can make this limit dynamic and charge more CU for more logs but that would
+Due to performance and compute concerns the log messages would be truncated,
+we can make this limit dynamic and charge more CU for more longer logs but that would
 be a separate change.
 
 ### Receipt Tree Specification
 
-The receipt tree is a binary merkle tree of receipts, where each node is a 32 byte hash of 
-the Receipt data structure. 
+The receipt tree is a binary merkle tree of receipts, where each node is a 32
+byte hash of the Receipt data structure.
 
-We construct a deterministic tree over a list of Receipts per slot. The tree needs to 
-be strictly deterministic as any other cryptographic primitive to ensure that trees are 
-exactly identical when individually constructed by different nodes. For membership proofs 
-and inclusion checks one should be able to provide a path from the leaf node (Receipt) to 
-the root of the tree. The locally computed root is compared for equality.
+We construct a deterministic tree over a list of Receipts per slot. The tree
+needs to be strictly deterministic as any other cryptographic primitive to
+ensure that trees are exactly identical when individually constructed by
+different nodes. For membership proofs and inclusion checks one should be
+able to provide a path from the leaf node (Receipt) to the root of the tree.
+The locally computed root is compared for equality.
 
-
-```
-Receipt tree with four receipts as leaf nodes [R1, R2, R3, R4] where R1, R2, R3 and R4 are 
-the receipts of transactions 1, 2, 3, and 4. R is the root.
+```txt
+Receipt tree with four receipts as leaf nodes [R1, R2, R3, R4] where R1, R2, R3 
+and R4 are the receipts of transactions 1, 2, 3, and 4. R is the root.
 
         R
       /  \
