@@ -146,7 +146,9 @@ hash) to restart from:
 
 See each step explained in details below.
 
-### 1. `silent repair phase`: Gossip last vote and ancestors on that fork
+### Silent repair mode
+
+1. **Gossip last vote and ancestors on that fork**
 
 The main goal of this step is to propagate the last `n` ancestors of the last
 voted fork to all others in restart.
@@ -175,7 +177,7 @@ flush gossip on successful restart before entering normal validator operation.
 To be extra cautious, we will also filter out `RestartLastVotedForkSlots` and
 `RestartHeaviestFork` in gossip if a validator is not in `silent repair phase`.
 
-### 2. `silent repair phase`: Repair ledgers up to the restart slot
+2. **Repair ledgers up to the restart slot**
 
 The main goal of this step is to repair all blocks which could potentially be
 optimistically confirmed.
@@ -246,7 +248,7 @@ Once the validator gets `RestartLastVotedForkSlots``, it can draw a line which
 are the "must-have" blocks. When all the "must-have" blocks are repaired and
 replayed, it can proceed to step 3.
 
-### 3. `silent repair phase`: Gossip current heaviest fork
+3. **Gossip current heaviest fork**
 
 The main goal of this step is to "vote" the heaviest fork to restart from.
 
@@ -284,7 +286,9 @@ After deciding heaviest block, gossip
 the latest picked block. We also gossip stake of received `RestartHeaviestFork`
 messages so that we can proceed to next step when enough validators are ready.
 
-### 4. Exit `silent repair phase`: Restart if everything okay, halt otherwise
+### Exit `silent repair phase`
+
+4. **Restart if everything okay, halt otherwise**
 
 All validators in restart keep counting the number of `RestartHeaviestFork`
 where `received_heaviest_stake` is higher than `RESTART_STAKE_THRESHOLD`. Once
