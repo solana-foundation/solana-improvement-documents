@@ -173,7 +173,7 @@ the `silent repair phase`, but even if this rare case occurred, we plan to
 flush gossip on successful restart before entering normal validator operation.
 
 To be extra cautious, we will also filter out `LastVotedForkSlots` and
-`HeaviestFork` in gossip if a validator is not in `silent repair phase`.
+`RestartHeaviestFork` in gossip if a validator is not in `silent repair phase`.
 
 ### 2. `silent repair phase`: Repair ledgers up to the restart slot
 
@@ -251,12 +251,12 @@ it can proceed to step 3.
 
 The main goal of this step is to "vote" the heaviest fork to restart from.
 
-We use a new Gossip message `HeaviestFork`, its fields are:
+We use a new Gossip message `RestartHeaviestFork`, its fields are:
 
 * `slot`: `u64` slot of the picked block.
 * `hash`: `Hash` bank hash of the picked block.
 * `stake_committed_percent`: `u16` total percentage of stakes of the validators
-it received `HeaviestFork` messages from.
+it received `RestartHeaviestFork` messages from.
 
 After receiving `LastVotedForkSlots` from the validators holding stake more 
 than  `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have" category,
@@ -281,20 +281,20 @@ replay all blocks and pick the heaviest fork as follows:
    2. Otherwise stop traversing the tree and use last picked block.
 
 After deciding heaviest block, gossip
-`HeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X is the
-latest picked block. We also gossip stake of received `HeaviestFork` messages
-so that we can proceed to next step when enough validators are ready.
+`RestartHeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X is
+the latest picked block. We also gossip stake of received `RestartHeaviestFork`
+messages so that we can proceed to next step when enough validators are ready.
 
 ### 4. Exit `silent repair phase`: Restart if everything okay, halt otherwise
 
-All validators in restart keep counting the number of `HeaviestFork` where
-`received_heaviest_stake` is higher than `RESTART_STAKE_THRESHOLD`. Once a
-validator counts that `RESTART_STAKE_THRESHOLD` of the validators send out
-`HeaviestFork` where `received_heaviest_stake` is higher than
+All validators in restart keep counting the number of `RestartHeaviestFork`
+where `received_heaviest_stake` is higher than `RESTART_STAKE_THRESHOLD`. Once
+a validator counts that `RESTART_STAKE_THRESHOLD` of the validators send out
+`RestartHeaviestFork` where `received_heaviest_stake` is higher than
 `RESTART_STAKE_THRESHOLD`, it starts the following checks:
 
-* Whether all `HeaviestFork` have the same slot and same bank Hash. Because
-validators are only sending slots instead of bank hashes in 
+* Whether all `RestartHeaviestFork` have the same slot and same bank Hash.
+Because validators are only sending slots instead of bank hashes in 
 `LastVotedForkSlots`, it's possible that a duplicate block can make the
 cluster unable to reach consensus. So bank hash needs to be checked as well.
 
@@ -305,15 +305,17 @@ the agreed upon slot.
 
 While the snapshot generation is in progress, the validator also checks to see
 whether two minutes has passed since agreement has been reached, to guarantee 
-its `HeaviestFork` message propagates to everyone, then proceeds to restart:
+its `RestartHeaviestFork` message propagates to everyone, then proceeds to
+restart:
 
 1. Issue a hard fork at the designated slot and change shred version in gossip.
 2. Execute the current tasks in --wait-for-supermajority and wait for
    `RESTART_STAKE_THRESHOLD` of the total validators to be in ready state.
 
 Before a validator enters restart, it will still propagate `LastVotedForkSlots`
-and `HeaviestFork` messages in gossip. After the restart,its shred_version will 
-be updated so it will no longer send or propagate gossip messages for restart.
+and `RestartHeaviestFork` messages in gossip. After the restart,its
+shred_version will be updated so it will no longer send or propagate gossip
+messages for restart.
 
 If any of the checks fails, the validator immediately prints out all debug info,
 sends out metrics so that people can be paged, and then halts.
@@ -329,14 +331,14 @@ operators don't need to manually generate and download snapshots again.
 
 ## Security Considerations
 
-The two added gossip messages `LastVotedForkSlots` and `HeaviestFork` will only
-be sent and processed when the validator is restarted in the new proposed 
-optimistic `cluster restart` mode. They will also be filtered out if a
+The two added gossip messages `LastVotedForkSlots` and `RestartHeaviestFork`
+will only be sent and processed when the validator is restarted in the new
+proposed optimistic `cluster restart` mode. They will also be filtered out if a
 validator is not in this mode. So random validator restarting in the new mode
 will not bring extra burden to the system.
 
 Non-conforming validators could send out wrong `LastVotedForkSlots` and
-`HeaviestFork` messages to mess with `cluster restart`s, these should be
+`RestartHeaviestFork` messages to mess with `cluster restart`s, these should be
 included in the Slashing rules in the future.
 
 ## Backwards Compatibility
