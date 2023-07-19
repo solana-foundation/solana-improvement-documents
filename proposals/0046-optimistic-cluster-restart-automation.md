@@ -193,6 +193,7 @@ Depending on the stakes of validators currently in restart, some slots with too
 few stake can be safely ignored, while others will be repaired.
 
 In the following analysis, we assume:
+
 * `RESTART_STAKE_THRESHOLD` is 80%
 * `MALICIOUS_SET` which is validators which can disobey the protocol, is 5%.
    For example, these validators can change their votes from what they
