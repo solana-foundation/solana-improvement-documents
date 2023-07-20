@@ -27,13 +27,16 @@ single validator restart which does not impact the cluster. See
 [`cluster restart`](https://docs.solana.com/running-validator/restart-cluster)
 for details.
 
-* `optimistically confirmed block`: a block which gets the votes from the
-majority of the validators in a cluster (> 2/3 stake). Our algorithm tries to
-guarantee that an optimistically confirmed will never be rolled back. When we 
-are performing `cluster restart`, we normally start from the highest 
-`optimistically confirmed block`, but it's also okay to start from a child of
+* `cluster restart slot`: In current `cluster restart` scheme, human normally
+decide on one slot for all validators to restart from. This is very often the
+highest `optimistically confirmed block`, because `optimistically confirmed
+block` should never be rolled back. But it's also okay to start from a child of
 the highest `optimistically confirmed block` as long as consensus can be
 reached.
+
+* `optimistically confirmed block`: a block which gets the votes from the
+majority of the validators in a cluster (> 2/3 stake). Our algorithm tries to
+guarantee that an optimistically confirmed block will never be rolled back.
 
 * `wen restart phase`: During the proposed optimistic `cluster restart`
 automation process, the validators in restart will first spend some time to
@@ -291,6 +294,9 @@ messages so that we can proceed to next step when enough validators are ready.
 
 4. **Restart if everything okay, halt otherwise**
 
+The main purpose in this step is to decide the `cluster restart slot` and the
+actual block to restart from.
+
 All validators in restart keep counting the number of `RestartHeaviestFork`
 where `received_heaviest_stake` is higher than `RESTART_STAKE_THRESHOLD`. Once
 a validator counts that `RESTART_STAKE_THRESHOLD` of the validators send out
@@ -305,7 +311,7 @@ cluster unable to reach consensus. So bank hash needs to be checked as well.
 * The voted slot is equal or a child of local optimistically confirmed slot.
 
 If all checks pass, the validator immediately starts generation of snapshot at
-the agreed upon slot.
+the agreed upon `cluster restart slot`.
 
 While the snapshot generation is in progress, the validator also checks to see
 whether a full two minutes interval passed since agreement had been reached,
