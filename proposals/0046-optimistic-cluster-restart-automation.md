@@ -1,6 +1,6 @@
 ---
 simd: '0046'
-title: Wen restart: optimistic cluster restart automation
+title: "Wen restart" - Optimistic cluster restart automation
 authors:
   - Wen Xu (Solana Labs)
 category: Standard
