@@ -1,6 +1,6 @@
 ---
 simd: '0046'
-title: Optimistic cluster restart automation
+title: Wen restart: optimistic cluster restart automation
 authors:
   - Wen Xu (Solana Labs)
 category: Standard
@@ -35,18 +35,18 @@ are performing `cluster restart`, we normally start from the highest
 the highest `optimistically confirmed block` as long as consensus can be
 reached.
 
-* `silent repair phase`: During the proposed optimistic `cluster restart`
+* `wen restart phase`: During the proposed optimistic `cluster restart`
 automation process, the validators in restart will first spend some time to
 exchange information, repair missing blocks, and finally reach consensus. The 
 validators only continue normal block production and voting after consensus is
 reached. We call this preparation phase where block production and voting are
-paused the `silent repair phase`.
+paused the `wen restart phase`.
 
-* `silent repair shred version`: right now we update `shred_version` during a
+* `wen restart shred version`: right now we update `shred_version` during a
 `cluster restart`, it is used to verify received shreds and filter Gossip
 peers. In the proposed optimistic `cluster restart` plan, we introduce a new
-temporary shred version in the `silent repair phase` so validators in restart
-don't interfere with those not in restart. Currently this `silent repair shred
+temporary shred version in the `wen restart phase` so validators in restart
+don't interfere with those not in restart. Currently this `wen restart shred
 version` is calculated using `(current_shred_version + 1) % 0xffff`.
 
 * `RESTART_STAKE_THRESHOLD`: We need enough validators to participate in a
@@ -126,7 +126,7 @@ When the cluster is in need of a restart, we assume validators holding at least
 Then the following steps will happen:
 
 1. The operator restarts the validator with a new command-line argument to
-cause it to enter the `silent repair phase` at boot, where it will not make new 
+cause it to enter the `wen restart phase` at boot, where it will not make new 
 blocks or vote. The validator propagates its local voted fork
 information to all other validators in restart.
 
@@ -169,14 +169,14 @@ hours past the outage, it cannot join the restart this way. If enough
 validators failed to restart within 9 hours, then fallback to the manual,
 interactive `cluster restart` method.
 
-When a validator enters restart, it uses `silent repair shred version` to avoid
+When a validator enters restart, it uses `wen restart shred version` to avoid
 interfering with those outside the restart. There is slight chance that 
-the `silent repair shred version` would collide with the shred version after
-the `silent repair phase`, but even if this rare case occurred, we plan to
+the `wen restart shred version` would collide with the shred version after
+the `wen restart phase`, but even if this rare case occurred, we plan to
 flush gossip on successful restart before entering normal validator operation.
 
 To be extra cautious, we will also filter out `RestartLastVotedForkSlots` and
-`RestartHeaviestFork` in gossip if a validator is not in `silent repair phase`.
+`RestartHeaviestFork` in gossip if a validator is not in `wen restart phase`.
 
 2. **Repair ledgers up to the restart slot**
 
@@ -287,7 +287,7 @@ After deciding heaviest block, gossip
 the latest picked block. We also gossip stake of received `RestartHeaviestFork`
 messages so that we can proceed to next step when enough validators are ready.
 
-### Exit `silent repair phase`
+### Exit `wen restart phase`
 
 4. **Restart if everything okay, halt otherwise**
 
@@ -324,7 +324,7 @@ sends out metrics so that people can be paged, and then halts.
 
 ## Impact
 
-This proposal adds a new silent repair mode to validators, during this phase
+This proposal adds a new wen restart mode to validators, during this phase
 the validators will not participate in normal cluster activities, which is the
 same as now. Compared to today's `cluster restart`, the new mode may mean more
 network bandwidth and memory on the restarting validators, but it guarantees
