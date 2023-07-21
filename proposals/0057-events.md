@@ -96,8 +96,9 @@ for the sake of efficient parsing.
 ### Runtime 
 
 In order to log an event, the SVM runtime must implement a new syscall
-`sol_emit_`. The runtime must charge 100 + ceil(48 * len / 1024) CU per
-invocation.
+`sol_emit_`. The runtime must charge 100 + 0.25 * len CU per invocation to
+account for the potential cost of including a blake3 hash of all log messages
+in consensus.
 
 ```
 #include <sol/emit.h>
