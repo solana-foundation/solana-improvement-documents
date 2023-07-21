@@ -62,6 +62,11 @@ Is there any new terminology introduced with this proposal?
 casual tx:
 fairness:
 block fullness in terms of number of actively-execution threads
+dark/filler tx: 
+tx base fee:
+address base fee:
+reserve <=> reward
+requested <=> required
 
 ## Detailed Design
 
@@ -107,6 +112,32 @@ cu.
 
 finally, when substantial blocks are full for extended duration, the global base-fee
 will naturally starts ceiling up. That's unavoidable no matter what.
+
+priority fee isn't collected at all.
+banking can implement this congenstion mechanism without forced consensus rules if disired for experiment
+
+### Example
+
+`TC_stake_weighted == 10` 
+
+100 kcu
+
+tx1a -- tx2a -- tx3a
+
+tx1a:
+  cu 100kcu
+  base fee: 
+
+tx2a:
+  cu 200kcu
+
+tx3a:
+  cu 300kcu
+
+why leaders are incentized for picking more prioritized txes even if they only receive fixed base fees?
+  predictable auction mechanism and ceiling base fee as much as possible
+  compound reserve from firstly-executed txes?
+
 
 ## Impact
 
