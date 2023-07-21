@@ -91,10 +91,6 @@ signature or data type, that should be used to tag the type of a data structure
 and encoded always in the very first bytes of an event, account or instruction
 for the sake of efficient parsing.
 
-POA - Program Owned Account
-
-EOA - Externally Owned Account
-
 ## Detailed Design
 
 ### Runtime 
@@ -149,8 +145,8 @@ EventCallback: ((
 
 DataSizeFilter and MemcmpFilter can be used to filter for specific event types
 using their discriminator. AccountMetaFilter allows to restrict on events
-emitted from transactions reading or writing from/to specific POA & EOA.
-Similarly it allows to restricted based on specific EOA signers as well on
+emitted from transactions reading or writing from/to specific Accounts.
+Similarly it allows to restricted based on specific signers as well on
 executing certain programs.
 SignatureFilter allows to restrict to events emitted by an individual
 transaction, while waiting for it's confirmation.
