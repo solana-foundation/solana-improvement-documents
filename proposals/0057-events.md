@@ -101,8 +101,8 @@ invocation.
 
 ```
 #include <sol/emit.h>
-void sol_emit_(/* r1 */ uint64_t len,
-               /* r2 */ const char *message);
+void sol_emit_(/* r1 */ const char *message,
+               /* r2 */ uint64_t len);
 ```
 
 The validator should preserve these events similar to transaction history
