@@ -16,7 +16,8 @@ During a cluster restart following an outage, make validators enter a separate
 recovery protocol that uses gossip to exchange local status and automatically 
 reach consensus on the block to restart from. Proceed to restart if validators
 in the restart can reach agreement, or print debug information and halt
-otherwise.
+otherwise. To distinguish the new restart process from other operations, we
+call the new process "Wen restart".
 
 ## New Terminology
 
@@ -28,7 +29,7 @@ single validator restart which does not impact the cluster. See
 for details.
 
 * `cluster restart slot`: In current `cluster restart` scheme, human normally
-decide on one slot for all validators to restart from. This is very often the
+decide on one block for all validators to restart from. This is very often the
 highest `optimistically confirmed block`, because `optimistically confirmed
 block` should never be rolled back. But it's also okay to start from a child of
 the highest `optimistically confirmed block` as long as consensus can be
@@ -46,7 +47,7 @@ reached. We call this preparation phase where block production and voting are
 paused the `wen restart phase`.
 
 * `wen restart shred version`: right now we update `shred_version` during a
-`cluster restart`, it is used to verify received shreds and filter Gossip
+`cluster restart`, it is used to verify received shreds and filter gossip
 peers. In the proposed optimistic `cluster restart` plan, we introduce a new
 temporary shred version in the `wen restart phase` so validators in restart
 don't interfere with those not in restart. Currently this `wen restart shred
@@ -128,10 +129,9 @@ When the cluster is in need of a restart, we assume validators holding at least
 `RESTART_STAKE_THRESHOLD` percentage of stakes will enter the restart mode.
 Then the following steps will happen:
 
-1. The operator restarts the validator with a new command-line argument to
-cause it to enter the `wen restart phase` at boot, where it will not make new 
-blocks or vote. The validator propagates its local voted fork
-information to all other validators in restart.
+1. The operator restarts the validator into the `wen restart phase` at boot,
+where it will not make new blocks or vote. The validator propagates its local
+voted fork information to all other validators in restart.
 
 2. While aggregating local vote information from all others in restart, the
 validator repairs all blocks which could potentially have been optimistically
@@ -149,14 +149,14 @@ hash) to restart from:
 
 See each step explained in details below.
 
-### Silent repair mode
+### Wen restart phase
 
-1. **Gossip last vote and ancestors on that fork**
+1. **gossip last vote and ancestors on that fork**
 
-The main goal of this step is to propagate the last `n` ancestors of the last
+The main goal of this step is to propagate most recent ancestors on the last
 voted fork to all others in restart.
 
-We use a new Gossip message `RestartLastVotedForkSlots`, its fields are:
+We use a new gossip message `RestartLastVotedForkSlots`, its fields are:
 
 * `last_voted_slot`: `u64` the slot last voted, this also serves as last_slot
 for the bit vector.
@@ -167,16 +167,16 @@ sender's last voted fork. the most significant bit is always
 
 The number of ancestor slots sent is hard coded at 81000, because that's
 400ms * 81000 = 9 hours, we assume that optimistic confirmation must halt
-within 81k slots of the last finalized block. If a validator restarts after 9
+within 81k slots of the last confirmed block. If a validator restarts after 9
 hours past the outage, it cannot join the restart this way. If enough
-validators failed to restart within 9 hours, then fallback to the manual,
+validators failed to restart within 9 hours, then we fallback to the manual,
 interactive `cluster restart` method.
 
 When a validator enters restart, it uses `wen restart shred version` to avoid
-interfering with those outside the restart. There is slight chance that 
+interfering with those outside the restart. There is a slight chance that 
 the `wen restart shred version` would collide with the shred version after
 the `wen restart phase`, but even if this rare case occurred, we plan to
-flush gossip on successful restart before entering normal validator operation.
+flush gossip after successful restart so it should not be a problem.
 
 To be extra cautious, we will also filter out `RestartLastVotedForkSlots` and
 `RestartHeaviestFork` in gossip if a validator is not in `wen restart phase`.
@@ -212,11 +212,10 @@ At any point in restart, let's call percentage of validators not in restart
 `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`.
 
 Any slot above this line should be repaired, while other slots can be ignored
-for now.
-
-If
+for now. But if
 `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
-is less than 10%, then the validators don't have to start any repairs.
+is less than 10%, then the validators don't have to start any repairs. Because
+the signal now is too noisy.
 
 We obviously want to repair all blocks above `OPTIMISTIC_CONFIRMED_THRESHOLD`
 before the restart. The validators in `MALICIOUS_SET` could lie about their
@@ -248,15 +247,15 @@ block will only move from "must-have" to "ignored" as more validators
 join the restart, not vice versa. So the list of blocks a validator needs to
 repair will never grow bigger when more validators join the restart.
 
-Once the validator gets `RestartLastVotedForkSlots``, it can draw a line which
-are the "must-have" blocks. When all the "must-have" blocks are repaired and
+Once the validator gets `RestartLastVotedForkSlots`, it can calculate which
+blocks must be repaired. When all those "must-have" blocks are repaired and
 replayed, it can proceed to step 3.
 
-3. **Gossip current heaviest fork**
+3. **gossip current heaviest fork**
 
 The main goal of this step is to "vote" the heaviest fork to restart from.
 
-We use a new Gossip message `RestartHeaviestFork`, its fields are:
+We use a new gossip message `RestartHeaviestFork`, its fields are:
 
 * `slot`: `u64` slot of the picked block.
 * `hash`: `Hash` bank hash of the picked block.
