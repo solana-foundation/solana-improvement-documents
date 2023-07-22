@@ -174,7 +174,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
             .iter()
             .map(|&(required_fee_rate, reserved_fee)| {
                 let required_fee = required_fee_rate * tx.requested_cu;
-                if self.is_congested {
+                if is_congested {
                     required_fee.saturating_sub(reserved_fee)
                 } else {
                     required_fee
