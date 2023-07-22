@@ -113,7 +113,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
     fn start_measuring(&mut self, tx: &Tx) -> Result<(), MeasureError> {
         let updated_active_tx_count = self.active_txs.len() + 1;
 
-        if updated_active_tx_count > MAXIMUM_THREAD_COUNT {
+        if updated_active_tx_count > POLICY.maximum_thread_count {
             return Err(TooManyActiveThreadCount);
         }
         if tx.addrs.is_empty() {
