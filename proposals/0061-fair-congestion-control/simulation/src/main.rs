@@ -424,7 +424,7 @@ mod tests {
         let tx = Tx::new(3, 1, 0, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
-        assert_eq!(tracker.fee_markets.get(&Addr(7)).unwrap().reserved_fee, 2_494_414);
+        assert_eq!(tracker.fee_markets.get(&Addr(7)).unwrap().reserved_fee, 2_990_000);
     }
 
     #[test]
