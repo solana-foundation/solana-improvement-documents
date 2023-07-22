@@ -105,10 +105,9 @@ impl Policy {
 
 impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
     fn start_measuring(&mut self, tx: &Tx) -> Result<(), MeasureError> {
-        if !self.active_txs.insert(tx.id) {
-            return Err(AlreadyMeasuring);
-        }
-        if self.active_txs.len() > MAXIMUM_THREAD_COUNT {
+        let updated_active_tx_count = self.active_txs.len() + 1;
+
+        if updated_active_tx_count > MAXIMUM_THREAD_COUNT {
             return Err(TooManyActiveThreadCount);
         }
         if tx.addrs.is_empty() {
@@ -116,7 +115,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
         }
 
         let (is_congested, reset_counter) =
-            match self.active_txs.len().cmp(&POLICY.congestion_threshold) {
+            match updated_active_tx_count.cmp(&POLICY.congestion_threshold) {
                 Less if self.is_congested => (false, self.reset_counter + 1),
                 Equal | Greater if !self.is_congested => (true, self.reset_counter),
                 _ => (self.is_congested, self.reset_counter),
@@ -177,6 +176,9 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
         let supplied_fee = tx.supplied_fee_rate * tx.requested_cu;
         if supplied_fee < minimum_supplied_fee {
             return Err(InsufficientSuppliedFee(supplied_fee, minimum_supplied_fee));
+        }
+        if !self.active_txs.insert(tx.id) {
+            return Err(AlreadyMeasuring);
         }
         self.is_congested = is_congested;
         self.reset_counter = reset_counter;
