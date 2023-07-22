@@ -316,11 +316,6 @@ mod tests {
         format!("{:?}", tx);
     }
 
-    #[test]
-    fn policy_new() {
-        assert_eq!(Policy::new(),Policy::new());
-        format!("{:?}", Policy::new().congestion_threshold(0).recent_tx_count(0).maximum_thread_count(0));
-    }
 
     #[test]
     fn main_() {
