@@ -174,11 +174,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
             .iter()
             .map(|&(required_fee_rate, reserved_fee)| {
                 let required_fee = required_fee_rate * tx.requested_cu;
-                if is_congested {
-                    required_fee.saturating_sub(reserved_fee)
-                } else {
-                    required_fee
-                }
+                required_fee.saturating_sub(reserved_fee)
             })
             .sum::<u64>();
         let supplied_fee = tx.supplied_fee_rate * tx.requested_cu;
@@ -204,9 +200,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
             tx.addrs.iter().zip(updated_fees.iter())
         {
             let required_fee = required_fee_rate * tx.requested_cu;
-            if self.is_congested {
-                reserved_fee = reserved_fee.saturating_sub(required_fee);
-            }
+            reserved_fee = reserved_fee.saturating_sub(required_fee);
             reserved_fee +=
                 (total_excess_fee * ((required_fee as f64) / total_required_fee)) as u64;
             reserved_fee = (reserved_fee as f64
