@@ -510,7 +510,7 @@ mod tests {
 
     #[test]
     fn tracker_errors() {
-        let mut tracker = BaseFeeTracker::<{ Policy::new().maximum_thread_count(2) }>::default();
+        let mut tracker = BaseFeeTracker::<{ Policy::new().maximum_thread_count(1) }>::default();
         let cu = 200;
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Err(NotMeasured));
