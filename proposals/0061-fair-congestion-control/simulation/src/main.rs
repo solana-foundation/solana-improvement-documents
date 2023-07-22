@@ -339,8 +339,8 @@ mod tests {
     #[test]
     fn tracker_no_congestion_transition() {
         let mut tracker = BaseFeeTracker::<{ Policy::new().congestion_threshold(2) }>::default();
-        let tx1 = Tx::new(3, 200, 5000, vec![Addr(7)]);
-        let tx2 = Tx::new(4, 200, 5000, vec![Addr(8)]);
+        let tx1 = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
+        let tx2 = Tx::new(4, 200, 1002600 / 200, vec![Addr(8)]);
         assert_eq!(tracker.start_measuring(&tx1), Ok(()));
         assert_eq!(tracker.is_congested, false);
         assert_eq!(tracker.start_measuring(&tx2), Ok(()));
