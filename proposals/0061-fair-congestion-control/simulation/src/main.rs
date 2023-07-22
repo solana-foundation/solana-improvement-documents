@@ -346,7 +346,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_burn_and_collect() {
+    fn tracker_burn_and_collect_with_success_tx() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let cu = 200;
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
