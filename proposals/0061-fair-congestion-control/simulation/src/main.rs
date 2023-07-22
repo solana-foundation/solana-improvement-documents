@@ -305,6 +305,12 @@ mod tests {
     }
 
     #[test]
+    fn tx_new() {
+        let tx = Tx::new(3, 200, 5000, vec![Addr(7)]);
+        format!("{:?}", tx);
+    }
+
+    #[test]
     fn exponential_heat_up() {
         let tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let cu = CU_TO_POWER as u64;
