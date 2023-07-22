@@ -258,7 +258,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
     }
 
     fn cool_down(&self, fee_rate: u64, cu: u64) -> u64 {
-        let factor = 2_f64.powf(cu as f64 / (self.nonconflicting_group_count - 1).max(1) as f64 / CU_TO_POWER);
+        let factor = 2_f64.powf(cu as f64 / self.nonconflicting_group_count.saturating_sub(1).max(1) as f64 / CU_TO_POWER);
         (fee_rate as f64 / factor) as u64
     }
 
