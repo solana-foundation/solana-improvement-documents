@@ -474,5 +474,13 @@ mod tests {
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
         assert_eq!(tracker.nonconflicting_group_count, 3);
+
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
+        assert_eq!(tracker.nonconflicting_group_count, 2);
+
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
+        assert_eq!(tracker.nonconflicting_group_count, 1);
     }
 }
