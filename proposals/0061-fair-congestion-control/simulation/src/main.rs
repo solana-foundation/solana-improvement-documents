@@ -107,6 +107,11 @@ impl Policy {
         self.recent_tx_count = recent_tx_count;
         self
     }
+
+    const fn maximum_thread_count(mut self, maximum_thread_count: usize) -> Self {
+        self.maximum_thread_count = maximum_thread_count;
+        self
+    }
 }
 
 impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
