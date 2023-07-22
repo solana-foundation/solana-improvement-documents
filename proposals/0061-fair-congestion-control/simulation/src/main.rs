@@ -343,14 +343,19 @@ mod tests {
         let tx2 = Tx::new(4, 200, 1002600 / 200, vec![Addr(8)]);
         assert_eq!(tracker.start_measuring(&tx1), Ok(()));
         assert_eq!(tracker.is_congested, false);
+        assert_eq!(tracker.reset_counter, 0);
         assert_eq!(tracker.start_measuring(&tx2), Ok(()));
         assert_eq!(tracker.is_congested, true);
+        assert_eq!(tracker.reset_counter, 0);
         assert_eq!(tracker.stop_measuring(&tx2, Ok(())), Ok(()));
         assert_eq!(tracker.is_congested, true);
+        assert_eq!(tracker.reset_counter, 0);
         assert_eq!(tracker.stop_measuring(&tx1, Ok(())), Ok(()));
         assert_eq!(tracker.is_congested, true);
+        assert_eq!(tracker.reset_counter, 0);
         assert_eq!(tracker.start_measuring(&tx1), Ok(()));
         assert_eq!(tracker.is_congested, false);
+        assert_eq!(tracker.reset_counter, 1);
     }
 
     #[test]
