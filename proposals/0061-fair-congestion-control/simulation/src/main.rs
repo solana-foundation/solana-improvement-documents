@@ -69,7 +69,6 @@ struct BaseFeeTracker<const POLICY: Policy> {
 
 const MINIMUM_BASE_FEE_RATE: u64 = 5000;
 const MAXIMUM_THREAD_COUNT: usize = 5;
-const RECENT_TX_COUNT: usize = 5;
 const CU_TO_POWER: f64 = 50_000.0;
 const INITIAL_RESERVED_FEE: u64 = 0;
 
@@ -87,12 +86,14 @@ use MeasureError::*;
 #[derive(PartialEq, Eq)]
 struct Policy {
     congestion_threshold: usize,
+    recent_tx_count: usize,
 }
 
 impl Policy {
     const fn new() -> Self {
         Self {
             congestion_threshold: 0,
+            reset_tx_count: 0,
         }
     }
 
