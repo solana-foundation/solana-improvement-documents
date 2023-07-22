@@ -371,7 +371,7 @@ mod tests {
 
         assert_eq!(tracker.start_measuring(&tx2), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx2, Ok(())), Ok(()));
-        assert_eq!(tracker.nonconflicting_group_count, 1);
+        assert_eq!(tracker.nonconflicting_group_count, 2);
 
         assert_eq!(tracker.start_measuring(&tx1), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx1, Ok(())), Ok(()));
