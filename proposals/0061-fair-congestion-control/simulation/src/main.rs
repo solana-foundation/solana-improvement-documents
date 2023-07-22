@@ -311,6 +311,11 @@ mod tests {
     }
 
     #[test]
+    fn main_() {
+        main();
+    }
+
+    #[test]
     fn exponential_heat_up() {
         let tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let cu = CU_TO_POWER as u64;
