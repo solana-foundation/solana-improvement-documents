@@ -75,7 +75,7 @@ const INITIAL_RESERVED_FEE: u64 = 0;
 #[derive(Debug, PartialEq)]
 enum MeasureError {
     AlreadyMeasuring,
-    AlreadyActive,
+    AlreadyActiveAddress,
     NoAddress,
     NotMeasured,
     TooManyActiveThreadCount,
@@ -132,7 +132,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
             .iter()
             .map(|addr| {
                 if self.fee_markets.get(addr).unwrap().is_active {
-                    Err(AlreadyActive)
+                    Err(AlreadyActiveAddress)
                 } else {
                     Ok(())
                 }
