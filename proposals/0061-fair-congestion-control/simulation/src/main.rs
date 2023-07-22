@@ -365,6 +365,6 @@ mod tests {
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Err(actual_cu)), Ok(()));
         assert_eq!(tracker.collected_fee(), actual_cu * MINIMUM_BASE_FEE_RATE / 2);
-        assert_eq!(tracker.burnt_fee(), 1002600 - 1000000/4 + 260);
+        assert_eq!(tracker.burnt_fee(), 1002600 - 1000000/4 + 2600);
     }
 }
