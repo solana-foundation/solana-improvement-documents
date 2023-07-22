@@ -329,7 +329,7 @@ mod tests {
     #[test]
     fn tracker_congestion() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
-        let tx = Tx::new(3, 200, 5000, vec![Addr(7)]);
+        let tx = Tx::new(3, 200, 1002600/200, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.is_congested, true);
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
