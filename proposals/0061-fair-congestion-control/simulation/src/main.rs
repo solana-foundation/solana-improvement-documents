@@ -82,7 +82,7 @@ enum MeasureError {
 }
 use MeasureError::*;
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 struct Policy {
     congestion_threshold: usize,
     recent_tx_count: usize,
