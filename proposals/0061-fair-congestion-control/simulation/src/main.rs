@@ -1,3 +1,6 @@
+#![feature(adt_const_params)]
+#![allow(incomplete_features)]
+
 use std::cmp::Ordering::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -52,7 +55,7 @@ impl LocalFeeMarket {
 }
 
 #[derive(Default, Debug)]
-struct BaseFeeTracker<const CONGESTION_THRESHOLD: usize> {
+struct BaseFeeTracker<const POLICY: Policy> {
     clock: u64,
     reset_counter: u64,
     is_congested: bool,
@@ -70,17 +73,36 @@ const RECENT_TX_COUNT: usize = 5;
 const CU_TO_POWER: f64 = 50_000.0;
 const INITIAL_RESERVED_FEE: u64 = 0;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum MeasureError {
     AlreadyMeasuring,
     AlreadyActive,
+    NoAddress,
     NotMeasured,
     TooManyActiveThreadCount,
     InsufficientSuppliedFee(u64, u64),
 }
 use MeasureError::*;
 
-impl<const CONGESTION_THRESHOLD: usize> BaseFeeTracker<CONGESTION_THRESHOLD> {
+#[derive(PartialEq, Eq)]
+struct Policy {
+    congestion_threshold: usize,
+}
+
+impl Policy {
+    const fn new() -> Self {
+        Self {
+            congestion_threshold: 0,
+        }
+    }
+
+    const fn congestion_threshold(mut self, u: usize) -> Self {
+        self.congestion_threshold = u;
+        self
+    }
+}
+
+impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
     fn start_measuring(&mut self, tx: &Tx) -> Result<(), MeasureError> {
         if !self.active_txs.insert(tx.id) {
             return Err(AlreadyMeasuring);
@@ -88,20 +110,16 @@ impl<const CONGESTION_THRESHOLD: usize> BaseFeeTracker<CONGESTION_THRESHOLD> {
         if self.active_txs.len() > MAXIMUM_THREAD_COUNT {
             return Err(TooManyActiveThreadCount);
         }
-
-        match self.active_txs.len().cmp(&CONGESTION_THRESHOLD) {
-            Less => {
-                if self.is_congested {
-                    self.is_congested = false;
-                    self.reset_counter += 1;
-                }
-            }
-            Equal | Greater => {
-                if !self.is_congested {
-                    self.is_congested = true;
-                }
-            }
+        if tx.addrs.is_empty() {
+            return Err(NoAddress);
         }
+
+        let (is_congested, reset_counter) =
+            match self.active_txs.len().cmp(&POLICY.congestion_threshold) {
+                Less if self.is_congested => (false, self.reset_counter + 1),
+                Equal | Greater if !self.is_congested => (true, self.reset_counter),
+                _ => (self.is_congested, self.reset_counter),
+            };
 
         let is_new_group = tx.addrs.iter().all(|addr| {
             self.fee_markets
@@ -132,9 +150,10 @@ impl<const CONGESTION_THRESHOLD: usize> BaseFeeTracker<CONGESTION_THRESHOLD> {
                     * 1.06_f64.powf(cool_down_duration as f64 / 1_000_000_f64))
                     as u64;
 
-                if self.is_congested && self.reset_counter == market.reset_counter {
+                if is_congested && reset_counter == market.reset_counter {
                     let mut required_fee_rate = market.required_fee_rate;
                     required_fee_rate = self.cool_down(required_fee_rate, cool_down_duration);
+                    required_fee_rate = required_fee_rate.max(MINIMUM_BASE_FEE_RATE);
                     required_fee_rate = self.heat_up(required_fee_rate, heat_up_duration);
 
                     (required_fee_rate, reserved_fee)
@@ -158,6 +177,8 @@ impl<const CONGESTION_THRESHOLD: usize> BaseFeeTracker<CONGESTION_THRESHOLD> {
         if supplied_fee < minimum_supplied_fee {
             return Err(InsufficientSuppliedFee(supplied_fee, minimum_supplied_fee));
         }
+        self.is_congested = is_congested;
+        self.reset_counter = reset_counter;
         if is_new_group {
             self.tx_group_count += 1;
         }
@@ -209,8 +230,7 @@ impl<const CONGESTION_THRESHOLD: usize> BaseFeeTracker<CONGESTION_THRESHOLD> {
         Ok(())
     }
 
-    fn stop_measuring(&mut self, tx: &Tx) -> Result<(), MeasureError> {
-        let result: Result<_, u64> = Ok(());
+    fn stop_measuring(&mut self, tx: &Tx, result: Result<(), u64>) -> Result<(), MeasureError> {
         if !self.active_txs.remove(&tx.id) {
             return Err(NotMeasured);
         }
@@ -220,22 +240,23 @@ impl<const CONGESTION_THRESHOLD: usize> BaseFeeTracker<CONGESTION_THRESHOLD> {
             market.clock = self.clock;
             market.is_active = false;
         }
-        self.rewarded_cu += match result {
-            Ok(()) => tx.requested_cu,
-            Err(cu) => cu / 2,
-        };
+        self.rewarded_cu += tx.addrs.len() as u64
+            * match result {
+                Ok(()) => tx.requested_cu,
+                Err(actual_cu) => actual_cu / 2,
+            };
 
         Ok(())
     }
 
-    fn heat_up(&self, current_required_base_fee: u64, cu: u64) -> u64 {
+    fn heat_up(&self, fee_rate: u64, cu: u64) -> u64 {
         let factor = 2_f64.powf(cu as f64 / CU_TO_POWER);
-        (current_required_base_fee as f64 * factor) as u64
+        (fee_rate as f64 * factor) as u64
     }
 
-    fn cool_down(&self, current_required_base_fee: u64, cu: u64) -> u64 {
-        let inverse_factor = 0.5_f64.powf(cu as f64 / self.tx_group_count as f64 / CU_TO_POWER);
-        ((current_required_base_fee as f64 * inverse_factor) as u64).max(MINIMUM_BASE_FEE_RATE)
+    fn cool_down(&self, fee_rate: u64, cu: u64) -> u64 {
+        let factor = 2_f64.powf(cu as f64 / self.tx_group_count.max(1) as f64 / CU_TO_POWER);
+        (fee_rate as f64 / factor) as u64
     }
 
     #[allow(dead_code)]
@@ -256,7 +277,81 @@ mod tests {
     use super::*;
 
     #[test]
-    fn exponential_base_fee_rate() {
-        let tracker = BaseFeeTracker::<0>::default();
+    fn tracker_default() {
+        let tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        assert_eq!(tracker.tx_group_count, 0);
+        assert_eq!(tracker.burnt_fee(), 0);
+        assert_eq!(tracker.collected_fee(), 0);
+        assert_eq!(tracker.fee_markets.is_empty(), true);
+    }
+
+    #[test]
+    fn exponential_heat_up() {
+        let tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        let cu = CU_TO_POWER as u64;
+        assert_eq!(tracker.heat_up(5000, cu * 0), 5000 * 1);
+        assert_eq!(tracker.heat_up(5000, cu * 1), 5000 * 2);
+        assert_eq!(tracker.heat_up(5000, cu * 2), 5000 * 4);
+        assert_eq!(tracker.heat_up(5000, cu * 3), 5000 * 8);
+    }
+
+    #[test]
+    fn exponential_normal_cool_down() {
+        let tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        let cu = CU_TO_POWER as u64;
+        assert_eq!(tracker.cool_down(5000 * 8, cu * 0), 5000 * 8);
+        assert_eq!(tracker.cool_down(5000 * 8, cu * 1), 5000 * 4);
+        assert_eq!(tracker.cool_down(5000 * 8, cu * 2), 5000 * 2);
+        assert_eq!(tracker.cool_down(5000 * 8, cu * 3), 5000 * 1);
+    }
+
+    #[test]
+    fn exponential_slow_cool_down() {
+        let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        tracker.tx_group_count = 5;
+        let cu = CU_TO_POWER as u64;
+        assert_eq!(tracker.cool_down(5000 * 8, cu * 0 * 5), 5000 * 8);
+        assert_eq!(tracker.cool_down(5000 * 8, cu * 1 * 5), 5000 * 4);
+        assert_eq!(tracker.cool_down(5000 * 8, cu * 2 * 5), 5000 * 2);
+        assert_eq!(tracker.cool_down(5000 * 8, cu * 3 * 5), 5000 * 1);
+    }
+
+    #[test]
+    fn tracker_no_congestion() {
+        let mut tracker =
+            BaseFeeTracker::<{ Policy::new().congestion_threshold(usize::MAX) }>::default();
+        let tx = Tx::new(3, 200, 5000, vec![Addr(7)]);
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.is_congested, false);
+    }
+
+    #[test]
+    fn tracker_congestion() {
+        let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        let tx = Tx::new(3, 200, 50000, vec![Addr(7)]);
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.is_congested, true);
+    }
+
+    #[test]
+    fn tracker_insufficient_fee() {
+        let mut tracker =
+            BaseFeeTracker::<{ Policy::new().congestion_threshold(usize::MAX) }>::default();
+        let tx = Tx::new(3, 200, 4999, vec![Addr(7)]);
+        assert_eq!(
+            tracker.start_measuring(&tx),
+            Err(InsufficientSuppliedFee(999800, 1000000))
+        );
+    }
+
+    #[test]
+    fn tracker_burn_and_collect() {
+        let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        let cu = 200;
+        let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
+        assert_eq!(tracker.burnt_fee(), 2600);
+        assert_eq!(tracker.collected_fee(), cu * MINIMUM_BASE_FEE_RATE);
     }
 }
