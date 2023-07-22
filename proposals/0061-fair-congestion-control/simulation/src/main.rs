@@ -470,5 +470,9 @@ mod tests {
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
         assert_eq!(tracker.nonconflicting_group_count, 3);
+        let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(10)]);
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
+        assert_eq!(tracker.nonconflicting_group_count, 3);
     }
 }
