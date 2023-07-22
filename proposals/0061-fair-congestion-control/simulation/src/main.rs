@@ -139,15 +139,13 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
                 .freq
                 == 0
         });
-        tx.addrs
-            .iter()
-            .try_for_each(|addr| {
-                if self.fee_markets.get(addr).unwrap().is_active {
-                    Err(AlreadyActiveAddress)
-                } else {
-                    Ok(())
-                }
-            })?;
+        tx.addrs.iter().try_for_each(|addr| {
+            if self.fee_markets.get(addr).unwrap().is_active {
+                Err(AlreadyActiveAddress)
+            } else {
+                Ok(())
+            }
+        })?;
 
         let heat_up_duration = tx.requested_cu;
         let updated_fees = tx
