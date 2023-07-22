@@ -205,9 +205,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
             reserved_fee = reserved_fee.saturating_sub(required_fee);
             reserved_fee +=
                 (total_excess_fee * ((required_fee as f64) / total_required_fee)) as u64;
-            reserved_fee = (reserved_fee as f64
-                * 1.06_f64.powf(heat_up_duration as f64 / 1_000_000_f64))
-                as u64;
+            reserved_fee = Self::inflate_reserve(reserved_fee);
 
             let market = self.fee_markets.get_mut(addr).unwrap();
             market.required_fee_rate = required_fee_rate;
@@ -268,6 +266,12 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
                 / CU_TO_POWER,
         );
         (fee_rate as f64 / factor) as u64
+    }
+
+    fn inflate_reserve(reserved_fee: u64, cu: u64) -> u64 {
+        (reserved_fee as f64
+                * 1.06_f64.powf(cu as f64 / 1_000_000_f64))
+                as u64
     }
 
     fn collected_fee(&self) -> u64 {
