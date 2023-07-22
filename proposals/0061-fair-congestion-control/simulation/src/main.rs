@@ -317,6 +317,11 @@ mod tests {
     }
 
     #[test]
+    fn policy_new() {
+        Policy::new();
+    }
+
+    #[test]
     fn main_() {
         main();
     }
