@@ -356,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_no_congestion() {
+    fn no_congestion() {
         let mut tracker =
             BaseFeeTracker::<{ Policy::new().congestion_threshold(usize::MAX) }>::default();
         let tx = Tx::new(3, 200, 5000, vec![Addr(7)]);
@@ -369,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_no_congestion_transition() {
+    fn no_congestion_transition() {
         let mut tracker = BaseFeeTracker::<{ Policy::new().congestion_threshold(2) }>::default();
         let tx1 = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
         let tx2 = Tx::new(4, 200, 1002600 / 200, vec![Addr(8)]);
@@ -391,7 +391,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_congestion() {
+    fn congestion() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let tx = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
@@ -408,7 +408,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_reserve() {
+    fn reserve() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let tx = Tx::new(3, 1, 3_000_000, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
@@ -422,7 +422,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_locality() {
+    fn locality() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let tx1 = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
         let tx2 = Tx::new(4, 200, 1002600 / 200, vec![Addr(8)]);
@@ -440,7 +440,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_cool_down() {
+    fn cool_down() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let tx1 = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
         let tx2 = Tx::new(4, 200, 1002600 / 200, vec![Addr(8)]);
@@ -459,7 +459,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_insufficient_fee() {
+    fn insufficient_fee() {
         let mut tracker =
             BaseFeeTracker::<{ Policy::new().congestion_threshold(usize::MAX) }>::default();
         let tx = Tx::new(3, 200, 4999, vec![Addr(7)]);
@@ -470,7 +470,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_burn_and_collect_with_success_tx() {
+    fn burn_and_collect_with_success_tx() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let cu = 200;
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
@@ -481,7 +481,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_burn_and_collect_with_fail_tx() {
+    fn burn_and_collect_with_fail_tx() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let cu = 200;
         let actual_cu = 100;
@@ -496,7 +496,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_recent_tx_count() {
+    fn recent_tx_count() {
         let mut tracker = BaseFeeTracker::<
             {
                 Policy::new()
@@ -532,7 +532,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_errors() {
+    fn errors() {
         let cu = 200;
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         let mut tracker = BaseFeeTracker::<{ Policy::new().maximum_thread_count(1) }>::default();
