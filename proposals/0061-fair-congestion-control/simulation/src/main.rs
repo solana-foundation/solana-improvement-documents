@@ -61,7 +61,7 @@ struct BaseFeeTracker<const POLICY: Policy> {
     is_congested: bool,
     fee_markets: BTreeMap<Addr, LocalFeeMarket>,
     active_txs: BTreeSet<TxId>,
-    tx_group_count: u64,
+    nonconflicting_group_count: u64,
     recent_addrs: VecDeque<Vec<Addr>>,
     rewarded_cu: u64,
     total_supplied_fee: u64,
@@ -183,7 +183,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
         self.is_congested = is_congested;
         self.reset_counter = reset_counter;
         if is_new_group {
-            self.tx_group_count += 1;
+            self.nonconflicting_group_count += 1;
         }
         self.total_supplied_fee += supplied_fee;
         let total_excess_fee = (supplied_fee - minimum_supplied_fee) as f64;
@@ -226,7 +226,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
                     market.freq == 0
                 });
             if was_new_group {
-                self.tx_group_count -= 1;
+                self.nonconflicting_group_count -= 1;
             }
         }
 
@@ -258,7 +258,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
     }
 
     fn cool_down(&self, fee_rate: u64, cu: u64) -> u64 {
-        let factor = 2_f64.powf(cu as f64 / self.tx_group_count.max(1) as f64 / CU_TO_POWER);
+        let factor = 2_f64.powf(cu as f64 / self.nonconflicting_group_count.max(1) as f64 / CU_TO_POWER);
         (fee_rate as f64 / factor) as u64
     }
 
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn tracker_default() {
         let tracker = BaseFeeTracker::<{ Policy::new() }>::default();
-        assert_eq!(tracker.tx_group_count, 0);
+        assert_eq!(tracker.nonconflicting_group_count, 0);
         assert_eq!(tracker.burnt_fee(), 0);
         assert_eq!(tracker.collected_fee(), 0);
         assert_eq!(tracker.fee_markets.is_empty(), true);
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn exponential_slow_cool_down() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
-        tracker.tx_group_count = 5;
+        tracker.nonconflicting_group_count = 5;
         let cu = CU_TO_POWER as u64;
         assert_eq!(tracker.cool_down(5000 * 8, cu * 0 * 5), 5000 * 8);
         assert_eq!(tracker.cool_down(5000 * 8, cu * 1 * 5), 5000 * 4);
