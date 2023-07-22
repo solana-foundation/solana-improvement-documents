@@ -419,10 +419,10 @@ mod tests {
         let tx = Tx::new(3, 200, 3_000_000, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
-        dbg!(tracker);
+        dbg!(&tracker);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
-        dbg!(tracker);
+        dbg!(&tracker);
     }
 
     #[test]
