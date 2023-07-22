@@ -514,7 +514,7 @@ mod tests {
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         let mut tracker = BaseFeeTracker::<{ Policy::new().maximum_thread_count(1) }>::default();
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
-        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.start_measuring(&tx), Err(TooManyActiveThreadCount));
         let mut tracker = BaseFeeTracker::<{ Policy::new().maximum_thread_count(2) }>::default();
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Err(NotMeasured));
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
