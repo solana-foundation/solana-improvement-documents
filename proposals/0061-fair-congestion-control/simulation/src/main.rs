@@ -154,9 +154,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
             .map(|addr| {
                 let market = self.fee_markets.get(addr).unwrap();
                 let cool_down_duration = self.clock - market.clock;
-                let reserved_fee = (market.reserved_fee as f64
-                    * 1.06_f64.powf(cool_down_duration as f64 / 1_000_000_f64))
-                    as u64;
+                let reserved_fee = Self::inflate_reserve(market.reserved_fee, cool_down_duration);
 
                 if is_congested && reset_counter == market.reset_counter {
                     let mut required_fee_rate = market.required_fee_rate;
