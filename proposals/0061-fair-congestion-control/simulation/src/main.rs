@@ -355,4 +355,15 @@ mod tests {
         assert_eq!(tracker.burnt_fee(), 2600);
         assert_eq!(tracker.collected_fee(), cu * MINIMUM_BASE_FEE_RATE);
     }
+
+    #[test]
+    fn tracker_burn_and_collect_with_fail_tx() {
+        let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        let cu = 200;
+        let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx, Err(100)), Ok(()));
+        assert_eq!(tracker.burnt_fee(), 2600);
+        assert_eq!(tracker.collected_fee(), cu * MINIMUM_BASE_FEE_RATE);
+    }
 }
