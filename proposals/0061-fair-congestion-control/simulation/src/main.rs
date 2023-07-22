@@ -267,9 +267,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
     }
 
     fn inflate_reserve(reserved_fee: u64, cu: u64) -> u64 {
-        (reserved_fee as f64
-                * 1.06_f64.powf(cu as f64 / 1_000_000_f64))
-                as u64
+        (reserved_fee as f64 * 1.06_f64.powf(cu as f64 / 1_000_000_f64)) as u64
     }
 
     fn collected_fee(&self) -> u64 {
