@@ -174,7 +174,9 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
             .iter()
             .map(|&(required_fee_rate, reserved_fee)| {
                 let required_fee = required_fee_rate * tx.requested_cu;
-                required_fee.saturating_sub(reserved_fee)
+                required_fee
+                    .saturating_sub(reserved_fee)
+                    .max(MINIMUM_BASE_FEE_RATE)
             })
             .sum::<u64>();
         let supplied_fee = tx.supplied_fee_rate * tx.requested_cu;
