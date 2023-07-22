@@ -98,12 +98,12 @@ impl Policy {
     }
 
     const fn congestion_threshold(mut self, congestion_threshold: usize) -> Self {
-        self.congestion_threshold = u;
+        self.congestion_threshold = congestion_threshold;
         self
     }
 
     const fn recent_tx_count(mut self, recent_tx_count: usize) -> Self {
-        self.recent_tx_count = u;
+        self.recent_tx_count = recent_tx_count;
         self
     }
 }
