@@ -277,12 +277,10 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
         (fee_rate as f64 / factor) as u64
     }
 
-    #[allow(dead_code)]
     fn collected_fee(&self) -> u64 {
         self.rewarded_cu * MINIMUM_BASE_FEE_RATE
     }
 
-    #[allow(dead_code)]
     fn burnt_fee(&self) -> u64 {
         self.total_supplied_fee - self.collected_fee()
     }
