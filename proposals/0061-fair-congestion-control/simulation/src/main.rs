@@ -10,7 +10,7 @@ struct Addr(u8);
 #[derive(Debug, Ord, Eq, PartialEq, PartialOrd, Clone, Copy, Default)]
 struct TxId(u8);
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Tx {
     id: TxId,
     requested_cu: u64,
