@@ -416,11 +416,11 @@ mod tests {
     #[test]
     fn tracker_reserve() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
-        let tx = Tx::new(3, 200, 3_000_000, vec![Addr(7)]);
+        let tx = Tx::new(3, 100, 3_000_000, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
         assert_eq!(tracker.fee_markets.get(&Addr(7)).unwrap().reserved_fee, 599004380);
-        let tx = Tx::new(3, 200, 0, vec![Addr(7)]);
+        let tx = Tx::new(3, 100, 0, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
         assert_eq!(tracker.fee_markets.get(&Addr(7)).unwrap().reserved_fee, 598006148);
