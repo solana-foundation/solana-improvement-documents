@@ -448,4 +448,13 @@ mod tests {
             (actual_cu / 2) * MINIMUM_BASE_FEE_RATE
         );
     }
+
+    #[test]
+    fn tracker_burn_and_collect_with_fail_tx() {
+        let mut tracker = BaseFeeTracker::<{ Policy::new().recent_tx_count(3) }>::default();
+        let cu = 200;
+        let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx, Ok(()), Ok(()));
+    }
 }
