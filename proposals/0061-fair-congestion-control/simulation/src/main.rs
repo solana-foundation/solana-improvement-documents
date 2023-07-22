@@ -374,6 +374,9 @@ mod tests {
         assert_eq!(tracker.start_measuring(&tx2), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx2, Ok(())), Ok(()));
 
+        assert_eq!(tracker.start_measuring(&tx2), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx2, Ok(())), Ok(()));
+
         assert_eq!(tracker.start_measuring(&tx1), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx1, Ok(())), Ok(()));
     }
