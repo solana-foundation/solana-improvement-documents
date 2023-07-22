@@ -318,8 +318,14 @@ mod tests {
 
     #[test]
     fn policy_new() {
-        assert_eq!(Policy::new(),Policy::new());
-        format!("{:?}", Policy::new().congestion_threshold(0).recent_tx_count(0).maximum_thread_count(0));
+        assert_eq!(Policy::new(), Policy::new());
+        format!(
+            "{:?}",
+            Policy::new()
+                .congestion_threshold(0)
+                .recent_tx_count(0)
+                .maximum_thread_count(0)
+        );
     }
 
     #[test]
@@ -486,7 +492,13 @@ mod tests {
 
     #[test]
     fn tracker_recent_tx_count() {
-        let mut tracker = BaseFeeTracker::<{ Policy::new().congestion_threshold(usize::MAX).recent_tx_count(3) }>::default();
+        let mut tracker = BaseFeeTracker::<
+            {
+                Policy::new()
+                    .congestion_threshold(usize::MAX)
+                    .recent_tx_count(3)
+            },
+        >::default();
         let cu = 200;
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
