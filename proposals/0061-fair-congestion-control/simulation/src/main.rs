@@ -295,6 +295,7 @@ mod tests {
         assert_eq!(tracker.burnt_fee(), 0);
         assert_eq!(tracker.collected_fee(), 0);
         assert_eq!(tracker.fee_markets.is_empty(), true);
+        format!("{:?}", tracker);
     }
 
     #[test]
