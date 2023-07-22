@@ -258,7 +258,11 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
     }
 
     fn cool_down(&self, fee_rate: u64, cu: u64) -> u64 {
-        let factor = 2_f64.powf(cu as f64 / self.nonconflicting_group_count.saturating_sub(1).max(1) as f64 / CU_TO_POWER);
+        let factor = 2_f64.powf(
+            cu as f64
+                / self.nonconflicting_group_count.saturating_sub(1).max(1) as f64
+                / CU_TO_POWER,
+        );
         (fee_rate as f64 / factor) as u64
     }
 
@@ -335,13 +339,16 @@ mod tests {
     #[test]
     fn tracker_congestion() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
-        let tx = Tx::new(3, 200, 1002600/200, vec![Addr(7)]);
+        let tx = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.is_congested, true);
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
 
-        assert_eq!(tracker.start_measuring(&tx), Err(InsufficientSuppliedFee(1002600, 1005200)));
-        let tx = Tx::new(3, 200, 1005200/200, vec![Addr(7)]);
+        assert_eq!(
+            tracker.start_measuring(&tx),
+            Err(InsufficientSuppliedFee(1002600, 1005200))
+        );
+        let tx = Tx::new(3, 200, 1005200 / 200, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
     }
@@ -349,13 +356,16 @@ mod tests {
     #[test]
     fn tracker_locality() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
-        let tx1 = Tx::new(3, 200, 1002600/200, vec![Addr(7)]);
-        let tx2 = Tx::new(4, 200, 1002600/200, vec![Addr(8)]);
+        let tx1 = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
+        let tx2 = Tx::new(4, 200, 1002600 / 200, vec![Addr(8)]);
         assert_eq!(tracker.start_measuring(&tx1), Ok(()));
         assert_eq!(tracker.is_congested, true);
         assert_eq!(tracker.stop_measuring(&tx1, Ok(())), Ok(()));
 
-        assert_eq!(tracker.start_measuring(&tx1), Err(InsufficientSuppliedFee(1002600, 1005200)));
+        assert_eq!(
+            tracker.start_measuring(&tx1),
+            Err(InsufficientSuppliedFee(1002600, 1005200))
+        );
 
         assert_eq!(tracker.start_measuring(&tx2), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx2, Ok(())), Ok(()));
@@ -364,8 +374,8 @@ mod tests {
     #[test]
     fn tracker_cool_down() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
-        let tx1 = Tx::new(3, 200, 1002600/200, vec![Addr(7)]);
-        let tx2 = Tx::new(4, 200, 1002600/200, vec![Addr(8)]);
+        let tx1 = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
+        let tx2 = Tx::new(4, 200, 1002600 / 200, vec![Addr(8)]);
         assert_eq!(tracker.start_measuring(&tx1), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx1, Ok(())), Ok(()));
 
@@ -410,7 +420,10 @@ mod tests {
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Err(actual_cu)), Ok(()));
-        assert_eq!(tracker.burnt_fee(), 1000000 - 1000000/4 + 2600);
-        assert_eq!(tracker.collected_fee(), (actual_cu / 2) * MINIMUM_BASE_FEE_RATE);
+        assert_eq!(tracker.burnt_fee(), 1000000 - 1000000 / 4 + 2600);
+        assert_eq!(
+            tracker.collected_fee(),
+            (actual_cu / 2) * MINIMUM_BASE_FEE_RATE
+        );
     }
 }
