@@ -347,6 +347,20 @@ mod tests {
     }
 
     #[test]
+    fn tracker_locality() {
+        let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        let tx1 = Tx::new(3, 200, 1002600/200, vec![Addr(7)]);
+        let tx2 = Tx::new(4, 200, 1002600/200, vec![Addr(8)]);
+        assert_eq!(tracker.start_measuring(&tx1), Ok(()));
+        assert_eq!(tracker.is_congested, true);
+        assert_eq!(tracker.stop_measuring(&tx1, Ok(())), Ok(()));
+
+        assert_eq!(tracker.start_measuring(&tx1), Err(InsufficientSuppliedFee(1002600, 1005200)));
+        assert_eq!(tracker.start_measuring(&tx2), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx2, Ok(())), Ok(()));
+    }
+
+    #[test]
     fn tracker_insufficient_fee() {
         let mut tracker =
             BaseFeeTracker::<{ Policy::new().congestion_threshold(usize::MAX) }>::default();
