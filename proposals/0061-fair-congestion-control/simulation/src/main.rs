@@ -414,6 +414,15 @@ mod tests {
     }
 
     #[test]
+    fn tracker_reserve() {
+        let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
+        let tx = Tx::new(3, 200, 3_000_000, vec![Addr(7)]);
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
+        dbg!(tracker);
+    }
+
+    #[test]
     fn tracker_locality() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let tx1 = Tx::new(3, 200, 1002600 / 200, vec![Addr(7)]);
