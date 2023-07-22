@@ -455,7 +455,7 @@ mod tests {
     }
 
     #[test]
-    fn tracker_burn_and_collect_with_fail_tx() {
+    fn tracker_recent_tx_count() {
         let mut tracker = BaseFeeTracker::<{ Policy::new().recent_tx_count(3) }>::default();
         let cu = 200;
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
