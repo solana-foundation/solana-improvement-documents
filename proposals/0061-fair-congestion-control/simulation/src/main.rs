@@ -420,6 +420,9 @@ mod tests {
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
         dbg!(tracker);
+        assert_eq!(tracker.start_measuring(&tx), Ok(()));
+        assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
+        dbg!(tracker);
     }
 
     #[test]
