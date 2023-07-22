@@ -461,5 +461,6 @@ mod tests {
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
+        assert_eq!(tracker.nonconflicting_group_count, 0);
     }
 }
