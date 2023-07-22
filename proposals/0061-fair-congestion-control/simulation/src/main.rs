@@ -212,7 +212,7 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
         }
 
         self.recent_addrs.push_back(tx.addrs.clone());
-        if self.recent_addrs.len() > RECENT_TX_COUNT {
+        if self.recent_addrs.len() > POLICY.recent_tx_count {
             let was_new_group = self
                 .recent_addrs
                 .pop_front()
