@@ -299,6 +299,12 @@ mod tests {
     }
 
     #[test]
+    fn local_fee_market_new() {
+        let market = LocalFeeMarket::new(0);
+        format!("{:?}", market);
+    }
+
+    #[test]
     fn exponential_heat_up() {
         let tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let cu = CU_TO_POWER as u64;
