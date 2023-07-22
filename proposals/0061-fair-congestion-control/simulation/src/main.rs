@@ -360,9 +360,9 @@ mod tests {
     fn tracker_burn_and_collect_with_fail_tx() {
         let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
         let cu = 200;
+        let actual_cu = 100;
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
-        let actual_cu = 100;
         assert_eq!(tracker.stop_measuring(&tx, Err(actual_cu)), Ok(()));
         assert_eq!(tracker.collected_fee(), actual_cu * MINIMUM_BASE_FEE_RATE / 2);
         assert_eq!(tracker.burnt_fee(), 752600);
