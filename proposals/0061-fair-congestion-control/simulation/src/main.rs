@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn policy_new() {
-        Policy::new();
+        Policy::new() == Policy::new() ;
     }
 
     #[test]
