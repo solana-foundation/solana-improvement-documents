@@ -352,8 +352,8 @@ mod tests {
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
         assert_eq!(tracker.stop_measuring(&tx, Ok(())), Ok(()));
-        assert_eq!(tracker.burnt_fee(), 2600);
         assert_eq!(tracker.collected_fee(), cu * MINIMUM_BASE_FEE_RATE);
+        assert_eq!(tracker.burnt_fee(), 2600);
     }
 
     #[test]
@@ -362,8 +362,9 @@ mod tests {
         let cu = 200;
         let tx = Tx::new(3, cu, 1002600 / cu, vec![Addr(7)]);
         assert_eq!(tracker.start_measuring(&tx), Ok(()));
-        assert_eq!(tracker.stop_measuring(&tx, Err(100)), Ok(()));
-        assert_eq!(tracker.collected_fee(), 100 * MINIMUM_BASE_FEE_RATE / 2);
+        let actual_cu = 100;
+        assert_eq!(tracker.stop_measuring(&tx, Err(acutal_cu)), Ok(()));
+        assert_eq!(tracker.collected_fee(), acutal_cu * MINIMUM_BASE_FEE_RATE / 2);
         assert_eq!(tracker.burnt_fee(), 752600);
     }
 }
