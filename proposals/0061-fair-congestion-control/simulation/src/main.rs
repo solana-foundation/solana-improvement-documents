@@ -93,7 +93,7 @@ impl Policy {
     const fn new() -> Self {
         Self {
             congestion_threshold: 0,
-            recent_tx_count: 0,
+            recent_tx_count: 5,
         }
     }
 
