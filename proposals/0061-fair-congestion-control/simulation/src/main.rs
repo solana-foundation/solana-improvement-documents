@@ -352,8 +352,10 @@ mod tests {
 
     #[test]
     fn exponential_slow_cool_down() {
-        let mut tracker = BaseFeeTracker::<{ Policy::new() }>::default();
-        tracker.nonconflicting_group_count = 6;
+        let tracker = BaseFeeTracker {
+            nonconflicting_group_count: 6,
+            ..BaseFeeTracker::<{ Policy::new() }>::default()
+        };
         let cu = CU_TO_POWER as u64;
         assert_eq!(tracker.cool_down(5000 * 8, cu * 0 * 5), 5000 * 8);
         assert_eq!(tracker.cool_down(5000 * 8, cu * 1 * 5), 5000 * 4);
