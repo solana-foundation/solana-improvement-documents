@@ -120,7 +120,7 @@ processing model is transactions are linearized by the order of appearance in le
 
 ### Congestion Detection
 
-thread count
+thread count or runnable/scheduled tx queue len?
 
 
 ### Nonconflicting transaction group
