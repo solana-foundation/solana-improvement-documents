@@ -17,12 +17,12 @@ to local fee markets while leaving their locality of transaction fee dynamics
 intact.
 
 To that end, it introduces a exponentially-scaled dynamic base fees to
-individual local fee markets.  It also attains very short feedback loop of
-intra block frequency to maintain full efficacy of Solana's peculiar execution
+individual local fee markets. It also attains very short feedback loop of
+per-tx frequency to maintain full efficacy of Solana's peculiar execution
 model compared to other blockchains: multi-threaded and low latency.
 
 This is realized by means of some incentive tweaks to combat against the
-obvious base fee manipulation with such short intervals
+obvious base fee manipulation with such short intervals.
 
 ## Motivation
 
@@ -68,7 +68,32 @@ address base fee:
 reserve <=> reward
 requested <=> required
 
+## High-Level Design with Example
+
+This proposal tries to localize congestions by means of increasing minimum
+required `cu_price`s for each write-locked addresses. This increase will be
+done exponentially measured by the consumed CU by each addresses at the moment.
+This means a transaction at least must cost the sum of `requested_cu *
+base_cu_price` for all of its write-locked addresses.
+
+This results in filtering out existing crowded subset of transaction waiting
+for block inclusion with market-rate priority fee quickly while other
+transactions are processed for block inclusion.
+
+This rate-limiting gets enforced, only when the cluster deemed to
+be congested. Also, those increased `cu_price` will be decreased 
+
+
+
 ## Detailed Design
+
+### Incentive alignment
+
+
+
+
+
+
 
 (i jotted this down in 10min before going to bed! pardon for being so random
 writings...)
