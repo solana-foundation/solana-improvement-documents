@@ -76,9 +76,9 @@ done exponentially measured by the consumed CU by each addresses at the moment.
 This means a transaction at least must cost the sum of `requested_cu *
 base_cu_price` for all of its write-locked addresses.
 
-This results in filtering out existing crowded subset of transaction waiting
-for block inclusion with market-rate priority fee quickly while other
-transactions are processed for block inclusion.
+This results in pricing out crowded subset of transactions waiting for block
+inclusion, while allowing other transactions to be processed for block
+inclusion.
 
 This rate-limiting gets enforced, only when the cluster deemed to
 be congested. Also, those increased `cu_price` will be decreased 
