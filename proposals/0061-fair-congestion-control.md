@@ -51,8 +51,8 @@ In this way, under-capitalized usage demand like spl-token transfers among
 wallets will still find its way for _timely_ block inclusion, accomplishing
 this mechanism's advertised _fairness_ in the sense of blockspace allocation
 and transaction fee isolation for each independent local fee markets even at
-the time of unrelated financial market's volatility, which entices
-well-capitalized usage demand in DeFi activities on chain. 
+the time of financial market's volatility, which entices well-capitalized usage
+demand in DeFi activities on chain. 
 
 This rate-limiting gets enforced only when the cluster deemed to be congested,
 meaning no idling block space is wasted when not congested. Also, those
@@ -62,7 +62,7 @@ address-specific CUs (= `address_cu`) remain to be unchanged due to the
 temporal stalemate of relevant transaction processing. Collectively, each
 addresses get equal amount of opportunity to execute transactions in
 round-robin fashion while contributing to the decrease of other
-`base_cu_price`, assuming no exponential priority-fee premium is paid among
+`base_cu_price`s, assuming no exponential priority-fee premium is paid among
 users to interrupt the orderly processing with such a high economical
 justification.
 
@@ -70,9 +70,25 @@ On top of the direct appreciation of aforementioned fairness, this proposal
 also obsoletes both the existing block-wide CU limit and the account-write CU
 limit to overcome their inherent unfairness and problems. Also, no global
 `base_cu_price` is introduced for simplicity, relying on natural block-wide
-market-rate ceiling from individual active `base_cu_prices`s.  Towards that
-end, rather drastic technical and economical changes are needed for this
-proposal as described below.
+market-rate ceiling from individual active `base_cu_prices`s.
+
+Also, this proposal was conceived with the intent of reinforcement of Solana's
+multi-threaded, real-time, and low-latency transaction execution. Towards that
+high-achieving objective, rather drastic technical and economical changes are
+needed for the introduction of this consensus-level congestion control as
+described below in detail.
+
+## Example
+
+For simplicity, assume all transactions request 100k CU and always succeed after consuming 100k CU.
+
+Available transactions for block inclusion:
+
+- `Tx1_AB@9` (read: transaction numbered as `1`, which write-locks address `A` and `B` with `cu_price == 9`)
+- `Tx2_A@8`
+- `Tx3_C@8`
+
+(1) 
 
 ## Detailed Design
 
