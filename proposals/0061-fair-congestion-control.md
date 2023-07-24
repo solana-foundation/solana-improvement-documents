@@ -61,13 +61,13 @@ likewise in terms of consumed CUs in a block (= `block_cu`), as long as its
 address-specific CUs (= `address_cu`) remain to be unchanged due to the
 temporal stalemate of relevant transaction processing. Collectively, each
 addresses get equal amount of opportunity to execute transactions in
-round-robin fashion, assuming no priority-fee premium is paid to interrupt the
-orderly processing.
+round-robin fashion while contributing decrease of other `base_cu_price`,
+assuming no priority-fee premium is paid to interrupt the orderly processing.
 
-On top of the direct appreciation of fairness, this proposal also obsoletes
-both the existing block-wide CU limit and the account-write CU limit to
-overcome their inherent unfairness and problems. Towards that end, rather
-drastic technical and economical changes are needed for this proposal as
+On top of the direct appreciation of aforementioned fairness, this proposal
+also obsoletes both the existing block-wide CU limit and the account-write CU
+limit to overcome their inherent unfairness and problems. Towards that end,
+rather drastic technical and economical changes are needed for this proposal as
 described below.
 
 ## Detailed Design
