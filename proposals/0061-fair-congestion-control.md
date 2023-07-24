@@ -40,12 +40,12 @@ obvious base fee manipulation with such short intervals.
 
 This proposal tries to localize congestions by means of increasing minimum
 required `cu_price`s for each write-locked addresses (= `base_cu_price`), which
-is newly introduced by this proposal. This increase will be done exponentially
-measured by the CU consumed by each addresses at the moment. This means a
-transaction must cost the sum of `requested_cu * base_cu_price` for all of its
-write-locked addresses at least. This results in selectively pricing out
-crowded subset of transactions waiting for block inclusion, while allowing
-other transactions to be processed for block inclusion.
+is newly introduced by this proposal. This increase will be calculated
+exponentially, measured by the CU consumed by each addresses at the moment.
+This means a transaction must cost the sum of `requested_cu * base_cu_price`
+for all of its write-locked addresses at least. This results in selectively
+pricing out crowded subset of transactions waiting for block inclusion, while
+allowing other transactions to be processed for block inclusion.
 
 In this way, under-capitalized usage demand like spl-token transfers among
 wallets will still find its way for _timely_ block inclusion, accomplishing
