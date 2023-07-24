@@ -348,6 +348,14 @@ Non-conforming validators could send out wrong `RestartLastVotedForkSlots` and
 `RestartHeaviestFork` messages to mess with `cluster restart`s, these should be
 included in the Slashing rules in the future.
 
+### Discarding oscillating votes
+Non-conforming validators could change their last votes back and forth, this
+could lead to instability in the system. Considering that during an outage, an
+operator could find out that wrong info was sent out and try to correct it. We
+allow `RestartLastVotedForkSlots` be changed 3 times, after that all updates
+from the validator with the same pubkey will be simply ignored. We allow
+`RestartHeaviestFork` to change until the validator exits `wen restart phase`.
+
 ## Backwards Compatibilityz
 
 This change is backward compatible with previous versions, because validators
