@@ -68,7 +68,7 @@ address base fee:
 reserve <=> reward
 requested <=> required
 
-## High-Level Description with Example
+## High-Level Description
 
 This proposal tries to localize congestions by means of increasing minimum
 required `cu_price`s for each write-locked addresses, which is newly introduced
@@ -90,10 +90,11 @@ Also, those increased `cu_price`s will be decreased exponentially as soon as
 its address-specific CUs remain to be unchanged due to the temporal stalemate
 of relevant transaction processing.
 
-On top of the direct appreciation of fairness in congestion control for heavily
-write-locked addresses, this proposal also obsoletes both the existing
-block-wide CU limit and the account-write CU limit to overcome their inherent unfair ness
-
+On top of the direct appreciation of fairness, this proposal also obsoletes
+both the existing block-wide CU limit and the account-write CU limit to
+overcome their inherent unfairness and problems. Towards that end, rather
+drastic technical and economical changes are needed for this proposal as
+described below.
 
 ## Detailed Design
 
