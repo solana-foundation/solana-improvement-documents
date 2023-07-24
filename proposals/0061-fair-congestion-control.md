@@ -81,9 +81,9 @@ other transactions to be processed for block inclusion.
 
 In this way, under-capitalized usage demand like spl-token transfers among
 wallets will still find its way for timely block inclusion, accomplishing this
-mechanism's advertised _fairness_ even at the time of unrelated financial
-market's volatility, which entices well-capitalized usage demand in DeFi
-activities on chain. 
+mechanism's advertised _fairness_ in the sense of each isolated local fee
+markets even at the time of unrelated financial market's volatility, which
+entices well-capitalized usage demand in DeFi activities on chain. 
 
 This rate-limiting gets enforced only when the cluster deemed to be congested.
 Also, those increased `cu_price`s will be decreased exponentially as soon as
