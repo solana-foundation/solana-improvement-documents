@@ -68,7 +68,7 @@ address base fee:
 reserve <=> reward
 requested <=> required
 
-## High-Level Description
+## Overview of the Design
 
 This proposal tries to localize congestions by means of increasing minimum
 required `cu_price`s for each write-locked addresses, which is newly introduced
