@@ -34,40 +34,6 @@ obvious base fee manipulation with such short intervals.
   auction can't guarantee the scheduling deadline of casual payment txes (which
   needs 99.99% sub-second confirmation at very minimum).
 
-## Alternatives Considered
-
-Related proposals:
-
-(TODO: add any relation of this to them)
-
-dynamic base fees
-https://github.com/solana-foundation/solana-improvement-documents/pull/4
-
-program rebatable account write fees:
-https://github.com/solana-foundation/solana-improvement-documents/pull/16
-
-asynchronous program execution:
-https://github.com/solana-foundation/solana-improvement-documents/pull/45
-
-increase prioritization fee:
-https://github.com/solana-foundation/solana-improvement-documents/pull/50
-
-bankless
-https://github.com/solana-foundation/solana-improvement-documents/pull/5
-
-## New Terminology
-
-Is there any new terminology introduced with this proposal?
-
-casual tx:
-fairness:
-block fullness in terms of number of actively-execution threads
-dark/filler tx: 
-tx base fee:
-address base fee:
-reserve <=> reward
-requested <=> required
-
 ## Overview of the Design
 
 This proposal tries to localize congestions by means of increasing minimum
@@ -196,3 +162,38 @@ Why should we not do this?
 
 Does the feature introduce any breaking changes? All incompatibilities and
 consequences should be listed.
+
+## Alternatives Considered
+
+Related proposals:
+
+(TODO: add any relation of this to them)
+
+dynamic base fees
+https://github.com/solana-foundation/solana-improvement-documents/pull/4
+
+program rebatable account write fees:
+https://github.com/solana-foundation/solana-improvement-documents/pull/16
+
+asynchronous program execution:
+https://github.com/solana-foundation/solana-improvement-documents/pull/45
+
+increase prioritization fee:
+https://github.com/solana-foundation/solana-improvement-documents/pull/50
+
+bankless
+https://github.com/solana-foundation/solana-improvement-documents/pull/5
+
+## New Terminology
+
+Is there any new terminology introduced with this proposal?
+
+casual tx:
+fairness:
+block fullness in terms of number of actively-execution threads
+dark/filler tx: 
+tx base fee:
+address base fee:
+reserve <=> reward
+requested <=> required
+
