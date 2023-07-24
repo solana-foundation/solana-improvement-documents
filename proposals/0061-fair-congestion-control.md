@@ -75,9 +75,9 @@ required `cu_price`s for each write-locked addresses, which is newly introduced
 by this proposal. This increase will be done exponentially measured by the CU
 consumed by each addresses at the moment. This means a transaction must cost
 the sum of `requested_cu * base_cu_price` for all of its write-locked addresses
-at least, selectively pricing out crowded subset of transactions waiting for
-block inclusion, while allowing other transactions to be processed for block
-inclusion.
+at least. This results in selectively pricing out crowded subset of
+transactions waiting for block inclusion, while allowing other transactions to
+be processed for block inclusion.
 
 In this way, under-capitalized usage demand like spl-token transfers among
 wallets will still find its way for timely block inclusion, accomplishing this
