@@ -26,6 +26,8 @@ obvious base fee manipulation with such short intervals.
 
 ## Motivation
 
+(still in half-finished...)
+
 - Write lock cu limit is bad (bot can lock out at the very first of block for
   the entire duration of whole blocktime (400ms)
 - Increased Defi activities around any volatile financial markets could starve
