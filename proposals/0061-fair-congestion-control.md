@@ -87,8 +87,8 @@ time of unrelated financial market's volatility, which entices well-capitalized
 usage demand in DeFi activities on chain. 
 
 This rate-limiting gets enforced only when the cluster deemed to be congested,
-meaning no idling block space when not congested. Also, those increased
-`base_cu_price`s will be decreased exponentially as soon as its
+meaning no idling block space is wasted when not congested. Also, those
+increased `base_cu_price`s will be decreased exponentially as soon as its
 address-specific CUs remain to be unchanged due to the temporal stalemate of
 relevant transaction processing. Collectively, each addresses get equal amount
 of opportunity to execute transactions in round-robin fashion, assuming no
