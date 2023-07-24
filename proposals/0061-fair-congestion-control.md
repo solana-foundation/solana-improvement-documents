@@ -49,18 +49,19 @@ other transactions to be processed for block inclusion.
 
 In this way, under-capitalized usage demand like spl-token transfers among
 wallets will still find its way for _timely_ block inclusion, accomplishing
-this mechanism's advertised _fairness_ in the sense of blockspace and
-transaction fee isolation for each independent local fee markets even at the
-time of unrelated financial market's volatility, which entices well-capitalized
-usage demand in DeFi activities on chain. 
+this mechanism's advertised _fairness_ in the sense of blockspace allocation
+and transaction fee isolation for each independent local fee markets even at
+the time of unrelated financial market's volatility, which entices
+well-capitalized usage demand in DeFi activities on chain. 
 
 This rate-limiting gets enforced only when the cluster deemed to be congested,
 meaning no idling block space is wasted when not congested. Also, those
-increased `base_cu_price`s will be decreased exponentially as soon as its
-address-specific CUs remain to be unchanged due to the temporal stalemate of
-relevant transaction processing. Collectively, each addresses get equal amount
-of opportunity to execute transactions in round-robin fashion, assuming no
-priority-fee premium is paid to interrupt the orderly processing.
+increased `base_cu_price`s will be decreased exponentially in terms of consumed
+CUs in a block, as soon as its address-specific CUs remain to be unchanged due
+to the temporal stalemate of relevant transaction processing. Collectively,
+each addresses get equal amount of opportunity to execute transactions in
+round-robin fashion, assuming no priority-fee premium is paid to interrupt the
+orderly processing.
 
 On top of the direct appreciation of fairness, this proposal also obsoletes
 both the existing block-wide CU limit and the account-write CU limit to
