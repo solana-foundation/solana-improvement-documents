@@ -78,21 +78,55 @@ high-achieving objective, rather drastic technical and economical changes are
 needed for the introduction of this consensus-level congestion control as
 described below in detail.
 
-## Example
+## Detailed Design
 
-For simplicity, assume all transactions request 100k CU and always succeed after consuming 100k CU.
+### Introductory example
 
-Available transactions for block inclusion:
+Due to this proposal's inherent complexities, the following very-simplified
+example is presented at first before diving into each design topic:
 
-- `Tx1_AB@9` (read: transaction numbered as `1`, which write-locks address `A` and `B` with `cu_price == 9`)
+Assume all transactions request 100k CU and always succeed after consuming 100k
+CU. Also assume the cluster is always congested.
+
+Available transactions for block inclusion (= `bufferd transactions`):
+
+- `Tx1_AB@9` (read: transaction numbered as `1`, which write-locks both address `A`
+  and address `B` with `cu_price == 9`)
 - `Tx2_A@8`
 - `Tx3_C@8`
 
 (1) 
 
-## Detailed Design
+#### update freq
+
+why block interval is bad?
+  this proposal's primary objective is for congestion control, not like EIP 1559's price discovery
+  so non-interactiveness is desired for little or no room of active auctioning
+  so, quick and acute is desired much like tcp's rwin.
 
 ### Incentive alignment
+
+
+
+
+
+
+### `base_cu_price` Calculation and block reward adjustment
+
+processing model is transactions are linearized by the order of appearance in ledger entries.
+
+### `reserved_fee` calculation and its accruing
+
+
+### Congestion Detection
+
+thread count
+
+
+### Nonconflicting transaction group
+
+
+
 
 
 
@@ -220,4 +254,5 @@ tx base fee:
 address base fee:
 reserve <=> reward
 requested <=> required
+buffered
 
