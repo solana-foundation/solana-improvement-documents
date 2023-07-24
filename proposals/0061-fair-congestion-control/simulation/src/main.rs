@@ -1,5 +1,6 @@
-#![feature(adt_const_params)]
 #![allow(incomplete_features)]
+#![feature(adt_const_params)]
+#![feature(const_float_bits_conv)]
 
 use std::cmp::Ordering::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -87,6 +88,7 @@ struct Policy {
     congestion_threshold: usize,
     recent_tx_count: usize,
     maximum_thread_count: usize,
+    exponential_rate: u64, // can't directly use f64 yet in consts...
 }
 
 impl Policy {
@@ -95,6 +97,7 @@ impl Policy {
             congestion_threshold: 0,
             recent_tx_count: 5,
             maximum_thread_count: 5,
+            exponential_rate: 2_f64.to_bits(),
         }
     }
 
@@ -111,6 +114,10 @@ impl Policy {
     const fn maximum_thread_count(mut self, maximum_thread_count: usize) -> Self {
         self.maximum_thread_count = maximum_thread_count;
         self
+    }
+
+    fn exponential_rate(&self) -> f64 {
+        f64::from_bits(self.exponential_rate)
     }
 }
 
@@ -253,12 +260,12 @@ impl<const POLICY: Policy> BaseFeeTracker<POLICY> {
     }
 
     fn heat_up(&self, fee_rate: u64, cu: u64) -> u64 {
-        let factor = 2_f64.powf(cu as f64 / CU_TO_POWER);
+        let factor = POLICY.exponential_rate().powf(cu as f64 / CU_TO_POWER);
         (fee_rate as f64 * factor) as u64
     }
 
     fn cool_down(&self, fee_rate: u64, cu: u64) -> u64 {
-        let factor = 2_f64.powf(
+        let factor = POLICY.exponential_rate().powf(
             cu as f64
                 / self.nonconflicting_group_count.saturating_sub(1).max(1) as f64
                 / CU_TO_POWER,
