@@ -68,21 +68,31 @@ address base fee:
 reserve <=> reward
 requested <=> required
 
-## High-Level Design with Example
+## High-Level Description with Example
 
 This proposal tries to localize congestions by means of increasing minimum
-required `cu_price`s for each write-locked addresses. This increase will be
-done exponentially measured by the consumed CU by each addresses at the moment.
-This means a transaction at least must cost the sum of `requested_cu *
-base_cu_price` for all of its write-locked addresses.
-
-This results in pricing out crowded subset of transactions waiting for block
-inclusion, while allowing other transactions to be processed for block
+required `cu_price`s for each write-locked addresses, which is newly introduced
+by this proposal. This increase will be done exponentially measured by the CU
+consumed by each addresses at the moment. This means a transaction must cost
+the sum of `requested_cu * base_cu_price` for all of its write-locked addresses
+at least, selectively pricing out crowded subset of transactions waiting for
+block inclusion, while allowing other transactions to be processed for block
 inclusion.
 
-This rate-limiting gets enforced, only when the cluster deemed to
-be congested. Also, those increased `cu_price` will be decreased 
+In this way, under-capitalized usage demand like spl-token transfers among
+wallets will still find its way for timely block inclusion, accomplishing this
+mechanism's advertised _fairness_ even at the time of unrelated financial
+market's volatility, which entices well-capitalized usage demand in DeFi
+activities on chain. 
 
+This rate-limiting gets enforced only when the cluster deemed to be congested.
+Also, those increased `cu_price`s will be decreased exponentially as soon as
+its address-specific CUs remain to be unchanged due to the temporal stalemate
+of relevant transaction processing.
+
+On top of the direct appreciation of fairness in congestion control for heavily
+write-locked addresses, this proposal also obsoletes both the existing
+block-wide CU limit and the account-write CU limit to overcome their inherent unfair ness
 
 
 ## Detailed Design
