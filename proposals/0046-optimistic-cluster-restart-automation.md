@@ -357,6 +357,22 @@ allow `RestartLastVotedForkSlots` be changed 3 times, after that all updates
 from the validator with the same pubkey will be simply ignored. We allow
 `RestartHeaviestFork` to change until the validator exits `wen restart phase`.
 
+### Handling multiple epochs
+
+Even though it's not very common that an outage happens across an epoch
+boundary, we do need to prepare for this rare case. Because the main purpose
+of `wen restart` is to make everyone reach aggrement, the following choices
+are made:
+
+* Every validator only handles 2 epochs, any validator will discard slots
+which belong to an epoch which is > 1 epoch away from its root. If a validator
+has very old root so it can't proceed, it will exit and report error.
+
+* The stake weight of each slot is calculated using the epoch the slot is in.
+If a validator is missing epoch stakes for a new epoch, it will use the epoch
+stakes of its root to approximate the results, and update all calculation once
+the first bank has been accepted in the new epoch.
+
 ## Backwards Compatibilityz
 
 This change is backward compatible with previous versions, because validators
