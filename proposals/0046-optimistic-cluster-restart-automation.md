@@ -373,6 +373,10 @@ If a validator is missing epoch stakes for a new epoch, it will use the epoch
 stakes of its root to approximate the results, and update all calculation once
 the first bank has been accepted in the new epoch.
 
+* When calculating cluster wide threshold (e.g. how many validators are in the
+restart), use the stake weight in the new Epoch. If there is no bank in the new
+Epoch yet, use old Epoch stakes to approximate and update later.
+
 ## Backwards Compatibilityz
 
 This change is backward compatible with previous versions, because validators
