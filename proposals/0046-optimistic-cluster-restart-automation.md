@@ -375,8 +375,8 @@ the first bank has been accepted in the new epoch.
 
 * When calculating cluster wide threshold (e.g. how many validators are in the
 restart), use the stake weight of the slot selected in `RestartHeaviestFork`.
-If there is no bank in the new Epoch or no slot has been selected yet, use
-Epoch stakes of local root bank to approximate and update later.
+If no slot has been selected yet, use Epoch stakes of local root bank to
+approximate and update later.
 
 * The `stake_committed_percent` in `RestartHeaviestFork` should always be
 calculated using the stakes on the selected slot.
