@@ -309,13 +309,10 @@ cluster unable to reach consensus. So bank hash needs to be checked as well.
 
 * The voted slot is equal or a child of local optimistically confirmed slot.
 
-If all checks pass, the validator immediately starts generation of snapshot at
-the agreed upon `cluster restart slot`.
+If all checks pass, the validator immediately starts setting root and
+generating an incremental snapshot at the agreed upon `cluster restart slot`.
 
-While the snapshot generation is in progress, the validator also checks to see
-whether a full two minutes interval passed since agreement had been reached,
-to guarantee its `RestartHeaviestFork` message propagates to everyone, and
-whether the snapshot generation is complete. When above checks pass, it then
+After the snapshot generation is complete, and above checks pass, it then
 proceeds to issue a hard fork at the designated slot and change shred version
 in gossip. After that it restarts into the normal (non-restart) state.
 
