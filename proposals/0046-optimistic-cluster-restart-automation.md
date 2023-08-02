@@ -378,7 +378,7 @@ approximate and update later.
 * The `stake_committed_percent` in `RestartHeaviestFork` should always be
 calculated using the stakes on the selected slot.
 
-## Backwards Compatibilityz
+## Backwards Compatibility
 
 This change is backward compatible with previous versions, because validators
 only enter the new mode during new restart mode which is controlled by a
