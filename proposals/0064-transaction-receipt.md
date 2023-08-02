@@ -131,7 +131,6 @@ The transaction receipt must contain the following information related to the tr
 
 - Signature
 - Execution Status
-- Logs
 
 The receipt would be a structure defined as:
 
@@ -139,22 +138,8 @@ The receipt would be a structure defined as:
 pub struct Receipt{
     pub signature: [u8;64],
     pub status: u8 // 1 or 0 would determine the post execution status
-    pub logs: Vec<String> 
 }
 ```
-
-The logs are important to verify the stakeweights of validators,
-[SIMD-0056](https://github.com/solana-foundation/solana-improvement-documents/pull/56)
-introduces a program that provides on-chain access to validator stake weights.
-This is important for light clients to verify that the validators that vote on a
-certain block have greater than X% stake. To achieve this, the client sends a transaction
-that logs the stake weights, it then requests for a proof from the receipt
-to the bankhash. We can do this because the receipt includes the logs and the validators
-vote on the bankhash.
-
-Due to performance and compute concerns the log messages would be truncated,
-we can make this limit dynamic and charge more CU for more longer logs but that would
-be a separate change.
 
 ### Receipt Tree Specification
 
