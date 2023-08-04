@@ -263,26 +263,46 @@ We use a new gossip message `RestartHeaviestFork`, its fields are:
 it received `RestartHeaviestFork` messages from.
 
 After receiving `RestartLastVotedForkSlots` from the validators holding stake
-more than `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have" category,
-replay all blocks and pick the heaviest fork as follows:
+more than `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have"
+category, replay all blocks and pick the heaviest fork by traversing from
+local root like this:
 
-1. For all blocks with more than 67% stake in `RestartLastVotedForkSlots`
-   messages, they must be on the heaviest fork.
+1. If a block has more than 67% stake in `RestartLastVotedForkSlots`
+   messages, traverse down this block.
 
-2. If a picked block has more than one child, check if the heaviest child
-   should be picked using the following rule:
+2. Define the "must have" threshold to be 62%. If traversing to a block with
+   more than one child, we check for each child `vote_on_child + stake_on_validators_not_in_restart >= 62%`. If so, traverse to the child.
 
-   1. If vote_on_child + stake_on_validators_not_in_restart >= 62%, pick child.
-      For example, if 80% validators are in restart, child has 42% votes, then
-      42 + (100-80) = 62%, pick child. 62% is chosen instead of 67% because 5%
-      could make the wrong votes.
+   For example, if 80% validators are in restart, child has 42% votes, then
+   42 + (100-80) = 62%, traverse to this child. 62% is chosen instead of 67%
+   because 5% could make the wrong votes.
 
-   It's okay to use 62% here because the goal is to prevent false negative
-   rather than false positive. If validators pick a child of optimistically
-   confirmed block to start from, it's okay because if 80% of the validators
-   all choose this block, this block will be instantly confirmed on the chain.
+   Otherwise stop traversing the tree and use last visited block.
 
-   2. Otherwise stop traversing the tree and use last picked block.
+To see why the above algorithm is safe, assuming one block X is optimistically
+confirmed before the restart, we prove that it will always be either the block
+picked or the ancestor of the block picked.
+
+Assume X is not picked, then:
+
+1. If its parent Y is on the Heaviest fork, then either a sibling of X is
+   chosen or no child of Y is chosen. In either case
+   vote_on_X + stake_on_validators_not_in_restart < 62%, otherwise X would be
+   picked. This contradicts with the fact X got 67% votes before the restart,
+   because vote_on_X should have been greater than
+   67% - 5% (non-conforming) - stake_on_validators_not_in_restart.
+
+2. If its parent Y is also not on the Heaviest fork, Y should have got > 67%
+   of the votes before the restart as well, then we can apply the same
+   reasoning to Y's parent, until we find an ancestor which is on the Heaviest
+   fork, then the contradiction in previous paragraph applies.
+
+In some cases, we might pick a child with less than 67% votes before the
+restart. Say a block X has child A with 43% votes and child B with 42% votes,
+child A will be picked as the restart slot. Note that block X which has more
+than 43% + 42% = 85% votes is the ancestor of the picked restart slot, so the
+constraint that optimistically confirmed block never gets rolled back is
+satisfied.
 
 After deciding heaviest block, gossip
 `RestartHeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X is
