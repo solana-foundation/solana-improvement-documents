@@ -271,7 +271,9 @@ local root like this:
    messages, traverse down this block.
 
 2. Define the "must have" threshold to be 62%. If traversing to a block with
-   more than one child, we check for each child `vote_on_child + stake_on_validators_not_in_restart >= 62%`. If so, traverse to the child.
+   more than one child, we check for each child
+   `vote_on_child + stake_on_validators_not_in_restart >= 62%`. If so, traverse
+   to the child.
 
    For example, if 80% validators are in restart, child has 42% votes, then
    42 + (100-80) = 62%, traverse to this child. 62% is chosen instead of 67%
