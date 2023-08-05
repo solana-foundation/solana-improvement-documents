@@ -1,10 +1,9 @@
 ---
 simd: '0052'
-title: Adding receipt root to Bankhash
+title: Adding Receipt Root to Bankhash
 authors:
   - Anoushk Kharangate (Tinydancer)
   - Harsh Patel (Tinydancer)
-  - Richard Patel (Jump Firedancer)
 category: Standard
 type: Core
 status: Draft
@@ -55,12 +54,12 @@ We propose two new changes:
 1) The receipt data structure and the receipt merkle tree which is formally
    defined in this [SIMD]([https://github.com/tinydancer-io/solana-improvement-documents](https://github.com/tinydancer-io/solana-improvement-documents/blob/transaction-receipt/proposals/0064-transaction-receipt.md))
 
-```rust
-  pub struct Receipt {
-    pub signature: [u8; 64],
-    pub status: u8,
-  }
-```
+   ```rust
+   pub struct Receipt {
+      pub signature: [u8; 64],
+      pub status: u8,
+   }
+   ```
 
 2) Add a transaction receipt root to the bankhash calculation where the receipt
    root is the root of the merkle tree of receipts. This root would be a sha256
@@ -68,15 +67,15 @@ We propose two new changes:
    Specifically it will be a 32 byte array. The receipt root would be added to
    the bankhash as follows:
 
-``` rust
-  let mut hash = hashv(&[
-   self.parent_hash.as_ref(),
-   accounts_delta_hash.0.as_ref(),
-   receipt_root,
-   &signature_count_buf,
-   self.last_blockhash().as_ref(),
-  ]);
-```
+   ``` rust
+   let mut hash = hashv(&[
+      self.parent_hash.as_ref(),
+      accounts_delta_hash.0.as_ref(),
+      receipt_root,
+      &signature_count_buf,
+      self.last_blockhash().as_ref(),
+   ]);
+   ```
 
 Note: The second change would initially be feature gated with a flag and can
 be activated once we have enough stake on the network with this version of the client.
