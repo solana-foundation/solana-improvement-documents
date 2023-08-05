@@ -1,6 +1,6 @@
 ---
 simd: '0052'
-title: Adding Receipt Root to Bankhash
+title: Add Receipt Root to Bankhash
 authors:
   - Anoushk Kharangate (Tinydancer)
   - Harsh Patel (Tinydancer)
