@@ -60,13 +60,6 @@ commitment scheme based on a binary hash tree that is constructed once per slot.
    and distribute a block before replaying said block. It is impossible to
    introduce such a tolerance if receipts are mandatory components of blocks.
 
-3. Construction of receipt commitments should initially be optional to
-   validators.
-   *Rationale:* Enforcing construction of receipt commitments (e.g.
-   by slashing validators that don’t) introduces additional security
-   considerations. The failure domain of additional receipt logic should be
-   isolated in the initial rollout to allow for timely activation.
-
 ## Alternatives Considered
 
 ### Using TransactionStatusMeta
@@ -89,34 +82,21 @@ is a breaking change.
   [TransactionStatusMeta]: https://docs.rs/solana-transaction-status/1.16.1/solana_transaction_status/struct.TransactionStatusMeta.html
   [TransactionResult]: https://docs.rs/solana-sdk/1.16.1/solana_sdk/transaction/type.Result.html
 
-### Bank Hash
-
-An alternative to introducing a new commitment scheme is reusing the bank hash.
-
-When executing transactions, Solana validators only indirectly commit to the
-state changes via the bank hash. Namely, the bank hash commits to all changed
-accounts after replaying a slot using a binary hash tree. However, it does not
-commit to intermediate states during replay.
-
-Redefining the bank hash to use a construction with transaction-level
-granularity is a breaking change. Because construction of the bank hash is
-practically mandatory for validators, it also violates design goal 3.
-
 ### Proof-of-History / Block Hash
 
 Another alternative to introducing a new commitment scheme is reusing the
 proof-of-history (PoH) hash chain. This was proposed in
-[SIMD-0052](https://github.com/solana-foundation/solana-improvement-documents/pull/52).
+[SPV Proposal](https://docs.solana.com/proposals/simple-payment-and-state-verification#transaction-merkle).
 
 The PoH chain currently commits to the signatures of all transactions added to
 the ledger. The consensus layer then periodically votes on the last state of the
 PoH chain for each block (block hash). Expanding the PoH hash is the least
 complex option as of today but is consequential for future upgrades.
 
-Such a change would be incompatible with design goal 2 (and by extension, goal
-3) because it redefines the PoH hash to additionally commit to execution
-results, instead of only ledger content. Block producers are then forced to
-synchronously replay while appending PoH ticks.
+Such a change would be incompatible with design goal 2 because it redefines
+the PoH hash to additionally commit to execution results, instead of only
+ledger content. Block producers are then forced to synchronously replay while
+appending PoH ticks.
 
 Furthermore, it significantly changes behavior in the event of an execution
 disagreement (e.g. due to a difference in execution behavior between
@@ -166,3 +146,35 @@ and R4 are the receipts of transactions 1, 2, 3, and 4. R is the root.
 R1  R2   R3  R4
 
 ```
+
+#### Benchmarks
+
+We have performed benchmarks comparing two merkle tree implementations,
+the benchmark was done on 1 million leaves, each leaf consisted of a 64 byte
+signature and a single byte status.
+
+1) Solana Labs Merkle Tree: This is the pure rust implementation that is currently
+   used by the Solana Labs client.
+   More details [Solana labs repository](https://github.com/solana-labs/solana/tree/master/merkle-tree)
+2) Firedancer binary merkle tree (bmtree): Implemented in C and uses firedancer's
+   optimised SHA-256 implementation as it's hashing algorithm. However the benchmarks
+   were performed using its rust FFI bindings.
+   More details: [Firedancer](https://github.com/firedancer-io/firedancer/tree/main/src/ballet/bmtree)
+   ![Benchamrk Results](https://github.com/tinydancer-io/solana-improvement-documents/assets/50767810/6c8d0013-1d62-4c7b-8264-4ec71ea28d7c)
+
+More details with an attached flamegraph can be found in our [repository](https://github.com/tinydancer-io/merkle-bench).
+
+## Security Considerations
+
+As defined in the specification for merkle tree by the Firedancer team:
+
+No practical collision attacks against SHA-256 are known as of Oct 2022.
+
+Collision resistance is vital to ensure that the graph of nodes remains acyclic
+and that each hash unambiguously refers to one logical node.
+
+[Link to the specification](https://github.com/solana-foundation/specs/blob/main/core/merkle-tree.md)
+
+## Backwards Compatibility
+
+Not applicable.
