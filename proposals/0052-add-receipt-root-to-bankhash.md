@@ -4,6 +4,7 @@ title: Add Receipt Root to Bankhash
 authors:
   - Anoushk Kharangate (Tinydancer)
   - Harsh Patel (Tinydancer)
+  - x19
 category: Standard
 type: Core
 status: Draft
