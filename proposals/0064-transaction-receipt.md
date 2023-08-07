@@ -129,23 +129,57 @@ byte hash of the Receipt data structure.
 We construct a deterministic tree over a list of Receipts per slot. The tree
 needs to be strictly deterministic as any other cryptographic primitive to
 ensure that trees are exactly identical when individually constructed by
-different nodes. For membership proofs and inclusion checks one should be
+different nodes. The order of the leaves should match the order of the list
+of receipts. For membership proofs and inclusion checks one should be
 able to provide a path from the leaf node (Receipt) to the root of the tree.
 The locally computed root is compared for equality.
 
 ```txt
-Receipt tree with four receipts as leaf nodes [R1, R2, R3, R4] where R1, R2, R3 
-and R4 are the receipts of transactions 1, 2, 3, and 4. R is the root.
+Receipt tree with four receipts as leaf nodes [L0, L1, L2, L3]
+where R0, R1, R2, R3 are the receipts and Nγ is the root.
 
-        R
+       Nγ
       /  \
      /    \
-   Ri      Ri'
+   Nα      Nβ
   / |     / \
  /  |    /   \
-R1  R2   R3  R4
+L0  L1   L2  L3
 
+L0 := sha256(concat(0x00, R0))
+L1 := sha256(concat(0x00, R1))
+L2 := sha256(concat(0x00, R2))
+L3 := sha256(concat(0x00, R3))
+Nα := sha256(concat(0x01, hash(L0), hash(L1)))
+Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
+Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
+
+
+Receipt tree with five receipts as leaf nodes [L0, L1, L2, L3, L4]
+where R0, R1, R2, R3 are the receipts and Nζ is the root.
+          Nζ
+         /  \
+        /    \
+       Nδ     Iε
+      /  \     \\
+     /    \     \\
+   Nα      Nβ    Nγ
+  /  \    /  \   ||
+ L0  L1  L2  L3  L4
+
+L0 := sha256(concat(0x00, R0))
+L1 := sha256(concat(0x00, R1))
+L2 := sha256(concat(0x00, R2))
+L3 := sha256(concat(0x00, R3))
+L4 := sha256(concat(0x00, R4))
+Nα := sha256(concat(0x01, hash(L0), hash(L1)))
+Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
+Nγ := sha256(concat(0x01, hash(L4), hash(L4)))
+Nδ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
+Nζ := sha256(concat(0x01, hash(Nδ), hash(Iε)))
 ```
+
+[Link to the specification](https://github.com/solana-foundation/specs/blob/main/core/merkle-tree.md)
 
 #### Benchmarks
 
@@ -166,14 +200,16 @@ More details with an attached flamegraph can be found in our [repository](https:
 
 ## Security Considerations
 
-As defined in the specification for merkle tree by the Firedancer team:
+We prepend 0x0 to leaf nodes and 0x1 to internal nodes to avoid second
+preimage attacks where a proof is provided with internal nodes as leaf nodes.
+
+Security considerations defined in the merkle tree specification
+by the Firedancer team:
 
 No practical collision attacks against SHA-256 are known as of Oct 2022.
 
 Collision resistance is vital to ensure that the graph of nodes remains acyclic
 and that each hash unambiguously refers to one logical node.
-
-[Link to the specification](https://github.com/solana-foundation/specs/blob/main/core/merkle-tree.md)
 
 ## Backwards Compatibility
 
