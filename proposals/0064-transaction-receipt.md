@@ -9,6 +9,7 @@ category: Standard
 type: Core
 status: Draft
 created: 2023-06-20
+feature: (fill in with feature tracking issues once accepted)
 ---
 
 ## Summary
@@ -17,6 +18,13 @@ This proposal introduces two new concepts to the Solana runtime.
 
 - Receipts, a deterministic encoding of state changes induced by a transaction;
 - The receipt tree, a commitment scheme over all transaction receipts in a slot.
+  
+## New Terminology
+
+Receipt: A deterministic encoding of state changes induced by a transaction that
+includes the status and signature of the transaction.
+
+Receipt Tree: A commitment scheme over all transaction receipts in a slot.
 
 ## Motivation
 
@@ -46,7 +54,7 @@ malleability.
 To succinctly detect receipt mismatches, this proposal further introduces a
 commitment scheme based on a binary hash tree that is constructed once per slot.
 
-## Design Goals
+### Design Goals
 
 1. Receipts should be deterministic.
    Given a transaction T and ledger history leading up to it, serializing the
@@ -204,6 +212,12 @@ signature and a single byte status.
    ![Benchamrk Results](https://github.com/tinydancer-io/solana-improvement-documents/assets/50767810/6c8d0013-1d62-4c7b-8264-4ec71ea28d7c)
 
 More details with an attached flamegraph can be found in our [repository](https://github.com/tinydancer-io/merkle-bench).
+
+## Impact
+
+This would enable SIMD-0052 to be implemented where we add the receipt root
+to the bankhash. This would allow users to verify their transaction validity
+and status without trusting the RPC.
 
 ## Security Considerations
 
