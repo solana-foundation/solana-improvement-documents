@@ -1,5 +1,5 @@
 ---
-simd: '0042'
+simd: '0065'
 title: Fraud Proofs for SVM
 authors:
   - Anatoly Yakovenko
