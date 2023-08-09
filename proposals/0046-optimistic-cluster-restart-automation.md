@@ -274,7 +274,9 @@ See each step explained in details below.
    local root like this:
 
    1. If a block has more than 67% stake in `RestartLastVotedForkSlots`
-   messages, traverse down this block.
+   messages, traverse down this block. Note that votes for children do count
+   towards the parent. So being a parent on the chosen fork means the parent
+   will not be rolled back either.
 
    2. Define the "must have" threshold to be 62%. If traversing to a block with
    more than one child, we check for each child
@@ -300,10 +302,10 @@ See each step explained in details below.
    because vote_on_X should have been greater than
    67% - 5% (non-conforming) - stake_on_validators_not_in_restart.
 
-   2. If its parent Y is also not on the Heaviest fork, Y should have got > 67%
-   of the votes before the restart as well, then we can apply the same
-   reasoning to Y's parent, until we find an ancestor which is on the Heaviest
-   fork, then the contradiction in previous paragraph applies.
+   2. If its parent Y is also not on the Heaviest fork, all ancestors of X
+   should have > 67% of the votes before restart. We should be able to find
+   the last ancestor of X on the Heaviest fork, then contradiction in previous
+   paragraph applies.
 
    In some cases, we might pick a child with less than 67% votes before the
    restart. Say a block X has child A with 43% votes and child B with 42%
