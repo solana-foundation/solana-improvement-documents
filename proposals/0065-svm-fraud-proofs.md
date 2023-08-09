@@ -22,8 +22,10 @@ malicious activity.
 
 With fraud proofs, honest participants in the network will be able
 to construct and gossip a fraud proof that can be easily verified
-in a browser that prooves that the majority is faulty.  Once the
-fraud proof is detected, clients can disconnect from the cluster.
+in a browser that proves that the majority is faulty.  Once the
+fraud proof is detected, clients can disconnect from the cluster,
+majority could be deterministically slashed by honest nodes on
+restart.
 
 ## Alternatives Considered
 
@@ -39,11 +41,19 @@ that finalize the transaction.
 
 ### SPV Inclusion Criteria
 
-1. The account hash for every input account (both read and write operations).
-2. The transaction count that led to the generation of that account hash.
+1. The account hash for every input account (both read and write
+operations).
+
+2. The transaction count that led to the generation of that account
+hash.
+
 3. The current transaction count.
+
 4. The outcome or result of the transaction.
-5. Sysvars and syscalls that read state must also track their changes wrt transaction count.
+
+5. Sysvars and syscalls that read state must also track their changes
+wrt transaction count.
+
 6. Sysvar and syscall state must also be merkelized into the SPV
 
 ### Validation Mechanism
