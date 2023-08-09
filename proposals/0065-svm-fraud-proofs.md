@@ -39,11 +39,12 @@ that finalize the transaction.
 
 ### SPV Inclusion Criteria
 
-zsh:1: command not found: fm
 1. The account hash for every input account (both read and write operations).
 2. The transaction count that led to the generation of that account hash.
 3. The current transaction count.
 4. The outcome or result of the transaction.
+5. Sysvars and syscalls that read state must also track their changes wrt transaction count.
+6. Sysvar and syscall state must also be merkelized into the SPV
 
 ### Validation Mechanism
 
