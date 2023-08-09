@@ -153,124 +153,130 @@ See each step explained in details below.
 
 1. **gossip last vote and ancestors on that fork**
 
-The main goal of this step is to propagate most recent ancestors on the last
-voted fork to all others in restart.
+   The main goal of this step is to propagate most recent ancestors on the last
+   voted fork to all others in restart.
 
-We use a new gossip message `RestartLastVotedForkSlots`, its fields are:
+   We use a new gossip message `RestartLastVotedForkSlots`, its fields are:
 
-* `last_voted_slot`: `u64` the slot last voted, this also serves as last_slot
-for the bit vector.
-* `last_voted_hash`: `Hash` the bank hash of the slot last voted slot.
-* `ancestors`: `BitVec<u8>` compressed bit vector representing the slots on
-sender's last voted fork. the most significant bit is always
-`last_voted_slot`, least significant bit is `last_voted_slot-81000`.
+   * `last_voted_slot`: `u64` the slot last voted, this also serves as
+   last_slot for the bit vector.
+   * `last_voted_hash`: `Hash` the bank hash of the slot last voted slot.
+   * `ancestors`: `BitVec<u8>` compressed bit vector representing the slots on
+   sender's last voted fork. the most significant bit is always
+   `last_voted_slot`, least significant bit is `last_voted_slot-81000`.
 
-The number of ancestor slots sent is hard coded at 81000, because that's
-400ms * 81000 = 9 hours, we assume that optimistic confirmation must halt
-within 81k slots of the last confirmed block. If a validator restarts after 9
-hours past the outage, it cannot join the restart this way. If enough
-validators failed to restart within 9 hours, then we fallback to the manual,
-interactive `cluster restart` method.
+   The number of ancestor slots sent is hard coded at 81000, because that's
+   400ms * 81000 = 9 hours, we assume that optimistic confirmation must halt
+   within 81k slots of the last confirmed block. If a validator restarts after
+   9 hours past the outage, it cannot join the restart this way. If enough
+   validators failed to restart within 9 hours, then we fallback to the manual,
+   interactive `cluster restart` method.
 
-When a validator enters restart, it uses `wen restart shred version` to avoid
-interfering with those outside the restart. There is a slight chance that 
-the `wen restart shred version` would collide with the shred version after
-the `wen restart phase`, but even if this rare case occurred, we plan to
-flush gossip after successful restart so it should not be a problem.
+   When a validator enters restart, it uses `wen restart shred version` to
+   avoid interfering with those outside the restart. There is a slight chance
+   that the `wen restart shred version` would collide with the shred version
+   after the `wen restart phase`, but even if this rare case occurred, we plan
+   to flush gossip after successful restart so it should not be a problem.
 
-To be extra cautious, we will also filter out `RestartLastVotedForkSlots` and
-`RestartHeaviestFork` in gossip if a validator is not in `wen restart phase`.
+   To be extra cautious, we will also filter out `RestartLastVotedForkSlots`
+   and `RestartHeaviestFork` in gossip if a validator is not in
+   `wen restart phase`.
 
 2. **Repair ledgers up to the restart slot**
 
-The main goal of this step is to repair all blocks which could potentially be
-optimistically confirmed.
+   The main goal of this step is to repair all blocks which could potentially
+   be optimistically confirmed.
 
-We need to prevent false negative at all costs, because we can't rollback an 
-`optimistically confirmed block`. However, false positive is okay. Because when
-we select the heaviest fork in the next step, we should see all the potential 
-candidates for optimistically confirmed slots, there we can count the votes and
-remove some false positive cases.
+   We need to prevent false negative at all costs, because we can't rollback an
+   `optimistically confirmed block`. However, false positive is okay. Because
+   when we select the heaviest fork in the next step, we should see all the
+   potential candidates for optimistically confirmed slots, there we can count
+   the votes and remove some false positive cases.
 
-However, it's also overkill to repair every block presented by others. When
-`RestartLastVotedForkSlots` messages are being received and aggregated, a
-validator can categorize blocks missing locally into 2 categories: must-have
-and ignored. Depending on the stakes of validators currently in restart, some
-slots with too few stake can be safely ignored, while others will be repaired.
+   However, it's also overkill to repair every block presented by others. When
+   `RestartLastVotedForkSlots` messages are being received and aggregated, a
+   validator can categorize blocks missing locally into 2 categories: must-have
+   and ignored. Depending on the stakes of validators currently in restart,
+   some slots with too few stake can be safely ignored, while others will be
+   repaired.
 
-In the following analysis, we assume:
+   In the following analysis, we assume:
 
-* `RESTART_STAKE_THRESHOLD` is 80%
-* `MALICIOUS_SET` which is validators which can disobey the protocol, is 5%.
+   * `RESTART_STAKE_THRESHOLD` is 80%
+   * `MALICIOUS_SET` which is validators which can disobey the protocol, is 5%.
    For example, these validators can change their votes from what they
    previously voted on.
-* `OPTIMISTIC_CONFIRMED_THRESHOLD` is 67%, which is the percentage of stake
+   * `OPTIMISTIC_CONFIRMED_THRESHOLD` is 67%, which is the percentage of stake
    required to be a `optimistically confirmed block`.
 
-At any point in restart, let's call percentage of validators not in restart
-`PERCENT_NOT_IN_RESTART`. We can draw a line at
-`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`.
+   At any point in restart, let's call percentage of validators not in restart
+   `PERCENT_NOT_IN_RESTART`. We can draw a line at
+   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET`
+    - `PERCENT_NOT_IN_RESTART`.
 
-Any slot above this line should be repaired, while other slots can be ignored
-for now. But if
-`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
-is less than 10%, then the validators don't have to start any repairs. Because
-the signal now is too noisy.
+   Any slot above this line should be repaired, while other slots can be
+   ignored for now. But if
+   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` -
+   `PERCENT_NOT_IN_RESTART` is less than 10%, then the validators don't have to
+   start any repairs. Because the signal now is too noisy.
 
-We obviously want to repair all blocks above `OPTIMISTIC_CONFIRMED_THRESHOLD`
-before the restart. The validators in `MALICIOUS_SET` could lie about their
-votes, so we need to be conservative and lower the line accordingly. Also,
-we don't know what the validators not in restart have voted, so we need to
-be even more conservative and assume they voted for this block. Being
-conservative means we might repair blocks which we didn't need, but we will
-never miss any block we should have repaired.
+   We obviously want to repair all blocks above
+   `OPTIMISTIC_CONFIRMED_THRESHOLD` before the restart. The validators in
+   `MALICIOUS_SET` could lie about their votes, so we need to be conservative
+   and lower the line accordingly. Also, we don't know what the validators not
+   in restart have voted, so we need to be even more conservative and assume
+   they voted for this block. Being conservative means we might repair blocks
+   which we didn't need, but we will never miss any block we should have
+   repaired.
 
-Next we illustrate the system behavior using concrete numbers:
+   Next we illustrate the system behavior using concrete numbers:
 
-* 5% validators in restart: `PERCENT_NOT_IN_RESTART` is 100% - 5% = 95%.
-`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
-= 67% - 5% - 95% < 10%, so no validators would repair any block.
+   * 5% validators in restart: `PERCENT_NOT_IN_RESTART` is 100% - 5% = 95%.
+   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` -
+   `PERCENT_NOT_IN_RESTART` = 67% - 5% - 95% < 10%, so no validators would
+   repair any block.
 
-* 70% validators in restart: `PERCENT_NOT_IN_RESTART` is 100% - 70% = 30%.
-`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
-= 67% - 5% - 30% = 32%, so slots with above 32% votes accumulated from
-`RestartLastVotedForkSlots` would be repaired.
+   * 70% validators in restart: `PERCENT_NOT_IN_RESTART` is 100% - 70% = 30%.
+   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - 
+   `PERCENT_NOT_IN_RESTART` = 67% - 5% - 30% = 32%, so slots with above 32%
+   votes accumulated from `RestartLastVotedForkSlots` would be repaired.
 
-* 80% validators are in restart, `PERCENT_NOT_IN_RESTART` is 100% - 80% = 20%.
-`OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - `PERCENT_NOT_IN_RESTART`
-= 67% - 5% - 20% = 42%, so slots with above 42% votes accumulated from
-`RestartLastVotedForkSlots` would be repaired.
+   * 80% validators are in restart, `PERCENT_NOT_IN_RESTART` is 100% - 80% =
+   20%. `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - 
+   `PERCENT_NOT_IN_RESTART` = 67% - 5% - 20% = 42%, so slots with above 42%
+   votes accumulated from `RestartLastVotedForkSlots` would be repaired.
 
-From above examples, we can see the "must-have" threshold changes dynamically 
-depending on how many validators are in restart. The main benefit is that a
-block will only move from "must-have" to "ignored" as more validators 
-join the restart, not vice versa. So the list of blocks a validator needs to
-repair will never grow bigger when more validators join the restart.
+   From above examples, we can see the "must-have" threshold changes
+   dynamically depending on how many validators are in restart. The main
+   benefit is that a block will only move from "must-have" to "ignored" as more
+   validators join the restart, not vice versa. So the list of blocks a
+   validator needs to repair will never grow bigger when more validators join
+   the restart.
 
-Once the validator gets `RestartLastVotedForkSlots`, it can calculate which
-blocks must be repaired. When all those "must-have" blocks are repaired and
-replayed, it can proceed to step 3.
+   Once the validator gets `RestartLastVotedForkSlots`, it can calculate which
+   blocks must be repaired. When all those "must-have" blocks are repaired and
+   replayed, it can proceed to step 3.
 
 3. **gossip current heaviest fork**
 
-The main goal of this step is to "vote" the heaviest fork to restart from.
+   The main goal of this step is to "vote" the heaviest fork to restart from.
 
-We use a new gossip message `RestartHeaviestFork`, its fields are:
+   We use a new gossip message `RestartHeaviestFork`, its fields are:
 
-* `slot`: `u64` slot of the picked block.
-* `hash`: `Hash` bank hash of the picked block.
-* `stake_committed_percent`: `u16` total percentage of stakes of the validators
-it received `RestartHeaviestFork` messages from.
+   * `slot`: `u64` slot of the picked block.
+   * `hash`: `Hash` bank hash of the picked block.
+   * `stake_committed_percent`: `u16` total percentage of stakes of the
+   validators it received `RestartHeaviestFork` messages from.
 
-After receiving `RestartLastVotedForkSlots` from the validators holding stake
-more than `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have"
-category, replay all blocks and pick the heaviest fork by traversing from
-local root like this:
+   After receiving `RestartLastVotedForkSlots` from the validators holding
+   stake more than `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have"
+   category, replay all blocks and pick the heaviest fork by traversing from
+   local root like this:
 
-1. If a block has more than 67% stake in `RestartLastVotedForkSlots`
+   1. If a block has more than 67% stake in `RestartLastVotedForkSlots`
    messages, traverse down this block.
 
-2. Define the "must have" threshold to be 62%. If traversing to a block with
+   2. Define the "must have" threshold to be 62%. If traversing to a block with
    more than one child, we check for each child
    `vote_on_child + stake_on_validators_not_in_restart >= 62%`. If so, traverse
    to the child.
@@ -281,39 +287,40 @@ local root like this:
 
    Otherwise stop traversing the tree and use last visited block.
 
-To see why the above algorithm is safe, assuming one block X is optimistically
-confirmed before the restart, we prove that it will always be either the block
-picked or the ancestor of the block picked.
+   To see why the above algorithm is safe, assuming one block X is
+   optimistically confirmed before the restart, we prove that it will always be
+   either the block picked or the ancestor of the block picked.
 
-Assume X is not picked, then:
+   Assume X is not picked, then:
 
-1. If its parent Y is on the Heaviest fork, then either a sibling of X is
+   1. If its parent Y is on the Heaviest fork, then either a sibling of X is
    chosen or no child of Y is chosen. In either case
    vote_on_X + stake_on_validators_not_in_restart < 62%, otherwise X would be
    picked. This contradicts with the fact X got 67% votes before the restart,
    because vote_on_X should have been greater than
    67% - 5% (non-conforming) - stake_on_validators_not_in_restart.
 
-2. If its parent Y is also not on the Heaviest fork, Y should have got > 67%
+   2. If its parent Y is also not on the Heaviest fork, Y should have got > 67%
    of the votes before the restart as well, then we can apply the same
    reasoning to Y's parent, until we find an ancestor which is on the Heaviest
    fork, then the contradiction in previous paragraph applies.
 
-In some cases, we might pick a child with less than 67% votes before the
-restart. Say a block X has child A with 43% votes and child B with 42% votes,
-child A will be picked as the restart slot. Note that block X which has more
-than 43% + 42% = 85% votes is the ancestor of the picked restart slot, so the
-constraint that optimistically confirmed block never gets rolled back is
-satisfied.
+   In some cases, we might pick a child with less than 67% votes before the
+   restart. Say a block X has child A with 43% votes and child B with 42%
+   votes, child A will be picked as the restart slot. Note that block X which
+   has more than 43% + 42% = 85% votes is the ancestor of the picked restart
+   slot, so the constraint that optimistically confirmed block never gets
+   rolled back is satisfied.
 
-After deciding heaviest block, gossip
-`RestartHeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X is
-the latest picked block. We also gossip stake of received `RestartHeaviestFork`
-messages so that we can proceed to next step when enough validators are ready.
+   After deciding heaviest block, gossip
+   `RestartHeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X
+   is the latest picked block. We also gossip stake of received
+   `RestartHeaviestFork` messages so that we can proceed to next step when
+   enough validators are ready.
 
 ### Exit `wen restart phase`
 
-4. **Restart if everything okay, halt otherwise**
+**Restart if everything okay, halt otherwise**
 
 The main purpose in this step is to decide the `cluster restart slot` and the
 actual block to restart from.
