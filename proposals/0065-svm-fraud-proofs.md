@@ -80,9 +80,14 @@ Light clients need to track epoch rollover and update their view of the quorum.
 
 ## Impact
 
-- Replay stage needs to assign a deterministic transaction count to each transaction.
-- Accounts db needs to store the transaction count that last modified the account.
-- Sysvars and system calls that read values must be tracked within the SPV as well.
+- Replay stage needs to assign a deterministic transaction count
+to each transaction.
+
+- Accounts db needs to store the transaction count that last modified
+the account.
+
+- Sysvars and system calls that read values must be tracked within
+the SPV as well.
 
 ## Security Considerations
 
