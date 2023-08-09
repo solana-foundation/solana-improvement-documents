@@ -126,13 +126,20 @@ pub struct Receipt{
 The receipt tree is a binary merkle tree of receipts, where each node is a 32
 byte hash of the Receipt data structure.
 
-We construct a deterministic tree over a list of Receipts per slot. The tree
-needs to be strictly deterministic as any other cryptographic primitive to
-ensure that trees are exactly identical when individually constructed by
-different nodes. The order of the leaves should match the order of the list
-of receipts. For membership proofs and inclusion checks one should be
-able to provide a path from the leaf node (Receipt) to the root of the tree.
-The locally computed root is compared for equality.
+We construct a deterministic tree over a list of Receipts per slot with
+the following properties:
+
+- The tree needs to be strictly deterministic as any other cryptographic
+  primitive to ensure that trees are exactly identical when individually
+  constructed by different nodes.
+
+- The order of the leaves should match the order of the list
+  of receipts. When validators replay the transactions in a slot, they should aggregate
+  the receipts in the same order as the transactions were in the block.
+
+- For membership proofs and inclusion checks one should be
+  able to provide a path from the leaf node (Receipt) to the root of the tree.
+  The locally computed root is compared for equality.
 
 ```txt
 Receipt tree with four receipts as leaf nodes [L0, L1, L2, L3]
@@ -202,6 +209,8 @@ More details with an attached flamegraph can be found in our [repository](https:
 
 We prepend 0x0 to leaf nodes and 0x1 to internal nodes to avoid second
 preimage attacks where a proof is provided with internal nodes as leaf nodes.
+
+We also make sure that the proof doesn't contain any consecutive identical hashes.
 
 Security considerations defined in the merkle tree specification
 by the Firedancer team:
