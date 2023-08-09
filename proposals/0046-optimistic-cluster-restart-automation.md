@@ -211,8 +211,8 @@ See each step explained in details below.
 
    At any point in restart, let's call percentage of validators not in restart
    `PERCENT_NOT_IN_RESTART`. We can draw a line at
-   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET`
-    - `PERCENT_NOT_IN_RESTART`.
+   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` -
+   `PERCENT_NOT_IN_RESTART`.
 
    Any slot above this line should be repaired, while other slots can be
    ignored for now. But if
