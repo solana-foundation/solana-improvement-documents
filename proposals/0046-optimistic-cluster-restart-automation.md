@@ -197,62 +197,13 @@ See each step explained in details below.
    However, it's also overkill to repair every block presented by others. When
    `RestartLastVotedForkSlots` messages are being received and aggregated, a
    validator can categorize blocks missing locally into 2 categories: must-have
-   and ignored. Depending on the stakes of validators currently in restart,
-   some slots with too few stake can be safely ignored, while others will be
-   repaired.
+   and ignored.
 
-   In the following analysis, we assume:
-
-   * `RESTART_STAKE_THRESHOLD` is 80%
-   * `MALICIOUS_SET` which is validators which can disobey the protocol, is 5%.
-   For example, these validators can change their votes from what they
-   previously voted on.
-   * `OPTIMISTIC_CONFIRMED_THRESHOLD` is 67%, which is the percentage of stake
-   required to be a `optimistically confirmed block`.
-
-   At any point in restart, let's call percentage of validators not in restart
-   `PERCENT_NOT_IN_RESTART`. We can draw a line at
-   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` -
-   `PERCENT_NOT_IN_RESTART`.
-
-   Any slot above this line should be repaired, while other slots can be
-   ignored for now. But if
-   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` -
-   `PERCENT_NOT_IN_RESTART` is less than 10%, then the validators don't have to
-   start any repairs. Because the signal now is too noisy.
-
-   We obviously want to repair all blocks above
-   `OPTIMISTIC_CONFIRMED_THRESHOLD` before the restart. The validators in
-   `MALICIOUS_SET` could lie about their votes, so we need to be conservative
-   and lower the line accordingly. Also, we don't know what the validators not
-   in restart have voted, so we need to be even more conservative and assume
-   they voted for this block. Being conservative means we might repair blocks
-   which we didn't need, but we will never miss any block we should have
-   repaired.
-
-   Next we illustrate the system behavior using concrete numbers:
-
-   * 5% validators in restart: `PERCENT_NOT_IN_RESTART` is 100% - 5% = 95%.
-   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` -
-   `PERCENT_NOT_IN_RESTART` = 67% - 5% - 95% < 10%, so no validators would
-   repair any block.
-
-   * 70% validators in restart: `PERCENT_NOT_IN_RESTART` is 100% - 70% = 30%.
-   `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - 
-   `PERCENT_NOT_IN_RESTART` = 67% - 5% - 30% = 32%, so slots with above 32%
-   votes accumulated from `RestartLastVotedForkSlots` would be repaired.
-
-   * 80% validators are in restart, `PERCENT_NOT_IN_RESTART` is 100% - 80% =
-   20%. `OPTIMISTIC_CONFIRMED_THRESHOLD` - `MALICIOUS_SET` - 
-   `PERCENT_NOT_IN_RESTART` = 67% - 5% - 20% = 42%, so slots with above 42%
-   votes accumulated from `RestartLastVotedForkSlots` would be repaired.
-
-   From above examples, we can see the "must-have" threshold changes
-   dynamically depending on how many validators are in restart. The main
-   benefit is that a block will only move from "must-have" to "ignored" as more
-   validators join the restart, not vice versa. So the list of blocks a
-   validator needs to repair will never grow bigger when more validators join
-   the restart.
+   We set the line at 42% when 80% join the restart, it's possible that
+   different validators see different 80%, so their must-have blocks might
+   be different, but in reality this case should be rare. Whenever some block
+   gets to 42%, repair could be started, because when more validators join the
+   restart, this number will only go up but will never go down.
 
    Once the validator gets `RestartLastVotedForkSlots`, it can calculate which
    blocks must be repaired. When all those "must-have" blocks are repaired and
@@ -378,14 +329,16 @@ Non-conforming validators could send out wrong `RestartLastVotedForkSlots` and
 `RestartHeaviestFork` messages to mess with `cluster restart`s, these should be
 included in the Slashing rules in the future.
 
-### Discarding oscillating votes
+### Handling oscillating votes
 
 Non-conforming validators could change their last votes back and forth, this
-could lead to instability in the system. Considering that during an outage, an
-operator could find out that wrong info was sent out and try to correct it. We
-allow `RestartLastVotedForkSlots` be changed 3 times, after that all updates
-from the validator with the same pubkey will be simply ignored. We allow
-`RestartHeaviestFork` to change until the validator exits `wen restart phase`.
+could lead to instability in the system. But our algorithm already built in
+safety buffers so < 5% of non-conforming validators will not change the
+conclusion. Considering that during an outage, an operator could find out that
+wrong info was sent out and try to correct it. We allow
+`RestartLastVotedForkSlots` be changed and new values will be used. But we will
+log warning messages about this. We allow `RestartHeaviestFork` to change until
+the validator exits `wen restart phase`.
 
 ### Handling multiple epochs
 
