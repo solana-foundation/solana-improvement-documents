@@ -166,11 +166,12 @@ See each step explained in details below.
    `last_voted_slot`, least significant bit is `last_voted_slot-81000`.
 
    The number of ancestor slots sent is hard coded at 81000, because that's
-   400ms * 81000 = 9 hours, we assume that optimistic confirmation must halt
-   within 81k slots of the last confirmed block. If a validator restarts after
-   9 hours past the outage, it cannot join the restart this way. If enough
-   validators failed to restart within 9 hours, then we fallback to the manual,
-   interactive `cluster restart` method.
+   400ms * 81000 = 9 hours, we assume that most validator administrators 
+   would have noticed an outage within 9 hours, and the optimistic 
+   confirmation must have halted within 81k slots of the last confirmed block.
+   If a validator restarts after 9 hours past the outage, it cannot join the
+   restart this way. If enough validators failed to restart within 9 hours,
+   then we fallback to the manual, interactive `cluster restart` method.
 
    When a validator enters restart, it uses `wen restart shred version` to
    avoid interfering with those outside the restart. There is a slight chance
@@ -340,12 +341,13 @@ cluster unable to reach consensus. So bank hash needs to be checked as well.
 
 * The voted slot is equal or a child of local optimistically confirmed slot.
 
-If all checks pass, the validator immediately starts setting root and
-generating an incremental snapshot at the agreed upon `cluster restart slot`.
+If all checks pass, the validator immediately starts setting root and issue a
+hard fork at the designated slot. Then it will start generating an incremental
+snapshot at the agreed upon `cluster restart slot`. This way the hard fork will
+be included in the newly generated snapshot.
 
-After the snapshot generation is complete, and above checks pass, it then
-proceeds to issue a hard fork at the designated slot and change shred version
-in gossip. After that it restarts into the normal (non-restart) state.
+After the snapshot generation is complete, it then changes the shred version
+in gossip before restarting into the normal (non-restart) state.
 
 Before a validator enters restart, it will still propagate
 `RestartLastVotedForkSlots` and `RestartHeaviestFork` messages in gossip. After
