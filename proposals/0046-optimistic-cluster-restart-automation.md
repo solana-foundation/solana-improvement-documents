@@ -179,7 +179,7 @@ See each step explained in details below.
    to flush gossip after successful restart so it should not be a problem.
 
    To be extra cautious, we will also filter out `RestartLastVotedForkSlots`
-   and `RestartHeaviestFork` in gossip if a validator is not in
+   and `RestartHeaviestFork` (described later) in gossip if a validator is not in
    `wen restart phase`.
 
 2. **Repair ledgers up to the restart slot**
