@@ -75,12 +75,10 @@ shreds using QUIC protocol.
 
 ## Detailed Design
 
-Once the cluster has upgraded to the new
-[`ContactInfo`](https://github.com/solana-labs/solana/blob/2fc1dc1bf/gossip/src/contact_info.rs#L68-L85)
-nodes may explicitly specify a socket address for TVU QUIC connections.
-Until then, similar to QUIC migration for TPU, we will use the port at
-[`QUIC_PORT_OFFSET`](https://github.com/solana-labs/solana/blob/2fc1dc1bf/sdk/src/quic.rs#L4)
-from the TVU socket for QUIC connections.
+TVU-forwards socket in `ContactInfo` specification is no longer used, and can
+be repurposed for TVU over QUIC.
+Shreds are sent using unreliable and unordered datagrams:
+[rfc9221](https://www.rfc-editor.org/rfc/rfc9221.html).
 
 In terms of specific components of QUIC:
 
@@ -102,26 +100,7 @@ In terms of specific components of QUIC:
 * Restrictions on connection IDs: We regain ~8 bytes by disabling connection
   IDs, if that is supported by the quinn library.
 
-For the initial implementation in the Solana Labs client we will use the same
-constructs as TPU QUIC implementation so the specs are the same. See [TPU/QUIC
-Protocol v1](https://github.com/solana-foundation/specs/blob/42f2058b7/p2p/tpu.md#tpuquic-protocol-v1).
-
-In terms of Solana Labs client design specifically, this would entail:
-
-* Spinning up a new [QUIC
-  server](https://github.com/solana-labs/solana/blob/2fc1dc1bf/streamer/src/quic.rs#L393-L406)
-  in TVU stage to ingest shreds and channel through to
-  [shred-fetch-stage](https://github.com/solana-labs/solana/blob/2fc1dc1bf/core/src/shred_fetch_stage.rs).
-* Retransmit shreds through a
-  [QUIC-connection-cache](https://github.com/solana-labs/solana/blob/master/quic-client/src/lib.rs)
-  in [retransmit-stage](https://github.com/solana-labs/solana/blob/master/core/src/retransmit_stage.rs).
-
-
 ## Impact
-
-Validators should allocate TVU +
-[`QUIC_PORT_OFFSET`](https://github.com/solana-labs/solana/blob/2fc1dc1bf/sdk/src/quic.rs#L4)
-port for TVU QUIC connections.
 
 ## Security Considerations
 
