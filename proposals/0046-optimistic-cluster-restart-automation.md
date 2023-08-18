@@ -162,8 +162,8 @@ See each step explained in details below.
    last_slot for the bit vector.
    * `last_voted_hash`: `Hash` the bank hash of the slot last voted slot.
    * `ancestors`: `BitVec<u8>` compressed bit vector representing the slots on
-   sender's last voted fork. the most significant bit is always
-   `last_voted_slot`, least significant bit is `last_voted_slot-81000`.
+   sender's last voted fork. the least significant bit is always
+   `last_voted_slot`, most significant bit is `last_voted_slot-81000`.
 
    The number of ancestor slots sent is hard coded at 81000, because that's
    400ms * 81000 = 9 hours, we assume that most validator administrators 
