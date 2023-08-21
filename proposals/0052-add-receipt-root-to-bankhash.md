@@ -50,10 +50,10 @@ Receipt Root: The root hash of a binary merkle tree of Receipts.
 
 ### Modifying the Bankhash
 
-We propose two new changes:
+We propose the following change:
 
-1) The receipt data structure and the receipt merkle tree which is formally
-   defined in this [SIMD]([https://github.com/tinydancer-io/solana-improvement-documents](https://github.com/tinydancer-io/solana-improvement-documents/blob/transaction-receipt/proposals/0064-transaction-receipt.md))
+Using the receipt data structure and the receipt merkle tree which is formally
+defined in this [SIMD]([https://github.com/tinydancer-io/solana-improvement-documents](https://github.com/tinydancer-io/solana-improvement-documents/blob/transaction-receipt/proposals/0064-transaction-receipt.md))
 
    ```rust
    pub struct Receipt {
@@ -62,19 +62,19 @@ We propose two new changes:
    }
    ```
 
-2) Add a transaction receipt root to the bankhash calculation where the receipt
-   root is the root of the merkle tree of receipts. This root would be a sha256
-   hash constructed as a final result of the binary merkle tree of receipts.
-   Specifically it will be a 32 byte array. The receipt root would be added to
-   the bankhash as follows:
+We add a transaction receipt root to the bankhash calculation where the receipt
+root is the root of the merkle tree of receipts. This root would be a sha256
+hash constructed as a final result of the binary merkle tree of receipts.
+Specifically it will be a 32 byte array. The receipt root would be added to
+the bankhash as follows:
 
    ``` rust
    let mut hash = hashv(&[
-      self.parent_hash.as_ref(),
-      accounts_delta_hash.0.as_ref(),
+      parent_hash,
+      accounts_delta_hash,
       receipt_root,
-      &signature_count_buf,
-      self.last_blockhash().as_ref(),
+      signature_count_buf,
+      last_blockhash,
    ]);
    ```
 
