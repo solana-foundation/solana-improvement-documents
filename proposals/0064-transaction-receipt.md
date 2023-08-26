@@ -98,8 +98,9 @@ proof-of-history (PoH) hash chain. This was proposed in
 
 The PoH chain currently commits to the signatures of all transactions added to
 the ledger. The consensus layer then periodically votes on the last state of the
-PoH chain for each block (block hash). Expanding the PoH hash is the least
-complex option as of today but is consequential for future upgrades.
+PoH chain for each bankhash which is an extension of the blockhash.
+Expanding the PoH hash is the least complex option as of today but
+is consequential for future upgrades.
 
 Such a change would be incompatible with design goal 2 because it redefines
 the PoH hash to additionally commit to execution results, instead of only
