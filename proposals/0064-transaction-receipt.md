@@ -149,6 +149,11 @@ the following properties:
 - For membership proofs and inclusion checks one should be
   able to provide a path from the leaf node (Receipt) to the root of the tree.
   The locally computed root is compared for equality.
+  
+- Finally after aggregating all the receipts and constructing the final root hash,
+  the count of the receipts is hashed with the root to produce a final commitment hash.
+  This is done to prevent the possibility of length extension attack vector inherent to
+  merkle trees where the total number of leaves is not fixed/known before tree construction.
 
 ```txt
 Receipt tree with four receipts as leaf nodes [L0, L1, L2, L3]
