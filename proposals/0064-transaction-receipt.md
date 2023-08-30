@@ -152,8 +152,9 @@ the following properties:
   
 - Finally after aggregating all the receipts and constructing the final root hash,
   the count of the receipts is hashed with the root to produce a final commitment hash.
-  This is done to prevent the possibility of length extension attack vector inherent to
-  merkle trees where the total number of leaves is not fixed/known before tree construction.
+  This is done to prevent the possibility of length extension attack vector
+  inherent to merkle trees where the total number of leaves is not fixed/known
+  before tree construction.
 
 ```txt
 Receipt tree with four receipts as leaf nodes [L0, L1, L2, L3]
