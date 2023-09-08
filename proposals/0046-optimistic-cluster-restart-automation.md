@@ -292,13 +292,14 @@ cluster unable to reach consensus. So bank hash needs to be checked as well.
 
 * The voted slot is equal or a child of local optimistically confirmed slot.
 
-If all checks pass, the validator immediately starts setting root and issue a
-hard fork at the designated slot. Then it will start generating an incremental
-snapshot at the agreed upon `cluster restart slot`. This way the hard fork will
-be included in the newly generated snapshot.
+If all checks pass, the validator immediately starts add a hard fork at the
+designated slot and update the root. Then it will start generating an
+incremental snapshot at the agreed upon `cluster restart slot`. This way the
+hard fork will be included in the newly generated snapshot.
 
-After the snapshot generation is complete, it then changes the shred version
-in gossip before restarting into the normal (non-restart) state.
+After the snapshot generation is complete, it then automatically executes the
+--wait_for_supermajority logic with the agreed upon slot and hash, the
+validator operators do not need to change the command line arguments here.
 
 Before a validator enters restart, it will still propagate
 `RestartLastVotedForkSlots` and `RestartHeaviestFork` messages in gossip. After
@@ -307,6 +308,10 @@ propagate gossip messages for restart.
 
 If any of the checks fails, the validator immediately prints out all debug info,
 sends out metrics so that people can be paged, and then halts.
+
+After the restart is complete, validators will automatically function in normal
+mode, the validator operators can update the command line arguments to update
+shred_version and remove --wen_restart at a convenient time later.
 
 ## Impact
 
