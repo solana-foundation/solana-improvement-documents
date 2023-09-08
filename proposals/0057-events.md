@@ -133,12 +133,11 @@ they are needed for indexing.
 EventCallback: ((
     message: Buffer,
     instructionContext: {
-        transactionSignature: TransactionSignature,
+        signature: TransactionSignature,
         outerInstructionIndex: number,
         innerInstructionIndex?: number,
     }
     context: {
-        eventIndexInBlock: number,
         slot: number
     }
 ) => void)
@@ -191,10 +190,52 @@ rpc.getSignaturesForEvent(
         commitment?: Commitment,
         minContextSlot?: number,
         limit?: number,
-        before?: Signature,
-        until?: Signature
+        before?: TransactionSignature,
+        until?: TransactionSignature
     }
-)
+): Promise<TransactionSignature[]>
+```
+
+In addition clients should be able to query events directly and index them
+reliably working around the randomized execution of entries inside a slot.
+The response is sorted by the following priorities:
+1. slots ascending
+2. signature order for transactions inside a block
+3. execution order for events inside a transaction
+
+A sequence number is returned, that can be incremented to populate the offset
+field for follow-up requests. The last finalized events' sequence number should
+be incremented by 1 for this use-case to force re-indexing of events that
+could potentially change order due to block re-orgs or intra-block signature
+order. Alternatively the commitment level of the response can be restricted to
+finalized which avoids these issues completely.
+
+```
+rpc.getEvents(
+    programId: PublicKey,
+    filters?: EventLookupFilter[],
+    options?: {
+        commitment?: Commitment,
+        encoding: 'base64' | 'base64+zstd',
+        limit?: number,
+        offset?: number,
+    }
+): Promise<EventResponse[]>
+
+
+EventResponse: {
+    message: Buffer,
+    instructionContext: {
+        signature: TransactionSignature,
+        outerInstructionIndex: number,
+        innerInstructionIndex?: number,
+    }
+    context: {
+        sequence: number,
+        slot: number,
+        confirmationStatus: "processed" | "confirmed" | "finalized"
+    }
+}
 ```
 
 
