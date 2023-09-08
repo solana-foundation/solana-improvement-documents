@@ -112,6 +112,19 @@ those are technically not part of the SIMD specification process, it's
 important to publish a recommended spec for 3rd party providers so that Solana
 Dapps don't run into vendor lock-in issues.
 
+The cost for this operation is derived from a possible future inclusion of a
+hash of all events in consensus. So future light-clients can verify the
+authenticity of events received from third party rpc providers.
+
+Bank deltas are currently hashed via sha256, the sha256 syscall charges
+85 + 0.5 CU / byte. blake3 a roughly 2x faster to compute hash, would be
+sufficient as well, hence 100 + 0.25 * len CU would be a good approximation
+in this case. CPI for event logging would be only "cheaper" when using >4k
+event payloads but most events are <512b in length. This cost enforces
+theoretical limits to the amount of logs per transaction & block:
+Limit per 200k CU: 800kB
+Limit per 48M CU: 200MB
+
 ### RPC-Client
 
 Clients should be able subscribe to events emitted with various filters:
