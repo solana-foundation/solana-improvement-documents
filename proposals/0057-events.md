@@ -212,6 +212,7 @@ rpc.getSignaturesForEvent(
 In addition clients should be able to query events directly and index them
 reliably working around the randomized execution of entries inside a slot.
 The response is sorted by the following priorities:
+
 1. slots ascending
 2. signature order for transactions inside a block
 3. execution order for events inside a transaction
