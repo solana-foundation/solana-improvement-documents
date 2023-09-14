@@ -210,19 +210,14 @@ rpc.getSignaturesForEvent(
 ```
 
 In addition clients should be able to query events directly and index them
-reliably working around the randomized execution of entries inside a slot.
-The response is sorted by the following priorities:
-
-1. slots ascending
-2. signature order for transactions inside a block
-3. execution order for events inside a transaction
-
-A sequence number is returned, that can be incremented to populate the offset
-field for follow-up requests. The last finalized events' sequence number should
-be incremented by 1 for this use-case to force re-indexing of events that
-could potentially change order due to block re-orgs or intra-block signature
-order. Alternatively the commitment level of the response can be restricted to
-finalized which avoids these issues completely.
+reliably, for that purpose the response is sorted by the order defined by
+how transactions are placed in entries and then in a block, but can change
+due to block re-orgs. A sequence number is returned, that can be incremented
+to populate the offset field for follow-up requests. The last finalized events'
+sequence number should be incremented by 1 for this use-case to force
+re-indexing of events that could potentially change order. Alternatively the
+commitment level of the response can be restricted to finalized which avoids
+this issue completely.
 
 ```
 rpc.getEvents(
