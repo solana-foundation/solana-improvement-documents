@@ -24,11 +24,13 @@ implement online data processing based on incoming selected transactions.
 <!-- Why are we doing this? What use cases does it support? What is the expected
 outcome? -->
 
-Applications want a way to watch transactions as they happen on specific programs. Currently, 
-the Solana websocket API allows to watch for changes to the program accounts and/or subscribing to logs. However,
-many applicaitons depend upon the ability to receive the transactions happening for a specific program
-or set of accounts. Currently, they use things like logSubscribe or polling via getTransaction, both of which are fairly
-inefficient ways to achieve this purpose.
+Applications want a way to watch transactions as they happen on specific
+programs. Currently, the Solana websocket API allows to watch for changes
+to the program accounts and/or subscribing to logs. However, many applicaitons
+depend upon the ability to receive the transactions happening for a specific
+program or set of accounts. Currently, they use things like logSubscribe or
+polling via getTransaction, both of which are fairly inefficient ways to
+achieve this purpose.
 
 In [Solana Geyser gRPC plugin](https://github.com/rpcpool/yellowstone-grpc) by
 [Triton](https://triton.one/) we implemented a filter for transactions. This filter
@@ -141,7 +143,9 @@ pub trait RpcSolPubSub {
 ## Impact
 
 <!-- How will the implemented proposal impacts dapp developers, validators, and core contributors? -->
-Currently the pattern for many is to use signatureSubscribe + getTransaction to achieve this data. Providing transactionSubscribe allows people to refactor this pattern and just use a single pubsub method. 
+Currently the pattern for many is to use signatureSubscribe + getTransaction to
+achieve this data. Providing transactionSubscribe allows people to refactor this
+pattern and just use a single pubsub method.
 
 ## Security Considerations
 
