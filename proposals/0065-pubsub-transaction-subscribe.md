@@ -1,6 +1,6 @@
 ---
 simd: '0065'
-title: Introduce `transactionSubscribe` in PubSub Interface
+title: Add `transactionSubscribe` to PubSub
 authors:
   - Kirill Fomichev (kirill.fomichev@triton.one)
   - Linus Kendall (lk@triton.one)
@@ -142,7 +142,9 @@ pub trait RpcSolPubSub {
 
 ## Impact
 
-<!-- How will the implemented proposal impacts dapp developers, validators, and core contributors? -->
+<!-- How will the implemented proposal impacts dapp developers, validators,
+and core contributors? -->
+
 Currently the pattern for many is to use signatureSubscribe + getTransaction to
 achieve this data. Providing transactionSubscribe allows people to refactor this
 pattern and just use a single pubsub method.
