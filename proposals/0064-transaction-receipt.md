@@ -22,7 +22,7 @@ This proposal introduces two new concepts to the Solana runtime.
 ## New Terminology
 
 Receipt: A deterministic encoding of state changes induced by a transaction that
-includes the status and signature of the transaction.
+includes the status and a message hash of the transaction.
 
 Receipt Tree: A commitment scheme over all transaction receipts in a slot.
 
@@ -118,14 +118,14 @@ result in a chain split.
 
 The transaction receipt must contain the following information related to the transaction:
 
-- Signature
+- Message Hash
 - Execution Status
 
 The receipt would be a structure defined as:
 
 ```rust
 pub struct Receipt{
-    pub signature: [u8;64],
+    pub message_hash: [u8;32],
     pub status: u8 // 1 or 0 would determine the post execution status
 }
 ```
@@ -242,7 +242,7 @@ We also make sure that the proof doesn't contain any consecutive identical hashe
 Security considerations defined in the merkle tree specification
 by the Firedancer team:
 
-No practical collision attacks against SHA-256 are known as of Oct 2022.
+No practical collision attacks against SHA-256 are known as of Oct 2023.
 
 Collision resistance is vital to ensure that the graph of nodes remains acyclic
 and that each hash unambiguously refers to one logical node.
