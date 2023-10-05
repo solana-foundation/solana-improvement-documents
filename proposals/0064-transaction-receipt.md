@@ -212,8 +212,8 @@ illustration) with the root 'Nζ' of the tree and hashing it.
 #### Benchmarks
 
 We have performed benchmarks comparing two merkle tree implementations,
-the benchmark was done on 1 million leaves, each leaf consisted of a 64 byte
-signature and a single byte status.
+the benchmark was done on 500k leaves, each leaf consisted of a 32 byte
+message hash and a single byte status.
 
 1) Solana Labs Merkle Tree: This is the pure rust implementation that is currently
    used by the Solana Labs client.
@@ -222,7 +222,8 @@ signature and a single byte status.
    optimised SHA-256 implementation as it's hashing algorithm. However the benchmarks
    were performed using its rust FFI bindings.
    More details: [Firedancer](https://github.com/firedancer-io/firedancer/tree/main/src/ballet/bmtree)
-   ![Benchamrk Results](https://github.com/tinydancer-io/solana-improvement-documents/assets/50767810/6c8d0013-1d62-4c7b-8264-4ec71ea28d7c)
+   
+![TINY_bench](https://github.com/tinydancer-io/solana-improvement-documents/assets/50767810/637dc83a-b3d2-4616-b70e-4fbb8a9e17fd)
 
 More details with an attached flamegraph can be found in our [repository](https://github.com/tinydancer-io/merkle-bench).
 
