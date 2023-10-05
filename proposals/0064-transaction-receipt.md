@@ -222,6 +222,7 @@ message hash and a single byte status.
    optimised SHA-256 implementation as it's hashing algorithm. However the benchmarks
    were performed using its rust FFI bindings.
    More details: [Firedancer](https://github.com/firedancer-io/firedancer/tree/main/src/ballet/bmtree)
+
    
 ![TINY_bench](https://github.com/tinydancer-io/solana-improvement-documents/assets/50767810/637dc83a-b3d2-4616-b70e-4fbb8a9e17fd)
 
