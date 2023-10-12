@@ -158,9 +158,11 @@ the following properties:
 
 ```txt
 Receipt tree with four receipts as leaf nodes [L0, L1, L2, L3]
-where R0, R1, R2, R3 are the receipts and Nγ is the root.
-
-       Nγ
+where R0, R1, R2, R3 are the receipts and Nδ is the root.
+           Nδ
+          /  \
+        /     \
+       Nγ      N(receipts)
       /  \
      /    \
    Nα      Nβ
@@ -175,12 +177,14 @@ L3 := sha256(concat(0x00, R3))
 Nα := sha256(concat(0x01, hash(L0), hash(L1)))
 Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
 Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
-
+Nδ := sha256(concat(hash(Nγ),len([L0, L1, L2, L3])))
 
 Receipt tree with five receipts as leaf nodes [L0, L1, L2, L3, L4]
-where R0, R1, R2, R3, R4 are the receipts and Nζ is the root.
-
-          Nζ
+where R0, R1, R2, R3, R4 are the receipts and Nτ is the root.
+                Nτ   
+              /   \
+            /      \
+          Nζ        N(receipts)
          /  \
         /    \
        Nδ     Iε
@@ -200,14 +204,11 @@ Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
 Nγ := sha256(concat(0x01, hash(L4), hash(L4)))
 Nδ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
 Nζ := sha256(concat(0x01, hash(Nδ), hash(Iε)))
+Nτ := sha256(concat(hash(Nζ),len([L0, L1, L2, L3, L4])))
 
-Αs a final step in the commitment we do:
-Nτ := sha256(concat(len([L0, L1, L2, L3, L4]), hash(Nζ)))
-
-Here 'Nτ' is the final commitment generated after concatenating
-the length of vector of leaf nodes (which is five in the above
-illustration) with the root 'Nζ' of the tree and hashing it.
-
+Here 'Nτ' is the root generated after concatenating
+the node 'Nζ' with the length of vector of leaf nodes (which is five in the above
+illustration) of the tree and hashing it.
 ```
 
 [Link to the specification](https://github.com/solana-foundation/specs/blob/main/core/merkle-tree.md)
