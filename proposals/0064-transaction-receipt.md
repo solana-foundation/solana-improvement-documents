@@ -178,8 +178,8 @@ Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
 
 
 Receipt tree with five receipts as leaf nodes [L0, L1, L2, L3, L4]
-where R0, R1, R2, R3 are the receipts and Nζ is the root.
-          Nτ
+where R0, R1, R2, R3, R4 are the receipts and Nζ is the root.
+          Nζ
          /  \
         /    \
        Nδ     Iε
@@ -199,6 +199,8 @@ Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
 Nγ := sha256(concat(0x01, hash(L4), hash(L4)))
 Nδ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
 Nζ := sha256(concat(0x01, hash(Nδ), hash(Iε)))
+
+Αs a final step in the commitment we do:
 Nτ := sha256(concat(len([L0, L1, L2, L3, L4]), hash(Nζ)))
 
 Here 'Nτ' is the final commitment generated after concatenating
