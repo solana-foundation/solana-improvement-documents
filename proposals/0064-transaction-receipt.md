@@ -179,6 +179,7 @@ Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
 
 Receipt tree with five receipts as leaf nodes [L0, L1, L2, L3, L4]
 where R0, R1, R2, R3, R4 are the receipts and Nζ is the root.
+
           Nζ
          /  \
         /    \
