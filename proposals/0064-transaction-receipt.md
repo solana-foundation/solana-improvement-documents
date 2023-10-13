@@ -174,6 +174,10 @@ the following properties:
   where the total number of leaves is not fixed/known before tree construction.
 
 ```txt
+Receipt tree with an empty set of receipts
+where Nδ is the root.
+Nα := sha256(concat(0x80,0u64))
+
 Receipt tree with four receipts as leaf nodes [L0, L1, L2, L3]
 where R0, R1, R2, R3 are the receipts and Nδ is the root.
            Nδ
