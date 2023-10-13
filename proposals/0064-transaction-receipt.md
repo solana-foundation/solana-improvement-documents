@@ -16,13 +16,14 @@ feature: (fill in with feature tracking issues once accepted)
 
 This proposal introduces two new concepts to the Solana runtime.
 
-- Receipts, a deterministic encoding of state changes induced by a transaction;
+- TransactionReceiptData, a deterministic encoding of state changes induced by
+  a transaction;
 - The receipt tree, a commitment scheme over all transaction receipts in a block.
   
 ## New Terminology
 
-Receipt: A deterministic encoding of state changes induced by a transaction that
-includes the status and a message hash of the transaction.
+TransactionReceiptData: A deterministic encoding of state changes induced by a
+transaction that includes the version, the status and a message hash of the transaction.
 
 Receipt Tree: A commitment scheme over all transaction receipts in a slot.
 
@@ -56,13 +57,13 @@ commitment scheme based on a binary hash tree that is constructed once per slot.
 
 ### Design Goals
 
-1. Receipts should be deterministic.
+1. Transaction Receipts should be deterministic.
    Given a transaction T and ledger history leading up to it, serializing the
    receipt generated for T  should result in the same byte vector for all nodes
    in the network.
    *Rationale:* Determinism is required for cluster-wide consensus.
 
-2. Receipts should not be required during block construction.
+2. Transaction Receipts should not be required during block construction.
    *Rationale:* Future upgrades propose tolerating asynchronous replay during
    block construction. In other words, validators should be allowed to produce
    and distribute a block before replaying said block. It is impossible to
@@ -114,7 +115,7 @@ result in a chain split.
 
 ## Detailed Design
 
-### Transaction Receipt Specification
+### TransactionReceiptData Specification
 
 The transaction receipt must contain the following information related to the transaction:
 
@@ -133,7 +134,7 @@ const RECEIPT_STATUS_SUCCESS: u8 = 0;
 const RECEIPT_STATUS_FAILURE: u8 = 1;
 
 // Size: 0x29
-struct TransactionReceipt {
+struct TransactionReceiptData {
     // Offset: 0x00
     // Must be RECEIPT_VERSION_V1
     version: u64,
@@ -147,12 +148,12 @@ struct TransactionReceipt {
 }
 ```
 
-### Receipt Tree Specification
+### Transaction Receipt Tree Specification
 
-The receipt tree is a binary merkle tree of receipts, where each node is a 32
-byte hash of the Receipt data structure.
+The transaction receipt tree is a binary merkle tree of transaction receipts, where
+each node is a 32 byte hash of the TransactionReceiptData data structure.
 
-We construct a deterministic tree over a list of Receipts per slot with
+We construct a deterministic tree over a list of Transaction Receipts per slot with
 the following properties:
 
 - The tree needs to be strictly deterministic as any other cryptographic
@@ -160,30 +161,33 @@ the following properties:
   constructed by different nodes.
 
 - The order of the leaves should match the order of the list
-  of receipts. When validators replay the transactions in a slot, they should aggregate
-  the receipts in the same order as the transactions were in the block.
+  of transaction receipts. When validators replay the transactions in a slot,
+  they should aggregate the transaction receipts in the same order as the
+  transactions were in the block.
 
 - For membership proofs and inclusion checks one should be
-  able to provide a path from the leaf node (Receipt) to the root of the tree.
-  The locally computed root is compared for equality.
+  able to provide a path from the leaf node (TransactionReceiptData) to the root
+  of the tree. The locally computed root is compared for equality.
   
-- Finally after aggregating all the receipts and constructing the final root hash,
-  the count of the receipts is hashed with the root in 64-bit little endian byte
-  ordering to produce a final commitment hash. This is done to prevent the
-  possibility of length extension attack vector inherent to merkle trees
-  where the total number of leaves is not fixed/known before tree construction.
+- Finally after aggregating all the transaction receipts and constructing the
+  final root hash, the count of the transaction receipts is hashed with the root
+  in 64-bit little endian byte ordering to produce a final commitment hash. This
+  is done to prevent the possibility of length extension attack vector inherent to
+  merkle trees where the total number of leaves is not fixed/known before
+  tree construction.
 
 ```txt
-Receipt tree with an empty set of receipts
+Transaction Receipt tree with an empty set of transaction receipts
 where Nα is the root.
 Nα := sha256(concat(0x80,0u64))
 
-Receipt tree with four receipts as leaf nodes [L0, L1, L2, L3]
-where R0, R1, R2, R3 are the receipts and Nδ is the root.
+Transaction Receipt tree with four transaction receipts as leaf
+nodes [L0, L1, L2, L3] where R0, R1, R2, R3 are the transaction 
+receipts and Nδ is the root.
            Nδ
           /  \
         /     \
-       Nγ      N(receipts)
+       Nγ      N(transaction_receipts)
       /  \
      /    \
    Nα      Nβ
@@ -200,12 +204,13 @@ Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
 Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
 Nδ := sha256(concat(0x80, hash(Nγ),len([L0, L1, L2, L3])))
 
-Receipt tree with five receipts as leaf nodes [L0, L1, L2, L3, L4]
-where R0, R1, R2, R3, R4 are the receipts and Nτ is the root.
+Transaction Receipt tree with five transaction receipts 
+as leaf nodes [L0, L1, L2, L3, L4] where R0, R1, R2, R3, R4 are the 
+transaction receipts and Nτ is the root.
                 Nτ   
               /   \
             /      \
-          Nζ        N(receipts)
+          Nζ        N(transaction_receipts)
          /  \
         /    \
        Nδ     Iε
@@ -263,8 +268,8 @@ More details with an attached flamegraph can be found in our [repository](https:
 
 ## Impact
 
-This would enable SIMD-0052 to be implemented where we add the receipt root
-to the bankhash. This would allow users to verify their transaction validity
+This would enable SIMD-0052 to be implemented where we add the transaction receipt
+root to the bankhash. This would allow users to verify their transaction validity
 and status without trusting the RPC.
 
 ## Security Considerations
