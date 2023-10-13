@@ -151,9 +151,9 @@ the following properties:
   The locally computed root is compared for equality.
   
 - Finally after aggregating all the receipts and constructing the final root hash,
-  the count of the receipts is hashed with the root in 64-bit little endian byte 
-  ordering to produce a final commitment hash. This is done to prevent the 
-  possibility of length extension attack vector inherent to merkle trees 
+  the count of the receipts is hashed with the root in 64-bit little endian byte
+  ordering to produce a final commitment hash. This is done to prevent the
+  possibility of length extension attack vector inherent to merkle trees
   where the total number of leaves is not fixed/known before tree construction.
 
 ```txt
@@ -227,7 +227,6 @@ message hash and a single byte status.
    were performed using its rust FFI bindings.
    More details: [Firedancer](https://github.com/firedancer-io/firedancer/tree/main/src/ballet/bmtree)
 
-   
 ![TINY_bench](https://github.com/tinydancer-io/solana-improvement-documents/assets/50767810/637dc83a-b3d2-4616-b70e-4fbb8a9e17fd)
 
 More details with an attached flamegraph can be found in our [repository](https://github.com/tinydancer-io/merkle-bench).
