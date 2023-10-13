@@ -136,7 +136,7 @@ const RECEIPT_STATUS_FAILURE: u8 = 1;
 struct TransactionReceipt {
     // Offset: 0x00
     // Must be RECEIPT_VERSION_V1
-    version: u64, // version of the receipt that starts with 1
+    version: u64,
     
     // Offset: 0x08
     message_hash: [u8;32],
