@@ -239,6 +239,10 @@ illustration) of the tree and hashing it.
 We have chosen SHA-256 over Blake3 as the hashing algorithm so we can take advantage
 of the hardware optimisations like SHA-NI and FPGA made by the Jump Firedancer team.
 
+This proposal reuses the Merkle tree construction used in other parts of the protocol.
+Breaking changes to the construction, such as using a different hash function,
+would introduce additional complexity to existing implementations.
+
 #### Benchmarks
 
 We have performed benchmarks comparing two merkle tree implementations,
