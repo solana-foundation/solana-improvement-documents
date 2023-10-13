@@ -17,7 +17,7 @@ feature: (fill in with feature tracking issues once accepted)
 This proposal introduces two new concepts to the Solana runtime.
 
 - Receipts, a deterministic encoding of state changes induced by a transaction;
-- The receipt tree, a commitment scheme over all transaction receipts in a slot.
+- The receipt tree, a commitment scheme over all transaction receipts in a block.
   
 ## New Terminology
 
