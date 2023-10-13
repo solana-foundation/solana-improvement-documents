@@ -175,7 +175,7 @@ the following properties:
 
 ```txt
 Receipt tree with an empty set of receipts
-where Nδ is the root.
+where Nα is the root.
 Nα := sha256(concat(0x80,0u64))
 
 Receipt tree with four receipts as leaf nodes [L0, L1, L2, L3]
