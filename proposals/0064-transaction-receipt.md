@@ -124,7 +124,7 @@ The transaction receipt must contain the following information related to the tr
 The receipt would be a structure defined as:
 
 ```rust
-pub struct Receipt{
+pub struct TransactionReceipt {
     pub message_hash: [u8;32],
     pub status: u8 // 1 or 0 would determine the post execution status
 }
