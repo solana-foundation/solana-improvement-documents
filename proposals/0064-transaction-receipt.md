@@ -118,15 +118,32 @@ result in a chain split.
 
 The transaction receipt must contain the following information related to the transaction:
 
+- Version
 - Message Hash
 - Execution Status
 
 The receipt would be a structure defined as:
 
 ```rust
-pub struct TransactionReceipt {
-    pub message_hash: [u8;32],
-    pub status: u8 // 1 or 0 would determine the post execution status
+// Scalars are encoded in little-endian order
+
+const RECEIPT_VERSION_V1: u64 = 1;
+
+const RECEIPT_STATUS_SUCCESS: u8 = 0;
+const RECEIPT_STATUS_FAILURE: u8 = 1;
+
+// Size: 0x29
+struct TransactionReceipt {
+    // Offset: 0x00
+    // Must be RECEIPT_VERSION_V1
+    version: u64, // version of the receipt that starts with 1
+    
+    // Offset: 0x08
+    message_hash: [u8;32],
+
+    // Offset: 0x28
+    // Must be one of RECEIPT_STATUS_{SUCCESS,FAILURE}
+    status: u8 // 1 or 0 to determine the post execution status
 }
 ```
 
@@ -177,7 +194,7 @@ L3 := sha256(concat(0x00, R3))
 Nα := sha256(concat(0x01, hash(L0), hash(L1)))
 Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
 Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
-Nδ := sha256(concat(hash(Nγ),len([L0, L1, L2, L3])))
+Nδ := sha256(concat(0x80, hash(Nγ),len([L0, L1, L2, L3])))
 
 Receipt tree with five receipts as leaf nodes [L0, L1, L2, L3, L4]
 where R0, R1, R2, R3, R4 are the receipts and Nτ is the root.
@@ -204,7 +221,7 @@ Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
 Nγ := sha256(concat(0x01, hash(L4), hash(L4)))
 Nδ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
 Nζ := sha256(concat(0x01, hash(Nδ), hash(Iε)))
-Nτ := sha256(concat(hash(Nζ),len([L0, L1, L2, L3, L4])))
+Nτ := sha256(concat(0x80, hash(Nζ),len([L0, L1, L2, L3, L4])))
 
 Here 'Nτ' is the root generated after concatenating
 the node 'Nζ' with the length of vector of leaf nodes (which is five in the above
@@ -212,6 +229,11 @@ illustration) of the tree and hashing it.
 ```
 
 [Link to the specification](https://github.com/solana-foundation/specs/blob/main/core/merkle-tree.md)
+
+#### Using SHA-256
+
+We have chosen SHA-256 over Blake3 as the hashing algorithm so we can take advantage
+of the hardware optimisations like SHA-NI and FPGA made by the Jump Firedancer team.
 
 #### Benchmarks
 
@@ -239,10 +261,12 @@ and status without trusting the RPC.
 
 ## Security Considerations
 
-We prepend 0x0 to leaf nodes and 0x1 to internal nodes to avoid second
-preimage attacks where a proof is provided with internal nodes as leaf nodes.
+We prepend 0x00 to leaf nodes, 0x01 to internal nodes and 0x80 to the root node respectively
+to avoid second preimage attacks where a inclusion proof is provided with internal
+nodes as leaf nodes.
 
-We also make sure that the proof doesn't contain any consecutive identical hashes.
+We also make sure that the inclusion proof doesn't contain any consecutive
+identical hashes.
 
 Security considerations defined in the merkle tree specification
 by the Firedancer team:
