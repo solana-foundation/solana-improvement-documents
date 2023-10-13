@@ -143,7 +143,7 @@ struct TransactionReceipt {
 
     // Offset: 0x28
     // Must be one of RECEIPT_STATUS_{SUCCESS,FAILURE}
-    status: u8 // 1 or 0 to determine the post execution status
+    status: u8,
 }
 ```
 
