@@ -22,53 +22,76 @@ not. These fees will be applied even if the transaction eventually fails and are
 collected on the account on which they were set. These fees would be only
 applied if the account is write locked by the transaction. The owner of the
 account can do lamport transfer to recover these fees. So instead of fees going
-to the validator, these fees go to the **dapp developers**. It will be dapp
-developer's responsibility to advertise the required PRAW fees to its users.
-These fees will depend on the CU requested by the transaction.
+to the validator, these fees go to the **writable account** i.e owner of the
+writable account. It will be dapp developer's responsibility to advertise the
+required PRAW fees to its users. User will have to specify the maximum amount of
+PRAW fees that they are willing to pay in the transaction. This way solana user
+and wallet adapters always know how much maximum fees they will end up paying to
+execute the transactions. If a user paid PRAW fees in excess the remaining
+amount of fees will be returned back to the user. Like prioritization fees,
+these fees will depend on the CU requested by the transaction.
+
 
 ## Motivation
 
-Currently, there is no way for dapp developers to enforce appropriate behavior
-in the way their contracts should be used. Bots spamming on dapps make them
-unusable and dapps lose their users/clients because the UX is laggy and
-inefficient. Unsuccessful transactions deny block space to potentially valid
-transactions which reduces activity on the dapp. For dapps like mango markets or
-Openbook increasing fees without any rebates or dynamically based other proposed
-mechanisms will punish potentially thousands of users because of a handful of
-malicious users. Giving dapps authority more control to incentivize proper
-utilization of its contract is the primary motivation for this proposal.
+### Broken Mechanics
 
-During network congestion, many transactions in the network cannot be processed
-because they all want to write-lock the same accounts. When a write lock on an
-account is taken by a transaction batch no other batch can use this account in
-parallel, so only transactions belonging to a single batch are processed
-correctly and all others are retried again or forwarded to the leader of the
-next slot. With all the forwarding and retrying the validator is choked by the
-transactions write-locking the same accounts and effectively processing valid
-transactions sequentially.
+When write-lock is taken, there are no checks on whether the program needs it or
+guarantees it will be used eventually. Whenever a transaction takes the
+write-lock, there is no punishment for taking the write-lock and not using it.
+Dapps have no authority over who can write-access the accounts owned by them.
+There is a 12M CUs per block per writable account limit, which makes the block
+space very important, and dapps would like to use it efficiently. Write-lock
+grievers use this advantage to get a competitive edge by write-locking the
+accounts of their competitors or dapp. Dapps may also want to incentivize
+certain transactions more than others during specific scenarios or conditions.
+Currently, dapps can regulate transactions that are executed successfully but
+cannot punish transactions that fail or that never CPI into the dapp. This makes
+honest users the cost bearer. There should be a mechanism where Dapps can
+monetize the accounts owned by them and then distribute the incentives as they
+see fit.
 
-There are multiple accounts of OpenBook, mango markets, etc which are used in
-high-frequency trading. During the event of extreme congestion, we observe that
-specialized trading programs write lock these accounts but never CPI into the
-respective programs unless they can extract profit, effectively starving the
-actual users for access. With current low cluster fees, it incentivizes spammers
-to spam the network with transactions.
+### Spamming
 
-Without any proper rebate mechanism for users, Solana fees will increase and it
-will lose the edge for being low fees cluster. For entities like market makers,
-Solana must remain a low-fee cluster as they have a thin profit margin and have
-to quote quite often. The goal of this proposal is to reduce spamming without
-really increasing fees for everyone. Encourage users to create proper
-transactions. Read the cluster state before creating transactions instead of
-spamming. We are motivated to improve the user experience, and user activity and
-keep Solana a low gas fee blockchain. Keeping gas fees low and increasing user
-activity on the chain will help all the communities based on Solana grow. This
-will also help users to gain more control over accounts owned by them.
+There are multiple accounts of OpenBook, mango markets, etc, which are used in
+high-frequency trading. During extreme congestion, specialized trading programs
+write-lock these accounts but never CPI into the respective programs unless they
+can extract profit, effectively starving the actual users for access. Current
+low cluster fees, and jitter, incentivize spammers to spam the network with
+transactions rather than improve infrastructure to read the cluster state and
+create transactions.
 
-Note that this proposal does not aim to increase gas fees for all transactions
-or add any kind of congestion control mechanism.
+With the correct fee mechanism, we can discourage spamming of the dapp and let
+dapp control its traffic.
+
+### Closing incentive loop
+
+With prioritization fees and MEV bribes, leaders will only include the
+transactions that maximize their profit. During extreme congestion or high
+network usage, these fees will increase drastically. For proper functioning of
+Dapps, they will need to incentivize some types of transactions more than
+others. These incentives will be distributed to subsidize the cost of sending
+transactions to the cluster. These incentives will eventually end up with the
+validators and their stakes accounts. These costs of creating incentives will
+then be transmitted to the users, making it lose its competitive advantages.
+
+We should focus on circulating rewards evenly between the communities of Solana
+ecosystems and make Solana attractive to all DeFi, Validators, MEV, and other
+protocols. With correctly managed PRAW fees, we can solve the issue for local
+fee markets and give actors the correct incentives to send proper instructions
+at the right time. This will also help dapp incentivize good behavior from the
+penalties collected for bad behavior. Better functioning of dapps will also
+increase profits by MEV or validator communities.
 
 ## Alternatives Considered
+
+* Having a seperate app chain for defi dapps
+
+Pros: Dapps can implement their own incentive loop and have fine control over
+accounts.
+
+Cons: A solana fork has to be developed and maintain, bidges have to be built.
+Not in the best interest for solana as a community.
 
 * Having a fixed write lock fee and a read lock fee.
 
@@ -126,9 +149,8 @@ Addition of new syscalls to get, set and rebate PRAW fees during program
 runtime. Application developers will be able to rebate these fees through the
 new syscall, but only if the transaction succeeds, this way transactions
 write-locking the respective accounts will require full fee payment before
-starting the execution of the transaction. Rebates will be issued to the payer
-after the transaction is executed. During transaction execution, the rebates
-will not be reflected in the payer's balance.
+starting the execution of the transaction. Program will have to rebate fees back
+to the payer in case of rebates
 
 Once PRAW fees are paid on an account by the payer they are valid for the whole
 transaction, even if the same account is write-locked in multiple instructions.
@@ -204,11 +226,8 @@ then the rest would be transferred back to the payer.
 
 ### Syscall to change PRAW fees
 
-PRAW fees should be considered as set and forget kind of fees by dapp
-developers. They are not aimed to control congestion over the network instead
-they aim to reduce spamming.The runtime will automatically set the PRAW fee to
-`0` on account creation. PRAW fee will not be changed if the ownership of the
-account changes.
+The runtime will automatically set the PRAW fee to `0` on account creation. PRAW
+fee will not be changed if the ownership of the account changes.
 
 A new syscall will be added to update the PRAW fees:
 
@@ -256,38 +275,10 @@ fn get_program_rebatable_account_write_fee(
 The syscall will take address as input and return microlamports per
 CU. It will return `0` if no PRAW is set on the address.
 
-### Syscall to Rebate
+### Rebates
 
-The admin of the program can issue a rebate of the PRAW fees paid to write lock
-a specific account. The rebate issued will be transferred back to the payer at
-the end of the transaction if it is successfully executed. Similar to the set
-and read PRAW fees this will need to be exposed through a syscall so that
-programs can implement custom authorization and delegate the decision to
-composing programs.
-
-Simple rebate schemes will verify merely signers, e.g an oracle preventing 3rd
-parties from write-locking their price feed. Dexes will need more complex rebate
-schemes based on instruction sysvar introspection.
-
-Syscall definition of the rebate mechanism is:
-
-```
-fn rebate_program_rebatable_account_write_fee(
-  address: Pubkey, 
-  microlamports_per_requested_cu: u64
-);
-```
-
-Rebate takes account on which rebate is issued and the amount of microlamports
-per CU that needs to be rebated as input. It returns void but the transaction
-will fail for invalid inputs. In case of multiple rebates on the same account
-only the highest amount of rebate will be taken into account. The rebated amount
-is always the minimum of the largest call to
-`rebate_program_rebatable_account_write_fee()` and the PRAW fees on the
-account. If program rebates `U64::MAX` it means all the PRAW fees on the account
-are rebated. The rebate amount cannot be negative. It will return an error
-`InvalidAccountOwner` if the program calling the syscall is not the owner of the
-account.
+Rebates will be handled inside the program itself using system program transfer
+instruction.
 
 ### Changes in JSON RPC
 
@@ -301,7 +292,7 @@ security we assume that program never rebates the PRAW fees on the accounts.
 Wallets should be extended to use these two methods to display user the correct
 information.
 
-### Calculation of PRAW Fees and rebates.
+### Calculation of PRAW Fees
 
 User creates a transaction by setting maximum PRAW fees in terms of
 microlamports per requested CUs (`m`) and requested CUs (`C`). Solana runtime
@@ -320,19 +311,7 @@ T = sum(Pi * C) for i in 0 to L.
 If M>=T we continue to execute else the transaction fails with an error
 `ProgramRebatableAccountWriteFeesNotPaid`.
 
-Let Overpaid amount (`O = M - T`)
-
-After execution, we iterate on the rebates issued to calculate total rebated
-amount (`R`), For an account there could be multiple rebates during a
-transaction. Consider that there are `N` rebates on ith account. Each rebate
-will be represented as `Rin`.
-
-```
-R = Sum( min(Pi, max(Rin where n=0 to N)) * C )
-```
-
-We then transfer `(Pi - Ri) * C` into each writable account and `O + R` back to
-the payer.
+Let Overpaid amount (`O = M - T`) which will returned back to the user.
 
 ### Consumption of CUs
 
@@ -341,8 +320,7 @@ Currently `DEFAULT_COMPUTE_UNITS` assigned to `ComputeBudgetProgram` and
 will consume a fixed 300 CUs to decode one or more
 `TransactionHeaderParameters`. An additional 150 CUs per writable account which
 has a PRAW fee will be charged for the transaction which is equivalent to
-`transfer` instruction in `SystemProgram`. There will be a cost of 150 CUs per
-call to rebate syscall and set PRAW fee syscall. These costs could change and
+`transfer` instruction in `SystemProgram`. These costs could change and
 the future development related to the consumption of CUs while loading writable
 accounts can additionally take into consideration if PRAW fees are enabled on
 the loaded accounts.
@@ -392,30 +370,16 @@ microlamports per requested CUs.
   or succeeds) `accA` will receive `100` lamports. The payer will end up paying
   `other fees` + `100` lamports.
 
-* Fees paid full rebates case:
+* Fees paid rebates case:
 
   A payer includes instruction `SetProgramRebatableAccountWriteFees(100)` in the
   transaction. There is an accounts `accA` which is write-locked by the
   transaction and it has an PRAW fees fee of `100` lamports. Consider during
   execution the program will rebate the PRAW fees fee on the account. Then payer
   should have a minimum balance of `other fees` + `100` lamports to execute the
-  transaction. After successful execution of the transaction, the `100` lamports
-  will be rebated by the program and then Solana runtime will transfer them back
-  to the payer. So the payer will finally end up paying `other fees` only.
-
-* Fees paid multiple partial rebates case:
-
-  A payer includes instruction `SetProgramRebatableAccountWriteFees(200)` in the
-  transaction. The transaction has three instructions (`Ix1`, `Ix2`, `Ix3`).
-  There are accounts (`accA`, `accB`) that are write-locked by the transaction
-  and each of them has an PRAW fees fee of `100` lamports. Lets consider `Ix1`
-  rebates 25 lamports on both accounts, `Ix2` rebates 75 lamports on `accA` and
-  `Ix3` rebates 10 lamports on `accB`. In the case of multiple rebates only the
-  maximum of all the rebates is applied. Consider the transaction is executed
-  successfully. The maximum of all the rebates for `accA` is 75 lamports and
-  `accB` is 25 lamports. So a total of 100 lamports are rebated back to the
-  payer, `accA` gets 25 lamports and `accB` gets 75 lamports. The payer will end
-  up paying `other fees` + `100` lamports.
+  transaction. After successful execution of the transaction, the `R` lamports
+  will be rebated by the program to the payer. So the payer will finally end up
+  paying `other fees` + `100` - `R` lamports only.
 
 * Fees paid full rebates but the execution failed case:
 
@@ -427,7 +391,7 @@ microlamports per requested CUs.
   `other fees` + `100` lamports to execute the transaction. The program rebated
   PRAW fees but as executing the transaction failed, no rebate will be issued.
   The PRAW fees fees will be transferred to respective accounts, and the payer
-  will finally end up paying `other fees` + `100` lamports as PRAW fees.
+  will finally end up paying `other fees` + `100` lamports as fees.
 
 * Fees are over paid case:
 
@@ -452,18 +416,10 @@ microlamports per requested CUs.
   So before program execution, we detect that the PRAW fees are not sufficiently
   paid and execution fails with the error
   `ProgramRebatableAccountWriteFeesNotPaid` and the partially paid amount is
-  transferred back to the payer. So the payer pays only `base fees` in the end
+  transferred back to the payer. So the payer pays only `other fees` in the end
   but the transaction is unsuccessful.
 
 #### Edge cases
-
-  * In a transaction, PRAW fee is set on an account, and then rebate is called on
-    the same account. Then there will be no rebates as no PRAW fees were paid
-    yet for the transaction.
-
-  * In a transaction on an account with PRAW fees, the PRAW fee is changed and
-    rebate is issued on the incorrect value of PRAW fees. The rebate will always
-    be paid on `min(max(all rebates), PRAW fee paid for the account)`.
 
   * If PRAW fee is changed multiple times in the transaction, only last update
     will be taken into account.
@@ -483,23 +439,23 @@ microlamports per requested CUs.
 
 ## Impact
 
-Overall this feature will incentivize the creation of proper transactions and
-spammers would have to pay much more fees reducing congestion in the cluster.
-This will add very low calculation overhead on the validators. It will also
-enable users to protect their accounts against malicious read and write locks.
-This feature will encourage everyone to write better-quality code to help
-avoid congestion.
+Overall this feature fixes bug where there are no negative effects of taking
+write lock on an account. It will also incentivize the creation of proper
+transactions and spammers would have to pay much more fees reducing congestion
+in the cluster. This will add very low calculation overhead on the validators.
+It will also enable users to protect their accounts against malicious read and
+write locks. This feature will encourage everyone to write better-quality code
+to help avoid congestion.
 
 It is the dapp's responsibility to publish the PRAW fees fee required for each
 account and instruction. They should also add appropriate
 `SetProgramRebatableAccountWriteFees` instruction in their client library while
-creating transactions or provide visible API to get these PRAW fees. We expect
-these fees to be set and forget kind of fees and do not expect them to be
-changed frequently. Some changes have to be done in web3.js client library to
-get PRAW fees when we request the account. Additional instructions should be
-added to the known programs like Token Program, to enable this feature on the
-TokenAccounts. The dapp developer have to also take into account PRAW fees on
-the programs they are dependent on.
+creating transactions or provide visible API to get these PRAW fees. Some
+changes have to be done in web3.js client library to get PRAW fees when we
+request the account. The dapp developer have to also take into account PRAW fees
+on the programs they are dependent on. Dapps can improve infrastructure to
+properly update and advertise these fees to their clients in specific scenarios
+making them dynamic.
 
 The cluster is currently vulnerable to a different kind of attack where an
 adversary with malicious intent can block its competitors by writing or
@@ -527,15 +483,18 @@ PRAW fees on the accounts will use around 1000 CUs, program owner will need
 roughly 4.3980 SOLs to reupdate the PRAW fees. Optimizing the instruction to
 update the PRAW fees is a must for dapp developers.
 
-For an account that has collected PRAW fees, to transfer these fees
-collected to another account we have to pay PRAW fees to write lock the
-account, we can include a rebate in the transaction. In case of
-any bugs, while transferring PRAW fees from the account to the
-authority, there can be an endless loop where the authority creates a
-transaction to recover collected PRAW fees, with an instruction to pay
-PRAW fees to modify the account and an instruction to rebate. If the
-transaction fails because of the bug, the user fails to recover collected
-fees, in turn increasing PRAW fees collected on the account.
+For an account that has collected PRAW fees, to transfer these fees collected to
+another account we have to pay PRAW fees to write lock the account. In case of
+any bugs, while transferring PRAW fees from the account to the authority, there
+can be an endless loop where the authority creates a transaction to recover
+collected PRAW fees, with an instruction to pay PRAW fees to modify the account
+and an instruction to rebate. If the transaction fails because of the bug, the
+user fails to recover collected fees, in turn increasing PRAW fees collected on
+the account.
+
+Program developers should take care of rebating. They can rebate more than what
+PRAW fees were paid during the transaction. This may add into incentivising
+users to send some transaction.
 
 ## Backwards Compatibility
 
@@ -599,18 +558,18 @@ spammers spend their SOLs 2000 times more rapidly than before. The thumb rule
 for dapps to set PRAW fees on their accounts is
 `More important the account = Higher PRAW fees`.
 
-### Pyth Usecase
+### Oracle Usecase
 
-Pyth's price feeds currently serve around 33M CU peak read load. An attacker
+Oracles's price feeds currently serve around 33M CU peak read load. An attacker
 could write lock those for 12M CU and cause scheduling issues by crowding out
 the majority of the block. A high PRAW fees fee of 2^42 microlamports per CU
 could prevent anyone except price feed publishers from write-locking a price
 feed account.
 
-To effectively block DeFi protocols from using Pyth oracles a malicious attacker
-needs to write lock Pyth oracles with a large amount of CUs. With current limits
-of CUs per writable account of around 10 million CUs the attacker has to spend
-around 4398 SOLs to block PYTH oracle for a block.
+To effectively block DeFi protocols from using oracles a malicious attacker
+needs to write lock oracles with a large amount of CUs. With current limits of
+CUs per writable account of around 10 million CUs the attacker has to spend
+around 4398 SOLs to block oracle for a block.
 
 ### Mango V4 Usecase
 
