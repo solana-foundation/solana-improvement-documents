@@ -18,14 +18,16 @@ This proposal introduces two new concepts to the Solana runtime.
 
 - TransactionReceiptData, a deterministic encoding of state changes induced by
   a transaction;
-- The receipt tree, a commitment scheme over all transaction receipts in a block.
+- Transaction Receipt Tree, a commitment scheme over all transaction receipts
+  in a block.
   
 ## New Terminology
 
 TransactionReceiptData: A deterministic encoding of state changes induced by a
 transaction that includes the version, the status and a message hash of the transaction.
 
-Receipt Tree: A commitment scheme over all transaction receipts in a slot.
+Transaction Receipt Tree: A commitment scheme over all transaction receipts
+in a slot.
 
 ## Motivation
 
@@ -49,11 +51,12 @@ large.
 
 This proposal introduces a new “transaction receipt” data structure, which
 contains a subset of the information available via RPC. The derivation and
-serialization functions for receipts are defined to be deterministic to prevent
-malleability.
+serialization functions for transaction receipts are defined to be deterministic
+to prevent malleability.
 
-To succinctly detect receipt mismatches, this proposal further introduces a
-commitment scheme based on a binary hash tree that is constructed once per slot.
+To succinctly detect transaction receipt mismatches, this proposal further
+introduces a commitment scheme based on a binary hash tree that is
+constructed once per slot.
 
 ### Design Goals
 
@@ -67,13 +70,14 @@ commitment scheme based on a binary hash tree that is constructed once per slot.
    *Rationale:* Future upgrades propose tolerating asynchronous replay during
    block construction. In other words, validators should be allowed to produce
    and distribute a block before replaying said block. It is impossible to
-   introduce such a tolerance if receipts are mandatory components of blocks.
+   introduce such a tolerance if transaction receipts are mandatory components
+   of blocks.
 
 ## Alternatives Considered
 
 ### Using TransactionStatusMeta
 
-An alternative to introducing a new receipt type is reusing the transaction
+An alternative to introducing a new transation receipt type is reusing the transaction
 status data as it appears in RPC ([TransactionStatusMeta]).  This would reduce
 complexity for clients.
 
@@ -123,7 +127,7 @@ The transaction receipt must contain the following information related to the tr
 - Message Hash
 - Execution Status
 
-The receipt would be a structure defined as:
+The transaction receipt would be a structure defined as:
 
 ```rust
 // Scalars are encoded in little-endian order
@@ -177,11 +181,11 @@ the following properties:
   tree construction.
 
 ```txt
-Transaction Receipt tree with an empty set of transaction receipts
+Transaction receipt tree with an empty set of transaction receipts
 where Nα is the root.
 Nα := sha256(concat(0x80,0u64))
 
-Transaction Receipt tree with four transaction receipts as leaf
+Transaction receipt tree with four transaction receipts as leaf
 nodes [L0, L1, L2, L3] where R0, R1, R2, R3 are the transaction 
 receipts and Nδ is the root.
            Nδ
@@ -204,7 +208,7 @@ Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
 Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
 Nδ := sha256(concat(0x80, hash(Nγ),len([L0, L1, L2, L3])))
 
-Transaction Receipt tree with five transaction receipts 
+Transaction receipt tree with five transaction receipts 
 as leaf nodes [L0, L1, L2, L3, L4] where R0, R1, R2, R3, R4 are the 
 transaction receipts and Nτ is the root.
                 Nτ   
