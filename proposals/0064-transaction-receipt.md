@@ -161,7 +161,7 @@ struct TransactionReceiptData {
 - The `version` integer can safely be shortened to `u8` in
   a future upgrade. (Due to little-endian encoding)
 - In future versions, hashes for a subset of fields exhibiting
-  a low set of possible combined values could be aligned to the
+  a small set of possible combinations could be aligned to the
   hash function block size and precomputed. (Such as `version`
   and `status`). For now, this micro-optimization would yield
   no performance improvements.
