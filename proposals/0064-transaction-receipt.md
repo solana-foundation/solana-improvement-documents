@@ -220,7 +220,7 @@ It is designed to feature the following properties:
   - Alternatives to SHA-256 based constructions, such as BLAKE3 or SHA-3 would
     offer superior performance.
   - Existing optimized SHA-256 hash tree implementations are readily available.
-  - As of 2023-Oct, hardware implementations of SHA-256 are currently availabl
+  - As of 2023-Oct, hardware implementations of SHA-256 are currently available
     (via SHA-NI on x86, via Firedancer's SystemVerilog implementation on AWS F1
     FPGA), whereas BLAKE3 and SHA-3 are not. (SHA-3 is only available on recent
     Arm cores)
