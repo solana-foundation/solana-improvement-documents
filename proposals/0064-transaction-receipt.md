@@ -174,7 +174,8 @@ each node is a 32 byte hash.
 The tree is derived from a vector of TransactionReceiptData objects.
 It is designed to feature the following properties:
 
-- The Merkle tree construction used is an extension of the PoH tree.
+- The Merkle tree construction used is an extension of the tree construction used in PoH.
+  (With different input data)
 
 - The tree derivation function is surjective:
   Each vector of transaction receipts results in a unique tree,
