@@ -209,7 +209,7 @@ It is designed to feature the following properties:
   `sha256(root_prefix || u64_le_encode(0))`.
 
 - If the leaf count is non-zero, the output is
-  `sha256(intermediate_root || u64_le_encode(leaf_count))`.
+  `sha256(root_prefix || intermediate_root || u64_le_encode(leaf_count))`.
 
 **Tree design considerations**
 
