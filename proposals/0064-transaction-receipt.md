@@ -202,14 +202,14 @@ It is designed to feature the following properties:
   - The `root_prefix` is the byte `0x80`
   - The function `u64_le_encode` encodes a 64-bit integer in little-endian
     byte order.
+  - The `leaf_count` is the number of TransactionReceiptData objects to
+    serve as leaf nodes in the tree.
 
 - If the leaf count is zero, the output is
-  `sha256(root_prefix || u64_le_encode(0))`
-  [Specification: Binary Merkle Tree](https://github.com/solana-foundation/specs/blob/main/core/merkle-tree.md)
+  `sha256(root_prefix || u64_le_encode(0))`.
 
 - If the leaf count is non-zero, the output is
   `sha256(intermediate_root || u64_le_encode(leaf_count))`.
-  Leaf count is the number of transaction receipts in the tree.
 
 **Tree design considerations**
 
