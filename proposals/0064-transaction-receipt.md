@@ -335,9 +335,9 @@ third-party RPC nodes.
 
 ## Security Considerations
 
-The transaction receipt tree is expected to be used for inclusion proof that
-demonstrate successful inclusion of a transaction.  Such proofs may then be
-relied on to provide financial services. 
+The transaction receipt tree is expected to be used for transaction inclusion proofs.
+For example, an inclusion proof might attest that a token transfer has succeeded.
+Such proofs may then be relied on to provide financial services. 
 
 It is thus important to ensure that proofs cannot be forged.
 
