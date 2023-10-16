@@ -4,7 +4,7 @@ title: Transaction Receipts
 authors:
   - Anoushk Kharangate (Tinydancer)
   - Harsh Patel (Tinydancer)
-  - Richard Patel (Jump Firedancer)
+  - Richard Patel (Jump)
 category: Standard
 type: Core
 status: Draft
