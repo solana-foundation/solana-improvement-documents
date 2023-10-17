@@ -77,7 +77,7 @@ constructed once per slot.
 
 ### Using TransactionStatusMeta
 
-An alternative to introducing a new transation receipt type is reusing the transaction
+An alternative to introducing a new transaction receipt type is reusing the transaction
 status data as it appears in RPC ([TransactionStatusMeta]).  This would reduce
 complexity for clients.
 
