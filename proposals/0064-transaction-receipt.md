@@ -268,7 +268,7 @@ It is designed to feature the following properties:
   - Allows reusing existing code for constructing the transaction receipt tree.
   - Avoids introducing a new cryptographic construction.
   - Alternatives to SHA-256 based constructions, such as BLAKE3 or SHA-3 would
-    offer superior performance.
+    offer superior theoretical performance.
   - Existing optimized SHA-256 hash tree implementations are readily available.
   - As of 2023-Oct, hardware implementations of SHA-256 are currently available
     (via SHA-NI on x86, via Firedancer's SystemVerilog implementation on AWS F1
