@@ -5,7 +5,7 @@ authors:
   - Jacob Creech (Solana Foundation)
 category: Meta
 type: Meta
-status: Draft
+status: Living
 created: 2022-10-18
 ---
 
@@ -68,7 +68,7 @@ Proposals but apply to areas other than the Solana protocol itself. They may
 propose an implementation, but not to Solana's codebase; they often require
 community consensus and users are typically not free to ignore them. Examples
 include procedures, guidelines, changes to the decision-making process, and
-changes to the tools or environment used in Solana development. Any meta-EIP is
+changes to the tools or environment used in Solana development. Any meta-SIMD is
 also considered a Process Proposals.
 
 ## Proposal Lifecycle
@@ -79,6 +79,7 @@ The stages in a lifecycle of a proposal are as follows:
 - Draft
 - Review
 - Accepted
+- Living
 - Stagnant
 - Withdrawn
 - Implemented
@@ -101,6 +102,7 @@ flowchart LR
   Idea ---> Draft;
   Draft ---> Review;
   Review ---> Accepted;
+  Review ---> Living;
 
   Draft ---> Stagnant;
   Review ---> Stagnant;
@@ -157,6 +159,10 @@ issue for tracking across clusters should also be created. While it is not
 far the most effective way to see a proposal through to completion: authors
 should not expect that other project developers will take on responsibility for
 implementing their accepted feature.
+
+### Living
+
+A special status for SIMDs that are designed to be continually updated and not reach a state of finality. This includes most notably SIMD-1.
 
 ### Stagnant
 
