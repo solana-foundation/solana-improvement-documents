@@ -8,6 +8,8 @@ type: Core/Networking/Interface/Meta
 status: Draft
 created: (fill me in with today's date, YYYY-MM-DD)
 feature: (fill in with feature tracking issues once accepted)
+supercedes: (optional - fill this in if the SIMD supercedes a previous SIMD)
+extends: (optional - fill this in if the SIMD extends the design of a previous SIMD)
 ---
 
 ## Summary
