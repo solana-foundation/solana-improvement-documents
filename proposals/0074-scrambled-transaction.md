@@ -13,3 +13,23 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 TBD
+
+## Motivation
+
+
+## Alternatives Considered
+
+
+## New Terminology
+
+
+## Detailed Design
+
+
+## Impact
+
+
+## Security Considerations
+
+
+## Drawbacks *(Optional)*
