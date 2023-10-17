@@ -127,7 +127,7 @@ a transaction.  It contains the following information:
 - Transaction Receipt Version (currently v1, other values reserved for future upgrades)
 - Message Hash identifying the transaction it refers to
 - The Execution Status, a boolean identifying whether the transaction was successfully
-  executed or failed without state changes.
+  executed or failed without extrinsic state changes.
 
 It is defined by the following pseudocode.
 
