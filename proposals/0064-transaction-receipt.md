@@ -154,12 +154,62 @@ struct TransactionReceiptData {
 }
 ```
 
-**Binary layout considerations**
+#### Binary layout
+
+The layout of the transaction receipt data when being hashed is as follows:
+0x00 Prefix
+0x01 Version
+0x09 Status
+0x0a Message Hash
+
+Since SHA-256 prefers 32 byte blocks with non-overlapping data, we considered padding
+the data to be aligned. However, without precomputation this would be worse in
+terms efficiency as it would require on block more. With precomputation the
+efficiency would be roughly the same. Below are the two layouts:
+
+**Naive Case:**
+
+```txt
+// SHA block 0
+[0x00..0x01] Merkle Node Type
+[0x01..0x09] Version
+[0x09..0x0a] Status
+[0x0a..0x20] Message Hash
+// SHA block 1
+[0x20..0x2a] Message Hash
+
+[0x2a..0x33] Merkle-Damgard Suffix
+[0x33..0x40] Merkle-Damgard Padding
+```
+
+**Optimised Case:**
+
+```txt
+// SHA block 0 (precomputed)
+[0x00..0x01] Merkle Node Type
+[0x01..0x09] Version
+[0x09..0x0a] Status
+[0x0a..0x20] Padding
+// SHA block 1
+[0x20..0x40] Message Hash
+// SHA block 2
+[0x40..0x49] Merkle-Damgard Suffix
+[0x49..0x60] Merkle-Damgard Padding
+```
+
+The leaf is constructed by hashing the struct fields in this order:
+hash(0x0, version, status, message_hash)
+
+##### Key considerations
 
 - When inserted as a leaf node into the tree defined below,
   this structure requires hashing two SHA-256 blocks.
 - The `version` integer can safely be shortened to `u8` in
-  a future upgrade. (Due to little-endian encoding)
+  a future upgrade (Due to little-endian encoding). Using a
+  u64 allows for this flexibilty. Futhermore, we could also
+  fit a domain hash separator in the `version` bits to prevent
+  re-interpreting the leaf nodes as a different structure in
+  the future as a good practice.
 - In future versions, hashes for a subset of fields exhibiting
   a small set of possible combinations could be aligned to the
   hash function block size and precomputed. (Such as `version`
@@ -174,8 +224,8 @@ each node is a 32 byte hash.
 The tree is derived from a vector of TransactionReceiptData objects.
 It is designed to feature the following properties:
 
-- The Merkle tree construction used is an extension of the tree construction used in PoH.
-  (With different input data)
+- The Merkle tree construction used is an extension of the tree construction used
+  in PoH. (With different input data)
 
 - The tree derivation function is surjective:
   Each vector of transaction receipts results in a unique tree,
@@ -188,7 +238,7 @@ It is designed to feature the following properties:
   from a leaf node to the root node. The inclusion proof format is defined
   separately from this SIMD.
 
-**Specification**
+#### Specification
 
 - Input: Vector of TransactionReceiptData objects in PoH order
 
@@ -198,7 +248,7 @@ It is designed to feature the following properties:
 
 - Definitions:
   - The `intermediate_root` is the 32 byte root of the binary merkle tree
-    as externally specified. 
+    as externally specified.
     [Specification: Binary Merkle Tree](https://github.com/solana-foundation/specs/blob/main/core/merkle-tree.md)
   - The `root_prefix` is the byte `0x80`
   - The function `u64_le_encode` encodes a 64-bit integer in little-endian
@@ -212,9 +262,9 @@ It is designed to feature the following properties:
 - If the leaf count is non-zero, the output is
   `sha256(root_prefix || intermediate_root || u64_le_encode(leaf_count))`.
 
-**Tree design considerations**
+#### Tree design considerations
 
-- _Use of the PoH hash tree construction_
+- *Use of the PoH hash tree construction*
   - Allows reusing existing code for constructing the transaction receipt tree.
   - Avoids introducing a new cryptographic construction.
   - Alternatives to SHA-256 based constructions, such as BLAKE3 or SHA-3 would
@@ -225,19 +275,19 @@ It is designed to feature the following properties:
     FPGA), whereas BLAKE3 and SHA-3 are not. (SHA-3 is only available on recent
     Arm cores)
 
-- _Leaf count suffix_:
+- *Leaf count suffix*:
   The PoH tree implicitly expands the internal leaf count to a power of two,
   causing the `intermediate_root` two have more than one pre-image for certain
   leaf counts.  This is fixed by the leaf count suffix in the final hash.
 
-- _Exclusion proofs are not provided_:
+- *Exclusion proofs are not provided*:
   Although it is possible to construct Merkle-based set exclusion proofs, this
   feature was not part of this proposal's design criteria.  A proposed exclusion
   proof mechanism involves sorting transaction receipts by their message hash.
   This change may be considered in a future version of the transaction receipt
   tree.
 
-**Examples**
+#### Examples
 
 The following illustrates transaction receipt hash trees for various inputs.
 
@@ -276,7 +326,7 @@ Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
 Nδ := sha256(concat(0x80, hash(Nγ),len([L0, L1, L2, L3])))
 ```
 
-```
+```txt
 Transaction receipt tree with five transaction receipts 
 as leaf nodes [L0, L1, L2, L3, L4] where R0, R1, R2, R3, R4 are the 
 transaction receipts and Nτ is the root.
@@ -321,7 +371,7 @@ The input used was a vector of 500k TransactionReceiptData objects.
 2) Firedancer binary merkle tree (bmtree): Implemented in C and uses Firedancer's
    optimised SHA-256 implementation. Benchmarks were performed via Rust FFI bindings,
    and thus may not be representative of the upper bound.
-   An improved version using AVX-512 instructions is in progress. 
+   An improved version using AVX-512 instructions is in progress.
    [Firedancer GitHub](https://github.com/firedancer-io/firedancer/tree/main/src/ballet/bmtree)
 
 [Benchmark Source](https://github.com/tinydancer-io/merkle-bench)
@@ -329,19 +379,20 @@ The input used was a vector of 500k TransactionReceiptData objects.
 
 ## Impact
 
-This would enable SIMD-0052 to be implemented, which adds the transaction receipt root
-to the bank hash. This will allow users to verify transaction statuses returned by
-third-party RPC nodes.
+This would enable SIMD-0052 to be implemented, which adds the transaction receipt
+root to the bank hash. This will allow users to verify transaction statuses returned
+by third-party RPC nodes.
 
 ## Security Considerations
 
 The transaction receipt tree is expected to be used for transaction inclusion proofs.
 For example, an inclusion proof might attest that a token transfer has succeeded.
-Such proofs may then be relied on to provide financial services. 
+Such proofs may then be relied on to provide financial services.
 
 It is thus important to ensure that proofs cannot be forged.
 
 Common forgery attacks against Merkle trees include:
+
 - Various forms of pre-image attacks against the underlying hash functions.
   As of 2023-Oct, no practical collision attacks against SHA-256 are known.
 - Malleability and type confusion in the hash tree construction.
@@ -351,6 +402,7 @@ Common forgery attacks against Merkle trees include:
   2. A node count suffix to prevent malleable leaf count attacks
 
 Further conerns include:
+
 - Implementation bugs: To reduce the risk of such, this proposal deliberately
   keeps the amount of newly introduced logic low.
 - Performance-related attacks (DoS): The computational complexity of transaction
