@@ -182,7 +182,7 @@ efficiency would be roughly the same. Below are the two layouts:
 [0x33..0x40] Merkle-Damgard Padding
 ```
 
-**Optimised Case:**
+**Potentially Optimised Case:**
 
 ```txt
 // SHA block 0 (precomputed)
@@ -214,7 +214,7 @@ hash(0x0, version, status, message_hash)
   a small set of possible combinations could be aligned to the
   hash function block size and precomputed. (Such as `version`
   and `status`). For now, this micro-optimization would yield
-  no performance improvements.
+  no performance improvements as mentioned above.
 
 ### Transaction Receipt Tree
 
