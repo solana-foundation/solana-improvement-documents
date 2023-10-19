@@ -383,9 +383,11 @@ The input used was a vector of 500k TransactionReceiptData objects.
 
 ## Impact
 
-This would enable SIMD-0052 to be implemented, which adds the transaction receipt
-root to the bank hash. This will allow users to verify transaction statuses returned
-by third-party RPC nodes.
+The generation of a Transaction Receipt Tree is a prerequisite for providing proof
+that a transaction was included in a block. Itself a step toward providing proof
+that a transaction was executed and accepted under consensus by a Solana cluster. A
+major improvement in trust-minimization for the ecosystem, opening the door to new
+use-cases and reducing infrastructure requirements for some of today's.
 
 ## Security Considerations
 
