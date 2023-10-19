@@ -59,8 +59,8 @@ descrambling = time-lock decrypting
 8. the tx is descrambled by a certain validator assigned by consistent
    hashing as part of new distributed descrambling stage.
 9. validator submits a vote tx with the descrambled key is attached
-10. as soon as all descrambled keys are included in child blocks, the parent
-    block is scheduled and replayed.
+10. as soon as all descrambled keys are included in child blocks, the original
+    (parent) block is scheduled and replayed.
 
 ### protocol changes
 
