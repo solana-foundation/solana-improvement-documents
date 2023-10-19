@@ -36,8 +36,7 @@ automatically activates it when a preset threshold is met.
 
 ## New Terminology
 
-- Feature Gate program: The BPF program that will own all feature accounts and
-possess the capability to revoke them.
+- Feature Gate program: The BPF program that will own all feature accounts.
 - Feature-Request account: The PDA under the Feature Gate program used to track
 features requested for activation.
 - Feature-Queue account: The PDA under the Feature Gate program used to track
@@ -74,11 +73,13 @@ has more features in its feature set.
 |           | Feature D |
 
 The runtime should activate each of these features when a strong majority of
-the network supports it. “Support” for a feature means that a node is running a
-version of the Solana runtime where the code required for the feature is
-present. For instance, on a cluster with 50% of stake running v1.14.25 and 50%
-of stake running v1.16.0, only Features A and C should be eligible for
-activation.
+the network supports it.
+"Strong majority" in this context is defined by the current feature activation
+process as 95% of stake.
+“Support” for a feature means that a node is running a version of the Solana
+runtime where the code required for the feature is present. For instance, on a
+cluster with 50% of stake running v1.14.25 and 50% of stake running v1.16.0,
+only Features A and C should be eligible for activation.
 
 This SIMD proposes 3 steps over the span of one epoch to determine which
 feature gates are queued for activation and assess stake support:
@@ -105,8 +106,9 @@ key-holders submit the CLI command to activate a feature, the Feature Gate
 Program appends the feature ID to the Feature-Request set at the same time as
 creating the feature account . Revoked features are removed from the
 Feature-Request list. At the end of the epoch, the Feature-Request set is
-written to the feature queue PDA, where it becomes immutable. The
-Feature-Request PDA is then reset to an empty list again.
+written to the feature queue PDA by the runtime, where it becomes immutable.
+The Feature-Request PDA is then reset to an empty list again, also by the
+runtime.
 
 The newly created immutable Feature-Queue can then be used by nodes to signal
 support for potential activation in the next epoch.
@@ -122,7 +124,7 @@ a feature for activation via CLI to when it is actually activated.
 With an on-chain reference point to determine the features queued for
 activation, nodes can signal support for specific features in the queue.
 
-A node signals its support for a feature set by sending a transaction to the
+A node signals its support for a feature set by sending an instruction to the
 Feature Gate program, signed by their authorized voter, to store a record of
 their supported feature set.
 This supported feature set would be a bit mask of the list of queued features,
@@ -162,7 +164,7 @@ Once the epoch concludes, the runtime uses the validator support signals to
 activate the proper features.
 
 To do this, the runtime walks all of the PDAs derived from the vote accounts,
-examines their bit-masks, and sums the stake supporting each feature-gate to
+examines their bitmasks, and sums the stake supporting each feature-gate to
 determine which feature gates meet the desired threshold of supported stake.
 
 For the initial implementation, the threshold will be hard-coded to 95% of
