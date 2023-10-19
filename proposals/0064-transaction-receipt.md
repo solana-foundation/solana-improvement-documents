@@ -14,12 +14,13 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-This proposal introduces two new concepts to the Solana runtime.
+Here we propose a mechanism for proving transaction inclusion into a block in
+the Solana protocol. This is a pre-requisite for several use-cases that would
+like to build upon a [Simple Payment Verification](https://en.wikipedia.org/wiki/Bitcoin_network#Payment_verification) like construction.
 
-- TransactionReceiptData, a deterministic encoding of state changes induced by
-  a transaction;
-- Transaction Receipt Tree, a commitment scheme over all transaction receipts
-  in a block.
+We employ the well-known [Merkle Tree](https://en.wikipedia.org/wiki/Merkle_tree)
+data structure to compress a block's transactions and their results into a compact
+identifier, with which inclusion proofs can be generated
   
 ## New Terminology
 
