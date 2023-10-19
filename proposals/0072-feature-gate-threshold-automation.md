@@ -1,5 +1,5 @@
 ---
-simd: '0066'
+simd: '0072'
 title: Feature Gate Threshold Automation
 authors:
   - Tyera Eulburg
