@@ -94,11 +94,12 @@ descrambling = time-lock decrypting
 ### scrambling
 
 - scrambling is optional. ie. older transaction is supported as before.
-- uses recursive randomx to derive private key from plaintext seed attached
-  to the tx
+- uses recursive [randomx](https://github.com/tevador/RandomX) to derive
+  private key from plaintext seed attached to the tx
   - randomx is a hash function and asic & fpga resistant.
-- also equix with difficulty is attached to the tx for spam prevention
-  - verification is around 50us per core.
+- also use [equix](https://github.com/tevador/equix) with difficulty is
+  attached to the tx for spam prevention
+  - verification is around 50us per tx.
   - should be able to do line-rate filtering.
 - padded to `1_232 bytes` (= `PACKET_DATA_SIZE`) to avoid finger printing.
 
