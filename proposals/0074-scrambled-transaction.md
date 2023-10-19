@@ -60,7 +60,7 @@ descrambling = time-lock decrypting
    hashing as part of new distributed descrambling stage.
 9. validator submits a vote tx with the descrambled key is attached
 10. as soon as all descrambled keys are included in child blocks, the parent
-    block is replayed
+    block is scheduled and replayed.
 
 ### protocol changes
 
@@ -77,14 +77,15 @@ descrambling = time-lock decrypting
 - vote transaction
   - additional flag whether the voter thinks the slot was censorship resistant
     or not.
-  - additional payload for solved decryption keys (`Vec<Result<Aes128Key,()>>`).
+  - additional payload for solved decryption keys (`(Slot,
+    Vec<Result<Aes128Key,()>>)`).
 - replay stage
   - deterministically reorders transactions by priority fee batched at 50ms
     intervals of entries' timestamp before executing.
   - transactions in the block aren't guaranteed to be executed anymore;
     - could be revealed the tx has expired according to the timestamp of its
       ledger entry position.
-    - could be overflow from the queue
+    - could be overflow from the fixed-size scheduling queue
 - clients
   - new transaction format
   - additional steps: time-lock encrypting, pow client puzzle solving,
@@ -107,7 +108,8 @@ descrambling = time-lock decrypting
   - chosen to be enough for minimal buffering + jitter of one-way network
     latency.
   - so precise time-stamp with subsecond gratuity is attached to the tx
-    - the timestamp is scrambled to encourage fifo at banking
+    - the timestamp is scrambled to encourage fifo at banking and avoid
+      fingerprinting via deduced network latency.
   - oracle is needed for bad validator with intentionally large latency.
 - descrambling is adjusted to take 100ms with modern machine
   - this is **5 times** of tx expiration (20ms).
@@ -139,7 +141,6 @@ gantt
     reorder/censor txes :milestone, mev, after ai, 5ms
     shred propagation               :mev2, after mev, 200ms
     tx is ignored due to being expired: milestone, after mev2, 5ms
-
 ```
 
 ### cooperative distributed descrambling
@@ -176,6 +177,9 @@ gantt
   - => staking reward is reduced (not slashing)
 - less than 2/3 node votes on `censorship_resistant=Yes`
   - => mark the fork as dead as a whole
+- transaction's timestamp is revealed to be too old compared to ledger entry
+  timestamp
+  - => won't be executed. fee is paid.
 
 ### future work
 
