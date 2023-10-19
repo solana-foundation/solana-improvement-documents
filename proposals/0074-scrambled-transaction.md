@@ -134,7 +134,7 @@ gantt
     section User's view
     tx execution confirmation :milestone, after a5, 5ms
     section (B) MEV
-    (tx expires) :milestone, 100, 0ms
+    (tx expires) :milestone, 220, 0ms
     ideally-accelerated descrambling (T_d_best): ai, after a1, 20ms
     reorder/censor txes :milestone, mev, after ai, 5ms
     shred propagation               :mev2, after mev, 200ms
