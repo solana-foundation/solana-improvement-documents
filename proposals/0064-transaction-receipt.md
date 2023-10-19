@@ -297,7 +297,7 @@ The following illustrates transaction receipt hash trees for various inputs.
 ```txt
 Transaction receipt tree with an empty vector of transaction receipts
 where Nα is the root.
-Nα := sha256(0x80 || u64_le_encode(0))
+Nα := sha256(0x80 || intermediate_root([0u8;32]) || u64_le_encode(0))
 
 Nα
 |
