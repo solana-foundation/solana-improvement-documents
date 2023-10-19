@@ -257,9 +257,10 @@ It is designed to feature the following properties:
     byte order.
   - The `leaf_count` is the number of TransactionReceiptData objects to
     serve as leaf nodes in the tree.
+  - `sentinel_root` is a byte array of zeros with length 32
 
 - If the leaf count is zero, the output is
-  `sha256(root_prefix || intermediate_root([0u8;32]) || u64_le_encode(0))`.
+  `sha256(root_prefix || sentinel_root || u64_le_encode(0))`.
 
 - If the leaf count is non-zero, the output is
   `sha256(root_prefix || intermediate_root || u64_le_encode(leaf_count))`.
@@ -276,6 +277,11 @@ It is designed to feature the following properties:
     (via SHA-NI on x86, via Firedancer's SystemVerilog implementation on AWS F1
     FPGA), whereas BLAKE3 and SHA-3 are not. (SHA-3 is only available on recent
     Arm cores)
+  - As of 2023-Oct, the Merkle tree root for an empty input vector is
+    unspecified, which is a specification bug. The canonical PoH Merkle tree
+    in the Solana Labs implementation does not define the empty tree either.
+    Therefore, we introduce zero as the sentinel value for the root of an empty
+    hash tree.
 
 - *Leaf count suffix*:
   The PoH tree implicitly expands the internal leaf count to a power of two,
