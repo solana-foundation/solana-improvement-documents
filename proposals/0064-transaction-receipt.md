@@ -3,8 +3,8 @@ simd: '0064'
 title: Transaction Receipts
 authors:
   - Anoushk Kharangate (Tinydancer)
-  - Harsh Patel (Tinydancer)
   - Richard Patel (Jump)
+  - Harsh Patel (Tinydancer)
 category: Standard
 type: Core
 status: Draft
