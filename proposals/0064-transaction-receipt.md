@@ -16,7 +16,8 @@ feature: (fill in with feature tracking issues once accepted)
 
 Here we propose a mechanism for proving transaction inclusion into a block in
 the Solana protocol. This is a pre-requisite for several use-cases that would
-like to build upon a [Simple Payment Verification](https://en.wikipedia.org/wiki/Bitcoin_network#Payment_verification) like construction.
+like to build upon a [Simple Payment Verification](https://en.wikipedia.org/wiki/Bitcoin_network#Payment_verification)
+like construction.
 
 We employ the well-known [Merkle Tree](https://en.wikipedia.org/wiki/Merkle_tree)
 data structure to compress a block's transactions and their results into a compact
@@ -279,7 +280,8 @@ It is designed to feature the following properties:
 - *Leaf count suffix*:
   The PoH tree implicitly expands the internal leaf count to a power of two,
   causing the `intermediate_root` two have more than one pre-image for certain
-  leaf counts.  This avoided by instead including the leaf count suffix in the final hash.
+  leaf counts.  This avoided by instead including the leaf count suffix in the
+  final hash.
 
 - *Exclusion proofs are not provided*:
   Although it is possible to construct Merkle-based set exclusion proofs, this
@@ -353,6 +355,7 @@ Nα := sha256(concat(0x01, hash(L0), hash(L1)))
 Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
 Nγ := sha256(concat(0x01, hash(L4), hash(L4)))
 Nδ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
+Iε := sha256(concat(0x01, hash(Nγ), hash(Nγ)))
 Nζ := sha256(concat(0x01, hash(Nδ), hash(Iε)))
 Nτ := sha256(concat(0x80, hash(Nζ), len([L0, L1, L2, L3, L4])))
 
