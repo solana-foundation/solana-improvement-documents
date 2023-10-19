@@ -60,7 +60,7 @@ constructed once per slot.
 
 ### Design Goals
 
-1. Transaction Receipts should be deterministic.
+1. Transaction Receipts must be deterministic.
    Given a transaction T and ledger history leading up to it, serializing the
    receipt generated for T  should result in the same byte vector for all nodes
    in the network.
