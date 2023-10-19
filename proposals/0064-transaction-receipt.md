@@ -66,7 +66,7 @@ constructed once per slot.
    in the network.
    *Rationale:* Determinism is required for cluster-wide consensus.
 
-2. Transaction Receipts should not be required during block construction.
+2. Transaction Receipts must not be required during block construction.
    *Rationale:* Future upgrades propose tolerating asynchronous replay during
    block construction. In other words, validators should be allowed to produce
    and distribute a block before replaying said block. It is impossible to
