@@ -137,10 +137,10 @@ gantt
     tx execution confirmation :milestone, after a5, 5ms
     section (B) MEV
     (tx expires) :milestone, 220, 0ms
-    ideally-accelerated descrambling (T_d_best): ai, after a1, 20ms
-    reorder/censor txes :milestone, mev, after ai, 5ms
+    ideally-accelerated descrambling: ai, after a1, 20ms
+    tx is reordered/censored and sequenced :milestone, mev, after ai, 5ms
     shred propagation               :mev2, after mev, 200ms
-    tx is ignored due to being expired: milestone, after mev2, 5ms
+    tx is ignored due to expiration for inclusion: milestone, after mev2, 5ms
 ```
 
 ### cooperative distributed descrambling
