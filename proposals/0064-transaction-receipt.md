@@ -306,8 +306,9 @@ Nα
 
 ```txt
 Transaction receipt tree with four transaction receipts as leaf
-nodes [L0, L1, L2, L3] where R0, R1, R2, R3 are the transaction 
-receipts and Nδ is the root.
+nodes [L0, L1, L2, L3] where R0, R1, R2, R3 are the serialized
+TransactionReceiptData objects and Nδ is the root.
+
            Nδ
           /  \
         /     \
@@ -323,16 +324,17 @@ L0 := sha256(concat(0x00, R0))
 L1 := sha256(concat(0x00, R1))
 L2 := sha256(concat(0x00, R2))
 L3 := sha256(concat(0x00, R3))
-Nα := sha256(concat(0x01, hash(L0), hash(L1)))
-Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
-Nγ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
-Nδ := sha256(concat(0x80, hash(Nγ),len([L0, L1, L2, L3])))
+Nα := sha256(concat(0x01, L0, L1))
+Nβ := sha256(concat(0x01, L2, L3))
+Nγ := sha256(concat(0x01, Nα, Nβ))
+Nδ := sha256(concat(0x80, Nγ, u64_le_encode(4)))  # leaf count
 ```
 
 ```txt
 Transaction receipt tree with five transaction receipts 
-as leaf nodes [L0, L1, L2, L3, L4] where R0, R1, R2, R3, R4 are the 
-transaction receipts and Nτ is the root.
+as leaf nodes [L0, L1, L2, L3, L4] where R0, R1, R2, R3, R4 are the
+serialized TransactionReceiptData objects and Nτ is the root.
+
                 Nτ   
               /   \
             /      \
@@ -351,17 +353,13 @@ L1 := sha256(concat(0x00, R1))
 L2 := sha256(concat(0x00, R2))
 L3 := sha256(concat(0x00, R3))
 L4 := sha256(concat(0x00, R4))
-Nα := sha256(concat(0x01, hash(L0), hash(L1)))
-Nβ := sha256(concat(0x01, hash(L2), hash(L3)))
-Nγ := sha256(concat(0x01, hash(L4), hash(L4)))
-Nδ := sha256(concat(0x01, hash(Nα), hash(Nβ)))
-Iε := sha256(concat(0x01, hash(Nγ), hash(Nγ)))
-Nζ := sha256(concat(0x01, hash(Nδ), hash(Iε)))
-Nτ := sha256(concat(0x80, hash(Nζ), len([L0, L1, L2, L3, L4])))
-
-Here 'Nτ' is the root generated after concatenating
-the node 'Nζ' with the length of vector of leaf nodes (which is five in the above
-illustration) of the tree and hashing it.
+Nα := sha256(concat(0x01, L0, L1))
+Nβ := sha256(concat(0x01, L2, L3))
+Nγ := sha256(concat(0x01, L4, L4))
+Nδ := sha256(concat(0x01, Nα, Nβ))
+Iε := sha256(concat(0x01, Nγ, Nγ))
+Nζ := sha256(concat(0x01, Nδ, Iε))
+Nτ := sha256(concat(0x80, Nζ, u64_le_encode(5)))  # leaf count
 ```
 
 #### Benchmarks
