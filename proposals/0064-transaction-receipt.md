@@ -278,7 +278,7 @@ It is designed to feature the following properties:
 - *Leaf count suffix*:
   The PoH tree implicitly expands the internal leaf count to a power of two,
   causing the `intermediate_root` two have more than one pre-image for certain
-  leaf counts.  This is fixed by the leaf count suffix in the final hash.
+  leaf counts.  This avoided by instead including the leaf count suffix in the final hash.
 
 - *Exclusion proofs are not provided*:
   Although it is possible to construct Merkle-based set exclusion proofs, this
