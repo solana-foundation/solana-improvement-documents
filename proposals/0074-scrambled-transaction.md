@@ -114,6 +114,34 @@ descrambling = time-lock decrypting
   - given 2.5 ghz cpu as baseline, 12.5 ghz cpu should be impossible for
     some time?
 
+#### Latency of Average Scrambled Transaction
+
+```mermaid
+gantt
+    dateFormat SSS
+    axisFormat +%S.%Ls
+    section tx liveness
+    can be sequenced before expiration  :200, 20ms
+    section (A) normal
+    tx travels the globe to tpu   :a1, 000, 200ms
+    tx is sequenced          :milestone, after a1, 5ms
+    shred propagation               :a2, after a1, 200ms
+    distributed descrambling          :a33, after a2, 200ms
+    descramble key prop. (as vote tx)          :a3, after a33, 200ms
+    replay                :a4, after a3, 400ms
+    replay vote prop.         :a5, after a4, 200ms
+    replay is optimistically confirmed :milestone, after a5, 5ms
+    section User's view
+    tx execution confirmation :milestone, after a5, 5ms
+    section (B) MEV
+    (tx expires) :milestone, 100, 0ms
+    ideally-accelerated descrambling (T_d_best): ai, after a1, 20ms
+    reorder/censor txes :milestone, mev, after ai, 5ms
+    shred propagation               :mev2, after mev, 200ms
+    tx is ignored due to being expired: milestone, after mev2, 5ms
+
+```
+
 ### cooperative distributed descrambling
 
 - this is needed because individual node can't descramble all txes: 100ms *
