@@ -65,7 +65,8 @@ descrambling = time-lock decrypting
    hashing as part of new distributed descrambling stage.
 9. validator submits a vote tx with the descrambled key is attached
 10. as soon as all descrambled keys are included in child blocks, the original
-    (parent) block is scheduled and replayed.
+    (parent) block is scheduled (ie. reordered by priority fee) and executed
+    at the replaying stage.
 
 ### protocol changes
 
