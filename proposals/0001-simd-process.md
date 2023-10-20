@@ -163,7 +163,9 @@ implementing their accepted feature.
 ### Living
 
 A special status for SIMDs that are designed to be continually updated and not
-reach a state of finality. This includes most notably SIMD-1.
+reach a state of finality. This includes most notably SIMD-1. This status must
+undergo extra scrutiny and review when updating the status from review to
+living.
 
 ### Stagnant
 
