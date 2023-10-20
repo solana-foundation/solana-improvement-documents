@@ -42,7 +42,12 @@ descrambling = time-lock decrypting
 - somewhat easier dos (hopefully not too easy) with garbage (mitigated by
   client puzzles)
 - tps scalability now depends on validator count
+  - maybe tps will be floated around 50k max for some time. i.e. 1 million
+    tps might not be a thing for awhile...
+    - however, there's strong incentive for high-staked nodes to add more nodes
+      for increased cluster-wide descrambling throughput if blocks are full.
 - reliance on ntp via wall-clock time-stamp both on tx and ledger entries.
+- burns electricity to some extent due to use of pow
 
 ### processing flow of a scrambled transaction
 
@@ -94,13 +99,22 @@ descrambling = time-lock decrypting
 ### scrambling
 
 - scrambling is optional. ie. older transaction is supported as before.
+  - so validators as a whole can conduct a variant of downgrade attack by not
+    accepting scrambled txes. so some social consensus must be reached on as to
+    censorship resistance is good for solana in the long term
+  - (future work) additionally, vote txes can be forced to be scrambled so that
+    this blanket censoring for scrambled transaction isn't practical.
 - uses recursive [randomx](https://github.com/tevador/RandomX) to derive
-  private key from plaintext seed attached to the tx
+  private key from plaintext seed attached to the tx. Recursion depth is
+  hard-coded.
   - randomx is a hash function and asic & fpga resistant.
 - also use [equix](https://github.com/tevador/equix) with difficulty is
   attached to the tx for spam prevention
   - verification is around 50us per tx.
   - should be able to do line-rate filtering.
+  - will expire in 2 min or so to against at-once spamming after accumulating solved
+    puzzles over very long time locally
+  - difficulty will be dynamic
 - padded to `1_232 bytes` (= `PACKET_DATA_SIZE`) to avoid finger printing.
 
 ### latency and safety parameters
@@ -109,7 +123,7 @@ descrambling = time-lock decrypting
   - chosen to be enough for minimal buffering + jitter of one-way network
     latency.
   - so precise time-stamp with subsecond gratuity is attached to the tx
-    - the timestamp is scrambled to encourage fifo at banking and avoid
+    - the timestamp is scrambled to encourage FIFO at banking and avoid
       fingerprinting via deduced network latency.
   - oracle is needed for bad validator with intentionally large latency.
 - descrambling is adjusted to take 100ms with modern machine
@@ -118,6 +132,10 @@ descrambling = time-lock decrypting
     some time?
 
 #### Latency of Average Scrambled Transaction
+
+artificial latency increase is **300ms** due to the distributed descrambling.
+also, note that replay stage can't be pipelined. note that pipelining is still
+applied across slots.
 
 ```mermaid
 gantt
@@ -128,11 +146,11 @@ gantt
     section (A) normal
     tx travels the globe to tpu   :a1, 000, 200ms
     tx is sequenced          :milestone, after a1, 5ms
-    shred propagation               :a2, after a1, 200ms
-    distributed descrambling          :a33, after a2, 200ms
-    descramble key prop. (as vote tx)          :a3, after a33, 200ms
+    shred propagation via turbine  :a2, after a1, 200ms
+    distributed descrambling          :a33, after a2, 100ms
+    descramble key prop. (as tx) via turbine  :a3, after a33, 200ms
     replay                :a4, after a3, 400ms
-    replay vote prop.         :a5, after a4, 200ms
+    vote prop.         :a5, after a4, 200ms
     replay is optimistically confirmed :milestone, after a5, 5ms
     section User's view
     tx execution confirmation :milestone, after a5, 5ms
