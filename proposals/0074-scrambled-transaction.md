@@ -135,8 +135,10 @@ descrambling = time-lock decrypting
 #### Latency of Average Scrambled Transaction
 
 artificial latency increase is **300ms** due to the distributed descrambling.
-also, note that replay stage can't be pipelined. note that pipelining is still
-applied across slots.
+note that this is a latency of single transaction processiong. repla stage can
+be pipelined to some extent as was before, because shred propagation and
+distributed descramblng can both be processed in streaming fashion. also note
+that pipelining is still applied across slots.
 
 ```mermaid
 gantt
