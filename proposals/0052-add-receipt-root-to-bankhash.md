@@ -20,8 +20,8 @@ transaction was included in the block without fully trusting the RPC provider.
 
 The main change includes:
 
-- Modifying the bankhash to add a Receipt Root of the receipt merkle tree that
-   includes transaction signatures and statuses.
+- Modifying the Bankhash to add a transaction receipt root of the transaction receipt merkle tree.
+  This root would be a 32 byte SHA-256 hash.
 
 ## Motivation
 
@@ -42,9 +42,9 @@ None
 
 ## New Terminology
 
-Receipt: A structure containing transaction signature and its execution status.
+Receipt: A structure containing a 64 byte version, a transaction message hash and its execution status.
 
-Receipt Root: The root hash of a binary merkle tree of Receipts.
+Receipt Root: The root hash of a binary merkle tree of transaction receipts.
 
 ## Detailed Design
 
@@ -55,15 +55,8 @@ We propose the following change:
 Using the receipt data structure and the receipt merkle tree which is formally
 defined in this [SIMD]([https://github.com/tinydancer-io/solana-improvement-documents](https://github.com/tinydancer-io/solana-improvement-documents/blob/transaction-receipt/proposals/0064-transaction-receipt.md))
 
-   ```rust
-   pub struct Receipt {
-      pub signature: [u8; 64],
-      pub status: u8,
-   }
-   ```
-
 We add a transaction receipt root to the bankhash calculation where the receipt
-root is the root of the merkle tree of receipts. This root would be a sha256
+root is the root of the merkle tree of transaction receipts. This root would be a sha256
 hash constructed as a final result of the binary merkle tree of receipts.
 Specifically it will be a 32 byte array. The receipt root would be added to
 the bankhash as follows:
@@ -77,30 +70,6 @@ the bankhash as follows:
       last_blockhash,
    ]);
    ```
-
-Note: The second change would initially be feature gated with a flag and can
-be activated once we have enough stake on the network with this version of the client.
-
-#### Benchmarks
-
-We have performed benchmarks comparing two merkle tree implementations,
-the benchmark was done on 1 million leaves, each leaf consisted of a 64 byte
-signature and a single byte status.
-
-1) Solana Labs Merkle Tree: This is the pure rust implementation that is currently
-   used by the Solana Labs client.
-   More details [Solana labs repository](https://github.com/solana-labs/solana/tree/master/merkle-tree)
-2) Firedancer binary merkle tree (bmtree): Implemented in C and uses firedancer's
-   optimised SHA-256 implementation as it's hashing algorithm. However the benchmarks
-   were performed using its rust FFI bindings.
-   More details: [Firedancer](https://github.com/firedancer-io/firedancer/tree/main/src/ballet/bmtree)
-   ![Benchamrk Results](https://github.com/tinydancer-io/solana-improvement-documents/assets/50767810/6c8d0013-1d62-4c7b-8264-4ec71ea28d7c)
-
-More details with an attached flamegraph can be found in our [repository](https://github.com/tinydancer-io/merkle-bench).
-
-Despite the performance penalty of FFI we can still see that fd_bmtree32 is ~61%
-faster than the pure rust implementation which makes it fast enough to not impact
-consensus with decent headroom.
 
 ## Impact
 
