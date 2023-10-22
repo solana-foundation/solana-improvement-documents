@@ -20,8 +20,8 @@ transaction was included in the block without fully trusting the RPC provider.
 
 The main change includes:
 
-- Modifying the Bankhash to add a transaction receipt root of the transaction receipt merkle tree.
-  This root would be a 32 byte SHA-256 hash.
+- Modifying the Bankhash to add a transaction receipt root of the transaction
+  receipt merkle tree. This root would be a 32 byte SHA-256 hash.
 
 ## Motivation
 
@@ -42,7 +42,8 @@ None
 
 ## New Terminology
 
-Receipt: A structure containing a 64 byte version, a transaction message hash and its execution status.
+Receipt: A structure containing a 64 byte version, a transaction message hash 
+and its execution status.
 
 Receipt Root: The root hash of a binary merkle tree of transaction receipts.
 
@@ -56,10 +57,10 @@ Using the receipt data structure and the receipt merkle tree which is formally
 defined in this [SIMD]([https://github.com/tinydancer-io/solana-improvement-documents](https://github.com/tinydancer-io/solana-improvement-documents/blob/transaction-receipt/proposals/0064-transaction-receipt.md))
 
 We add a transaction receipt root to the bankhash calculation where the receipt
-root is the root of the merkle tree of transaction receipts. This root would be a sha256
-hash constructed as a final result of the binary merkle tree of receipts.
-Specifically it will be a 32 byte array. The receipt root would be added to
-the bankhash as follows:
+root is the root of the merkle tree of transaction receipts. 
+This root would be a sha256 hash constructed as a final result of the 
+binary merkle tree of receipts. Specifically it will be a 32 byte array. 
+The receipt root would be added to the bankhash as follows:
 
    ``` rust
    let mut hash = hashv(&[
