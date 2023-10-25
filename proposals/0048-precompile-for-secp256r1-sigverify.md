@@ -13,7 +13,7 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-Adding a Precompile to support the verification of signatures
+Adding a precompile to support the verification of signatures
 generated on the secp256r1 curve.
 Analogous to the support for secp256k1 and ed25519 signatures that already
 exists in form of
@@ -23,25 +23,27 @@ precompiles
 
 ## Motivation
 
-Solana should have option to secure your funds in a self custodial manner that
-doesn't just airgap your private key with a hardware wallet (which even then
-remains as a single point of failure). Arguably, multi-signature wallets fit
-into this equation as they enable the dependency on multiple private keys.
-However in practice the UX takes too much of a hit, as having to sign a
-transaction a minimum of 3 separate times and having to write down 3 seed
-phrases is too cumbersome. It would be ideal to have an authentication form that
-relies on a more familiar second factor, such as a users mobile device.
+Solana has the opportunity to leverage the secure element of users' existing 
+mobile devices to support more user-friendly self-custodial security solutions.
+The status quo of air-gapping signing with a hardware wallet currently requires
+specialty hardware and still represents a single point of failure. Multi-signature
+wallets provide enhanced security through multi-party signing, however the UX
+is cumbersome due to the need to sign transactions multiple times and manage 
+multiple seed phrases. A much more ergonomic approach combining the best of 
+these two solutions on generalised mobile hardware could be achieved by adding 
+support for secp256r1 signatures.
 
-Passkeys & WebAuthn are a standardized implementation of this. They enable users
-to save keypairs associated to different services natively on the secure
-element of their mobile device. To authenticate with those services, the user
-uses their biometrics to sign a message with the stored private key.
+There are already several standardised implementations of this, such as Passkeys 
+and WebAuthn. These solutions leverage Apple's Secure Enclave and Android Keystore
+to enable users to save keypairs associated to different services natively on 
+the secure element of their mobile devices. To authenticate with those services, 
+the user uses their biometrics to sign a message with the stored private key.
 
-And although this is meant to enable password-less logins in web2, it makes for
-an excellent candidate as a second factor of on-chain authentication.
-
-Going past just securing funds, this would support other beneficial account
-abstractions that make use of the simple UX of WebAuthn and Passkeys.
+While originally intended to solve for password-less authentication in Web2
+applications, WebAuthn and Passkeys also make an excellent candidate for on-chain 
+second-factor authentication. Beyond simply securing funds, there are also many 
+other potential beneficial abstractions that could make use of the simple UX
+they provide.
 
 Note:
 
@@ -52,7 +54,7 @@ Although WebAuthn supports the following curves:
 - P-521
 - ed25519
 
-P-256 is the only one supported by both Android & IOS (IOS being the more
+P-256 is the only one supported by both Android & MacOS/iOS (MacOS/iOS being the more
 restrictive of the two), hence the goal being to implement secp256r1 signature
 verification
 
@@ -69,7 +71,14 @@ We have discussed the following alternatives:
 1.) Realising signature verification with a syscall similar
 to `secp256k1_recover()` instead of a precompile. This would ease
 integration for developers, since no instruction introspection would be
-required when utilizing the syscall.
+required when utilizing the syscall. This is still a valid consideration.
+
+2.) Allowing for high-S signatures was considered, however the pitfalls 
+of signature malleability are too great to leave open to implementation. 
+
+3.) Allowing for uncompressed keys was considered, however as we are already
+taking an opinionated stance on signature malleability, it makes sense to
+also take an opinionated stance on public key encoding.
 
 ## New Terminology
 
@@ -95,22 +104,29 @@ The encoding and decoding of these is outlined in sections
 and `2.3.4 Octet-String-to-Elliptic-Curve-Point Conversion`
 found in [SEC1](https://www.secg.org/sec1-v2.pdf#page=16).
 
-The SEC1 encoded EC point P = (x_p, y_p) 
-in compressed form consists of 33 bytes (octets). 
-The first byte 02_16 / 03_16 signifies
-whether the point is compressed or uncompressed as well as 
-signifying the odd or even state of y_p. The 
-remaining 32 bytesrepresent x_p converted 
-into a 32 octet string.
+The SEC1 encoded EC point P = (x_p, y_p) in compressed form consists
+of 33 bytes (octets). The first byte of 02_16 / 03_16 signifies a 
+compressed point, as well as whether y_p is odd or even. The remaining 
+32 bytes represent x_p converted into a 32 octet string.
 
-SEC1 endcoded uncompressed points, which consist of 65 bytes, 
-have been deliberately disregarded as y_p is not needed
-during signature verification and it seems sensible to save 32 
-bytes of transaction space.
+While SEC1 encoded uncompressed points could also be used,
+due to their larger size of 65 bytes, the ease of transformation 
+between uncompressed and compressed points, and the vast majority 
+of applications exclusively making use of compressed points, it 
+seems a reasonable consideration to save 32 bytes of instruction 
+data with a protocol that only accepts compressed points.
 
-**Note:** The existing precompiles for secp256k1 & ed25519 utilize 
-just x_p encoded as an octet string. This saves one byte 
-compared to using a compressed point, but fails to conform to any standard.
+**Note:** When it comes to public key encoding, the existing 
+precompile for `secp256k1` utilizes a vastly different standard,
+accepting a 20 octet Ethereum address and recovery id to recover an 
+SEC1 encoded uncompressed point. This is due to the primary aim of the 
+program not being to verify ECDSA signatures but to provide parity with 
+`ecrecover` on EVM. Conversely, the `ed25519` program, which is 
+primarily concerned with verifying ed25519 signatures, utilises the most
+common ed25519 convention of encoding x_p as a single 32 octet string. 
+As the goals of the `secp256r1` program are more analogous to those of the 
+`ed25519` program, we propose the SEC1 compressed point encoding to conform 
+to the most widely-used standard in common ECDSA applications.
 
 ### ECDSA / Signature Verification
 
@@ -130,16 +146,26 @@ in Section A.2.5 as well as at the
 
 ### Signature Malleability
 
-As any signature `s = (R,S)` generated with ECDSA is malleable 
-in regards to the `S` value, the precompile should enforce the usage
-of `lowS` values, in which `S < n/2` where `n` is the order of 
-the elliptic curve.
-It should fail on any signatures that include a `highS` value.
+Due to X axis symmetry along the elliptic curve, for any ECDSA signature 
+`(r, s)`, there also exists a valid signature `(r, n - s)`, where `n` is the 
+order of the curve. This introduces "s malleability", allowing an attacker 
+to produce an alternative version of `s` without invalidating the signature.
 
-This should be done to prevent any accidental succeptibility to
-signature malleability attacks.
+The pitfalls of this in authentication systems can be particularly perilous,
+opening up certain implementations to signature replay attacks over the same
+message by simply flipping the `s` value over the curve.
 
-Note: The existing secp256k1 precompile does not prevent signature malleability
+As the primary goal of the `secp256r1` program is secure signature validation
+for authentication purposes, the precompile should mitigate these attacks 
+by enforcing the usage of `lowS` values, in which `s <= n/2`.
+
+As such, the program should immediately fail upon the detection of any 
+signature that includes a `highS` value. This prevents any accidental 
+succeptibility to signature malleability attacks.
+
+Note: The existing `secp256k1` precompile makes no attempt attempt to mitigate 
+s malleability, as doing so would go against its primary goal of achieving 
+`ecrecover` parity with EVM.
 
 ### Program
 
@@ -180,9 +206,8 @@ precompiles.
 ### Implementation
 
 The precompile can be implemented using the `p256` crate at version `0.10.1`.
-This crate is part of the `Rust Crypto` library and implements
-the NIST P-256 curve as well as ECDSA.
-It conforms with the test vectors found in 
+This crate is part of the `Rust Crypto` library and implements the NIST P-256
+curve as well as ECDSA. It conforms with the test vectors found in 
 [RFC6979](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5).
 
 The precompile would make use of the following to accomplish signature
@@ -209,9 +234,10 @@ See [PR#27961](https://github.com/solana-labs/solana/pull/27961) & [PR#28503](ht
 
 ## Impact
 
-Would enable the on-chain usage of Passkeys and the WebAuthn Standard.
+Would enable the on-chain usage of Passkeys and the WebAuthn Standard, and
+turn the vast majority of modern smartphones into native hardware wallets.
 
-By extension this would also enable the creation of account abstractions and
+By extension, this would also enable the creation of account abstractions and
 forms of Two-Factor Authentication around those keypairs.
 
 ## Security Considerations
