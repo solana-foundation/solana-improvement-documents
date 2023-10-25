@@ -33,15 +33,20 @@ multiple seed phrases. A much more ergonomic approach combining the best of
 these two solutions on generalised mobile hardware could be achieved by adding 
 support for secp256r1 signatures.
 
-There are already several standardised implementations of this, such as Passkeys 
-and WebAuthn. These solutions leverage Apple's Secure Enclave and Android Keystore
+There are already several standardised implementations of this,
+such as Passkeys 
+and WebAuthn. These solutions leverage Apple's Secure Enclave and
+Android Keystore
 to enable users to save keypairs associated to different services natively on 
-the secure element of their mobile devices. To authenticate with those services, 
+the secure element of their mobile devices. To authenticate with
+those services, 
 the user uses their biometrics to sign a message with the stored private key.
 
 While originally intended to solve for password-less authentication in Web2
-applications, WebAuthn and Passkeys also make an excellent candidate for on-chain 
-second-factor authentication. Beyond simply securing funds, there are also many 
+applications, WebAuthn and Passkeys also make an excellent
+candidate for on-chain 
+second-factor authentication. Beyond simply securing funds,
+there are also many 
 other potential beneficial abstractions that could make use of the simple UX
 they provide.
 
@@ -54,8 +59,10 @@ Although WebAuthn supports the following curves:
 - P-521
 - ed25519
 
-P-256 is the only one supported by both Android & MacOS/iOS (MacOS/iOS being the more
-restrictive of the two), hence the goal being to implement secp256r1 signature
+P-256 is the only one supported by both Android & MacOS/iOS
+(MacOS/iOS being the more
+restrictive of the two), hence the goal being to implement
+secp256r1 signature
 verification
 
 General Documentation:
