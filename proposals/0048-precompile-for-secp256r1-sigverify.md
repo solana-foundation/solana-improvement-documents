@@ -136,7 +136,7 @@ of `lowS` values, in which `S < n/2` where `n` is the order of
 the elliptic curve.
 It should fail on any signatures that include a `highS` value.
 
-This should done to prevent any accidental succeptibility to
+This should be done to prevent any accidental succeptibility to
 signature malleability attacks.
 
 Note: The existing secp256k1 precompile does not prevent signature malleability
