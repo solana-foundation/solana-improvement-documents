@@ -219,7 +219,7 @@ forms of Two-Factor Authentication around those keypairs.
 As [Firedancer](https://github.com/firedancer-io/firedancer) is being developed
 in C, it is imperative that there can be bit-level reproducibility between 
 the precompile implementations. Any discrepancy between the two implementations
-could cause a fork and or a chain halt. (Thank you @fd-ripatel for pointing this
+could cause a fork and or a chain halt. (Thank you @ripatel-fd for pointing this
 out and advocating for it)
 
 As such we would propose the following:
