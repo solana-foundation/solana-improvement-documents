@@ -121,7 +121,8 @@ in Section 4.1.4 as well as in the
 document in Section 6.4.2.
 
 A multitude of test vectors to verify correctness can 
-be found in [RFC6979](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5) 
+be found in 
+[RFC6979](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5) 
 in Section A.2.5 as well as at the 
 [NIST CAVP](https://csrc.nist.gov/Projects/cryptographic-algorithm-validation-program/digital-signatures#ecdsa2vs)
 (Cryptographic Algorithm Validation Program)
@@ -181,7 +182,8 @@ precompiles.
 The precompile can be implemented using the `p256` crate at version `0.10.1`.
 This crate is part of the `Rust Crypto` library and implements
 the NIST P-256 curve as well as ECDSA.
-It conforms with the test vectors found in [RFC6979](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5).
+It conforms with the test vectors found in 
+[RFC6979](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5).
 
 The precompile would make use of the following to accomplish signature
 verification:
@@ -222,8 +224,9 @@ out and advocating for it)
 
 As such we would propose the following:
 
-- Development of a thorough test suite that includes all test vectors as well as tests
-from the [Wycheproof Project](https://github.com/google/wycheproof#project-wycheproof)
+- Development of a thorough test suite that includes all test vectors as well
+as tests from the
+[Wycheproof Project](https://github.com/google/wycheproof#project-wycheproof)
 
 - Thorough auditing as well as a formal verification of the arithmetic and
 decoding inside the `p256` crate
