@@ -95,21 +95,21 @@ The encoding and decoding of these is outlined in sections
 and `2.3.4 Octet-String-to-Elliptic-Curve-Point Conversion`
 found in [SEC1](https://www.secg.org/sec1-v2.pdf#page=16).
 
-The SEC1 encoded EC point P = (x<sub>p</sub>, y<sub>p</sub>) 
+The SEC1 encoded EC point P = (x_p, y_p) 
 in compressed form consists of 33 bytes (octets). 
-The first byte 02<sub>16</sub> / 03 <sub>16</sub> signifies
+The first byte 02_16 / 03_16 signifies
 whether the point is compressed or uncompressed as well as 
-signifying the odd or even state of y<sub>p</sub>. The 
-remaining 32 bytesrepresent x<sub>p</sub> converted 
+signifying the odd or even state of y_p. The 
+remaining 32 bytesrepresent x_p converted 
 into a 32 octet string.
 
 SEC1 endcoded uncompressed points, which consist of 65 bytes, 
-have been deliberately disregarded as y<sub>p</sub> is not needed
+have been deliberately disregarded as y_p is not needed
 during signature verification and it seems sensible to save 32 
 bytes of transaction space.
 
 **Note:** The existing precompiles for secp256k1 & ed25519 utilize 
-just x<sub>p</sub> encoded as an octet string. This saves one byte 
+just x_p encoded as an octet string. This saves one byte 
 compared to using a compressed point, but fails to conform to any standard.
 
 ### ECDSA / Signature Verification
@@ -121,9 +121,10 @@ in Section 4.1.4 as well as in the
 document in Section 6.4.2.
 
 A multitude of test vectors to verify correctness can 
-be found in [RFC6979 Deterministic DSA and ECDSA](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5) 
+be found in [RFC6979](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5) 
 in Section A.2.5 as well as at the 
-[NIST Cryptographic Algorithm Validation Program](https://csrc.nist.gov/Projects/cryptographic-algorithm-validation-program/digital-signatures#ecdsa2vs)
+[NIST CAVP](https://csrc.nist.gov/Projects/cryptographic-algorithm-validation-program/digital-signatures#ecdsa2vs)
+(Cryptographic Algorithm Validation Program)
 
 
 ### Signature Malleability
