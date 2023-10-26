@@ -4,6 +4,7 @@ title: Precompile for verifying secp256r1 sig.
 authors:
   - Orion (Bunkr)
   - Jstnw (Bunkr)
+  - Dean (Web3 Builders Alliance)
 category: Standard
 type: Core
 status: Draft
