@@ -78,6 +78,19 @@ implemented by all validator clients in coordination. This makes upgrading the
 program to support the complete Multi-Client Feature Gate architecture
 cumbersome and potentially dangerous.
 
+However, one of the main benefits gained by instead opting for a native program
+would be an easier ability to upgrade via feature gate.
+
+Another alternative considered is to use the deployment process outlined in the
+"Deploying the Program" section under "Detailed Design" to upgrade the program
+behind feature gates in the future. In short, contributors would stage changes
+to the program in another account and create a runtime feature gate to swap
+this upgraded version of the program into the current program's place.
+
+Note this may render the multi-signature program upgrade authority setup
+useless, except for less common use cases, such as a critical upgrade that
+could not be done through a feature gate.
+
 ## New Terminology
 
 - Feature Gate program: The BPF program that will own all feature accounts.
