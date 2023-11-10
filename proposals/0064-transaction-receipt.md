@@ -234,7 +234,7 @@ It is designed to feature the following properties:
   thereby making it deterministic and immalleable.
 
 - The order of the leaf nodes matches the block's transaction order.
-  (As it unamiguously appears in the PoH construction)
+  (As it unambiguously appears in the PoH construction)
 
 - Succinct inclusion proofs are constructed by providing a hash path
   from a leaf node to the root node. The inclusion proof format is defined
