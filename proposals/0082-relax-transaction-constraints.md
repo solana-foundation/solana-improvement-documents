@@ -45,6 +45,8 @@ remove one of the barriers to asynchronous execution.
     be better to relax as many constraints as possible, rather than just some.
     Any reliance on account state, means the protocol requires synchronous
     execution.
+    For this reason, the constraint on fee-paying was also decided to be
+    relaxed.
 3. Additionally, relax the address lookup table resolution constraint
     - This was considered, since it is a transaction-level constraint that is
     depdendent on account-state. However, due to entry-level and block-level
@@ -100,28 +102,39 @@ included in a block. During block validation, if any of these constraints
 are broken, the entire block is marked invalid; with this proposal, the
 block is not marked invalid, but the transaction will not be executed.
 These constraints must still be satisfied in order for the transaction to be
-executed, and have an effect on state. However, there are some new considerations
-which must be taken into account, specifically as it relates to fees and block
-limits.
+executed, and have an effect on account state.
+Any transaction included in the block, regardless of whether or not the
+transaction is executed, must be inserted into the status cache.
+Nonced transactions must advance the nonce account, even if the transaction,
+is not executed.
+However, there are some new considerations which must be taken into account,
+specifically as it relates to fees and block limits.
 
 ### Fee-Paying
 
-Currently, iff a transaction's fee-payer does not have enough funds to pay the
+Currently, if a transaction's fee-payer does not have enough funds to pay the
 fee, the transaction cannot be included in a block. With this proposal, it is
 possible for such a transaction to be included in the block, and there are
-three different edge-cases to consider:
+four different possibilites for what happens to the fee-payer account:
 
 1. The fee-payer account does not exist (0 lamports)
 2. The fee-payer account does not have enough funds for the entire fee
 3. The fee-payer account has enough funds for the fee, but would no longer be
 rent-exempt
+4. The fee-payer account has enough funds for the fee, and would still be
+rent-exempt after paying the fee
 
 In case 1, the transaction should simply be ignored for execution, and have no
 effect on state.
-In case 2, the fee-paying account should be drained of all funds, but have no
-other effect on state.
+In case 2, the fee-paying account should be drained of all funds, with fees
+being paid to the block producer, and have no other effect on state.
 In case 3, the fee-paying account should be drained of all funds, with fees
-being paid to the block-producer, and the remainder of lamports being dropped.
+being paid to the block-producer, and the remainder of lamports being burnt,
+and have no other effect on state.
+In case 4, the fee-paying account should be charged the fee, and execution
+should proceed as normal if all other executability checks pass.
+Case 4 is the only case in which a transaction is possibly executed, and thus
+is the only case that has can have effect on account state beyond fees.
 
 ### Block-Limits
 
@@ -129,18 +142,26 @@ Pending the activation of `2ry7ygxiYURULZCrypHhveanvP5tzZ4toRwVp89oCNSj`,
 validators must validate a block is within block-limits.
 With this proposal, some transactions may not be executable, but will still
 count towards block-limits.
+Transactions have a cost towards block limits without needing to execute the
+transaction.
+The cost of a transaction consists of signature verification, write locks for
+accounts, builtin instructions, requested or default bpf compute units, and
+data size costs.
+With this proposal, regardless of whether a transaction can pay fees, or is
+executed, the total cost of the transaction will count towards block limits.
+
 If these transactions did not count towards block-limits, the validation of
 block-limits would require the validator to check whether or not a transaction
 is executable, which negates the benefits of this proposal.
 
-Additionally, f these transactions did not count towards block-limits, a
+Additionally, if these transactions did not count towards block-limits, a
 malicious leader could produce a block with non-executable transactions and
 overload the network.
 
 ## Impact
 
 - Transactions that would previously be dropped with an error, can now be
-  included, and even charged fees.
+  included and will be charged fees.
   - Users must be more careful when constructing transactions to ensure they
     are executable if they don't want to waste fees
 - The validity of a block is no longer dependent on intra-block account-state
