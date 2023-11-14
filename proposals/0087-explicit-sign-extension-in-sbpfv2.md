@@ -8,8 +8,6 @@ type: Core
 status: Draft
 created: 2023-11-14
 feature: TBD
-supersedes:
-extends:
 ---
 
 ## Summary
