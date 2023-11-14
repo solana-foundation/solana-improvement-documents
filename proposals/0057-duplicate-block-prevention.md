@@ -185,9 +185,11 @@ Prevention:
 
 1) Merkle shreds (rolled out)
 2) Turbine/Repair features
+
   - Coding shreds repair
   - Propagate duplicate proofs through turbine
   - 1/2 Shreds threshold for voting (feature flag)
+
 3) QUIC turbine
 4) Lock down turbine tree (feature flag and opt-out cli arg for jito)
 
@@ -195,13 +197,18 @@ Resolution:
 
 1) Merkle shreds (rolled out)
 2) Blockstore/AccountsDb features
+
   - Duplicate proofs for merkle shreds
   - Store up to 5 versions in blockstore (feature flag for column migration)
   - Store epoch's worth of slot hashes in accountsdb (feature flag)
+
 3) Consensus changes
+
   - Targetted duplicate block repair
   - Voting checks and 34% repair (feature flag)
+
 4) Migration
+
   - Unplug DuplicateConfirmed
   - Unplug Ancestor Hashes Service
   - Unplug Popular Pruned
