@@ -21,10 +21,9 @@ which has a path from the transaction receipt to the transaction receipt
 tree root since the network votes on the bankhash for consensus. 
 
 ## Motivation
-The transaction receipt tree as formalized in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64) 
-proposes a commitment scheme to construct a binary merkle tree 
-of transaction receipts which contain information about the 
-execution status of the transaction. The root of this tree 
+The transaction receipt tree proposes a commitment scheme to construct 
+a binary merkle tree of transaction receipts which contain information 
+about the execution status of the transaction. The root of this tree 
 needs to have network wide consensus per slot. Hence we propose 
 adding the transaction receipt root to Bankhash since it's voted 
 on by the staked nodes who participate in consensus. This will 
