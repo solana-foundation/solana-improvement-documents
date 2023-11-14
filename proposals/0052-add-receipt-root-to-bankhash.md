@@ -20,22 +20,17 @@ This will enable a way to verify transaction inclusion by a merkle proof
 which has a path from the transaction receipt to the transaction receipt 
 tree root since the network votes on the bankhash for consensus. 
 
-The receipt tree construction is formally described in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64)
-
 ## Motivation
 
-Currently, for a user to validate whether their transaction is valid and included
-in a block it needs to trust the confirmation from the RPC. This has been a glaring
-attack vector for malicious actors that could lie to users if it's in their own interest.
-
-To combat this, mature entities like exchanges run full nodes that process the
-entire ledger and can verify entire blocks. The downside of this is that it's
-very costly to run a full node which makes it inaccessible to everyday users,
-exposing users to potential attacks from malicious nodes.
-This is where diet clients come in, users run the client to verify
-the confirmation of their transaction without trusting the RPC.
-
-
+The transaction receipt tree as formalized in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64) 
+proposes a commitment scheme to construct a binary merkle tree 
+of transaction receipts which contain information about the 
+execution status of the transaction. The root of this tree 
+needs to have network wide consensus per slot. Hence we propose 
+adding the transaction receipt root to Bankhash since it's voted 
+on by the staked nodes who participate in consensus. This will 
+help Solana clients verify transaction inclusion and supermajority 
+consensus on the transaction hence enabling consensus light clients. 
 
 ## Alternatives Considered
 
@@ -44,16 +39,13 @@ None
 ## New Terminology
 
 Transaction Receipt Root: The merkle root hash of a binary merkle tree of 
-TransactionReceiptData as formally describled in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64).
+TransactionReceiptData described in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64).
 
 ## Detailed Design
 
 ### Modifying the Bankhash
 
 We propose the following change:
-
-Using the receipt data structure and the receipt merkle tree which is formally
-defined in this [SIMD]([https://github.com/tinydancer-io/solana-improvement-documents](https://github.com/tinydancer-io/solana-improvement-documents/blob/transaction-receipt/proposals/0064-transaction-receipt.md))
 
 We add a transaction receipt root to the bankhash calculation where the receipt
 root is the root of the merkle tree of transaction receipts. 
