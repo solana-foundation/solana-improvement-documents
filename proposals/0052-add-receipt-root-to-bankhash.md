@@ -14,11 +14,11 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-This proposal describes the inclusion of a transaction receipt tree root which
-is a 32 byte SHA-256 hash to the current Bankhash construction. This will enable 
-a way to verify transaction inclusion by a merkle proof which has a path from 
-the transaction receipt to the transaction receipt tree root since the network 
-votes on the bankhash for consensus. 
+This proposal describes the inclusion of a transaction receipt tree root, 
+which is a 32 byte SHA-256 hash, to the current Bankhash construction. 
+This will enable a way to verify transaction inclusion by a merkle proof 
+which has a path from the transaction receipt to the transaction receipt 
+tree root since the network votes on the bankhash for consensus. 
 
 The receipt tree construction is formally described in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64)
 
