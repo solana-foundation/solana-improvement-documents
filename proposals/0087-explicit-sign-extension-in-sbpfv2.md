@@ -2,7 +2,7 @@
 simd: '0087'
 title: Explicit Sign-Extension in SBPFv2
 authors:
-  - Liam Heeger (@CantelopePeel, @lheeger-jump)
+  - Liam Heeger (Jump)
 category: Standard
 type: Core
 status: Draft
