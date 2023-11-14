@@ -182,6 +182,7 @@ will be the final step.
 Tentative schedule:
 
 Prevention:
+
 1) Merkle shreds (rolled out)
 2) Turbine/Repair features
   - Coding shreds repair
@@ -191,6 +192,7 @@ Prevention:
 4) Lock down turbine tree (feature flag and opt-out cli arg for jito)
 
 Resolution:
+
 1) Merkle shreds (rolled out)
 2) Blockstore/AccountsDb features
   - Duplicate proofs for merkle shreds
