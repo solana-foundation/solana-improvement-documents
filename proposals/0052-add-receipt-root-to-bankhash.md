@@ -43,7 +43,8 @@ None
 
 ## New Terminology
 
-Transaction Receipt Root: The merkle root hash of a binary merkle tree of TransactionReceiptData as formally describled in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64).
+Transaction Receipt Root: The merkle root hash of a binary merkle tree of 
+TransactionReceiptData as formally describled in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64).
 
 ## Detailed Design
 
