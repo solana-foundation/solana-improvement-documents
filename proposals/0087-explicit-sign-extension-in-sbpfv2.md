@@ -86,7 +86,7 @@ Zero-extend `imm` to 64-bits. Perform bitwise or on the zero-extended immediate
 with `dst_reg`. Store this value in dst_reg.
 
 Input Constraints: \
-$\mathtt{dst\_reg} \neq \mathtt{r10}$
+$\mathtt{dst\\_reg} \neq \mathtt{r10}$
 
 Operation:
 
