@@ -76,14 +76,15 @@ makes it harder for leaders to split the network into groups that see a block is
 duplicate and groups that don't.
 
 Note these duplicate proofs still need to gossiped because it's not guaranteed
-duplicate shreds will propaagate to everyone if there's a network partition, or
+duplicate shreds will propagate to everyone if there's a network partition, or
 a colluding malicious root node in turbine. For instance, assuming 1 malicious
 root node `X`, `X` can forward one version of the shred to one specific
 validator `Y` only, and then only descendants of validator `Y` would possibly
 see a duplicate proof when the other canonical version of the shred is
 broadcasted.
 
-3. In order to account for the last FEC set potentially having a 1:32 split of
+3. The last FEC set is unique in that it can have less than 32 data shreds.
+In order to account for the last FEC set potentially having a 1:32 split of
 data to coding shreds, we enforce that validators must see at least half the
 block before voting on the block, *even if they received all the data shreds for
 that block*. This guarantees leaders cannot just change the one data shred to
@@ -92,17 +93,28 @@ generate two completely different, yet playable versions of the block
 ### Duplicate block resolution
 
 Against a powerful adversary, the preventative measures outlined above can be
-circumvented. Namely an adversary that controls a large percentage of stake and
-has the ability to create and straddle network partitions can circumvent the
-measures by isolating honest nodes in partitions. Within the partition the
-adversaries can propagate a single version of the block, nullifying the effects
-of the duplicate witness proof.
+circumvented. Namely an adversary that controls a large percentage (< 33%) of
+stake and has the ability to create and straddle network partitions can
+circumvent the measures by isolating honest nodes in partitions.
+Within the partition the adversaries can propagate a single version of the
+block, nullifying the effects of the duplicate witness proof.
 
 In the worse case we can assume that the adversary controls 33% of the network
 stake. By utilizing this stake, they can attack honest nodes by creating network
 partitions. In a turbine setup with offline nodes and malicious stake
-communicating through side channel, simulations show a 1% propagation to honest
-nodes given at least 15% honest nodes are in the partition. [1]
+communicating through side channel, simulations show that 1% of honest nodes can
+receive a block given that at least 15% honest nodes are in the partition. [1]
+
+Percentage online is the number of total stake online in the partition. These
+simulations were run with 33% of that stake being malicious. Malicious nodes
+communicate through side channel to receive the block, and therefore will always
+propagate shreds to their children, regardless of whether their parent sent them
+the shred.
+
+The simulation was run with 2 different stake weight distributions, an equal
+distribution where each validator had the same amount of stake, and a Mainnet
+distribution where the number of validators and stake weights directly mapped
+to the mainnet beta distribution as of Sept 14th 2023.
 
 Median stake recovered with 33% malicious, 10K trials
 | Percentage online | Equal stake | Mainnet stake |
@@ -176,5 +188,5 @@ Not applicable
 [2] Section 4
 `https://github.com/AshwinSekar/turbine-simulation/blob/master/Turbine_Merkle_Shred_analysis.pdf`
 
-[3] Block Ancestors Proposal 
+[3] Block Ancestors Proposal
 `https://github.com/solana-labs/solana/pull/19194 files`
