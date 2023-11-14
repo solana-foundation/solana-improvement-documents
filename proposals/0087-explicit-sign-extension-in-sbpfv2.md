@@ -34,6 +34,7 @@ NA
 NA
 
 ## Detailed Design
+
 The instruction set changes proposed are two fold: 
 
 1. Add a new instruction to SBPFv2 for explicit sign extension.
@@ -49,6 +50,7 @@ instructions.
 The new instruction is specified as follows:
 
 ---
+
 ### `SEXT64_REG` - Sign Extension 64-Bit Instruction
 
 Opcode: `0x87`
@@ -62,6 +64,7 @@ Input Constraints: \
 $\mathtt{dst\_reg} \neq \mathtt{r10}$
 
 Operation:
+
 ```
 if dst_reg[31] = 0 {
   dst_reg[63:32] := 0
@@ -69,6 +72,7 @@ if dst_reg[31] = 0 {
   dst_reg[63:32] := 1
 }
 ```
+
 ---
 
 The changes to existing instructions is as follows:
@@ -76,6 +80,7 @@ The changes to existing instructions is as follows:
 ---
 
 ### `OR64_IMM` - Bitwise Or 64-bit Immediate
+
 Opcode: `0x47`
 
 Description: \
@@ -86,6 +91,7 @@ Input Constraints: \
 $\mathtt{dst\_reg} \neq \mathtt{r10}$
 
 Operation:
+
 ```
 dst_reg := dst_reg | ZeroExtend(imm)
 ```
@@ -93,6 +99,7 @@ dst_reg := dst_reg | ZeroExtend(imm)
 ---
 
 ### `AND64_IMM` - Bitwise And 64-bit Immediate
+
 Opcode: `0x57`
 
 Description: \
@@ -103,6 +110,7 @@ Input Constraints: \
 $\mathtt{dst\_reg} \neq \mathtt{r10}$
 
 Operation:
+
 ```
 dst_reg := dst_reg & ZeroExtend(imm)
 ```
@@ -110,6 +118,7 @@ dst_reg := dst_reg & ZeroExtend(imm)
 ---
 
 ### `XOR64_IMM` - Bitwise Xor 64-bit Immediate
+
 Opcode: `0xA7`
 
 Description: \
@@ -120,6 +129,7 @@ Input Constraints: \
 $\mathtt{dst\_reg} \neq \mathtt{r10}$
 
 Operation:
+
 ```
 dst_reg := dst_reg ^ ZeroExtend(imm)
 ```
@@ -127,6 +137,7 @@ dst_reg := dst_reg ^ ZeroExtend(imm)
 ---
 
 ### `MOV64_IMM` - Move 64-bit Immediate
+
 Opcode: `0xB7`
 
 Description: \
@@ -137,6 +148,7 @@ Input Constraints: \
 $\mathtt{dst\_reg} \neq \mathtt{r10}$
 
 Operation:
+
 ```
 dst_reg := dst_reg ^ ZeroExtend(imm)
 ```
@@ -144,17 +156,19 @@ dst_reg := dst_reg ^ ZeroExtend(imm)
 ---
 
 ## Impact
+
 This proposal affects changes to Program Runtime v2 and the tooling being built
 for developers. It does not affect developers directly, 
 
 ## Security Considerations
+
 All clients must carefully implement the changes to the instruction set and
 should fuzz test and cross validate the changes.
 
 ## Drawbacks
 
 This will require work from both the compiler teams and runtime teams to 
-implement within SBPFv2. The work 
+implement within SBPFv2.
 
 It will reuse the old NEG64 instruction opcode from SBPFv1 in SBPFv2. 
 
@@ -166,6 +180,7 @@ compatibility with SBPFv1.
 ## Appendix 1: Functions for Instruction Operations
 
 ### Zero Extension Function
+
 ```
 ZeroExtend(x: u32) -> u64 {
   y: u64 := 0
