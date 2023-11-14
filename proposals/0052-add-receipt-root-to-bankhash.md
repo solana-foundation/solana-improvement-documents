@@ -14,14 +14,13 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-This SIMD describes the changes required to allow users to
-verify that a supermajority of the stake has voted on the slot that their
-transaction was included in the block without fully trusting the RPC provider.
+This proposal describes the inclusion of a transaction receipt tree root which
+is a 32 byte SHA-256 hash to the current Bankhash construction. This will enable 
+a way to verify transaction inclusion by a merkle proof which has a path from 
+the transaction receipt to the transaction receipt tree root since the network 
+votes on the bankhash for consensus. 
 
-The main change includes:
-
-- Modifying the Bankhash to add a transaction receipt root of the transaction
-  receipt merkle tree. This root would be a 32 byte SHA-256 hash.
+The receipt tree construction is formally described in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64)
 
 ## Motivation
 
@@ -36,16 +35,15 @@ exposing users to potential attacks from malicious nodes.
 This is where diet clients come in, users run the client to verify
 the confirmation of their transaction without trusting the RPC.
 
+
+
 ## Alternatives Considered
 
 None
 
 ## New Terminology
 
-Receipt: A structure containing a 64 byte version, a transaction message hash 
-and its execution status.
-
-Receipt Root: The root hash of a binary merkle tree of transaction receipts.
+Transaction Receipt Root: The merkle root hash of a binary merkle tree of TransactionReceiptData as formally describled in [SIMD-0064](https://github.com/solana-foundation/solana-improvement-documents/pull/64).
 
 ## Detailed Design
 
