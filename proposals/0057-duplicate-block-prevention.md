@@ -35,7 +35,8 @@ complicated and relies on detection of the duplicate block
 
 ## New Terminology
 
-None
+None, however this proposal assumes an understanding of shreds:
+https://github.com/solana-foundation/specs/blob/main/p2p/shred.md
 
 ## Detailed Design
 
