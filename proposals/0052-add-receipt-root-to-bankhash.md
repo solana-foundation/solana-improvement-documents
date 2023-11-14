@@ -21,6 +21,7 @@ which has a path from the transaction receipt to the transaction receipt
 tree root since the network votes on the bankhash for consensus. 
 
 ## Motivation
+
 The transaction receipt tree proposes a commitment scheme to construct 
 a binary merkle tree of transaction receipts which contain information 
 about the execution status of the transaction. The root of this tree 
