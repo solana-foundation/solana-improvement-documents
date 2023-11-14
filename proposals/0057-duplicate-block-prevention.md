@@ -35,8 +35,9 @@ complicated and relies on detection of the duplicate block
 
 ## New Terminology
 
-None, however this proposal assumes an understanding of shreds:
+None, however this proposal assumes an understanding of shreds and turbine:
 https://github.com/solana-foundation/specs/blob/main/p2p/shred.md
+https://docs.solana.com/cluster/turbine-block-propagation
 
 ## Detailed Design
 
