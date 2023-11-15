@@ -44,7 +44,9 @@ TransactionReceiptData described in [SIMD-0064](https://github.com/solana-founda
 
 ### Modifying the Bankhash
 
-We propose the following change:
+The bankhash is computed in the `hash_internal_state() -> Hash` which is
+implicitly called by `bank.freeze()`. The bank is frozen after all the 
+transactions of a particular slot have been executed and committed.
 
 We add a transaction receipt root to the bankhash calculation where the receipt
 root is the root of the merkle tree of transaction receipts. 
