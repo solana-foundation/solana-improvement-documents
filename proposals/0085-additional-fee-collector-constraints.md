@@ -24,23 +24,45 @@ constraint was already added for rent fee collection in
 
 ## Motivation
 
-1. Since fee collection occurs outside of the runtime, it's generally a good
-   idea to reduce the number of account modification edge cases.
-2. Prevent new rent paying accounts from being created
+1. Fee collection occurs outside of the transaction runtime because the Solana
+   protocol mandates that fees are collected at the end of each block. By
+   restricting fee collector accounts to be system owned, the number of account
+   modification edge cases as well as protocol complexity are both reduced.
+2. Prevent new rent-paying accounts from being created since rent collection is
+   planned to be disabled in SIMD-0084.
 
 ## Alternatives Considered
 
-NA
+### Elide the system-owned constraint
+
+Restricting fee collection accounts to be system-owned is perhaps overly
+restrictive and limits the amount of flexibility that validator operators have
+when managing sensitive accounts with funds. However, the risk of having more
+runtime edge cases is too high to allow any program-owned account to collect
+fees. The Solana protocol should aim to limit the types of account modifications
+that can occur outside of the transaction processor to avoid introducing
+loopholes.
+
+### Introduce an enshrined "validator node" account
+
+Rather than restricting fee collector accounts to be system-owned, a new type of
+"validator node" account could be introduced. Currently, in normal validator
+operations, the "fee collector" account is also used as the "node id" as well as
+the vote fee payer. Introducing a "validator node" account that is owned by a
+"validator node" program which allows configuring a "withdraw authority" and
+"vote fee payer" could help increase validator operation flexibility and
+increase clarity in how validator keys are used in the protocol.
 
 ## New Terminology
 
-NA
+Fee Collector: The account that receives block and rent fees collected by
+validators. Also known as the "node id".
 
 ## Detailed Design
 
-At the end of a block, validators MUST NOT distribute fees to accounts that are
-not system owned and/or rent-exempt. Instead, they MUST burn the fees by not
-distributing them to anyone.
+At the end of a block, validators MUST ONLY distribute fees to accounts that are
+both system owned and rent-exempt. If a fee collector account does not satisfy
+these constraints, the fees MUST be burned by not distributing them to anyone.
 
 ## Impact
 
