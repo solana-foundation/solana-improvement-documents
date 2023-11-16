@@ -53,6 +53,13 @@ the vote fee payer. Introducing a "validator node" account that is owned by a
 "vote fee payer" could help increase validator operation flexibility and
 increase clarity in how validator keys are used in the protocol.
 
+This approach requires a migration of all "fee collector" accounts as well as
+the development of a new on-chain program to manage the new "validator node"
+accounts. It will be a big effort compared to the proposed constraints in this
+SIMD and should be discussed in a new SIMD if this approach is desired.
+Furthermore, durable nonce accounts already have a configurable authority field
+which can be used to manage fee collector account funds in a more flexible way.
+
 ## New Terminology
 
 Fee Collector: The account that receives block and rent fees collected by
