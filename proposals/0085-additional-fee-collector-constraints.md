@@ -35,7 +35,7 @@ constraint was already added for rent fee collection in
 
 ### Elide the system-owned constraint
 
-Restricting fee collection accounts to be system-owned is perhaps overly
+Restricting fee collector accounts to be system-owned is perhaps overly
 restrictive and limits the amount of flexibility that validator operators have
 when managing sensitive accounts with funds. However, the risk of having more
 runtime edge cases is too high to allow any program-owned account to collect
@@ -66,7 +66,7 @@ these constraints, the fees MUST be burned by not distributing them to anyone.
 
 ## Impact
 
-New and existing validators must ensure that their fee collection account is
+New and existing validators must ensure that their fee collector account is
 rent-exempt and owned by the system program in order to receive fees. Since the
 Solana Labs validator implementation currently requires the fee collector
 account to be same account as the fee payer for vote transactions, this is
