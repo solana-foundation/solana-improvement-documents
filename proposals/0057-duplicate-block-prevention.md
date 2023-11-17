@@ -18,20 +18,19 @@ different versions of the block
 
 ## Motivation
 
-In a situation where a leader generates two different blocks for a slot, ideally
-either all the validators get the same version of the block, or they all see a
-mix of the different versions of the block and mark it dead during replay. This
-removes the complicated process of reaching consensus on which version of the
-block needs to be stored.
+In a situation where a leader generates two different blocks for a slot, either:
+
+1) all the validators get the same version of the block.
+2) the super majority gets a mixture of shreds from the different versions of the
+   block and mark it dead during replay.
+3) the network is split and participants get different replayable versions of the
+   block.
+
+This proposal attempts to maximize the chance of situations (1) and (2).
 
 ## Alternatives Considered
 
-1. Storing all or some 'n' versions of the block - This can be DOS'd if a
-malicious leader generates a bunch of different versions of a block, or
-selectively sends some versions to specific validators.
-
-2. Running separate consensus mechanism on each duplicate block - Very
-complicated and relies on detection of the duplicate block
+Not applicable
 
 ## New Terminology
 
@@ -92,79 +91,6 @@ block before voting on the block, *even if they received all the data shreds for
 that block*. This guarantees leaders cannot just change the one data shred to
 generate two completely different, yet playable versions of the block
 
-### Duplicate block resolution
-
-Against a powerful adversary, the preventative measures outlined above can be
-circumvented. Namely an adversary that controls a large percentage (< 33%) of
-stake and has the ability to create and straddle network partitions can
-circumvent the measures by isolating honest nodes in partitions.
-Within the partition the adversaries can propagate a single version of the
-block, nullifying the effects of the duplicate witness proof.
-
-In the worse case we can assume that the adversary controls 33% of the network
-stake. By utilizing this stake, they can attack honest nodes by creating network
-partitions. In a turbine setup with offline nodes and malicious stake
-communicating through side channel, simulations show that 1% of honest nodes can
-receive a block given that at least 15% honest nodes are in the partition. [1]
-
-Percentage online is the number of total stake online in the partition. These
-simulations were run with 33% of that stake being malicious. Malicious nodes
-communicate through side channel to receive the block, and therefore will always
-propagate shreds to their children, regardless of whether their parent sent them
-the shred.
-
-The simulation was run with 2 different stake weight distributions, an equal
-distribution where each validator had the same amount of stake, and a Mainnet
-distribution where the number of validators and stake weights directly mapped
-to the mainnet beta distribution as of Sept 14th 2023.
-
-Median stake recovered with 33% malicious, 10K trials
-| Percentage online | Equal stake | Mainnet stake |
-| ----|-----|-----------|
-| 33% | 33% | 33%       |
-| 40% | 33% | 33%       |
-| 45% | 33.3% | 33.09%  |
-| 46% | 33.4% | 33.46%  |
-| 47% | 33.54% | 33.58% |
-| 48% | 33.71% | 34.78% |
-| 49% | 33.97% | 36.21% |
-| 50% | 34.28% | 39.93% |
-| 51% | 34.70% | 42.13% |
-| 52% | 35.09% | 43.42% |
-| 53% | 35.85% | 45.23% |
-| 54% | 36.88% | 46.42% |
-| 55% | 37.96% | 47.95% |
-| 60% | 48.95% | 55.51% |
-| 66% | 64.05% | 64.08% |
-| 75% | 74.98% | 74.59% |
-
-Given this we can conclude that there will be at most 5 versions of a block that
-can reach a 34% vote threshold, even against the most powerful adversaries, as
-there needs to be a non overlapping 15% honest nodes in each partition. [2]
-
-To solve this case we can store up to 5 duplicate forks as normal forks, and
-perform normal fork choice on them:
-
-- Allow blockstore to store up to 5 versions of a block.
-- Only one of these versions can be populated by turbine. The remaining 4
-  versions are only for repair.
-- If a version of this slot reaches the 34% vote threshold, attempt to repair
-that block. This inherently cannot be from a turbine parent, so it must relax
-the constraint from the prevention design.
-- From this point on, we treat the fork as normal in fork choice. This requires
-that the remaining parts of consensus operate on (Slot, Hash) ids, and that
-switching proofs allow stake on the same slot, but different hashes.
-- Include the same duplicate witness proofs from the prevention design, and only
-vote on blocks that we have not received a proof for, or that have reached the
-threshold.
-
-In order to accurately track the threshold, it might be prudent to tally vote
-txs from dead blocks as well, in the case gossip is experiencing problems.
-Alternatively/Additionally consider some form of ancestory information in votes
-[3] to ensure that the vote threshold is viewed. This might be a necessity in
-double duplicate split situations where the initial duplicate block is not voted
-on.
-
 ## Impact
 
 The network will be more resilient against duplicate blocks
@@ -175,12 +101,9 @@ Not applicable
 
 ## Backwards Compatibility
 
-Rollout will happen in stages, prevention cannot be turned on until QUIC turbine.
-Resolution can run in tandem with duplicate block consensus v1, and full migration
-will be the final step.
+Rollout will happen in stages, as this proposal depends on QUIC turbine
 
 Tentative schedule:
-
 Prevention:
 
 1) Merkle shreds (rolled out)
@@ -191,40 +114,4 @@ Prevention:
   - 1/2 Shreds threshold for voting (feature flag)
 
 3) QUIC turbine
-4) Lock down turbine tree (feature flag and opt-out cli arg for jito)
-
-Resolution:
-
-1) Merkle shreds (rolled out)
-2) Blockstore/AccountsDb features
-
-  - Duplicate proofs for merkle shreds
-  - Store up to 5 versions in blockstore (feature flag for column migration)
-  - Store epoch's worth of slot hashes in accountsdb (feature flag)
-
-3) Consensus changes
-
-  - Targetted duplicate block repair
-  - Voting checks and 34% repair (feature flag)
-
-4) Migration
-
-  - Unplug DuplicateConfirmed
-  - Unplug Ancestor Hashes Service
-  - Unplug Popular Pruned
-
-## References
-
-[1] Equal stake weight simulation
-    `https://github.com/AshwinSekar/turbine-simulation/blob/master/src/main.rs`
-    uses a 10,000 node network with equal stake and shred recovery. Mainnet
-    stake weight simulation
-    `https://github.com/AshwinSekar/solana/commits/turbine-simulation` mimics
-    the exact node count and stake distribution of mainnet and does not perform
-    shred recovery.
-
-[2] Section 4
-`https://github.com/AshwinSekar/turbine-simulation/blob/master/Turbine_Merkle_Shred_analysis.pdf`
-
-[3] Block Ancestors Proposal
-`https://github.com/solana-labs/solana/pull/19194/files`
+4) Lock down turbine tree (feature flag and opt-out cli arg for shred forwarders)
