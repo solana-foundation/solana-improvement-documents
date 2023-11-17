@@ -13,7 +13,7 @@ feature: TBD
 ## Summary
 
 Add a sign extension instruction to SBPFv2 and replace implicit sign extension
-in certain SBPF instructions with zero extension. 
+on instruction outputs in certain SBPF instructions with zero extension.
 
 ## Motivation
 
@@ -54,9 +54,8 @@ The new instruction is specified as follows:
 Opcode: `0x87`
 
 Description: \
-Sign extend the lower 32-bit value in `dst_reg` to 64-bit and store into
-`dst_reg`. This instruction discards and does not consider any value in the
-upper 32-bits of the `dst_reg`.
+Sign extend the lower 32-bit value in `src_reg` to 64-bit and store into 
+`dst_reg`.
 
 Input Constraints: \
 $\mathtt{dst\_reg} \neq \mathtt{r10}$
@@ -64,6 +63,8 @@ $\mathtt{dst\_reg} \neq \mathtt{r10}$
 Operation:
 
 ```
+dst_reg[31:0] := src_reg[31:0]
+
 if dst_reg[31] = 0 {
   dst_reg[63:32] := 0
 } else {
@@ -77,13 +78,12 @@ The changes to existing instructions is as follows:
 
 ---
 
-### `OR64_IMM` - Bitwise Or 64-bit Immediate
+### `ADD32_IMM` - Bitwise Or 64-bit Immediate
 
 Opcode: `0x47`
 
 Description: \
-Zero-extend `imm` to 64-bits. Perform bitwise or on the zero-extended immediate
-with `dst_reg`. Store this value in dst_reg.
+Truncate Perform 32-bit wrapping integer addition on this and `dst_reg`. Store into `dst_reg`.
 
 Input Constraints: \
 $\mathtt{dst\\_reg} \neq \mathtt{r10}$
@@ -91,7 +91,7 @@ $\mathtt{dst\\_reg} \neq \mathtt{r10}$
 Operation:
 
 ```
-dst_reg := dst_reg | ZeroExtend(imm)
+dst_reg := Truncate(dst_reg) + imm
 ```
 
 ---
@@ -186,3 +186,25 @@ ZeroExtend(x: u32) -> u64 {
   return y
 }
 ```
+
+### Sign Extension Function 
+
+```
+SignExtend(x: u32) -> u64 {
+  y: u64 := 0
+  y[31:0] := x
+  if x[31] = 0 {
+    y[63:32] := 0
+  } else {
+    y[63:32] := 1
+  }
+
+  return y
+}
+```
+
+### Zero Upper Function
+ZeroUpper(x: u64) -> u64 {
+  x[63:32] := 0
+  return x
+}
