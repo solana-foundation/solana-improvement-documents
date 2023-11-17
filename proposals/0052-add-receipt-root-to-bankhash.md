@@ -58,9 +58,9 @@ The receipt root would be added to the bankhash as follows:
    let mut hash = hashv(&[
       parent_hash,
       accounts_delta_hash,
-      receipt_root,
       signature_count_buf,
       last_blockhash,
+      receipt_root,
    ]);
    ```
 
