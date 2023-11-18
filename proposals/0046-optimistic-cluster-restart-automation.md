@@ -161,16 +161,17 @@ See each step explained in details below.
    * `last_voted_slot`: `u64` the slot last voted, this also serves as
    last_slot for the bit vector.
    * `last_voted_hash`: `Hash` the bank hash of the slot last voted slot.
-   * `ancestors`: `BitVec<u8>` compressed bit vector representing the slots on
-   sender's last voted fork. the least significant bit is always
-   `last_voted_slot`, most significant bit is `last_voted_slot-81000`.
+   * `ancestors`: `Run-length encoding` compressed bit vector representing the
+   slots on sender's last voted fork. the least significant bit is always
+   `last_voted_slot`, most significant bit is `last_voted_slot-65535`.
 
-   The number of ancestor slots sent is hard coded at 81000, because that's
-   400ms * 81000 = 9 hours, we assume that most validator administrators 
-   would have noticed an outage within 9 hours, and the optimistic 
-   confirmation must have halted within 81k slots of the last confirmed block.
-   If a validator restarts after 9 hours past the outage, it cannot join the
-   restart this way. If enough validators failed to restart within 9 hours,
+   The number of ancestor slots sent is hard coded at 65535, because that's
+   400ms * 65535 = 7.3 hours, we assume that most validator administrators 
+   would have noticed an outage within 7 hours, and the optimistic 
+   confirmation must have halted within 64k slots of the last confirmed block.
+   Also 65535 bits nicely fits into u16, which makes encoding more compact.
+   If a validator restarts after 7 hours past the outage, it cannot join the
+   restart this way. If enough validators failed to restart within 7 hours,
    then we fallback to the manual, interactive `cluster restart` method.
 
    When a validator enters restart, it uses `wen restart shred version` to
