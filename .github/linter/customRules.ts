@@ -121,6 +121,8 @@ const requiredMetadata = {
 
 const optionalMetadata = {
   feature: {},
+  supersedes: {},
+  extends: {},
 }
 
 export const metadataSimdIsValid = {
