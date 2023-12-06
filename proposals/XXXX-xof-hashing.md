@@ -1,0 +1,164 @@
+---
+simd: 'XXXX'
+title: extenable output (XOF) hashing support
+authors:
+  - Ralph Ankele
+category: Standard
+type: Core
+status: Draft
+created: 2023-11-30
+feature: (fill in with feature tracking issues once accepted)
+---
+
+## Summary
+
+This proposal introduces three new concepts to the Solana runtime:
+- Support extendable Output Functions (XOF) hasing, based on cSHAKE  
+- Support [cSHAKE](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf) as a customable 
+version of [SHAKE](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf)
+- Support the [STROBE protocol](https://strobe.sourceforge.io/papers/strobe-latest.pdf) based on cSHAKE
+
+Using the above new concepts would enable regular Solana programs to:
+- Use [merlin transcripts](https://merlin.cool/index.html), automating the Fiat-Shamir transform for 
+zero-knowledge proofs, which turns interactive proofs into non-interactive proofs
+- Use the widely used [BulletProofs](https://github.com/dalek-cryptography/bulletproofs) zero-knowledge library  
+
+## Motivation
+
+Implementing [cSHAKE](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf) within Solana 
+offers several advantages. Firstly, cSHAKE is a variant of the SHA3 extendable-output function (XOF) that allows 
+users to customize the output length and incorporate personalized domain separation parameters. It operates by 
+taking a message `N` and a customization string `S` as input, enabling users to generate hash outputs of variable 
+lengths `L` and tailor the hashing process based on specific application requirements. Extendable-output function's 
+such as cSHAKE can be used for:
+- *Customized hashing:* cSHAKE's ability to produce variable-length hash outputs makes it valuable for 
+applications requiring flexible and tailored hashing functions, such as in blockchain protocols, where different 
+data structures might require different hash lengths.
+- *Domain Separation:* It is beneficial in situations where secure and domain-separated hashing is necessary, like 
+in cryptographic protocols and systems where unique hashing based on different contexts or domains is crucial.
+- *Protocols:* It is useful in protocols such as the [STROBE protocol](https://strobe.sourceforge.io/papers/strobe-latest.pdf), which is a versatile protocol framework used to construct 
+cryptographic primitives by composing different operations in a sequence known as a protocol transcript. It allows 
+for flexible and efficient design of cryptographic protocols by assembling operations like hashing, encryption, 
+and authentication in a customizable manner. 
+
+Integrating cSHAKE would enhance Solana's cryptography toolkit, enabling developers to create more secure and 
+flexible applications on the platform. By incorporating cSHAKE, Solana can leverage the full potential of the 
+[BulletProofs](https://github.com/dalek-cryptography/bulletproofs) zero-knowledge proof library, enabling the 
+efficient generation and verification of non-interactive proofs. Applications involving privacy-preserving 
+transactions, such as confidential asset transfers, can leverage Bulletproofs for efficient range proofs, while 
+cSHAKE provides customizable hashing for enhanced security.
+
+Overall, integrating cSHAKE and enabling to build the Bulletproofs zero-knowledge proof library into Solana's 
+infrastructure broadens the platform's cryptographic capabilities, fostering enhanced privacy, security, and 
+flexibility for a wide array of decentralized applications and use cases.
+
+## Alternatives Considered
+Rewriting the BulletProof zero-knowledge library such that the merlin transcripts are 
+not based on any extendable output function. However, that would change the security 
+guarantees, and is most probably more complicated to implement. 
+
+Another alternative is to implement the BulletProof zero-knowledge library as a native 
+program entirely, however, this would limit the use cases that can additionally be enabled 
+by supporting the customable extendable output functin cSHAKE, and the merlin transcripts. 
+Though, supporting a native zero-knowledge proof library would likely be more efficient. 
+
+## New Terminology
+
+None.
+
+## Detailed Design
+
+Explain the feature as if it was already implemented and you're explaining it
+to another Solana core contributor. The generally means:
+
+- Explain the proposed change and how it works
+- Where the feature fits in to the runtime, core, or relevant sub-system
+- How this feature was/could be implemented
+- Interaction with other features
+- Edge cases
+
+cSHAKE is a customable variant of SHAKE, which is SHA3 with infinite output. Basically, cSHAKE 
+differs from SHA3/Keccak by 
+- infinite output (infinite squeeze)
+- different domain seperation (SHA3 appends `01` after the input, SHAKE appends `1111`)
+
+An third-party Rust implementation (suggested by the Keccak designers on their 
+[website](https://keccak.team/software.html)) is available at 
+[https://github.com/quininer/sp800-185](https://github.com/quininer/sp800-185/blob/master/src/cshake.rs). 
+
+SHA3/Keccak are already implemented in the Solana runtime, in the [bpf_loader](https://github.com/solana-labs/solana/blob/master/programs/bpf_loader/src/syscalls/mod.rs#L205) as a [syscall](https://github.com/solana-labs/solana/blob/master/sdk/program/src/syscalls/definitions.rs#L46) for hashing. The implementation 
+of Keccak is in [solana/sdk/program/src/keccak.rs](https://github.com/solana-labs/solana/blob/master/sdk/program/src/keccak.rs).  
+
+When implementing cSHAKE the Keccak implementation can be used as a template and the domain separations needs 
+to be adapted. Moreover, the squeeze function needs to be adapted to allow for infinite squeezing. 
+TODO provide details where to change code
+
+There are two variants of [cSHAKE](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf), `cSHAKE128` and `cSHAKE256`, providing `128`-bit and `256`-bit of security, 
+respectively. Both functions take four parameters, `cSHAKE(X, L, N, S)` where
+- `X`: is the input string, which can be *any* length (`0..2^2040-1`)
+- `L`: the output length in bits
+- `N`: the function name as a bit string
+- `S`: the customization bit string 
+
+cSHAKE can be defined in terms of SHAKE or Keccak as follows:
+```
+cSHAKE-128(X, L, N, S):
+if N == "" and S == "":
+  return SHAKE-128(X, L)
+else:
+  return Keccak[256](bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
+```
+```
+cSHAKE-256(X, L, N, S):
+if N == "" and S == "":
+  return SHAKE-256(X, L)
+else:
+  return Keccak[512](bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
+```
+
+TODO what is additionally needed for STROBE?
+https://sourceforge.net/p/strobe/code/ci/master/tree/strobe.c#l303
+
+Further to add support for the STROBE protocol framework, cSHAKE can be adapted with different 
+parameters such as TODO. 
+
+TODO what is additionally needed for merlin?
+https://github.com/zkcrypto/merlin/blob/main/src/strobe.rs
+
+With the sycalls for cSHAKE and STROBE in place, the merlin transcripts can straight foward 
+be implemented in regular Solana programs. This further enables developers to use the 
+[BulletProofs](https://github.com/dalek-cryptography/bulletproofs) zero-knowledge proof library.
+
+## Impact
+
+This proposal would enable dapp developers and core contributors to use the extendable output function 
+[cSHAKE](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf). Moreover, it would allow 
+them to easier build applications based on the [BulletProofs](https://github.com/dalek-cryptography/bulletproofs) 
+zero-knowledge proof library.  
+
+## Security Considerations
+
+The cSHAKE functions support variable output lengths of `L` bits. Keep in mind that the security of 
+e.g. `cSHAKE128` is `min(2^(L/2), 2^128)` for collision attacks and `min(2^L, 2^128)` for 
+preimage attacks, where `L` is the number of output bits. While a longer output does not 
+improve the security, as shorter output lenght might decrease the security. 
+
+For a given choice of the function name `N` and the customizable string `S`, `cSHAKE128(X, L, N, S)`
+has the same security properties as `SHAKE128(X, L)`. Note, that the customizeable string `S` 
+should never be under attacker control. It should be a fixed constant or random value set by the 
+protocol or application. An attacker controlled customizable string `S` could lead to related-key attacks 
+or void any security proof as an attacker could force two outputs of the hash function to be 
+the same, by using identical customizable strings.    
+
+TODO implementation specific security considerations
+
+<!---
+## Drawbacks *(Optional)*
+
+Why should we not do this?
+
+## Backwards Compatibility *(Optional)*
+
+Does the feature introduce any breaking changes? All incompatibilities and
+consequences should be listed.
+-->
