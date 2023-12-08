@@ -51,9 +51,11 @@ coordination. This makes upgrading the program cumbersome and potentially
 dangerous.
 
 With the Feature Gate program instead implemented as a Core BPF program, the
-program could be upgraded through the official feature-gate process. Thus,
-changes to the program need only to be done once and are protected by the
-feature activation process.
+program could be upgraded through the official feature-gate process described
+in
+[SIMD 0088](https://github.com/solana-foundation/solana-improvement-documents/pull/88).
+Like all Core BPF programs, changes to the program only need to be done once
+and are protected by the feature activation process.
 
 Another alternative to a Core BPF program is a standard, upgradeable BPF program
 whose upgrade authority is controlled by a multisig, with key-holders from each
@@ -63,7 +65,7 @@ would make gating upgrades behind feature gates much more difficult.
 ## New Terminology
 
 - Feature Gate program: The Core BPF program that all feature accounts will be
-  assigned to
+  assigned to, with address `Feature111111111111111111111111111111111111`.
 - "Revoke" or "revoke pending activation": The act of reallocating a feature
   account's data to zero, assigning it to the System Program, and defunding its
   lamports balance - effectively removing it from the runtime's recognized set
