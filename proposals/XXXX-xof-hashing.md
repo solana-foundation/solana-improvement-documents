@@ -68,30 +68,12 @@ None.
 
 ## Detailed Design
 
-Explain the feature as if it was already implemented and you're explaining it
-to another Solana core contributor. The generally means:
-
-- Explain the proposed change and how it works
-- Where the feature fits in to the runtime, core, or relevant sub-system
-- How this feature was/could be implemented
-- Interaction with other features
-- Edge cases
+### cSHAKE
 
 cSHAKE is a customable variant of SHAKE, which is SHA3 with infinite output. Basically, cSHAKE 
 differs from SHA3/Keccak by 
 - infinite output (infinite squeeze)
 - different domain seperation (SHA3 appends `01` after the input, SHAKE appends `1111`)
-
-An third-party Rust implementation (suggested by the Keccak designers on their 
-[website](https://keccak.team/software.html)) is available at 
-[https://github.com/quininer/sp800-185](https://github.com/quininer/sp800-185/blob/master/src/cshake.rs). 
-
-SHA3/Keccak are already implemented in the Solana runtime, in the [bpf_loader](https://github.com/solana-labs/solana/blob/master/programs/bpf_loader/src/syscalls/mod.rs#L205) as a [syscall](https://github.com/solana-labs/solana/blob/master/sdk/program/src/syscalls/definitions.rs#L46) for hashing. The implementation 
-of Keccak is in [solana/sdk/program/src/keccak.rs](https://github.com/solana-labs/solana/blob/master/sdk/program/src/keccak.rs).  
-
-When implementing cSHAKE the Keccak implementation can be used as a template and the domain separations needs 
-to be adapted. Moreover, the squeeze function needs to be adapted to allow for infinite squeezing. 
-TODO provide details where to change code
 
 There are two variants of [cSHAKE](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf), `cSHAKE128` and `cSHAKE256`, providing `128`-bit and `256`-bit of security, 
 respectively. Both functions take four parameters, `cSHAKE(X, L, N, S)` where
@@ -115,6 +97,33 @@ if N == "" and S == "":
 else:
   return Keccak[512](bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
 ```
+
+#### Implementation Details
+
+An third-party Rust implementation of cSHAKE (suggested by the Keccak designers on their 
+[website](https://keccak.team/software.html)) is available at 
+[https://github.com/quininer/sp800-185](https://github.com/quininer/sp800-185/blob/master/src/cshake.rs). 
+
+SHA3/Keccak are already implemented in the Solana runtime, in the [bpf_loader](https://github.com/solana-labs/solana/blob/master/programs/bpf_loader/src/syscalls/mod.rs#L205) as a [syscall](https://github.com/solana-labs/solana/blob/master/sdk/program/src/syscalls/definitions.rs#L46) for hashing. The implementation 
+of Keccak is in [solana/sdk/program/src/keccak.rs](https://github.com/solana-labs/solana/blob/master/sdk/program/src/keccak.rs).  
+
+When implementing cSHAKE the Keccak implementation can be used as a template and the domain separations needs 
+to be adapted. Moreover, the squeeze function needs to be adapted to allow for infinite squeezing. In more details, a new syscall needs to be added in [solana/sdk/program/src/syscalls/definition.rs](https://github.com/solana-labs/solana/blob/master/sdk/program/src/syscalls/definitions.rs#L46) as follows:
+```
+define_syscall!(fn sol_cshake128(vals: *const u8, val_len: u64, func_name: *const u8, cust_string: *const u8, hash_result: *mut u8) -> u64);
+define_syscall!(fn sol_cshake256(vals: *const u8, val_len: u64, func_name: *const u8, cust_string: *const u8, hash_result: *mut u8) -> u64);
+```
+Additionally, the support for using cSHAKE as a xof-hasing function can be added in [solana/sdk/program/bpf_loader/src/syscalls/mod.rs](https://github.com/solana-labs/solana/blob/master/programs/bpf_loader/src/syscalls/mod.rs#L149) by adding a new `HasherImpl` implementation for cSHAKE.
+
+```
+impl HasherImpl for cShake128Hasher {
+  ...
+}
+```
+
+The cSHAKE implementation then differs from Keccak by modifying the domain separation and the squeeze function from the existing Keccak implementation in [solana/sdk/program/src/keccak.rs](https://github.com/solana-labs/solana/blob/master/sdk/program/src/keccak.rs), or exchanging the `Keccak` implemenation with a `cSHAKE` implementation.
+
+### STROBE
 
 TODO what is additionally needed for STROBE?
 https://sourceforge.net/p/strobe/code/ci/master/tree/strobe.c#l303
