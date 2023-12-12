@@ -98,7 +98,7 @@ else:
   return Keccak[512](bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
 ```
 
-#### Implementation Details
+#### Implementation Details {#cshake-implementation}
 
 An third-party Rust implementation of cSHAKE (suggested by the Keccak designers on their 
 [website](https://keccak.team/software.html)) is available at 
@@ -125,16 +125,72 @@ The cSHAKE implementation then differs from Keccak by modifying the domain separ
 
 ### STROBE
 
-TODO what is additionally needed for STROBE?
-https://sourceforge.net/p/strobe/code/ci/master/tree/strobe.c#l303
+Strobe is a protocol framework based on the duplex Sponge construction. `Strobe-f-λ/b` is a Strobe instance 
+with a targeted security level of `λ` bits. The capacity `c = 2λ`, the bandwidth `b=r+c`, where `r` is the rate, 
+and `F=f(b)` is the sponge function, based on Keccak-f. 
 
-Further to add support for the STROBE protocol framework, cSHAKE can be adapted with different 
-parameters such as TODO. 
+Strobe can be instantiated with cSHAKE and specifies two instances based on cSHAKE:
+- `Strobe-128/1600()`
+- `Strobe-256/1600()`
 
-TODO what is additionally needed for merlin?
-https://github.com/zkcrypto/merlin/blob/main/src/strobe.rs
+where the  initial state of `Strobe-f-λ/b` is
+```
+  S_0 := F(bytepad(encode_string("") || encode_string("STROBEv1.0.2"), r/8))
+       = F([[1, r/8, 1, 0, 1, 96]] || "STROBEv1.0.2" || (r/8-18) * [[0]])
+```
 
-With the sycalls for cSHAKE and STROBE in place, the merlin transcripts can straight foward 
+For `Strobe-128/1600()` any data squeezed is of the form `cSHAKE128(X)` and for `Strobe-256/1600()` it is of the form 
+`cSHAKE256(X)`. 
+
+#### Implementation Details
+
+The Strobe designers released an official implementation in C available at [https://sourceforge.net/p/strobe](https://sourceforge.net/p/strobe/code/ci/master/tree/). Moreover, a minimal Strobe-128 implementation in Rust is available 
+in the [source code](https://github.com/zkcrypto/merlin/blob/main/src/strobe.rs) for the merlin crate. 
+
+To add support for the STROBE protocol framework, cSHAKE can be adapted with different parameters such as TODO. 
+Additionally to hashing, that us implemented for Keccak, additional sponge functions need to be implemented, such as: 
+- Adding associated data 
+- Key Addition
+- Extract hash/pseudorandom data (PRF)
+
+which should all be available in Keccak/cSHAKE, by using the `Absorb` and `Squeeze` functions. In more details, for adding 
+associated data the functions `AD` and `meta_AD` need to be implemented, that absorbs data into the state. `meta_AD` 
+describes the protocols interpretation of the operation. The function `KEY` adds a cryptographic key to the state by 
+absorbing the key. The function `PRF` extracts pseudorandom data from the state, by squeezing data.   
+
+For all the above functions, syscalls need to be defined in 
+[solana/sdk/program/src/syscalls/definition.rs](https://github.com/solana-labs/solana/blob/master/sdk/program/src/syscalls/definitions.rs#L46) as follows:
+```
+define_syscall!(fn sol_strobe128_ad(...) -> u64);
+define_syscall!(fn sol_strobe128_meta_ad(...) -> u64);
+define_syscall!(fn sol_strobe128_key(...) -> u64);
+define_syscall!(fn sol_strobe128_prf(...) -> u64);
+
+define_syscall!(fn sol_strobe256_ad(...) -> u64);
+define_syscall!(fn sol_strobe256_meta_ad(...) -> u64);
+define_syscall!(fn sol_strobe256_key(...) -> u64);
+define_syscall!(fn sol_strobe256_prf(...) -> u64);
+```
+
+The `AD`, `meta_AD`, `KEY` and `PRF` functions can be build by using the `Absorb` and `Squeeze` functions from an cSHAKE
+implementation as defined in [cSHAKE](#cshake-implementation) above, and need to be added to `solana/sdk/program/src/strobe.rs`
+Moreover, an trait needs to be build for the Strobe functions in [solana/sdk/program/bpf_loader/src/syscalls/mod.rs](https://github.com/solana-labs/solana/blob/master/programs/bpf_loader/src/syscalls/mod.rs#L135) by adding a new `StrobeImpl` similar to
+the `HasherImpl` used for Keccak hashing.
+
+```
+pub trait StrobeImpl {
+  ...
+
+  fn ad(...)
+  fn meta_ad(...)
+  fn key(...)
+  fn prf(...)
+}
+```
+
+### Merlin and BulletProofs
+
+With the sycalls for cSHAKE and STROBE in place, the merlin transcripts can straight forward 
 be implemented in regular Solana programs. This further enables developers to use the 
 [BulletProofs](https://github.com/dalek-cryptography/bulletproofs) zero-knowledge proof library.
 
