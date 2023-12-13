@@ -20,15 +20,6 @@ This SIMD also introduces the concept of Core BPF programs: programs which are
 essential to network operations. Currently, these are embedded programs known as
 "native" programs.
 
-With an explicit process in place for upgrading Core BPF programs, engineers can
-safely manage changes to essential programs through feature gates. The feature
-gate process requries incremental activations on each cluster: testnet, then
-devnet, then mainnet-beta. This is extremely valuable for ensuring a change has
-been safely integrated and will not have negative effects on mainnet-beta.
-
-This same explicit process can be used to migrate existing native programs to
-their new Core BPF versions.
-
 ## Motivation
 
 BPF programs offer less complexity for other clients, such as Firedancer, since
@@ -41,16 +32,10 @@ process.
 
 ## Alternatives Considered
 
-An alternative approach to managing upgrades to Core BPF programs could be
-to make these core BPF programs _upgradeable_ and establish a multi-signature
-upgrade authority. This authority could be comprised of key-holders from each
-validator client: Solana Labs, Jito, Jump, and possibly Syndica (Sig).
-
-Gating upgrades behind a feature-gate has numerous benefits, including a long
-lead time to deployment and requiring validators to upgrade their software to
-signal their acceptance of the change. Allowing Core BPF programs to be upgraded
-by a multi-sig without feature-gating strips core contributors of these
-benefits.
+An alternative approach to managing upgrades to Core BPF programs could be to
+manually upgrade these programs behind a feature gate using the runtime. This
+process is more complex and involves circumventing the established program
+upgrade process.
 
 It's possible that multi-sig program upgrades could be combined with
 feature-gates, however this implementation would add additional layers of
@@ -58,32 +43,40 @@ complexity to the upgrade process.
 
 ## New Terminology
 
-- `Core BPF Program`: A **non-upgradeable** BPF program relied on by any part of
+- `Core BPF Program`: An **upgradeable** BPF program relied on by any part of
   the Solana stack, including (but not limited to) consensus, transaction
   processing, voting, staking, and account creation.
 
 ## Detailed Design
 
-In the context of this design, **source program** shall be the modified version
-of a core BPF program intending to be moved in place of the existing program,
-while **target program** is that existing program.
+Core BPF programs shall be upgradeable BPF programs deployed with
+`BPFLoaderUpgradeab1e11111111111111111111111`.
 
-Core BPF programs shall be non-upgradeable BPF programs deployed with
-`BPFLoader2111111111111111111111111111111111`.
+The upgrade authority shall be a multi-sig comprised of keyholders from each
+validator client. Right now, that list includes Solana Labs, Jito, and Jump.
+This list can be updated in the future to include newer clients like Sig.
 
-Core BPF programs must only be modified through feature gates.
+**Upgrading a core BPF program** shall consist of a coordinated effort amongst
+core contributors from all validator clients. Similar to the feature gate
+process, this upgrade should occur on testnet, then devnet, then mainnet-beta.
 
-**Upgrading a core BPF program** shall consist of deploying the modified program
-to a new arbitrary address as a **non-upgradeable** BPF program and using a
-feature gate to move the modified program in place of the existing program. The
-feature gate is required to circumvent normal transaction processing rules and
-replace the contents of one account with another directly at the runtime level.
+Upgraded versions of core BPF programs shall always be compiled using a
+verifiable build process.
 
-Note, since this deployed program will be deployed using the non-upgradeable BPF
-loader (`BPFLoader2111111111111111111111111111111111`), it will consist of only
-a program account, with no additional program _data_ account.
+**Migrating a native program to core BPF** shall consist of deploying a modifed
+version of the native program to a new arbitrary address as an **upgradeable**
+BPF program and using a feature gate to move the modified program in place of
+the existing program.
 
-This process must adhere to the following steps:
+The feature gate is required to circumvent normal transaction processing rules
+and replace the contents of one account with another directly at the runtime
+level.
+
+In the context of this design, **source program** shall be the modified BPF
+version of a native program intending to be moved in place of the existing
+native program, while **target program** is that existing program.
+
+The migration process must adhere to the following steps:
 
 1. Verifiably build the modified program.
 2. Generate a new keypair for the **source** program.
@@ -93,51 +86,40 @@ This process must adhere to the following steps:
    **source** (modified) program.
 6. Follow the existing process for activating features.
 
-An additional optional field could be added to feature gate issues for the
-**target program** being upgraded.
-
-**Migrating a native program** to a core BPF program shall consist of following
-the exact steps outlined above with the modified BPF version of the program.
-This will effectively replace the program at the target address with its core
-BPF implementation.
-
-Some additional checks should be run when doing a migration instead of an
-upgrade, such as validating the native program's owner is
-`NativeLoader1111111111111111111111111111111`.
-
 ## Impact
 
-This proposed change would result in a new process for upgrading core programs.
-Although this process will still require feature gates as it does now, the
-change is handled completely differently.
+With this change, validator clients would no longer be required to implement
+changes to essential programs. Instead these programs could be modified just
+once. This reduces some engineering overhead on validator teams.
 
-The act of deploying the modified program and using a runtime feature gate to
-move it into the proper account will be an entirely new way of upgrading
-programs that were previously native.
+This also introduces a multi-sig process, which core contributors across all
+validator teams must, in a timely manner, participate in.
 
 ## Security Considerations
 
-This proposal provides a secure means for upgrading core BPF programs - a
-process that will be increasingly valuable as new core BPF programs are created.
+This proposal establishes the concept of relying on BPF programs that are not
+built into the runtime for essential cluster operations. With these programs
+being upgradeable, there are some obvious security considerations around who can
+upgrade these programs and when. With a proper multi-sig process in place, these
+risks are mitigated.
 
-However, this change also introduces a critical security consideration
-surrounding the replacement of a core program with the contents of another
-account. This is an extremely sensitive process that must be handled with
-maximum caution.
-
-If a core program is modified incorrectly, or somehow erased during migration,
-it could have immediate and fatal consequences for the network.
+When it comes to migrating native programs to core BPF, this change introduces a
+serious security consideration surrounding the replacement of an essential
+program with the contents of another account. This is an extremely sensitive
+process that must be handled with maximum caution. If a core program is modified
+incorrectly, or somehow erased during migration, it could have immediate and
+fatal consequences for the network.
 
 ## Backwards Compatibility
 
 This proposal itself does not directly introduce any breaking changes. The code
-introduced to migrate native programs or upgrade core BPF programs will exist
-off the runtime's "hot path" until it's actually used for a migration/upgrade.
+introduced to migrate native programs to core BPF programs will exist off of the
+runtime's "hot path" until it's actually used for a migration.
 
-When the mechanism is used _specifically_ to migrate a native program to core
-BPF, the core BPF version will be more than backwards compatible. It must
-provide the exact same results as the native program it aims to replace.
+When a migration is conducted, the core BPF version will be more than backwards
+compatible. It must provide the exact same results as the native program it aims
+to replace.
 
-However, once a program has been migrated to core BPF, the process by which this
-program is upgraded will not be backwards compatible. Core contributors must
-follow the new process.
+However, once a native program has been migrated to core BPF, the process by
+which this program is upgraded will not be backwards compatible. Core
+contributors must follow the new process.
