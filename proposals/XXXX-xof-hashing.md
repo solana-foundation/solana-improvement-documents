@@ -98,7 +98,7 @@ else:
   return Keccak[512](bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
 ```
 
-#### Implementation Details {#cshake-implementation}
+#### Implementation Details
 
 An third-party Rust implementation of cSHAKE (suggested by the Keccak designers on their 
 [website](https://keccak.team/software.html)) is available at 
@@ -147,8 +147,10 @@ For `Strobe-128/1600()` any data squeezed is of the form `cSHAKE128(X)` and for 
 The Strobe designers released an official implementation in C available at [https://sourceforge.net/p/strobe](https://sourceforge.net/p/strobe/code/ci/master/tree/). Moreover, a minimal Strobe-128 implementation in Rust is available 
 in the [source code](https://github.com/zkcrypto/merlin/blob/main/src/strobe.rs) for the merlin crate. 
 
-To add support for the STROBE protocol framework, cSHAKE can be adapted with different parameters such as TODO. 
-Additionally to hashing, that us implemented for Keccak, additional sponge functions need to be implemented, such as: 
+The STROBE protocol framework can be build on top of the current Keccak implementation or on top of the cSHAKE implementation, 
+as outlined in the Strobe-128 [implementation](https://github.com/zkcrypto/merlin/blob/main/src/strobe.rs) of the merlin 
+crate. Additionally to hashing, that is currently implemented for Keccak, additional sponge functions need to be implemented, 
+such as: 
 - Adding associated data 
 - Key Addition
 - Extract hash/pseudorandom data (PRF)
@@ -156,7 +158,8 @@ Additionally to hashing, that us implemented for Keccak, additional sponge funct
 which should all be available in Keccak/cSHAKE, by using the `Absorb` and `Squeeze` functions. In more details, for adding 
 associated data the functions `AD` and `meta_AD` need to be implemented, that absorbs data into the state. `meta_AD` 
 describes the protocols interpretation of the operation. The function `KEY` adds a cryptographic key to the state by 
-absorbing the key. The function `PRF` extracts pseudorandom data from the state, by squeezing data.   
+absorbing the key. The function `PRF` extracts pseudorandom data from the state, by squeezing data. Additionally, Strobe 
+operations are defined by flags as outlined in the specifications at [https://strobe.sourceforge.io/specs/#ops.flags](https://strobe.sourceforge.io/specs/#ops.flags).  
 
 For all the above functions, syscalls need to be defined in 
 [solana/sdk/program/src/syscalls/definition.rs](https://github.com/solana-labs/solana/blob/master/sdk/program/src/syscalls/definitions.rs#L46) as follows:
@@ -172,9 +175,9 @@ define_syscall!(fn sol_strobe256_key(...) -> u64);
 define_syscall!(fn sol_strobe256_prf(...) -> u64);
 ```
 
-The `AD`, `meta_AD`, `KEY` and `PRF` functions can be build by using the `Absorb` and `Squeeze` functions from an cSHAKE
-implementation as defined in [cSHAKE](#cshake-implementation) above, and need to be added to `solana/sdk/program/src/strobe.rs`
-Moreover, an trait needs to be build for the Strobe functions in [solana/sdk/program/bpf_loader/src/syscalls/mod.rs](https://github.com/solana-labs/solana/blob/master/programs/bpf_loader/src/syscalls/mod.rs#L135) by adding a new `StrobeImpl` similar to
+The `AD`, `meta_AD`, `KEY` and `PRF` functions can be build by using the `Absorb` and `Squeeze` functions from a cSHAKE
+implementation as defined in [cSHAKE](#implementation-details) above, and need to be added to `solana/sdk/program/src/strobe.rs`
+Moreover, a trait needs to be build for the Strobe functions in [solana/sdk/program/bpf_loader/src/syscalls/mod.rs](https://github.com/solana-labs/solana/blob/master/programs/bpf_loader/src/syscalls/mod.rs#L135) by adding a new `StrobeImpl` similar to
 the `HasherImpl` used for Keccak hashing.
 
 ```
@@ -190,7 +193,8 @@ pub trait StrobeImpl {
 
 ### Merlin and BulletProofs
 
-With the sycalls for cSHAKE and STROBE in place, the merlin transcripts can straight forward 
+With the sycalls for [cSHAKE](#implementation-details) and [STROBE](#implementation-details-1) in place, the 
+[merlin transcripts](https://merlin.cool/index.html) can straight forward 
 be implemented in regular Solana programs. This further enables developers to use the 
 [BulletProofs](https://github.com/dalek-cryptography/bulletproofs) zero-knowledge proof library.
 
@@ -203,6 +207,7 @@ zero-knowledge proof library.
 
 ## Security Considerations
 
+### cSHAKE
 The cSHAKE functions support variable output lengths of `L` bits. Keep in mind that the security of 
 e.g. `cSHAKE128` is `min(2^(L/2), 2^128)` for collision attacks and `min(2^L, 2^128)` for 
 preimage attacks, where `L` is the number of output bits. While a longer output does not 
@@ -213,9 +218,12 @@ has the same security properties as `SHAKE128(X, L)`. Note, that the customizeab
 should never be under attacker control. It should be a fixed constant or random value set by the 
 protocol or application. An attacker controlled customizable string `S` could lead to related-key attacks 
 or void any security proof as an attacker could force two outputs of the hash function to be 
-the same, by using identical customizable strings.    
+the same, by using identical customizable strings.  
 
-TODO implementation specific security considerations
+### STROBE
+
+Strobe is a framework to create symmetric protocols, so cryptographic keys need to be pre-shared. Moreover, 
+the padding in Strobe should be carefully implemented as outlined in the [specification](https://strobe.sourceforge.io/specs/#ops.impl.runf). Additionally, when using Strobe with cSHAKE, the [NIST separation string](https://strobe.sourceforge.io/specs/#ops.impl.init) `N=""` should be set to the empty string as Strobe was not designed by NIST. 
 
 <!---
 ## Drawbacks *(Optional)*
