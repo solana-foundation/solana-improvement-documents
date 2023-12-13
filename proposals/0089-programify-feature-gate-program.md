@@ -51,16 +51,10 @@ coordination. This makes upgrading the program cumbersome and potentially
 dangerous.
 
 With the Feature Gate program instead implemented as a Core BPF program, the
-program could be upgraded through the official feature-gate process described
-in
+program could be upgraded through the official multi-sig process described in
 [SIMD 0088](https://github.com/solana-foundation/solana-improvement-documents/pull/88).
-Like all Core BPF programs, changes to the program only need to be done once
-and are protected by the feature activation process.
-
-Another alternative to a Core BPF program is a standard, upgradeable BPF program
-whose upgrade authority is controlled by a multisig, with key-holders from each
-client team - Solana Labs, Jito, Jump, and possibly Syndica. This arrangement
-would make gating upgrades behind feature gates much more difficult. 
+Thus, changes to the program need only to be done once and are protected by
+the multi-sig process.
 
 ## New Terminology
 
@@ -107,8 +101,7 @@ The non-existent program at `Feature111111111111111111111111111111111111` can be
 considered analogous to a no-op native program. Thus, the official processes
 outlined in
 [SIMD 0088](https://github.com/solana-foundation/solana-improvement-documents/pull/88)
-for migrating a native program to Core BPF and upgrading a Core BPF
-program can be used to enable this new program.
+for migrating a native program to Core BPF can be used to enable this new program.
 
 Consider the following steps to activate Feature Gate:
 
@@ -138,11 +131,11 @@ confidently update their state upon activation.
 
 With this proposal, a live BPF program - which can accept instructions from
 anyone and execute code - will be the owner of these accounts. This creates some
-risk if _both_ the program's processor code as well as a secure system for
+risk if *both* the program's processor code as well as a secure system for
 upgrading the program are not properly managed.
 
-However, since this program would be Core BPF, its upgrades are protected by the
-feature gate process. Thoroughly reviewed and safe processor code should
+However, since this program would be Core BPF, its upgrades are protected by a
+multi-sig authority. Thoroughly reviewed and safe processor code should
 mitigate any new risks associated with this change.
 
 ## Backwards Compatibility
