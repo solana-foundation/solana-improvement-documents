@@ -120,7 +120,8 @@ cSHAKE-128(X, L, N, S):
 if N == "" and S == "":
   return SHAKE-128(X, L)
 else:
-  return Keccak[256](bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
+  return Keccak[256](bytepad(encode_string(N) || encode_string(S), 168) || X || 
+00, L)
 ```
 
 ```
@@ -128,7 +129,8 @@ cSHAKE-256(X, L, N, S):
 if N == "" and S == "":
   return SHAKE-256(X, L)
 else:
-  return Keccak[512](bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
+  return Keccak[512](bytepad(encode_string(N) || encode_string(S), 136) || X || 
+00, L)
 ```
 
 #### Implementation Details
@@ -285,6 +287,7 @@ zero-knowledge proof library.
 ## Security Considerations
 
 ### cSHAKE
+
 The cSHAKE functions support variable output lengths of `L` bits. Keep in mind 
 that the security of e.g. `cSHAKE128` is `min(2^(L/2), 2^128)` for collision 
 attacks and `min(2^L, 2^128)` for preimage attacks, where `L` is the number of 
