@@ -95,15 +95,17 @@ feature-gates:
 - **Feature-Queue PDA**: Stores an *immutable* list of the previous epoch's
   requested activations.
 
-When a new epoch begins, the Feature-Request PDA will be an empty list. When
-key-holders submit the CLI command to activate a feature, the Feature Gate
-Program appends the feature ID to the Feature-Request set at the same time as
-creating the feature account . Revoked features are removed from the
-Feature-Request list.
+When a new epoch begins, a new Feature-Request PDA will be created, thus
+initializing an empty list. When key-holders submit the CLI command to activate
+a feature, the Feature Gate program appends the feature ID to the
+Feature-Request set at the same time as creating the feature account. Revoked
+features are removed from the Feature-Request list when the Feature Gate
+program's `RevokePendingActivation` instruction is invoked.
 
-At the end of the epoch, the Feature-Request set is written to the Feature-Queue
-PDA by the runtime, where it becomes immutable. The Feature-Request PDA is then
-reset to an empty list again, also by the runtime.
+At the end of the epoch, the Feature-Request set is written to a new
+Feature-Queue PDA (for the next epoch) by the runtime, where it becomes
+immutable. A new empty-list Feature-Request PDA is then created for the next
+epoch, also by the runtime.
 
 The newly created immutable Feature-Queue can then be used by nodes to signal
 support for potential activation in the next epoch.
@@ -113,6 +115,18 @@ previously requested feature activations, and end with the activation of those
 with enough support. This process takes one epoch. Therefore, it will take at
 least one more epoch than it currently does from the time a key-holder submits
 a feature for activation via CLI to when it is actually activated.
+
+Proposed Program-Derived Address for Feature-Request PDA:
+
+```
+"feature_request" + <epoch>
+```
+
+Proposed Program-Derived Address for Feature-Queue PDA:
+
+```
+"feature_queue" + <epoch>
+```
 
 ### Signaling Support for Features
 
@@ -140,8 +154,12 @@ Similarly, a node running v1.16.0 would signal:
 1   1   1   1 
 ```
 
-Validators send these transactions signaling their support for a queued set of
-features on the first slot of every epoch and on startup after any reboot.
+Validators shall send transactions containing the Feature Gate program's
+`SignalSupportForFeatureSet` instruction, which would contain their bit mask, on
+the first slot of every epoch and on startup after any reboot. When this
+instruction is invoked, the Feature Gate program stores the submitted bit mask
+in a PDA derived from the validator's vote account. This effectively signals a
+node's support for a queued set of features.
 
 Note: If a feature is revoked before it is moved to the immutable Feature-Queue
 list, it is simply removed from the Feature-Request list and never presented to
@@ -152,6 +170,12 @@ won’t activate this feature if its corresponding feature account no longer
 exists on-chain.
 This is how the runtime currently handles features and can be observed here:
 <https://github.com/solana-labs/solana/blob/170478924705c9c62dbeb475c5425b68ba61b375/runtime/src/bank.rs#L8119-L8150>.
+
+Proposed Program-Derived Address for Validator Support-Signal PDA:
+
+```
+"validator_support" + <vote address> + <epoch>
+```
 
 ### Activating Supported Features
 
