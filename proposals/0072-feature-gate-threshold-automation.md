@@ -36,31 +36,15 @@ automatically activates it when a preset threshold is met.
 
 ## New Terminology
 
-- Feature Gate program: The BPF program that will own all feature accounts.
+- Feature Gate program: The Core BPF program introduced in
+  [SIMD 0089](https://github.com/solana-foundation/solana-improvement-documents/pull/89)
+  that will own all feature accounts.
 - Feature-Request account: The PDA under the Feature Gate program used to track
 features requested for activation.
 - Feature-Queue account: The PDA under the Feature Gate program used to track
 features queued for activation that must have support signaled by nodes.
 
 ## Detailed Design
-
-Before this SIMD is published, we will deploy a BPF program to manage feature
-activations, which will allow us to revoke pending feature activations
-(previously not possible).
-The feature activation process will otherwise be unchanged, so no SIMD is
-required.
-This program will be upgradeable; the authority and process through which it
-will be upgraded is outside the scope of this SIMD. Since this SIMD requires an
-update to the program, the upgrade details will be determined in parallel.
-
-The initial Feature Gate Program can be found in this pull request to the
-Solana Program Library:
-<https://github.com/solana-labs/solana-program-library/pull/4987>.
-The runtime changes and feature activation that will enable this program can be
-found in this feature tracking issue:
-<https://github.com/solana-labs/solana/issues/33547>.
-
-### Overview
 
 Consider two arbitrary versions of the Solana runtime, where the newer version
 has more features in its feature set.
@@ -81,34 +65,38 @@ runtime where the code required for the feature is present. For instance, on a
 cluster with 50% of stake running v1.14.25 and 50% of stake running v1.16.0,
 only Features A and C should be eligible for activation.
 
-This SIMD proposes 3 steps over the span of one epoch to determine which
-feature gates are queued for activation and assess stake support:
+This SIMD proposes the following steps for activating features:
 
-1. On an epoch boundary, the runtime generates a list of feature-gates queued
-for activation.
-2. Validators signal which of the queued feature-gates they support.
-3. On the next epoch boundary, the runtime activates the feature-gates that
-have the necessary stake support
+1. In some epoch 0, keyholders submit features for activation using the Solana
+   CLI.
+2. On the epoch boundary, the runtime generates a list of feature-gates queued
+   for activation.
+3. During epoch 1, validators signal which of the queued feature-gates they
+   support in their software.
+4. On the next epoch boundary, the runtime activates the feature-gates that have
+   the necessary stake support.
 
 ### Representing the Current Feature Set
 
-As mentioned above, a BPF program is being deployed that will replace the
-non-existent account `Feature111111111111111111111111111111111111`, which is
-the owner of all feature accounts.
+As mentioned above, the Feature Gate program at address 
+`Feature111111111111111111111111111111111111` is the owner of all feature
+accounts. The Feature Gate program shall utilize two PDAs to keep track of all
+feature-gates:
 
-The Feature Gate program will utilize two PDAs to track the authoritative
-feature set queued for activation. One PDA (the Feature-Request PDA) will
-store newly requested feature activations and the other (the Feature-Queue
-PDA) will store the previous epoch’s requested activations.
+- **Feature-Request PDA**: Stores a *mutable* list of newly requested feature
+  activations submitted during the current epoch.
+- **Feature-Queue PDA**: Stores an *immutable* list of the previous epoch's
+  requested activations.
 
 When a new epoch begins, the Feature-Request PDA will be an empty list. When
 key-holders submit the CLI command to activate a feature, the Feature Gate
 Program appends the feature ID to the Feature-Request set at the same time as
 creating the feature account . Revoked features are removed from the
-Feature-Request list. At the end of the epoch, the Feature-Request set is
-written to the feature queue PDA by the runtime, where it becomes immutable.
-The Feature-Request PDA is then reset to an empty list again, also by the
-runtime.
+Feature-Request list.
+
+At the end of the epoch, the Feature-Request set is written to the Feature-Queue
+PDA by the runtime, where it becomes immutable. The Feature-Request PDA is then
+reset to an empty list again, also by the runtime.
 
 The newly created immutable Feature-Queue can then be used by nodes to signal
 support for potential activation in the next epoch.
@@ -167,7 +155,7 @@ To do this, the runtime walks all of the PDAs derived from the vote accounts,
 examines their bitmasks, and sums the stake supporting each feature-gate to
 determine which feature gates meet the desired threshold of supported stake.
 
-For the initial implementation, the threshold will be hard-coded to 95% of
+For the initial implementation, the threshold shall be hard-coded to 95% of
 stake, but future iterations on the Feature Program could allow feature
 key-holders to set a custom threshold for each feature gate
 (including 0%, ie. –yolo).
@@ -176,8 +164,12 @@ Once a list of stake-supported features is generated, the runtime rechecks the
 Feature accounts in case any have been revoked. Then the runtime processes the
 activations using the existing feature logic.
 
-At this point, the runtime clears the existing validator support PDA accounts
-and returns to step 1 to generate the next list of queued features.
+At this point, the runtime performs a garbage collection process and returns to
+step 1 to generate the next list of queued features. More on this process below.
+
+### Garbage Collection
+
+TODO
 
 ### Conclusion
 
@@ -234,11 +226,6 @@ software version.
 
 This proposal increases security for feature activations by removing the human
 element from ensuring the proper stake supports a feature.
-
-However, it also adds a dependency on a BPF program and the data within its
-owned accounts to perform feature activations, which previously has not been
-the case. This may introduce some security concerns around this relationship
-between the runtime and the Feature Gate program.
 
 This proposal could also potentially extend the length of time required for
 integrating feature-gated changes, which may include security fixes. However,
