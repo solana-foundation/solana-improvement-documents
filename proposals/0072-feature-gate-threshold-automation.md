@@ -122,11 +122,28 @@ Proposed Program-Derived Address for Feature-Request PDA:
 "feature_request" + <epoch>
 ```
 
+Proposed state for Feature-Request PDA:
+
+```rust
+struct FeatureRequest {
+    requested_features: Vec<Pubkey>,
+}
+```
+
 Proposed Program-Derived Address for Feature-Queue PDA:
 
 ```
 "feature_queue" + <epoch>
 ```
+
+Proposed state for Feature-Queue PDA:
+
+```rust
+struct FeatureQueue {
+    feature_queue: Vec<Pubkey>,
+}
+```
+
 
 ### Signaling Support for Features
 
@@ -203,6 +220,22 @@ When the `SignalSupportForFeatureSet` instruction is invoked, the Feature Gate
 program stores the submitted bit mask in a PDA derived from the validator's vote
 account. This effectively signals a node's support for a queued set of features.
 
+
+Proposed Program-Derived Address for Validator Support-Signal PDA:
+
+```
+"validator_support" + <vote address> + <epoch>
+```
+
+Proposed state for Validator Support-Signal PDA:
+
+```rust
+struct ValidatorSupportSignal {
+    bit_mask: Vec<u8>,
+}
+```
+
+
 Note: If a feature is revoked before it is moved to the immutable Feature-Queue
 list, it is simply removed from the Feature-Request list and never presented to
 nodes. However, if a feature is revoked after it becomes part of the immutable
@@ -212,12 +245,6 @@ won’t activate this feature if its corresponding feature account no longer
 exists on-chain.
 This is how the runtime currently handles features and can be observed here:
 <https://github.com/solana-labs/solana/blob/170478924705c9c62dbeb475c5425b68ba61b375/runtime/src/bank.rs#L8119-L8150>.
-
-Proposed Program-Derived Address for Validator Support-Signal PDA:
-
-```
-"validator_support" + <vote address> + <epoch>
-```
 
 ### Activating Supported Features
 
