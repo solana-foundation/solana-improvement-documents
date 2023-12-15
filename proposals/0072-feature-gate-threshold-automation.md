@@ -158,6 +158,37 @@ Validators shall send transactions containing the Feature Gate program's
 `SignalSupportForFeatureSet` instruction, which would contain their bit mask, at
 some aritrary point during the epoch and on startup after any reboot.
 
+Consider the instruction as it may appear in the Feature Gate program:
+
+```rust
+pub enum FeatureGateInstruction {
+    /// Signal support for a feature set.
+    ///
+    /// This instruction submits a bit mask representing the current epoch's
+    /// feature queue.
+    ///
+    /// Validators submit these bit masks to describe feature-gates supported
+    /// by their current client software version.
+    ///
+    /// A `1` value represents support for the feature at that index of the
+    /// bit mask, while a `0` represents a lack of support (or rejection).
+    /// A "pending" feature activation is a feature account that has been
+    /// allocated and assigned, but hasn't yet been updated by the runtime
+    /// with an `activation_slot`.
+    ///
+    /// Accounts expected by this instruction:
+    ///
+    ///   0. `[w]`      Validator Support-Signal PDA
+    ///   1. `[s]`      Vote account
+    SignalSupportForFeatureSet {
+        bit_mask: Vec<u8>,
+    },
+}
+```
+
+Validators are also required to prepend an instruction to fund this account with
+rent-exempt lamports if it does not exist prior to signaling.
+
 Note that a validator client's particular implementation may use their own
 discretion to determine the appropriate cadence at which to send this
 transaction during the course of an epoch, with the following restrictions:
