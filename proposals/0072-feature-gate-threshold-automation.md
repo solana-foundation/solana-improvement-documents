@@ -36,13 +36,20 @@ automatically activates it when a preset threshold is met.
 
 ## New Terminology
 
-- Feature Gate program: The Core BPF program introduced in
+- **Feature Gate program**: The Core BPF program introduced in
   [SIMD 0089](https://github.com/solana-foundation/solana-improvement-documents/pull/89)
   that will own all feature accounts.
-- Feature-Request account: The PDA under the Feature Gate program used to track
+- **Feature-Request PDA**: The PDA under the Feature Gate program used to track
 features requested for activation.
-- Feature-Queue account: The PDA under the Feature Gate program used to track
+- **Feature-Queue PDA**: The PDA under the Feature Gate program used to track
 features queued for activation that must have support signaled by nodes.
+- **Validator Support-Signal PDA**: The PDAs under the Feature Gate program
+  created by validator support signal transactions to track a vote account's
+  list of features supported.
+- **Feature Gate Tombstone PDA**: The PDA under the Feature Gate program used to
+  assign as the owner of accounts no longer needed for the feature activation
+  process, effectively removing them from the Feature Gate program's owned
+  accounts list.
 
 ## Detailed Design
 
@@ -169,7 +176,30 @@ step 1 to generate the next list of queued features. More on this process below.
 
 ### Garbage Collection
 
-TODO
+Since submitting features for activation, creating the Feature-Request and 
+Feature-Queue PDAs, and signaling support for features through PDAs will create 
+many accounts per epoch, a garbage collection process is required.
+
+This garbage collection process will involve the use of the Feature Gate 
+Tombstone account - an empty PDA of the Feature Gate program used to assign as 
+the owner of accounts no longer required by the feature activation process.
+
+On epoch rollover, the following accounts will be assigned to the Feature Gate 
+Tombstone PDA by the Feature Gate program, effectively removing them from its
+list of owned accounts:
+
+- The previous epoch's Feature-Request and Feature-Queue PDAs
+- The previous epoch's Validator Support-Signal PDAs
+- Any other feature accounts unused when the current epoch's Feature-Queue PDA
+  is created
+
+Note: The tombstone shall be a PDA under the Feature Gate program to preserve
+the accounts in case a record of any feature activation is necessary to be
+queried in the future.
+
+With this garbage collection in place, the runtime can efficiently minimize the
+scope of accounts that are required to be loaded to perform activations on epoch
+rollover.
 
 ### Conclusion
 
