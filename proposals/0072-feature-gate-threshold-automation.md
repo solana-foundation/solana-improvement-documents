@@ -155,11 +155,22 @@ Similarly, a node running v1.16.0 would signal:
 ```
 
 Validators shall send transactions containing the Feature Gate program's
-`SignalSupportForFeatureSet` instruction, which would contain their bit mask, on
-the first slot of every epoch and on startup after any reboot. When this
-instruction is invoked, the Feature Gate program stores the submitted bit mask
-in a PDA derived from the validator's vote account. This effectively signals a
-node's support for a queued set of features.
+`SignalSupportForFeatureSet` instruction, which would contain their bit mask, at
+some aritrary point during the epoch and on startup after any reboot.
+
+Note that a validator client's particular implementation may use their own
+discretion to determine the appropriate cadence at which to send this
+transaction during the course of an epoch, with the following restrictions:
+
+- The signaling transaction **must** be submitted after any reboot.
+- No signaling transactions will be considered after **128 slots before the
+  epoch boundary**. This cut-off is to ensure proper caching.
+- The **last signal submitted** before the 128-slot cut-off will be the final
+  signal considered in the activation phase.
+
+When the `SignalSupportForFeatureSet` instruction is invoked, the Feature Gate
+program stores the submitted bit mask in a PDA derived from the validator's vote
+account. This effectively signals a node's support for a queued set of features.
 
 Note: If a feature is revoked before it is moved to the immutable Feature-Queue
 list, it is simply removed from the Feature-Request list and never presented to
