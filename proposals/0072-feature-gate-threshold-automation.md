@@ -74,14 +74,58 @@ only Features A and C should be eligible for activation.
 
 This SIMD proposes the following steps for activating features:
 
-1. In some epoch 0, keyholders submit features for activation using the Solana
-   CLI.
+1. In some epoch 0, authorized contributors submit features for activation using
+   the Solana CLI.
 2. On the epoch boundary, the runtime generates a list of feature-gates queued
    for activation.
 3. During epoch 1, validators signal which of the queued feature-gates they
    support in their software.
 4. On the next epoch boundary, the runtime activates the feature-gates that have
    the necessary stake support.
+
+### Authorizing Feature Submissions
+
+Currently, anyone can create a feature account using the Solana CLI with the
+command `solana feature activate`. This command will send a transaction with the
+necessary instructions to allocate the proper space for a feature account and
+assign it to `Feature111111111111111111111111111111111111`.
+
+In order to protect against spam, this command shall now require a signature from
+a multi-signature authority, with keyholders from each validator client: Solana
+Labs, Jito, and Jump.
+
+This command shall now send a transaction with the following instructions:
+
+- Fund the feature account with rent-exempt lamports for feature state
+- Allocate the proper space for feature state
+- Assign the account to `Feature111111111111111111111111111111111111`
+- Invoke the Feature Gate program's `SubmitFeatureForActivation` instruction
+
+When the `SubmitFeatureForActivation` instruction is invoked, the Feature Gate
+program will write the proper feature state into the account. 
+
+Consider the instruction as it may appear in the Feature Gate program:
+
+```rust
+pub enum FeatureGateInstruction {
+    /// Submit a feature for activation.
+    ///
+    /// Features may only be submitted for activation by the multi-signature
+    /// authority that presides over the feature activation process.
+    ///
+    /// Accounts expected by this instruction:
+    ///
+    ///   0. `[w]`      Feature account
+    ///   1. `[s]`      Multi-signature authority
+    SubmitFeatureForActivation,
+}
+```
+
+Accounts owned by `Feature111111111111111111111111111111111111` will not be
+recognized in the feature activation process without the proper state.
+
+The address of the multi-sig shall be hard-coded into the Feature Gate program
+to validate the signature.
 
 ### Representing the Current Feature Set
 
