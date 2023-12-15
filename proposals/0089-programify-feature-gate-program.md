@@ -51,10 +51,7 @@ coordination. This makes upgrading the program cumbersome and potentially
 dangerous.
 
 With the Feature Gate program instead implemented as a Core BPF program, the
-program could be upgraded through the official multi-sig process described in
-[SIMD 0088](https://github.com/solana-foundation/solana-improvement-documents/pull/88).
-Thus, changes to the program need only to be done once and are protected by
-the multi-sig process.
+program could be changed only once, eliminating this duplication of work.
 
 ## New Terminology
 
@@ -67,7 +64,12 @@ the multi-sig process.
 
 ## Detailed Design
 
-The program would initially be designed to support one instruction:
+The Feature Gate program shall be a Core BPF program whose upgrade authority
+will be controlled by a multi-sig authority, with keyholders from each validator
+client implementation. This includes Solana Labs, Jito, and Jump. In the future,
+this can be expanded to include new clients such as Syndica.
+
+The program shall initially be designed to support one instruction:
 `RevokePendingActivation`. Any other instructions or functionality this program
 may support in the future is outside the scope of this SIMD.
 
@@ -112,6 +114,9 @@ Consider the following steps to activate Feature Gate:
 Executing these two steps would effectively activate Feature Gate without any
 changes to existing processes.
 
+As mentioned previously, the upgrade in step 2 would be conducted by the Feature
+Gate program's multi-sig upgrade authority. 
+
 ## Impact
 
 Core contributors are positively impacted by this change, since the ability to
@@ -134,9 +139,9 @@ anyone and execute code - will be the owner of these accounts. This creates some
 risk if *both* the program's processor code as well as a secure system for
 upgrading the program are not properly managed.
 
-However, since this program would be Core BPF, its upgrades are protected by a
-multi-sig authority. Thoroughly reviewed and safe processor code should
-mitigate any new risks associated with this change.
+However, this program's upgrades will be protected by a multi-sig authority.
+Thoroughly reviewed and safe processor code should mitigate any new risks
+associated with this change.
 
 ## Backwards Compatibility
 
