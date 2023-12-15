@@ -12,13 +12,13 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-This proposal outlines the process by which engineers will manage upgrades to
-enshrined Core BPF programs, as well as migrate existing native programs to core
-BPF.
+This proposal introduces the concept of Core BPF programs: programs which are
+essential to network operations. Currently, these exist as built-in programs
+known as "native" programs.
 
-This SIMD also introduces the concept of Core BPF programs: programs which are
-essential to network operations. Currently, these are embedded programs known as
-"native" programs.
+This SIM also details the process by which existing native programs shall be
+ported to Core BPF, as well as the process for introducing brand-new Core BPF
+programs.
 
 ## Motivation
 
@@ -27,46 +27,39 @@ developers will no longer have to keep up with program changes in their runtime
 implementations. Instead, the program can just be modified once. 
 
 For this reason, it makes sense to introduce the concept of Core BPF programs:
-BPF programs the network depends on that should be upgraded with a special
-process.
+BPF programs the network depends on that should be treated with special care.
 
 ## Alternatives Considered
 
-An alternative approach to managing upgrades to Core BPF programs could be to
-manually upgrade these programs behind a feature gate using the runtime. This
-process is more complex and involves circumventing the established program
-upgrade process.
-
-It's possible that multi-sig program upgrades could be combined with
-feature-gates, however this implementation would add additional layers of
-complexity to the upgrade process.
+The alternative to Core BPF programs is to keep these essential programs as
+native programs. This would mean each validator client implementation would have
+to build and maintain these built-in programs with their runtime
+implementations, including any future changes to these programs introduced via
+SIMDs or other fixes.
 
 ## New Terminology
 
-- `Core BPF Program`: An **upgradeable** BPF program relied on by any part of
-  the Solana stack, including (but not limited to) consensus, transaction
-  processing, voting, staking, and account creation.
+- `Core BPF Program`: A BPF program relied on by any part of the Solana stack,
+  including (but not limited to) consensus, transaction processing, voting,
+  staking, and account creation.
 
 ## Detailed Design
 
-Core BPF programs shall be upgradeable BPF programs deployed with
-`BPFLoaderUpgradeab1e11111111111111111111111`.
+Core BPF programs in many ways will be designed no differently than any other
+BPF program on Solana. However, some programs may require special privileges,
+which is beyond the scope of this SIMD.
 
-The upgrade authority shall be a multi-sig comprised of keyholders from each
-validator client. Right now, that list includes Solana Labs, Jito, and Jump.
-This list can be updated in the future to include newer clients like Sig.
+When an existing native program is being proposed to migrate to Core BPF, or
+when a new Core BPF program is being introduced, at least one SIMD shall be
+published outlining at least the following details:
 
-**Upgrading a core BPF program** shall consist of a coordinated effort amongst
-core contributors from all validator clients. Similar to the feature gate
-process, this upgrade should occur on testnet, then devnet, then mainnet-beta.
-
-Upgraded versions of core BPF programs shall always be compiled using a
-verifiable build process.
+- How any required special privileges will be granted to the program in its BPF
+  form
+- How this program's upgrades will be managed after it becomes Core BPF
 
 **Migrating a native program to core BPF** shall consist of deploying a modifed
-version of the native program to a new arbitrary address as an **upgradeable**
-BPF program and using a feature gate to move the modified program in place of
-the existing program.
+version of the native program to a new arbitrary address and using a feature
+gate to move the modified program in place of the existing program.
 
 The feature gate is required to circumvent normal transaction processing rules
 and replace the contents of one account with another directly at the runtime
@@ -92,16 +85,13 @@ With this change, validator clients would no longer be required to implement
 changes to essential programs. Instead these programs could be modified just
 once. This reduces some engineering overhead on validator teams.
 
-This also introduces a multi-sig process, which core contributors across all
-validator teams must, in a timely manner, participate in.
-
 ## Security Considerations
 
 This proposal establishes the concept of relying on BPF programs that are not
-built into the runtime for essential cluster operations. With these programs
-being upgradeable, there are some obvious security considerations around who can
-upgrade these programs and when. With a proper multi-sig process in place, these
-risks are mitigated.
+built into the runtime for essential cluster operations. Depending on how these
+programs are elected to be upgraded, there are some obvious security
+considerations around who can upgrade these programs and when. Any new Core BPF
+program should follow a fully-fledged SIMD process addressing these concerns.
 
 When it comes to migrating native programs to core BPF, this change introduces a
 serious security consideration surrounding the replacement of an essential
