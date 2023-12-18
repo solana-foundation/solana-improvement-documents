@@ -16,7 +16,7 @@ Add a new feature to disable Bpf loader V2 program deployment.
 
 ## Motivation
 
-We want to deprecate the usage of *executable* metadata on account for program
+We want to deprecate the usage of *executable* metadata on accounts for program
 runtime. The new variant of Bpf loader (i.e. V3/V4 etc.) no longer requires
 *executable* metadata. However, the old Bpf loader (v2) still use *executable*
 metadata during its program deployment. And this is a blocker for deprecating
