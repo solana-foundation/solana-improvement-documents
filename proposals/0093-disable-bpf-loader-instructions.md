@@ -12,9 +12,23 @@ feature: https://github.com/solana-labs/solana/issues/33970
 
 ## Summary
 
-Add a new feature to disable Bpf loader V2 program deployment.
+Disable BPF Loader V2 for program deployment.
 
 ## Motivation
+
+An `account` on solana network is defined by the following struct. In the
+struct, the bool metadata field `executable` was used to indicate whether the
+account is executable by program runtime.
+
+```
+pub struct Account {
+    pub lamports: u64,
+    pub data: Vec<u8>,
+    pub owner: Pubkey,
+    pub executable: bool,
+    pub rent_epoch: Epoch,
+}
+```
 
 We want to deprecate the usage of *executable* metadata on accounts for program
 runtime. The new variant of Bpf loader (i.e. V3/V4 etc.) no longer requires
