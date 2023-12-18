@@ -45,7 +45,7 @@ The PR for this work is at https://github.com/solana-labs/solana/pull/34194
 
 ## Impact
 
-1. New program will not longer be deployed with Bpf loader V2. People will have
+1. New programs will no longer be deployable with Bpf loader V2. People will have
    to migrate their program deployment with the new Bpf loader, i.e. V3 or V4.
 
 
