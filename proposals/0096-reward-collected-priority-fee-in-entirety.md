@@ -57,7 +57,9 @@ Are there any implementation-specific guidance or pitfalls?
 
 ## Drawbacks
 
-None
+100% rewarding priority fee allows leaders to artificially bump up priority fee.
+They send a bunch of txs to themselves with a massive priority fee and recover
+all of it, pumping the price artificially.
 
 ## Backwards Compatibility
 
