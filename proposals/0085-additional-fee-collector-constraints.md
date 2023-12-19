@@ -47,14 +47,14 @@ loopholes.
 
 Rather than restricting fee collector accounts to be system-owned, a new type of
 "validator node" account could be introduced. Currently, in normal validator
-operations, the "fee collector" account is also used as the "node id" as well as
-the vote fee payer. Introducing a "validator node" account that is owned by a
-"validator node" program which allows configuring a "withdraw authority" and
-"vote fee payer" could help increase validator operation flexibility and
+operations, the fee collector account is also used as the node id as well as
+the vote fee payer. Introducing a validator node account that is owned by a
+validator node program which allows configuring a withdraw authority and
+vote fee payer could help increase validator operation flexibility and
 increase clarity in how validator keys are used in the protocol.
 
-This approach requires a migration of all "fee collector" accounts as well as
-the development of a new on-chain program to manage the new "validator node"
+This approach requires a migration of all fee collector accounts as well as
+the development of a new on-chain program to manage the new validator node
 accounts. It will be a big effort compared to the proposed constraints in this
 SIMD and should be discussed in a new SIMD if this approach is desired.
 Furthermore, durable nonce accounts already have a configurable authority field
