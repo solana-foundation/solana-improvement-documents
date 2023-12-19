@@ -24,8 +24,8 @@ constraint was already added for rent fee collection in
 
 ## Motivation
 
-1. Fee collection occurs outside of the transaction runtime because the Solana
-   protocol mandates that fees are collected at the end of each block. By
+1. Fee distribution occurs outside of the transaction runtime because the Solana
+   protocol mandates that fees are distributed to "fee collector" accounts at the end of each block. By
    restricting fee collector accounts to be system owned, the number of account
    modification edge cases as well as protocol complexity are both reduced.
 2. Prevent new rent-paying accounts from being created since rent collection is
