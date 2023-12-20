@@ -47,37 +47,32 @@ safeguards.
 The Feature Gate program could instead be implemented as a built-in native
 program, rather than a Core BPF program. However, this would mean any changes to
 the program would need to be implemented by all validator clients in
-coordination. This makes upgrading the program cumbersome and potentially
-dangerous.
+coordination. This makes upgrading the program cumbersome.
 
-With the Feature Gate program instead implemented as a Core BPF program, the
-program could be changed only once, eliminating this duplication of work.
+With the Feature Gate program instead implemented as a Core BPF program, any
+changes need only be done once, eliminating this duplication of work.
 
 ## New Terminology
 
 - Feature Gate program: The Core BPF program that all feature accounts will be
   assigned to, with address `Feature111111111111111111111111111111111111`.
-- "Revoke" or "revoke pending activation": The act of reallocating a feature
-  account's data to zero, assigning it to the System Program, and defunding its
-  lamports balance - effectively removing it from the runtime's recognized set
-  of pending feature activations.
 
 ## Detailed Design
 
 The Feature Gate program shall be a Core BPF program whose upgrade authority
-will be controlled by a multi-sig authority, with keyholders from each validator
-client implementation. This includes Solana Labs, Jito, and Jump. In the future,
-this can be expanded to include new clients such as Syndica.
+will be a multi-sig authority, with keyholders from each validator client
+implementation. This includes Solana Labs, Jito, and Jump. In the future, this
+can be expanded to include new clients such as Syndica.
 
 The program shall initially be designed to support one instruction:
 `RevokePendingActivation`. Any other instructions or functionality this program
-may support in the future is outside the scope of this SIMD.
+may support in the future will be proposed and discussed separately.
 
-As mentioned above under "New Terminology", when this instruction is invoked by
-a feature key-holder, the program will reallocate the account to zero, assign it
-back to the System Program, and defund its lamports balance. As a result, the
-runtime will no longer recognize this feature as pending, since it will no
-longer be owned by `Feature111111111111111111111111111111111111`.
+When this instruction is invoked by a feature key-holder, the program will
+reallocate the account to zero, assign it back to the System Program, and defund
+its lamports balance. As a result, the runtime will no longer recognize this
+feature as pending, since it will no longer be owned by
+`Feature111111111111111111111111111111111111`.
 
 Consider the instruction as it may appear in the Feature Gate program:
 
@@ -99,23 +94,21 @@ pub enum FeatureGateInstruction {
 }
 ```
 
-The non-existent program at `Feature111111111111111111111111111111111111` can be
-considered analogous to a no-op native program. Thus, the official processes
-outlined in
+The official process outlined in 
 [SIMD 0088](https://github.com/solana-foundation/solana-improvement-documents/pull/88)
-for migrating a native program to Core BPF can be used to enable this new program.
-
-Consider the following steps to activate Feature Gate:
+for migrating a native program to Core BPF will be used to enable this new
+program, with the addition of the `RevokePendingActivation` instruction as a
+separate BPF prgoram-upgrade step.
 
 1. Migrate the native no-op program at
-   `Feature111111111111111111111111111111111111` to a Core BPF no-op.
-2. Upgrade the Core BPF no-op to add the `RevokePendingActivation` instruction.
+   `Feature111111111111111111111111111111111111` to a Core BPF no-op, with the
+   new program's upgrade authority set to the Feature Gate multi-sig.
+2. Upgrade the Core BPF no-op to add the `RevokePendingActivation` instruction
+   using the new multi-sig authorization.
 
-Executing these two steps would effectively activate Feature Gate without any
-changes to existing processes.
-
-As mentioned previously, the upgrade in step 2 would be conducted by the Feature
-Gate program's multi-sig upgrade authority. 
+Because the only change to the program is the addition of the
+`RevokePendingActivation` instruction, these steps will enable Core BPF Feature
+Gate without any changes to the existing feature activation process.
 
 ## Impact
 
