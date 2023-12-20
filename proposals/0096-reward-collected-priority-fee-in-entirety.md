@@ -52,8 +52,7 @@ transactions.
 
 ## Security Considerations
 
-What security implications/considerations come with implementing this feature?
-Are there any implementation-specific guidance or pitfalls?
+None
 
 ## Drawbacks
 
