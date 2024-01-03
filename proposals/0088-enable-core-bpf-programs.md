@@ -62,13 +62,9 @@ BPF version of the native program to a new arbitrary address and, using a
 feature gate, move the BPF program, replacing the existing native program at
 its program address.
 
-In the context of this design, **target prorgam** refers to an existing native
+In the context of this design, **target program** refers to an existing native
 program, while **source program** refers to the BPF version to be moved into the
 existing program account.
-
-In the context of this design, **source program** shall be the BPF version of
-a native program intending to be moved in place of the existing native program,
-while **target program** is that existing program.
 
 The migration process must adhere to the following steps:
 
