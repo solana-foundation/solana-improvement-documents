@@ -16,15 +16,16 @@ This proposal introduces the concept of Core BPF programs: programs which are
 essential to network operations. Currently, these exist as built-in programs
 known as "native" programs.
 
-This SIMD also details the process by which existing native programs shall be
+This SIMD details the process by which existing native programs can be
 ported to Core BPF, as well as the process for introducing brand-new Core BPF
 programs.
 
 ## Motivation
 
-BPF programs offer less complexity for other clients, such as Firedancer, since
-developers will no longer have to keep up with program changes in their runtime
-implementations. Instead, the program can just be updated once. 
+BPF programs offer less complexity than native programs for other clients, such
+as Firedancer, since developers will no longer have to keep up with program
+changes in their runtime implementations. Instead, the program can just be
+updated once.
 
 For this reason, it makes sense to introduce the concept of Core BPF programs:
 BPF programs the network depends on that should be treated with special care.
@@ -58,8 +59,8 @@ published outlining at least the following details:
 - How this program's upgrades will be managed after it becomes Core BPF
 
 **Migrating a native program to core BPF** shall consist of deploying a
-BPF version of the native program to a new arbitrary address and, using a
-feature gate, move the BPF program, replacing the existing native program at
+BPF version of the native program to a new arbitrary address and using a
+feature gate to move the BPF program, replacing the existing native program at
 its program address.
 
 In the context of this design, **target program** refers to an existing native
