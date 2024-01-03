@@ -74,26 +74,6 @@ its lamports balance. As a result, the runtime will no longer recognize this
 feature as pending, since it will no longer be owned by
 `Feature111111111111111111111111111111111111`.
 
-Consider the instruction as it may appear in the Feature Gate program:
-
-```rust
-pub enum FeatureGateInstruction {
-    /// Revoke a pending feature activation.
-    ///
-    /// A "pending" feature activation is a feature account that has been
-    /// allocated and assigned, but hasn't yet been updated by the runtime
-    /// with an `activation_slot`.
-    ///
-    /// Features that _have_ been activated by the runtime cannot be revoked.
-    ///
-    /// Accounts expected by this instruction:
-    ///
-    ///   0. `[w+s]`    Feature account
-    ///   1. `[w]`      Destination (for rent lamports)
-    RevokePendingActivation,
-}
-```
-
 The official process outlined in 
 [SIMD 0088](https://github.com/solana-foundation/solana-improvement-documents/pull/88)
 for migrating a native program to Core BPF will be used to enable this new
