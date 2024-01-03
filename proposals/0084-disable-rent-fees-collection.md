@@ -51,12 +51,12 @@ The PR for this work is at https://github.com/solana-labs/solana/pull/33945
 
 ## Security Considerations
 
-Because when the feature is activated, there will be no more rent paying
-accounts, and it would also be impossible to create any new rent paying accounts
-on the network, there should be no security issue. However, if for some reason,
-rent paying accounts still exit or are created in the network, when the feature
-is activated, the network will still be alive. The only difference is just that
-no more rents are collected and distributed.
+There will be no more rent paying accounts once the feature is activated. It is 
+already impossible to create any new rent paying accounts on the network, there
+should be no security issue. However, if for some reason rent paying accounts 
+still exist or are created in the network, when the feature is activated, the network 
+will still work as expected. The only difference is just that no more rents are 
+collected or distributed.
 
 
 ## Backwards Compatibility
