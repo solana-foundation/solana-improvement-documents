@@ -33,7 +33,7 @@ None
 ## Detailed Design
 
 When the feature - "disable rent fees collections" is activated, rent will no
-longer be collected from accounts and distributed to validators.
+longer be collected from accounts nor will it be distributed to validators.
 
 The PR for this work is at https://github.com/solana-labs/solana/pull/33945
 
