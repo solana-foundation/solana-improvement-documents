@@ -60,9 +60,8 @@ changes need only be done once, eliminating this duplication of work.
 ## Detailed Design
 
 The Feature Gate program shall be a Core BPF program whose upgrade authority
-will be a multi-sig authority, with keyholders from each validator client
-implementation. This includes Solana Labs, Jito, and Jump. In the future, this
-can be expanded to include new clients such as Syndica.
+will be a multi-sig authority with keyholders from Solana Labs and potentially
+Jito.
 
 The program shall initially be designed to support one instruction:
 `RevokePendingActivation`. Any other instructions or functionality this program
