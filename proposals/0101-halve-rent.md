@@ -60,9 +60,6 @@ will require half as much rent, in SOL, as before.
 
 ## Security Considerations
 
-What security implications/considerations come with implementing this feature?
-Are there any implementation-specific guidance or pitfalls?
-
 Unbounded account growth can exhaust physical resources of validators.
 Reducing rent can make it economically easier to create accounts.  The amount
 that rent is *reduced* should be significantly lower than the amount the SOL
