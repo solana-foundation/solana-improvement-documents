@@ -14,13 +14,11 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-Adding a precompile to support the verification of signatures
-generated on the secp256r1 curve.
-Analogous to the support for secp256k1 and ed25519 signatures that already
-exists in form of
-the `KeccakSecp256k11111111111111111111111111111` and
-`Ed25519SigVerify111111111111111111111111111`
-precompiles
+Adding a precompile to support the verification of signatures generated on
+the secp256r1 curve. Analogous to the support for secp256k1 and ed25519
+signatures that already exists in form of the
+`KeccakSecp256k11111111111111111111111111111` and
+`Ed25519SigVerify111111111111111111111111111` precompiles.
 
 ## Motivation
 
@@ -266,7 +264,7 @@ As such we would propose the following:
   [Wycheproof Project](https://github.com/google/wycheproof#project-wycheproof)
 
 - Direct comparison and analysis of `p256` verification routines and group/field
-  with those found in the `prime256v1` OpenSSL implementation
+  operations with those found in the `prime256v1` OpenSSL implementation
 
 - Thorough auditing of the arithmetic and
   decoding inside the `p256` crate
