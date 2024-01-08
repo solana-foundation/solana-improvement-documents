@@ -39,8 +39,6 @@ Note that this does **not** change the requirement that existing rent-paying
 accounts, which need to be made rent-exempt first before any withdrawals can be
 make from them.
 
-The PR for this work is at https://github.com/solana-labs/solana/pull/33945
-
 ## Impact
 
 1. Other implementations of validator client will not need to implement rent
