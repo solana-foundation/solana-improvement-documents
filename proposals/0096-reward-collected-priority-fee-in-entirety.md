@@ -62,5 +62,9 @@ all of it, pumping the price artificially.
 
 ## Backwards Compatibility
 
-No changes to how transaction submitter would pay, should not have backwards
-compatibility issue.
+The implementation of this proposal necessitates the use of a feature gate.
+Although there will be no alteration to the transaction submitter's payment
+structure, the software incorporating the proposal will allocate a greater
+portion of fees to the leader compared to other versions. Consequently, a
+feature gate is essential to ensure that all validators transition to the
+new functionality at the epoch boundary, thereby preserving consensus.
