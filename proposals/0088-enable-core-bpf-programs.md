@@ -113,6 +113,16 @@ When a migration is conducted, the core BPF version will be more than backwards
 compatible. It must provide the exact same results as the native program it aims
 to replace.
 
-However, once a native program has been migrated to core BPF, the process by
-which this program is upgraded will not be backwards compatible. Core
-contributors must follow the new process.
+When a migration is conducted, the BPF version of a native program will be
+absolutely backwards compatible *functionally*. Its BPF version must provide the
+exact same results as the original native program it aims to replace.
+
+However, since BPF programs cannot precisely match the compute meter and other
+resource limits of their original native counterparts, some of these metrics may
+be slightly different when a native program becomes BPF, thereby affecting
+backwards compatibility in that regard.
+
+Additionally, once a native program has been migrated to core BPF, the process
+by which this program is upgraded will not be backwards compatible. Core
+contributors must follow the upgrade process outlined in each program's
+migration SIMD.
