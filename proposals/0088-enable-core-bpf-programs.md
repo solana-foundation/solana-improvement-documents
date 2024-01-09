@@ -65,7 +65,8 @@ published outlining at least the following details:
 **Migrating a native program to core BPF** shall consist of deploying a
 BPF version of the native program to a new arbitrary address and using a
 feature gate to move the BPF program, replacing the existing native program at
-its program address.
+its original program address. No program IDs for existing native programs would
+be changed by this migration process.
 
 In the context of this design, **target program** refers to an existing native
 program, while **source program** refers to the BPF version to be moved into the
