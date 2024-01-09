@@ -54,9 +54,13 @@ When an existing native program is being proposed to be migrated to Core BPF,
 or when a new Core BPF program is being introduced, at least one SIMD shall be
 published outlining at least the following details:
 
+- The interface for the program
+- A precise and complete specification of its behavior
 - How any required special privileges will be granted to the program in its BPF
   form
-- How this program's upgrades will be managed after it becomes Core BPF
+- Whether or not this program will be an upgradeable or non-upgradeable BPF
+  program
+- How this changes to this program will be managed after it becomes BPF
 
 **Migrating a native program to core BPF** shall consist of deploying a
 BPF version of the native program to a new arbitrary address and using a
