@@ -37,7 +37,11 @@ block-validation.
 
 ## New Terminology
 
-None
+Conflicting transactions are defined as transactions that either:
+
+1. both require a write-lock on the same account, or
+2. one transaction requires a write-lock, and the other requires a read-lock on
+   the same account.
 
 ## Detailed Design
 
@@ -50,6 +54,26 @@ If transactions within an entry conflict with each other, they must be
 executed sequentially, in the order they appear in the entry.
 This decision gives the most freedom in block-production, as it allows for
 arbitrary ordering of transactions within an entry by the block-producer.
+
+If the proposal is accepted, the individual entry constraints are as follows:
+
+1. Each entry must be deserializable via `bincode` (or equivalent) into a
+   structure:
+
+   ```rust
+    struct Entry {
+      num_hashes: u64,
+      hash: Hash,
+      transactions: Vec<VersionedTransaction>,
+    }
+   ```
+
+   where `Hash` and `VersionedTransaction` are defined in `solana-sdk`.
+2. An entry without any transactions is only valid if `num_hashes` matches the
+   `hashes_per_tick` field of the `Bank`. This value is subject to change with
+   feature-gates, but is currently 12500.
+
+If any of these constraints are violated, the entire block is invalid.
 
 ## Impact
 
