@@ -109,10 +109,6 @@ This proposal itself does not directly introduce any breaking changes. The code
 introduced to migrate native programs to core BPF programs will exist off of the
 runtime's "hot path" until it's actually used for a migration.
 
-When a migration is conducted, the core BPF version will be more than backwards
-compatible. It must provide the exact same results as the native program it aims
-to replace.
-
 When a migration is conducted, the BPF version of a native program will be
 absolutely backwards compatible *functionally*. Its BPF version must provide the
 exact same results as the original native program it aims to replace.
