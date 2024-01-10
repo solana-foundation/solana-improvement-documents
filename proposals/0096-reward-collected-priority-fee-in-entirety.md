@@ -36,7 +36,6 @@ from transaction fee.
 - During fee collection, priority fees are accumulated separately from transaction
 fees;
   - change `bank.collector_fees` and `bank.filter_program_errors_and_collect_fee()`
-- When distribute transaction fee, should deposit unburnt transaction fee and 100%
 - When distributing collected fees, the collector_id receives the sum of priority
 fees. Logic for distributing base transaction fees is unchanged.
   - Change `bank.distribute_transaction_fee()`
