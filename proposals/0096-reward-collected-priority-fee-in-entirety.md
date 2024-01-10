@@ -55,9 +55,11 @@ None
 
 ## Drawbacks
 
-100% rewarding priority fee allows leaders to artificially bump up priority fee.
-They send a bunch of txs to themselves with a massive priority fee and recover
-all of it, pumping the price artificially.
+By paying the complete priority fee to their own accounts, leaders can now
+inflate the reported priority fees in their blocks artificially, incurring
+minimal costs. Previously, burning a portion of the priority fees deincentivized
+such behavior. The artificial inflation of fees could lead wallets to
+overestimate the required priority fee.
 
 ## Backwards Compatibility
 
