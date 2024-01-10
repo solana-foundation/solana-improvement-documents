@@ -33,8 +33,7 @@ None
 - When calculate fee for `SanitizedMessage`, it should separate prioritization_fee
 from transaction fee.
   - change `FeeStructure.calculate_fee()`
-- When accumulate collector fees, prioritization_fee should also be separated
-from transaction fee;
+- During fee collection, priority fees are accumulated separately from transaction fees;
   - change `bank.collector_fees` and `bank.filter_program_errors_and_collect_fee()`
 - When distribute transaction fee, should deposit unburnt transaction fee and 100%
 prioritization_fee to collector_id.
