@@ -80,6 +80,7 @@ builtin program keys currently tracked in static lists in the Solana Labs
 validator implementation:
 
 sysvar_ids:
+
 - SysvarC1ock11111111111111111111111111111111
 - SysvarEpochSchedu1e111111111111111111111111
 - SysvarFees111111111111111111111111111111111
@@ -92,6 +93,7 @@ sysvar_ids:
 - Sysvar1nstructions1111111111111111111111111
 
 builtin_program_ids:
+
 - Config1111111111111111111111111111111111111
 - Feature111111111111111111111111111111111111
 - NativeLoader1111111111111111111111111111111
@@ -108,19 +110,17 @@ epoch boundaries, validator implementations should add or remove reserved keys
 as dictated by feature gated code. The first feature gate activated modification
 will likely include the following keys:
 
-```rust
-pub static ref NEW_RESERVED_KEYS: Vec<Pubkey> = vec![
-    address_lookup_table::program::id(),
-    compute_budget::id(),
-    ed25519_program::id(),
-    secp256k1_program::id(),
-    loader_v4::id(),
-    sysvar::id(),
-    epoch_rewards::id(),
-    last_restart_slot::id(),
-    Pubkey::from_str("ZkTokenProof1111111111111111111111111111111").unwrap(),
-];
-```
+new_reserved_keys:
+
+- AddressLookupTab1e1111111111111111111111111
+- ComputeBudget111111111111111111111111111111
+- Ed25519SigVerify111111111111111111111111111
+- KeccakSecp256k11111111111111111111111111111
+- LoaderV411111111111111111111111111111111111
+- Sysvar1111111111111111111111111111111111111
+- SysvarEpochRewards1111111111111111111111111
+- SysvarLastRestartS1ot1111111111111111111111
+- ZkTokenProof1111111111111111111111111111111
 
 For validator operations not subject to consensus like RPC services, ledger
 history storage, and debugging tools which don't have a block context for
@@ -129,7 +129,7 @@ updated without requiring feature gates.
 
 ## Impact
 
-Impact should be negligible. Dapp developers don't need to change how they build
+Impact should be negligible. dApp developers don't need to change how they build
 transactions due to the developer friendly nature of the write lock demotion
 feature.
 
