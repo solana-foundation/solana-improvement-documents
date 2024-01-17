@@ -79,38 +79,29 @@ The set of reserved keys will be initialized as the full set of sysvar and
 builtin program keys currently tracked in static lists in the Solana Labs
 validator implementation:
 
-```rust
-pub static ref SYSVAR_IDS: Vec<Pubkey> = vec![
-    clock::id(),
-    epoch_schedule::id(),
-    #[allow(deprecated)]
-    fees::id(),
-    #[allow(deprecated)]
-    recent_blockhashes::id(),
-    rent::id(),
-    rewards::id(),
-    slot_hashes::id(),
-    slot_history::id(),
-    stake_history::id(),
-    instructions::id(),
-];
+sysvar_ids:
+- SysvarC1ock11111111111111111111111111111111
+- SysvarEpochSchedu1e111111111111111111111111
+- SysvarFees111111111111111111111111111111111
+- SysvarRecentB1ockHashes11111111111111111111
+- SysvarRent111111111111111111111111111111111
+- SysvarRewards111111111111111111111111111111
+- SysvarS1otHashes111111111111111111111111111
+- SysvarS1otHistory11111111111111111111111111
+- SysvarStakeHistory1111111111111111111111111
+- Sysvar1nstructions1111111111111111111111111
 
-pub static ref BUILTIN_PROGRAMS_KEYS: [Pubkey; 10] = {
-    let parse = |s| Pubkey::from_str(s).unwrap();
-    [
-        parse("Config1111111111111111111111111111111111111"),
-        parse("Feature111111111111111111111111111111111111"),
-        parse("NativeLoader1111111111111111111111111111111"),
-        parse("Stake11111111111111111111111111111111111111"),
-        parse("StakeConfig11111111111111111111111111111111"),
-        parse("Vote111111111111111111111111111111111111111"),
-        system_program::id(),
-        bpf_loader::id(),
-        bpf_loader_deprecated::id(),
-        bpf_loader_upgradeable::id(),
-    ]
-};
-```
+builtin_program_ids:
+- Config1111111111111111111111111111111111111
+- Feature111111111111111111111111111111111111
+- NativeLoader1111111111111111111111111111111
+- Stake11111111111111111111111111111111111111
+- StakeConfig11111111111111111111111111111111
+- Vote111111111111111111111111111111111111111
+- 11111111111111111111111111111111
+- BPFLoader1111111111111111111111111111111111
+- BPFLoader2111111111111111111111111111111111
+- BPFLoaderUpgradeab1e11111111111111111111111
 
 The set of reserved keys may only be modified via feature gate activation. On
 epoch boundaries, validator implementations should add or remove reserved keys
