@@ -138,3 +138,7 @@ feature.
 The main consideration is making sure that all `is_writable` checks are
 consistent before and after implementing this proposal to avoid breaking
 consensus.
+
+Additionally, this dynamic set is intended for protecting a small number of core
+protocol accounts. If the need arises for more larger scale write lock
+management, a new proposal should be introduced.
