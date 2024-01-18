@@ -91,6 +91,7 @@ How this would be accomplished depends on the outcome of SIMD 0105.
 
 ## Backwards Compatibility
 
-Population of an account each epoch is a consensus-breaking change and must be
-activated with a feature gate. Since this is an extension of SIMD 0015, it
+Runtime-population of an account each epoch is a consensus-breaking change and
+must be activated with a feature gate. Since this is an extension of SIMD 0015
+and that feature gate has not yet been activated on any public clusters, it
 should be gated by the same feature id.
