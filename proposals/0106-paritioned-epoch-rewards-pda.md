@@ -70,10 +70,9 @@ struct PartitionData {
 }
 ```
 
-The address of this PDA should include the current epoch number (which contains
-the distributions) as a little-endian u64, as well as some bytes to prevent
-griefing (eg. `b"EpochRewardsPartitionData"`). The owning program should be the
-Stake Program.
+The address of this PDA should include some bytes to prevent griefing (eg.
+`b"EpochRewardsPartitionData"`) and the current epoch number as a little-endian
+u64. The owning program should be the Stake Program.
 
 ## Impact
 
