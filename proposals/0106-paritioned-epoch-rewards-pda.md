@@ -49,7 +49,26 @@ When partitioned rewards are calculated in the runtime (currently during the
 first block of the epoch), the runtime should populate a PDA that stores the
 partition data needed to recreate the hasher that returns the partition index
 for any address. This data comprises: the number of partitions, the parent
-blockhash, and the hasher kind.
+blockhash, and the hasher kind. More specifically:
+
+```rust
+// Version wrapper to allow future updates
+enum EpochRewardsPartitionDataVersion {
+    V0(PartitionData),
+}
+
+// Extensible list of kinds of hashers used to generate partitions
+enum HasherKind {
+    Sip13,
+}
+
+// Data about rewards partitions for a particular epoch
+struct PartitionData {
+    num_partitions: usize,
+    parent_blockhash: Hash,
+    hasher_kind: HasherKind,
+}
+```
 
 The address of this PDA should include the current epoch number (which contains
 the distributions) as a little-endian u64, as well as some bytes to prevent
