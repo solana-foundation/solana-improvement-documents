@@ -53,20 +53,22 @@ blockhash, and the hasher kind. More specifically:
 
 ```rust
 // Version wrapper to allow future updates
+// Variant serialized as little-endian unsigned 32-bit integer
 enum EpochRewardsPartitionDataVersion {
     V0(PartitionData),
 }
 
 // Extensible list of kinds of hashers used to generate partitions
+// Variant serialized as little-endian unsigned 32-bit integer
 enum HasherKind {
-    Sip13,
+    Sip13 = 0,
 }
 
 // Data about rewards partitions for a particular epoch
 struct PartitionData {
-    num_partitions: usize,
-    parent_blockhash: Hash,
-    hasher_kind: HasherKind,
+    num_partitions: usize, // little-endian unsigned 64-bit integer
+    parent_blockhash: Hash, // byte-array of length 32
+    hasher_kind: HasherKind, // little-endian unsigned 32-bit integer
 }
 ```
 
