@@ -180,11 +180,15 @@ At the end of the slot when a bank is frozen, there is a method that runs,
 similar to the incinerator, which transfers any accumulated
 lamports in the runtime variable into the configured tip_receiver.
 
-The TipInstruction::ChangeTipReceiver instruction allows a validator to 
+The TipInstruction::ChangeTipReceiver instruction allows a validator to
 change their configured tip receiver. 
 Any changes are delayed until an epoch boundary. Furthermore, the 
 tip receiver can only be changed in the first 50% of the epoch
 to avoid any last minute changes immediately before the epoch boundary.
+
+If there's no tip receiver configured, it may make sense to default to the 
+validator's identity account. The validator's identity account can also
+be configured as a valid tip receiver.
 
 ## Impact
 
