@@ -126,7 +126,7 @@ Any changes are delayed until an epoch boundary. Furthermore, the tip receiver c
 to avoid any last minute changes immediately before the epoch boundary.
 
 ## Impact
-Tips happen in consensus.
+Tips happen as a native program and not out of consensus.
 
 ## Alternatives Considered
 Pro rata tip distribution to stakers and validators could happen on the epoch boundary and be controlled by another variable. 
