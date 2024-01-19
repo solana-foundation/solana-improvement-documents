@@ -59,7 +59,7 @@ enum EpochRewardsPartitionDataVersion {
 }
 
 // Extensible list of kinds of hashers used to generate partitions
-// Variant serialized as little-endian unsigned 32-bit integer
+// Mapping fn defines the HasherKind for each partition-data version
 enum HasherKind {
     Sip13 = 0,
 }
@@ -68,7 +68,6 @@ enum HasherKind {
 struct PartitionData {
     num_partitions: usize, // little-endian unsigned 64-bit integer
     parent_blockhash: Hash, // byte-array of length 32
-    hasher_kind: HasherKind, // little-endian unsigned 32-bit integer
 }
 ```
 
