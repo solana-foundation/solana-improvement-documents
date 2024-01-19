@@ -13,10 +13,9 @@ feature: N/A
 ## Summary
 
 I propose the addition of a mechanism that allows sending tips in SOL to the
-current leader through a built-in program.
-It's important that this is a built-in program as opposed to directly tipping
-the leader to solve for potential issues with Solana's access lists 
-and a rotating leader.
+current leader through a built-in program. This is useful for out of band
+prioritization schemes that are appearing on Solana with Jito and likely
+others in the future.
 
 ## Motivation
 
