@@ -1,6 +1,6 @@
 ---
 simd: '0106'
-title: Partitioned Epoch Rewards PDA
+title: Epoch Rewards Partition Data PDA
 authors:
   - Tyera Eulberg
 category: Standard
