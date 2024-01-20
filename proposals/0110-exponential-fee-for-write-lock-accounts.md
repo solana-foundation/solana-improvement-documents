@@ -3,8 +3,8 @@ simd: '0110'
 title: Exponential fee for write lock accounts
 authors:
   - Anatoly Yakovenko, Tao Zhu
-category: Standard/Meta
-type: Core/Networking/Interface/Meta
+category: Standard
+type: Core
 status: Draft
 created: 2024-01-18
 feature: (fill in with feature tracking issues once accepted)
@@ -13,7 +13,7 @@ extends: (optional - fill this in if the SIMD extends the design of a previous
  SIMD)
 ---
 
-## Summary:
+## Summary
 
 In a permissionless environment with low fees, users often submit transactions
 for opportunistic trades without considering the success probability. Almost
@@ -26,7 +26,7 @@ Exponential Moving Average (EMA) of contentious accounts' CU utilization
 per block and exponentially increasing the cost to write-lock these accounts
 if their utilization remains high.
 
-## Motivation:
+## Motivation
 
 The motivation behind this feature is to introduce economic back pressure,
 dissuading DeFi spammers from overwhelming the network. DeFi spam, defined as
@@ -59,7 +59,7 @@ compute-unit at a given condition.
 - *write lock fee*: denominated in `lamport`, it is fee dedicated for write
 lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.requested_cu()`.
 
-## Design Highlights:
+## Design Highlights
 
 - Account Association with Compute Unit Pricer:
   - Accounts are associated with a *compute unit pricer*, and the *runtime*
@@ -85,7 +85,7 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
   - Fee required to write-lock an account is calculated by multiplying the
   write-lock *cost rate* by the transaction's requested CU.
 
-## Detailed Design:
+## Detailed Design
 
 - Initialization and Inheritance:
   - Bank initializes an empty account_write_lock_fee_cache, an LRU Cache of
@@ -111,17 +111,7 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
   - Collected priority fees are 100% rewarded.
   - Collected signature fees are 50% burnt, 50% rewarded.
 
-## Impact:
-
-- Rate of successful CU inclusion in a block is expected to increase, reducing
-failed transactions.
-- Transactions writing to contentious accounts will experience increased fees,
-particularly during congestion.
-- DeFi arbitrage traders will need to adjust strategies to account for the
-heightened fees.
-
-
-## Other Considerations:
+### Other Considerations
 
 - Users may need new instruction to set a maximum write-lock fee for transaction
 - Consider tooling for wallets/simulators to query "min/max write lock fee."
@@ -130,11 +120,18 @@ heightened fees.
 to an account, allowing dApps to refund cranks and other service providers.
 This decision should be done via a governance vote.
 
+## Impact
+
+- Rate of successful CU inclusion in a block is expected to increase, reducing
+failed transactions.
+- Transactions writing to contentious accounts will experience increased fees,
+particularly during congestion.
+- DeFi arbitrage traders will need to adjust strategies to account for the
+heightened fees.
 
 ## Security Considerations
 
-n/a
-
+none
 
 ## Backwards Compatibility
 
