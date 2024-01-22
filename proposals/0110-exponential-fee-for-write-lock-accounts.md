@@ -53,7 +53,7 @@ trades and ensure a more secure and efficient network environment.
  compute-units applied to a given resource.
 - *cost rate*: denominated in `lamport/cu`, it represents the cost per
 compute-unit at a given condition.
-- *compute unit pricer*: a componenet tracks Exponential Moving Average of
+- *compute unit pricer*: a component tracks Exponential Moving Average of
 *compute-unit utilization*, applies a pricing algorithm to provide current
 *cost rate*.
 - *write lock fee*: denominated in `lamport`, it is fee dedicated for write
@@ -77,7 +77,7 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
   `alpha = 2 / (N+1)`.
 - Pricing Algorithm:
   - Adjusts write-lock *cost rate* based on an account's EMA *compute-unit
-  utilization*. Initial write-lock cost rate is `1000 lamport/CU`.
+  utilization*. Initial write-lock cost rate is `1000 micro-lamport/CU`.
   - For each block, if an account's EMA *compute-unit utilization* is more than
   half of its max limit, its write-lock *cost rate* increases by 1%. If it's
   below half, the *cost rate* decreases by 1%.
@@ -97,15 +97,15 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
   priority fee, constitutes the total fee for the transaction.
   - Leader checks fee payer's balance before scheduling the transaction.
 - Cost Tracking:
-  - Cost_tracker tracks CUs for the current block and each write-locked accounti
+  - Cost_tracker tracks CUs for the current block and each write-locked account
   as-is;
   - Ensuring cost tracking is enabled at the replay stage.
 - End of Block Processing:
   - Identify write-locked accounts with *compute-unit utilization* > half of
   account max CU limit. Add/update bank's account_write_lock_fee_cache. 
   - Adding new account into LRU cache could push out eldest account;
-  - LRU cache has capacity of 1024, which should be large enough for hot accounts
-  in 150 slots.
+  - LRU cache has capacity of 2048, which is 2* worst case block, should
+  be enough to prevent cache attack.
 - Fee Handling:
   - Collected write-lock fees are 100% burnt.
   - Collected priority fees are 100% rewarded.
