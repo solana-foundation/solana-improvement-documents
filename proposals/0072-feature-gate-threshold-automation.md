@@ -26,13 +26,13 @@ network. The current feature-gate system comprises two steps:
 1. An individual key-holder queues a feature gate for activation
 2. The runtime automatically activates the feature on the next epoch boundary
 
-The key-holder is the one who (with the help of the solana-cli) assesses the
-amount of stake that recognizes the feature and decides whether it is safe to
-activate. This is obviously brittle and subject to human error.
+The key-holder is the one who *manually* (with the help of the solana-cli)
+assesses the amount of stake that recognizes the feature and decides whether
+it is safe to activate. This is obviously brittle and subject to human error.
 
-This SIMD proposes that the runtime itself replaces the human to assess the
-amount of stake that supports a particular queued feature and only
-automatically activates it when a preset threshold is met. 
+This SIMD proposes that the runtime itself replaces the human with an automated
+process to assess the amount of stake that supports a particular queued feature
+and only activate it when a preset threshold is met. 
 
 ## New Terminology
 
@@ -40,13 +40,13 @@ automatically activates it when a preset threshold is met.
   [SIMD 0089](https://github.com/solana-foundation/solana-improvement-documents/pull/89)
   that will own all feature accounts.
 - **Feature-Request PDA**: The PDA under the Feature Gate program used to track
-features requested for activation.
+  features requested for activation.
 - **Feature-Queue PDA**: The PDA under the Feature Gate program used to track
-features queued for activation that must have support signaled by nodes.
+  features queued for activation that must have support signaled by nodes.
 - **Validator Support-Signal PDA**: The PDAs under the Feature Gate program
   created by validator support signal transactions to track a vote account's
   list of features supported.
-- **Feature Gate Tombstone PDA**: The PDA under the Feature Gate program used to
+- **Feature Tombstone PDA**: The PDA under the Feature Gate program used to
   assign as the owner of accounts no longer needed for the feature activation
   process, effectively removing them from the Feature Gate program's owned
   accounts list.
@@ -91,12 +91,12 @@ necessary instructions to allocate the proper space for a feature account and
 assign it to `Feature111111111111111111111111111111111111`.
 
 In order to protect against spam, this command shall now require a signature from
-a multi-signature authority, with keyholders from each validator client: Solana
-Labs, Jito, and Jump.
+a multi-signature authority, with keyholders from Solana Labs and potentially
+other validator clients.
 
 This command shall now send a transaction with the following instructions:
 
-- Fund the feature account with rent-exempt lamports for feature state
+- Fund the feature account with the required lamports deposit minimum
 - Allocate the proper space for feature state
 - Assign the account to `Feature111111111111111111111111111111111111`
 - Invoke the Feature Gate program's `SubmitFeatureForActivation` instruction
@@ -121,11 +121,22 @@ pub enum FeatureGateInstruction {
 }
 ```
 
-Accounts owned by `Feature111111111111111111111111111111111111` will not be
-recognized in the feature activation process without the proper state.
+Since anyone can create accounts and assign them to
+`Feature111111111111111111111111111111111111`, the Feature Gate program's
+`SubmitFeatureForActivation` instruction provides a necessary step to protect
+against spam. 
 
-The address of the multi-sig shall be hard-coded into the Feature Gate program
-to validate the signature.
+This instruction will:
+- Check that the account's lamports balance meets the required minimum
+- Check that the account has allocated enough space for the `Feature` state
+- Check that the account is owned by
+  `Feature111111111111111111111111111111111111`
+- Serialize an un-initialized `Feature` layout to the account data
+
+Only accounts which have been successfully processed by the Feature Gate
+program's `SubmitFeatureForActivation` will have serialized data, therefore only
+accounts owned by `Feature111111111111111111111111111111111111` with serialized
+data will be recognized for feature activation.
 
 ### Representing the Current Feature Set
 
@@ -372,8 +383,8 @@ This approach may increase the total required work for a node in a given epoch.
 Rather than sending a transaction to the Feature Gate program, a node could
 instead signal the bit mask in their block header whenever they are the leader.
 
-This would introduce a change to the block header and remove this information
-from being publicly and transparently on-chain.
+This would introduce a change to the block header, which may prove to be a
+difficult change to integrate.
 
 ## Impact
 
