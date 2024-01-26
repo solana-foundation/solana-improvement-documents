@@ -59,7 +59,9 @@ compute-unit at a given condition.
 - *write lock fee*: denominated in `lamport`, it is fee dedicated for write
 lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.requested_cu()`.
 
-## Design Highlights
+## Detailed Design
+
+### Design Highlights
 
 - Account Association with Compute Unit Pricer:
   - Accounts are associated with a *compute unit pricer*, and the *runtime*
@@ -77,15 +79,17 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
   `alpha = 2 / (N+1)`.
 - Pricing Algorithm:
   - Adjusts write-lock *cost rate* based on an account's EMA *compute-unit
-  utilization*. Initial write-lock cost rate is `1000 micro-lamport/CU`.
+  utilization*.
   - For each block, if an account's EMA *compute-unit utilization* is more than
-  half of its max limit, its write-lock *cost rate* increases by 1%. If it's
-  below half, the *cost rate* decreases by 1%.
+  half of its max limit, its write-lock *cost rate* increases by X%. If it's
+  below half, the *cost rate* decreases by X%.
+  - For V0, Initial write-lock cost rate is `1000 micro-lamport/CU`; and cost
+  rate set to 1%.
 - Calculate *Write Lock Fee*:
   - Fee required to write-lock an account is calculated by multiplying the
   write-lock *cost rate* by the transaction's requested CU.
 
-## Detailed Design
+### Detailed Design
 
 - Initialization and Inheritance:
   - Bank initializes an empty account_write_lock_fee_cache, an LRU Cache of
@@ -103,9 +107,14 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
 - End of Block Processing:
   - Identify write-locked accounts with *compute-unit utilization* > half of
   account max CU limit. Add/update bank's account_write_lock_fee_cache. 
-  - Adding new account into LRU cache could push out eldest account;
-  - LRU cache has capacity of 2048, which is 2* worst case block, should
-  be enough to prevent cache attack.
+  - Evicting cheapest account before add new "hot" accounts into LRU cach;
+  - LRU cache has capacity set to 2* worst case eviction per block to prevent
+  cache attack.
+  - For v0, cache capacity set to 2048, as:
+    - Max number of tansactions with account 6M CU = 48M/6M = 8;
+    - Max number of accounts per tx: 128;
+    - worst case per block: 128 * 8 = 1024;
+    - 2 times worst case: 2048;
 - Fee Handling:
   - Collected write-lock fees are 100% burnt.
   - Collected priority fees are 100% rewarded.
