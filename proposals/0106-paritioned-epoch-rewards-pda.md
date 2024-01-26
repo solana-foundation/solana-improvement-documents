@@ -49,20 +49,15 @@ When partitioned rewards are calculated in the runtime (currently in the first
 block of the epoch when new-epoch operations -- like feature activations and
 leader schedule generation -- are processed), the runtime must populate a PDA
 that stores the partition data needed to recreate the hasher that returns the
-partition index for any address. The data comprises: the number of partitions
-and parent blockhash. More specifically:
+partition index for any address. The hasher for v0 partitioned rewards is
+SipHash 1-3. The data needed comprises: the number of partitions and parent
+blockhash. More specifically:
 
 ```rust
 // Version wrapper to allow future updates
 // Variant serialized as little-endian unsigned 32-bit integer
 enum EpochRewardsPartitionDataVersion {
     V0(PartitionData),
-}
-
-// Extensible list of kinds of hashers used to generate partitions
-// Mapping fn defines the HasherKind for each partition-data version
-enum HasherKind {
-    Sip13 = 0,
 }
 
 // Data about rewards partitions for a particular epoch
