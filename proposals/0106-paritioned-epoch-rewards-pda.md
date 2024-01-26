@@ -74,18 +74,18 @@ struct PartitionData {
 The address of this PDA will use some bytes -- to prevent griefing and namespace
 the PDAs -- and the rewards distribution epoch number as a little-endian u64 as
 seeds. Specifically: `[b"EpochRewards",b"PartitionData", &epoch.to_le_bytes()]`.
-The owning program should be the sysvar program id:
+The owning program should be the Sysvar program id:
 `Sysvar1111111111111111111111111111111111111`.
 
 ## Impact
 
 The change in this proposal does increase the number of "forever" accounts that
 validators must store by one per epoch. However, the PDAs will be owned by the
-stake program, so could be adjusted or closed in the future by a feature-gated
-change to the Stake Program. Meanwhile, the change greatly improves the
-post-SIMD 0015 situation for clients trying to track stake or voting rewards,
-since they can use the data in the PDA to pull the correct partition directly,
-instead of scanning an unknown number of blocks.
+Sysvar program, so could be adjusted or closed in the future by a feature-gated
+change to that program. Meanwhile, the change greatly improves the post-SIMD
+0015 situation for clients trying to track stake or voting rewards, since they
+can use the data in the PDA to pull the correct partition directly, instead of
+scanning an unknown number of blocks.
 
 ## Security Considerations
 
