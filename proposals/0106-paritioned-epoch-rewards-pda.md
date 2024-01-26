@@ -90,8 +90,11 @@ scanning an unknown number of blocks.
 
 ## Security Considerations
 
-Like traditional sysvars, the new accounts should only be loadable as read-only.
-How this would be accomplished depends on the outcome of SIMD 0105.
+Like traditional sysvars, the partitioned-rewards data PDAs should only be
+loadable as read-only. SIMD 0105 defines a method for demoting sysvar write
+locks, but depends on a list of static addresses. If write-lock handling of
+dynamically addressed sysvars like these PDAs seems needed in the future, a new
+proposal should be introduced.
 
 ## Backwards Compatibility
 
