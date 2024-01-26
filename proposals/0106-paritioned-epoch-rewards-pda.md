@@ -47,10 +47,10 @@ None
 
 When partitioned rewards are calculated in the runtime (currently in the first
 block of the epoch when new-epoch operations -- like feature activations and
-leader schedule generation -- are processed), the runtime should populate a PDA
+leader schedule generation -- are processed), the runtime must populate a PDA
 that stores the partition data needed to recreate the hasher that returns the
-partition index for any address. This data comprises: the number of partitions,
-the parent blockhash, and the hasher kind. More specifically:
+partition index for any address. The data comprises: the number of partitions
+and parent blockhash. More specifically:
 
 ```rust
 // Version wrapper to allow future updates
@@ -67,7 +67,7 @@ enum HasherKind {
 
 // Data about rewards partitions for a particular epoch
 struct PartitionData {
-    num_partitions: usize, // little-endian unsigned 64-bit integer
+    num_partitions: u64, // little-endian unsigned 64-bit integer
     parent_blockhash: Hash, // byte-array of length 32
 }
 ```
@@ -75,7 +75,7 @@ struct PartitionData {
 The address of this PDA will use some bytes -- to prevent griefing and namespace
 the PDAs -- and the rewards distribution epoch number as a little-endian u64 as
 seeds. Specifically: `[b"EpochRewards",b"PartitionData", &epoch.to_le_bytes()]`.
-The owning program should be the Sysvar program id:
+The owning program will be the Sysvar program id:
 `Sysvar1111111111111111111111111111111111111`.
 
 ## Impact
