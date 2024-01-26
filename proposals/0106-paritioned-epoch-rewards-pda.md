@@ -45,11 +45,12 @@ None
 
 ## Detailed Design
 
-When partitioned rewards are calculated in the runtime (currently during the
-first block of the epoch), the runtime should populate a PDA that stores the
-partition data needed to recreate the hasher that returns the partition index
-for any address. This data comprises: the number of partitions, the parent
-blockhash, and the hasher kind. More specifically:
+When partitioned rewards are calculated in the runtime (currently in the first
+block of the epoch when new-epoch operations -- like feature activations and
+leader schedule generation -- are processed), the runtime should populate a PDA
+that stores the partition data needed to recreate the hasher that returns the
+partition index for any address. This data comprises: the number of partitions,
+the parent blockhash, and the hasher kind. More specifically:
 
 ```rust
 // Version wrapper to allow future updates
