@@ -123,19 +123,81 @@ deterministic manner for the current epoch, while also randomizing the
 distribution across different epochs, the partitioning of all rewards will be
 done as follows.
 
-The reward results are sorted by Stake Account address, and randomly shuffled
-with a fast `rng` seeded by current epoch. The shuffled reward results are then
-divided into `M` chunks. This process will ensure that the reward distribution
-is deterministic for the current epoch, while also introducing a degree of
-randomness between epochs.
-
 To minimize the impact on block processing time during the reward distribution
-phase, a total of 4,096 accounts will be distributed per block. The total
-number of blocks needed to distributed rewards is given by the following
-formula to avoid using floating point value arithmetic:
+phase, a target of 4,096 stake rewards will be distributed per block. The total
+number of blocks `M` needed to distributed rewards is given by the following
+formula to round up to the nearest integer without using floating point value
+arithmetic:
 
 ```
 M = ((4096 - 1)+num_stake_accounts)/4096
+```
+
+To safeguard against the number of stake accounts growing dramatically and
+overflowing the number of blocks in an epoch, the number of blocks is capped at
+10% of the number of block in an epoch (currently 432,000).
+
+The [SipHash 1-3](https://www.aumasson.jp/siphash/siphash.pdf) pseudo-random
+function is used to hash stake account addresses efficiently and uniformly
+across the blocks in the reward distribution phase. The hashing function for an
+epoch is created by seeding a new `SipHasher` with the parent block's bank hash.
+This hashing function can then be used to hash each active stake account's
+address into a u64 hash value. The reward distribution block index `I` can then
+be computed by applying the following formula to the hash:
+
+```
+I = (M * stake_address_hash) / 2^64
+```
+
+### Reward Distribution Snapshot State
+
+An additional field `epoch_rewards_status` will be added to serialized bank
+structure so that the full list of stake rewards calculated in the first epoch
+block can be recovered inside snapshots created during reward distribution. This
+data is very large so cannot be stored on-chain.
+
+The layout of the `EpochRewardsStatus` field is as follows:
+
+```
+enum EpochRewardStatus {
+    /// this bank is in the reward phase.
+    Active(StartBlockHeightAndRewards),
+    /// this bank is outside of the rewarding phase.
+    #[default]
+    Inactive,
+}
+
+struct StartBlockHeightAndRewards {
+    /// the block height of the slot at which rewards distribution began
+    pub(crate) start_block_height: u64,
+    /// calculated epoch rewards pending distribution, outer Vec is by partition
+    /// (one partition per block)
+    pub(crate) stake_rewards_by_partition: Arc<Vec<Vec<StakeReward>>>,
+}
+
+struct StakeReward {
+    pub stake_pubkey: Pubkey,
+    pub stake_reward_info: RewardInfo,
+    pub stake_account: AccountSharedData,
+}
+
+struct RewardInfo {
+    pub reward_type: RewardType,
+    /// Reward amount
+    pub lamports: i64,
+    /// Account balance in lamports after `lamports` was applied
+    pub post_balance: u64,
+    /// Vote account commission when the reward was credited, only present for
+    /// voting and staking rewards
+    pub commission: Option<u8>,
+}
+
+enum RewardType {
+    Fee,
+    Rent,
+    Staking,
+    Voting,
+}
 ```
 
 ### `EpochRewards` Sysvar Account
@@ -147,7 +209,7 @@ reflects the amount of pending rewards to distribute.
 The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 
 ```
-struct RewardRewards{
+struct EpochRewards {
    // total rewards for the current epoch, in lamports
    total_rewards: u64,
 
@@ -167,13 +229,28 @@ and vote account rewards become available at this time. The
 each block in the reward distribution phase.
 
 Once all rewards have been distributed, the balance of the `EpochRewards`
-account MUST be reduced to `0` (or something has gone wrong). For safety, any
-extra lamports in `EpochRewards` accounts will be burned after reward
-distribution phase, and the sysvar account will be deleted. Because of the
-lifetime of `EpochRewards` sysvar coincides with the reward distribution
-interval, user can explicitly query the existence of this sysvar to determine
-whether a block is in reward interval. Therefore, no new RPC method for reward
-interval is needed.
+account MUST be reduced to `0` (or something has gone wrong) at the beginning of
+the last rewards distribution block (before processing transactions). Any extra
+lamports in `EpochRewards` accounts will be burned after reward distribution
+phase, and the sysvar account will be deleted.
+
+There are two possible reasons why the sysvar balance could be non-zero after
+reward distribution:
+
+1. The sysvar can only be made read-only after the activation of a feature in
+accordance with SIMD 105. Before it's read-only, it will be possible for anyone
+to send lamports to this account.
+
+2. During reward distribution, it's possible that the sysvar balance is reduced
+below its rent-exempt minimum balance. Similar to other sysvars, whenever this
+sysvar is updated, its balance will be topped up to the rent-exempt minimum.
+
+Because the lifetime of `EpochRewards` sysvar coincides with the reward
+distribution interval, users can explicitly query the existence of this sysvar
+to determine whether a block is in reward interval. Therefore, no new RPC method
+for reward interval is needed. Similar to other sysvars, a new syscall named
+`sol_get_epoch_rewards_sysvar` will be created to allow programs to fetch this
+sysvar in the SVM.
 
 ### Reward Distribution
 
@@ -189,22 +266,30 @@ amount of the reward that was distributed.
 
 ### Restrict Stake Account Access
 
-To avoid the complexity and potential rewards in unexpected stake accounts,
-the stake program is disabled during the epoch reward distribution period.
+To avoid programs interfering with reward distribution, the runtime rejects
+transactions that attempt to write-lock a stake program owned account during the
+epoch reward distribution period regardless of whether that stake account is
+active or not. This is because reward distribution completely overwrite stake
+account state and any changes would be lost.
 
-Any transaction that invokes staking program during this period will fail with
-a new unique error code - `StakeProgramUnavailable`.
+Any transaction that invokes staking program during this period will be dropped
+without deducting fees due to this new error code:
+
+```
+TransactionError::ProgramExecutionTemporarilyRestricted {
+  account_index: u8,
+}
+```
 
 That means all updates to stake accounts have to wait until the rewards
 distribution finishes.
 
 Because different stake accounts are receiving the rewards at different blocks,
-on-chain programs, which depends on the rewards of stakes accounts during the
+on-chain programs, which depend on the rewards of stakes accounts during the
 reward period, may get into partial epoch reward state. To prevent this from
 happening, loading stake accounts from on-chain programs during reward period
 will be disabled. However, reading the stake account through RPC will still be
 available.
-
 
 ## Impact
 
@@ -216,7 +301,9 @@ few blocks later in the epoch than before.
 
 The second impact is that users will not be able to update their stakes during
 the epoch reward phases, and will have to wait until the end of the epoch
-reward period to make any changes.
+reward period to make any changes. This includes lamport transfers to their
+stake accounts so things like Jito MEV tip distribution will also need to wait
+until the end of the epoch reward period to distribute tip earnings.
 
 Nonetheless, the overall amount of time that the user must wait before
 receiving and updating their stake rewards should be roughly equivalent to what
@@ -234,13 +321,18 @@ beta today.
 While the proposed new approach does impact and modify various components of
 the validators, it does not alter the economics of the reward system.
 
-If all the changes are implemented correctly and tested fully, there are no
-security issues.
+Reward distribution relies on completely restricting any lamport balance
+changes for stake accounts until distribution is completed.
 
+Reward distribution state should be recoverable from snapshots produced during
+the reward distribution period to avoid consensus failure.
 
 ## Backwards Compatibility
 
 This is a breaking change.  The new epoch calculation and distribution approach
 will not be compatible with the old approach.
+
+Snapshot format changes due to new the bank serialized field will also be made
+backwards compatible.
 
 ## Open Questions
