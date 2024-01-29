@@ -45,13 +45,13 @@ None
 
 ## Detailed Design
 
-When partitioned rewards are calculated in the runtime (currently in the first
-block of the epoch when new-epoch operations -- like feature activations and
-leader schedule generation -- are processed), the runtime must populate a PDA
-that stores the partition data needed to recreate the hasher that returns the
-partition index for any address. The hasher for v0 partitioned rewards is
-SipHash 1-3. The data needed comprises: the number of partitions and parent
-blockhash. More specifically:
+When partitioned rewards populates the temporary `EpochRewards` sysvar --
+defined in SIMD 0015 as at the start of the first block of the epoch, before any
+transactions are processed -- the runtime must populate a PDA that stores the
+partition data needed to recreate the hasher that returns the partition index
+for any address. The hasher for v0 partitioned rewards is SipHash 1-3. The data
+needed comprises: the number of partitions and parent blockhash. More
+specifically:
 
 ```rust
 // Version wrapper to allow future updates
