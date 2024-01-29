@@ -73,6 +73,12 @@ seeds. Specifically: `[b"EpochRewards",b"PartitionData", &epoch.to_le_bytes()]`.
 The owning program will be the Sysvar program id:
 `Sysvar1111111111111111111111111111111111111`.
 
+Like traditional sysvars, the partitioned-rewards data PDAs should only be
+loadable as read-only. SIMD 0105 defines a method for demoting sysvar write
+locks, but depends on a list of addresses in code. If write-lock handling of
+dynamically addressed sysvars like these PDAs seems needed in the future, a new
+proposal should be introduced.
+
 ## Impact
 
 The change in this proposal does increase the number of "forever" accounts that
@@ -85,11 +91,7 @@ scanning an unknown number of blocks.
 
 ## Security Considerations
 
-Like traditional sysvars, the partitioned-rewards data PDAs should only be
-loadable as read-only. SIMD 0105 defines a method for demoting sysvar write
-locks, but depends on a list of static addresses. If write-lock handling of
-dynamically addressed sysvars like these PDAs seems needed in the future, a new
-proposal should be introduced.
+None
 
 ## Backwards Compatibility
 
