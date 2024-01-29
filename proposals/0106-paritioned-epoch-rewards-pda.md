@@ -73,6 +73,8 @@ seeds. Specifically: `[b"EpochRewards",b"PartitionData", &epoch.to_le_bytes()]`.
 The owning program will be the Sysvar program id:
 `Sysvar1111111111111111111111111111111111111`.
 
+The partition-data PDA will not be available to on-chain programs via syscall.
+
 Like traditional sysvars, the partitioned-rewards data PDAs should only be
 loadable as read-only. SIMD 0105 defines a method for demoting sysvar write
 locks, but depends on a list of addresses in code. If write-lock handling of
