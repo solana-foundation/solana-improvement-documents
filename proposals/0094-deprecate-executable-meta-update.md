@@ -18,14 +18,14 @@ program deployment.
 ## Motivation
 
 We want to deprecate the usage of *executable* metadata on account for program
-runtime. The new variant of Bpf loader (i.e. V3, V4 etc.) no longer requires
+runtime. The new variant of bpf loader (i.e. V3, V4 etc.) no longer requires
 *executable* metadata. However, during the program deployment, bpf loader still
 updates *executable* account metadata, which is not necessary.
 
-Therefore, as we are migrating to the new Bpf loader, we are going to add a
+Therefore, as we are migrating to the new bpf loader, we are going to add a
 feature to deprecate executable account metadata update during bpf program
 deployment, so that we can activate the feature and deprecate *executable*
-metadata in program runtime for the new kinds of Bpf loaders.
+metadata in program runtime for the new kinds of bpf loaders.
 
 
 ## Alternatives Considered
@@ -41,6 +41,26 @@ None
 When the feature - "deprecate executable account metadata update" is activated,
 the bpf loader will no longer update *executable* metadata to true after
 program deployment.
+
+This also implies that the bpf runtime can no longer depend on the *executable*
+flag in the account metadata for to check whether certain account updates are
+allowable. To mirror the current validator runtime behavior, the *executable*
+flags on the account can be computed from the account's owner ID, which must be
+one of the bpf loaders, and the corresponding program account's metadata stored
+in the account's data.
+
+However, computing the executable from account's owner and data is not going to
+be performant. Currently, there are only 3 places, which checks account's
+*executable* flag before updates: (1) `lamport`` change, (2) `owner` change, and
+(3) `data` change.
+
+With the new bpf loaders, the `owner` and the `data` of the program accounts
+will never be changed at runtime. Therefore, the executable checks on case (2)
+and (3) can be readily skipped. For (1) `lamport` change, we propose to relax
+the restriction that `lamport` on `executable` account can't be changed, since
+there are no particular reasons why the lamport can't change on executable
+accounts (as far as I know). When this restriction is removed, the executable
+check for case (1) can be skipped too.
 
 The PR for this work is at https://github.com/solana-labs/solana/pull/34194
 
