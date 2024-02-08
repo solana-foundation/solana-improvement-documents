@@ -74,7 +74,7 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
   current bank is frozen.
   - Provides the current *cost rate* when queried.
 - EMA of Compute-Unit Utilization:
-  - Uses 150 slots for EMA calculation.
+  - Uses 8 slots for EMA calculation.
   - EMA Alpha, representing the degree of weighting decrease, is calculated as
   `alpha = 2 / (N+1)`.
 - Pricing Algorithm:
