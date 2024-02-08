@@ -81,10 +81,12 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
   - Adjusts write-lock *cost rate* based on an account's EMA *compute-unit
   utilization*.
   - For each block, if an account's EMA *compute-unit utilization* is more than
-  half of its max limit, its write-lock *cost rate* increases by X%. If it's
-  below half, the *cost rate* decreases by X%.
-  - For V0, Initial write-lock cost rate is `1000 micro-lamport/CU`; and cost
-  rate set to 1%.
+  target utilization, its write-lock *cost rate* increases by X%. If it's
+  below target, the *cost rate* decreases by X%.
+  - For V0:
+    - target utilization is `25%` of Max limit;
+    - Initial write-lock cost rate is `1000 micro-lamport/CU`;
+    - cost change rate set to 1%;
 - Calculate *Write Lock Fee*:
   - Fee required to write-lock an account is calculated by multiplying the
   write-lock *cost rate* by the transaction's requested CU.
