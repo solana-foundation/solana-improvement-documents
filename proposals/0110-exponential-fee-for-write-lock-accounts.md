@@ -94,7 +94,7 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
 ### Detailed Design
 
 - Initialization and Inheritance:
-  - Bank initializes an empty account_write_lock_fee_cache, an LRU Cache of
+  - Bank initializes an empty account_write_lock_fee_cache, an Cache of
   {account_pubkey, compute-unit-pricer}.
   - Child banks inherit the parent's cache.
 - Transaction Fee Calculation:
@@ -107,10 +107,15 @@ lock an account, calculated as `compute-unit-pricer.cost-rate() * transaction.re
   as-is;
   - Ensuring cost tracking is enabled at the replay stage.
 - End of Block Processing:
-  - Identify write-locked accounts with *compute-unit utilization* > half of
-  account max CU limit. Add/update bank's account_write_lock_fee_cache. 
-  - Evicting cheapest account before add new "hot" accounts into LRU cach;
-  - LRU cache has capacity set to 2* worst case eviction per block to prevent
+  - Identify write-locked accounts with *compute-unit utilization* > target
+  utilization. Add/update bank's account_write_lock_fee_cache.
+  - For those accounts are in cache, eg were saturated, but not being
+  write-locked in this block, their current block *compute-unit utilization*
+  shall be considered as zero; then use it to update Cache.
+  - Evict cheapest account before add new "hot" accounts into LRU cach, if cache
+  is in full capacity;
+  - Account will be evicted from cache as soon as its *cost rate* drop back to 0
+  - Cache has capacity set to 2* worst case eviction per block to prevent
   cache attack.
   - For v0, cache capacity set to 2048, as:
     - Max number of tansactions with account 6M CU = 48M/6M = 8;
