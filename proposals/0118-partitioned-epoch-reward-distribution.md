@@ -238,9 +238,9 @@ epoch rewarding phase.
 The first impact is that stake accounts will see their rewards being credited a
 few blocks later in the epoch than before.
 
-The second impact is that users will not be able to update their stakes during
-the epoch reward phases, and will have to wait until the end of the epoch
-reward period to make any changes.
+The second impact is that users will only be able to credit their stake accounts
+during the epoch reward phase. Any other updates will have to wait until the end
+of the phase.
 
 Nonetheless, the overall amount of time that the user must wait before
 receiving and updating their stake rewards should be roughly equivalent to what
@@ -258,8 +258,12 @@ beta today.
 While the proposed new approach does impact and modify various components of
 the validators, it does not alter the economics of the reward system.
 
-If all the changes are implemented correctly and tested fully, there are no
-security issues.
+Reward distribution relies on restricting any lamport debit or state changes for
+stake accounts until distribution is completed.
+
+The initial reward calculation and reward-distribution progress should be
+recoverable from snapshots produced during the reward distribution period to
+avoid consensus failure.
 
 
 ## Backwards Compatibility
