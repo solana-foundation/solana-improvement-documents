@@ -152,54 +152,59 @@ be computed by applying the following formula to the hash:
 I = (M * stake_address_hash) / 2^64
 ```
 
-### `EpochRewards` Sysvar Account
+### Reward Distribution
 
-`EpochRewards` sysvar account records the total rewards and the amount of
-distributed rewards for the current epoch internally. And the account balance
-reflects the amount of pending rewards to distribute.
+The reward distribution phase happens after the reward computation phase, ie.
+during the second block in the epoch as per the current design. It lasts for `M`
+blocks (see previous section).
+
+#### `EpochRewards` Sysvar Account
+
+The `EpochRewards` sysvar account records whether the rewards distribution phase
+is in progress, as well as the details needed to resume distribution when
+starting from a snapshot during the reward distribution phase. These details
+include: the parameters needed to recalculate the reward partitions, the total
+rewards to be distributed, and the amount of rewards distributed so far.
 
 The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 
 ```
-struct RewardRewards{
+struct EpochRewards{
+   // whether rewards distribution is active
+   active: bool, // byte
+
+   distribution_starting_block_height: u64, // little-endian unsigned 64-bit integer
+   
+   num_partitions: u64, // little-endian unsigned 64-bit integer
+   
+   parent_blockhash: Hash, // byte-array of length 32
+
    // total rewards for the current epoch, in lamports
-   total_rewards: u64,
+   total_rewards: u64, // little-endian unsigned 64-bit integer
 
-   // distributed rewards for  the current epoch, in lamports
-   distributed_rewards: u64,
-
-   // distribution of all staking rewards for the current
-   // epoch will be completed before this block height
-   distribution_complete_block_height: u64,
+   // distributed rewards for the current epoch, in lamports
+   distributed_rewards: u64, // little-endian unsigned 64-bit integer
 }
 ```
 
-The `EpochRewards` sysvar is created at the start of the first block of the
+The `EpochRewards` sysvar is repopulated at the start of the first block of the
 epoch (before any transactions are processed), as both the total epoch rewards
 and vote account rewards become available at this time. The
-`distributed_reward_in_lamport` field is updated per reward distribution for
-each block in the reward distribution phase.
+`distributed_rewards` field is updated per reward distribution for each block in
+the reward distribution phase. The `active` field is set to false after the last
+partition is distributed (and `total_rewards == distributed_rewards`).
 
-Once all rewards have been distributed, the balance of the `EpochRewards`
-account MUST be reduced to `0` (or something has gone wrong). For safety, any
-extra lamports in `EpochRewards` accounts will be burned after reward
-distribution phase, and the sysvar account will be deleted. Because of the
-lifetime of `EpochRewards` sysvar coincides with the reward distribution
-interval, user can explicitly query the existence of this sysvar to determine
-whether a block is in reward interval. Therefore, no new RPC method for reward
-interval is needed.
+#### Booting from Snapshot
 
-### Reward Distribution
-
-Reward distribution phase happens after reward computation phase, which starts
-after the first block in the epoch for this proposal. It lasts for `M` blocks.
-Each of the `M` blocks is responsible for distributing the reward from one
-partition of the rewards from the `EpochRewards` sysvar account.
-
-Before each reward distribution, the `EpochRewards` account's `balance` is
-checked to make sure there is enough balance to distribute the reward. After a
-reward is distributed, the balance in `EpochRewards` account is decreased by the
-amount of the reward that was distributed.
+When booting from a snapshot, a node must check the EpochRewards sysvar account
+to determine whether the distribution phase is active. If so, the node must
+rerun the rewards calculation using the `EpochRewards::num_partitions` and
+`EpochRewards::parent_blockhash` sysvar fields as well as the `EpochStakes` in
+the snapshot. Then the runtime must resume rewards distribution from the
+partition indicated by comparing its current block height to
+`EpochRewards::distribution_starting_block_height`. This can be confirmed by
+comparing a partial sum of the rewards calculation (those partitions expected to
+have been distributed) with the `EpochRewards::distributed_rewards` field.
 
 ### Restrict Stake Account Access
 
