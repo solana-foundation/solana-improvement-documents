@@ -206,24 +206,29 @@ partition indicated by comparing its current block height to
 comparing a partial sum of the rewards calculation (those partitions expected to
 have been distributed) with the `EpochRewards::distributed_rewards` field.
 
-### Restrict Stake Account Access
+### Restrict Stake Account Mutation
 
-To avoid the complexity and potential rewards in unexpected stake accounts,
-the stake program is disabled during the epoch reward distribution period.
+The stake accounts need to be preserved in credit-only state while distributions
+are in progress in order to prevent any changes interfering with reward
+distribution.
 
-Any transaction that invokes staking program during this period will fail with
-a new unique error code - `StakeProgramUnavailable`.
+Therefore, the Stake Program needs access to a syscall which reports whether the
+distribution phase is active. This new syscall `sol_get_epoch_rewards_status`
+should report the value of `EpochRewards::active`. All Stake Program
+instructions that mutate stake data or debit stake balances should be disabled
+when `sol_get_epoch_rewards_status` is true.
 
-That means all updates to stake accounts have to wait until the rewards
-distribution finishes.
+Any transaction that attempts to invoke such an instruction will fail with this
+new error code:
 
-Because different stake accounts are receiving the rewards at different blocks,
-on-chain programs, which depends on the rewards of stakes accounts during the
-reward period, may get into partial epoch reward state. To prevent this from
-happening, loading stake accounts from on-chain programs during reward period
-will be disabled. However, reading the stake account through RPC will still be
-available.
+```
+StakeError {
+   EpochRewardsDistributionActive = 15,
+}
+```
 
+Other users can access the `sol_get_epoch_rewards_status` to determine the
+distribution-phase status from within the SVM.
 
 ## Impact
 
