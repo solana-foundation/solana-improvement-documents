@@ -103,17 +103,17 @@ Reward calculation phase computes all the rewards that need to be distributed
 for the active stake accounts, and partitions the reward into a number of
 chunks for distribution in the next phase.
 
-Currently, on Solana Mainnet Beta with ~550K active stake accounts, it shows
-that epoch reward calculation takes around 10 seconds on average. This will
-make it impossible to perform rewards computation synchronous within one block.
+Currently, on Solana Mainnet Beta with ~550K active stake accounts, epoch reward
+calculation takes around 10 seconds on average. This will make it impossible to
+perform rewards computation synchronous within one block.
 
 However, there are quite a few promising optimizations that can cut down the
 reward computation time. An experiment for reward calculation optimization
 (https://github.com/solana-labs/solana/pull/31193) showed that we can cut the
 reward calculation time plus vote reward distribution time to around 1s. This
 makes synchronous reward computation and asynchronous reward distribution a
-feasible approach. We also believe that there is still more rooms for more
-optimization to further cut down the above timing.
+feasible approach. We also believe that there is room for more optimization to
+further cut down the above timing.
 
 Therefore, the following design is based on the above optimization. The
 reward calculation will be performed at the first block of the epoch. Once the
@@ -126,19 +126,30 @@ deterministic manner for the current epoch, while also randomizing the
 distribution across different epochs, the partitioning of all rewards will be
 done as follows.
 
-The reward results are sorted by Stake Account address, and randomly shuffled
-with a fast `rng` seeded by current epoch. The shuffled reward results are then
-divided into `M` chunks. This process will ensure that the reward distribution
-is deterministic for the current epoch, while also introducing a degree of
-randomness between epochs.
-
 To minimize the impact on block processing time during the reward distribution
-phase, a total of 4,096 accounts will be distributed per block. The total
-number of blocks needed to distributed rewards is given by the following
-formula to avoid using floating point value arithmetic:
+phase, a target of 4,096 stake rewards will be distributed per block. The total
+number of blocks `M` needed to distributed rewards is given by the following
+formula to round up to the nearest integer without using floating point value
+arithmetic:
 
 ```
 M = ((4096 - 1)+num_stake_accounts)/4096
+```
+
+To safeguard against the number of stake accounts growing dramatically and
+overflowing the number of blocks in an epoch, the number of blocks is capped at
+10% of the number of block in an epoch (currently 432,000).
+
+The [SipHash 1-3](https://www.aumasson.jp/siphash/siphash.pdf) pseudo-random
+function is used to hash stake account addresses efficiently and uniformly
+across the blocks in the reward distribution phase. The hashing function for an
+epoch is created by seeding a new `SipHasher` with the parent block's blockhash.
+This hashing function can then be used to hash each active stake account's
+address into a u64 hash value. The reward distribution block index `I` can then
+be computed by applying the following formula to the hash:
+
+```
+I = (M * stake_address_hash) / 2^64
 ```
 
 ### `EpochRewards` Sysvar Account
