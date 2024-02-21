@@ -1,10 +1,7 @@
 ---
 simd: '0118'
 title: Partitioned Epoch Rewards Distribution
-authors:
-  - Haoran Yi (Anza)
-  - Justin Starry (Anza)
-  - Tyera Eulberg (Anza)
+authors: Haoran Yi (Anza), Justin Starry (Anza), Tyera Eulberg (Anza)
 category: Standard
 type: Core
 status: Draft
