@@ -10,7 +10,7 @@ type: Core
 status: Draft
 created: 2024-02-16
 feature: (fill in with feature tracking issues once accepted)
-supersedes: 0015
+supersedes: '0015'
 ---
 
 ## Summary
@@ -170,8 +170,8 @@ The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 
 ```
 struct EpochRewards{
-   // whether rewards distribution is active
-   active: bool, // byte
+   // whether the rewards period (calculation and distribution) is active
+   active: bool, // byte. false: 0x00, true: 0x01
 
    distribution_starting_block_height: u64, // little-endian unsigned 64-bit integer
    
@@ -215,7 +215,7 @@ distribution.
 Therefore, the Stake Program needs access to a syscall which reports whether the
 distribution phase is active. This new syscall `sol_get_epoch_rewards_status`
 should report the value of `EpochRewards::active`. All Stake Program
-instructions that mutate stake data or debit stake balances should be disabled
+instructions that mutate stake data or debit stake balances must be disabled
 when `sol_get_epoch_rewards_status` is true.
 
 Any transaction that attempts to invoke such an instruction will fail with this
