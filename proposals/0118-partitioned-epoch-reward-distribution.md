@@ -211,10 +211,10 @@ are in progress in order to prevent any changes interfering with reward
 distribution.
 
 Therefore, the Stake Program needs access to a syscall which reports whether the
-distribution phase is active. This new syscall `sol_get_epoch_rewards_status`
-should report the value of `EpochRewards::active`. All Stake Program
+distribution phase is active. This new syscall `sol_get_epoch_rewards_sysvar`
+should return the values of the `EpochRewards` sysvar. All Stake Program
 instructions that mutate stake data or debit stake balances must be disabled
-when `sol_get_epoch_rewards_status` is true.
+when `EpochRewards::active` is true.
 
 Any transaction that attempts to invoke such an instruction will fail with this
 new error code:
@@ -225,8 +225,9 @@ StakeError {
 }
 ```
 
-Other users can access the `sol_get_epoch_rewards_status` to determine the
-distribution-phase status from within the SVM.
+Other users can access the `active` field from the
+`sol_get_epoch_rewards_sysvar` syscall to determine the distribution-phase
+status from within the SVM.
 
 ## Impact
 
