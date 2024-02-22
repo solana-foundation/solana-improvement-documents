@@ -166,6 +166,7 @@ rewards to be distributed, and the amount of rewards distributed so far.
 The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 
 ```
+#[repr(C)] // C representation, ie. 8-byte alignment
 struct EpochRewards{
    // whether the rewards period (calculation and distribution) is active
    active: bool, // byte. false: 0x00, true: 0x01
