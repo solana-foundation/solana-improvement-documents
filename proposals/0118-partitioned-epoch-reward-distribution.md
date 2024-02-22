@@ -112,11 +112,11 @@ makes synchronous reward computation and asynchronous reward distribution a
 feasible approach. We also believe that there is room for more optimization to
 further cut down the above timing.
 
-Therefore, the following design is based on the above optimization. The
-reward calculation will be performed at the first block of the epoch. Once the
-full rewards are calculated, the rewards will be partitioned into distribution
-chunks stored in the bank, which will then be distributed during the `reward
-distribution` phase.
+Therefore, the following design is based on the above optimization. The reward
+calculation will be performed at the first block of the epoch, block height `X`.
+Once the full rewards are calculated, the rewards will be partitioned into
+distribution chunks stored in the bank, which will then be distributed during
+the `reward distribution` phase.
 
 To ensure that each block distributes a subset of the rewards in a
 deterministic manner for the current epoch, while also randomizing the
@@ -189,7 +189,8 @@ epoch (before any transactions are processed), as both the total epoch rewards
 and vote account rewards become available at this time. The
 `distributed_rewards` field is updated per reward distribution for each block in
 the reward distribution phase. The `active` field is set to false after the last
-partition is distributed (and `total_rewards == distributed_rewards`).
+partition is distributed (and `total_rewards == distributed_rewards`), ie.
+before processing transactions in block at height `X + M`.
 
 #### Booting from Snapshot
 
