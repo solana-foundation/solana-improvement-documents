@@ -68,15 +68,14 @@ We have discussed the following alternative approaches.
 
 ## Detailed Design
 
-The major bottleneck for epoch reward distribution is to distribute rewards to
+The major bottleneck for epoch reward distribution is to write back updates to
 stake accounts. At the time of writing, there are approximately 550K active
 stake accounts and 1.5K vote accounts on Solana Mainnet Beta. Given the
 relatively small number of vote accounts, it makes sense to keep vote rewards
 distribution mechanism unchanged. They can still be distributed efficiently at
 the first block of the epoch boundary. This reduces the impact of rewards for
-vote account and also simplifies the overall changes. It also lets us focus on
-solving the primary bottleneck - Stake Rewards. Only Stake rewards are going to
-be distributed out over multiple blocks.
+vote account and also simplifies the overall changes. Only stake rewards will be
+distributed out over multiple blocks.
 
 In the new stake rewards distribution approach, we will separate the
 computation of rewards from the actual distribution of rewards at the epoch
@@ -88,35 +87,16 @@ boundary by dividing the process into two distinct phases:
    1. rewards distribution phase - during which the calculated epoch rewards
       for the active stake accounts are distributed.
 
-To help maintain the total capital balance and track/verify the reward
-distribution during rewarding phases, a new sysvar account, `EpochRewards`, is
-proposed. The `EpochRewards` sysvar holds the balance of the rewards that are
-pending for distribution.
+A new sysvar account, `EpochRewards`, will track and verify the reward
+distribution during rewarding phases.
 
 
 ### Rewards Calculation
 
-Reward calculation phase computes all the rewards that need to be distributed
-for the active stake accounts, and partitions the reward into a number of
-chunks for distribution in the next phase.
-
-Currently, on Solana Mainnet Beta with ~550K active stake accounts, epoch reward
-calculation takes around 10 seconds on average. This will make it impossible to
-perform rewards computation synchronous within one block.
-
-However, there are quite a few promising optimizations that can cut down the
-reward computation time. An experiment for reward calculation optimization
-(https://github.com/solana-labs/solana/pull/31193) showed that we can cut the
-reward calculation time plus vote reward distribution time to around 1s. This
-makes synchronous reward computation and asynchronous reward distribution a
-feasible approach. We also believe that there is room for more optimization to
-further cut down the above timing.
-
-Therefore, the following design is based on the above optimization. The reward
-calculation will be performed at the first block of the epoch, block height `X`.
-Once the full rewards are calculated, the rewards will be partitioned into
-distribution chunks stored in the bank, which will then be distributed during
-the `reward distribution` phase.
+The reward calculation will be performed at the first block of the epoch, block
+height `X`. Once the full rewards are calculated, the rewards will be
+partitioned into distribution chunks stored in the bank, which will then be
+distributed during the `reward distribution` phase.
 
 To ensure that each block distributes a subset of the rewards in a
 deterministic manner for the current epoch, while also randomizing the
@@ -135,7 +115,7 @@ M = ((4096 - 1)+num_stake_accounts)/4096
 
 To safeguard against the number of stake accounts growing dramatically and
 overflowing the number of blocks in an epoch, the number of blocks is capped at
-10% of the number of block in an epoch (currently 432,000).
+10% of the total slots in an epoch.
 
 The [SipHash 1-3](https://www.aumasson.jp/siphash/siphash.pdf) pseudo-random
 function is used to hash stake account addresses efficiently and uniformly
@@ -204,6 +184,7 @@ partition indicated by comparing its current block height to
 `EpochRewards::distribution_starting_block_height`. This can be confirmed by
 comparing a partial sum of the rewards calculation (those partitions expected to
 have been distributed) with the `EpochRewards::distributed_rewards` field.
+Partitions for blocks prior to the current block height can be discarded.
 
 ### Restrict Stake Account Mutation
 
@@ -242,7 +223,7 @@ The second impact is that users will only be able to credit their stake accounts
 during the epoch reward phase. Any other updates will have to wait until the end
 of the phase.
 
-Nonetheless, the overall amount of time that the user must wait before
+Nonetheless, the overall amount of wall time that the user must wait before
 receiving and updating their stake rewards should be roughly equivalent to what
 they are now experiencing on the current mainnet beta, since the prolonged
 first block time at the epoch boundary effectively obstructs the user's access
