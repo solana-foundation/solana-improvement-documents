@@ -1,6 +1,6 @@
 ---
 simd: '0119'
-title: Additional Income for Distribution
+title: Additional Amounts for Distribution
 authors:
   - diman
 category: Standard
@@ -17,11 +17,11 @@ of additional amounts.
 
 ## Motivation
 
-Validators have additional income. To increase their competitive advantage 
-over stakers, validators use various schemes to distribute some of these 
-revenues among their stakers. It is proposed to provide such a mechanism at the 
-protocol level. This, among other things, will provide a simple and uniform  
-way for independent analysts/websites to obtain this information.
+To enhance their competitive edge over stakers, validators employ various 
+methods to allocate some of the additional amounts among their stakers. It is 
+suggested to implement such a mechanism at the protocol level. This will, among 
+other benefits, offer a simple and uniform way for independent 
+analysts/websites to access this information.
 
 ## Alternatives Considered
 
@@ -52,7 +52,7 @@ is left for discussion of this proposal.
 Validators will be happy: they won’t have to deal with complex manipulations 
 with pools or other distribution programs. The addition of the proposed feature 
 itself does not require any additional actions on the part of the validator if 
-they do not distribute additional revenues.
+they do not distribute additional amounts.
 
 ## Security Considerations
 
