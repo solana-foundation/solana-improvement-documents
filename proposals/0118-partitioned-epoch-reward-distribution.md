@@ -159,6 +159,10 @@ struct EpochRewards{
    
    parent_blockhash: Hash, // byte-array of length 32
 
+   // total points calculated for the current epoch, where points equals the sum
+   // of delegated stake * credits observed for all delegations
+   total_points: u128, // little-endian unsigned 128-bit integer
+
    // total rewards for the current epoch, in lamports
    total_rewards: u64, // little-endian unsigned 64-bit integer
 
@@ -179,14 +183,17 @@ before processing transactions in block at height `X + M`.
 
 When booting from a snapshot, a node must check the EpochRewards sysvar account
 to determine whether the distribution phase is active. If so, the node must
-rerun the rewards calculation using the `EpochRewards::num_partitions` and
-`EpochRewards::parent_blockhash` sysvar fields as well as the `EpochStakes` in
-the snapshot. Then the runtime must resume rewards distribution from the
-partition indicated by comparing its current block height to
-`EpochRewards::distribution_starting_block_height`. This can be confirmed by
-comparing a partial sum of the rewards calculation (those partitions expected to
-have been distributed) with the `EpochRewards::distributed_rewards` field.
-Partitions for blocks prior to the current block height can be discarded.
+rerun the rewards partitioning using the `EpochRewards::num_partitions` and
+`EpochRewards::parent_blockhash` sysvar fields and determining the upcoming
+partitions by comparing its current block height to
+`EpochRewards::distribution_starting_block_height`. Then the runtime must
+recalculate the remaining rewards using the `EpochRewards::total_points` and
+`EpochRewards::total_rewards` sysvar fields, as well as the `EpochStakes` in the
+snapshot. The recalculated rewards can be confirmed by comparing a sum of the
+rewards remaining (those partitions expected to not yet have been distributed)
+with the difference between the `EpochRewards::total_rewards` and
+`EpochRewards::distributed_rewards` fields. Partitions for blocks prior to the
+current block height can be discarded.
 
 ### Restrict Stake Account Mutation
 
