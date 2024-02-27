@@ -117,7 +117,8 @@ M = ((4096 - 1)+num_stake_accounts)/4096
 
 To safeguard against the number of stake accounts growing dramatically and
 overflowing the number of blocks in an epoch, the number of blocks is capped at
-10% of the total slots in an epoch.
+10% of the total slots in an epoch. If the block cap is reached, accounts per
+partition is allowed to surpass the 4,096 target.
 
 The [SipHash 1-3](https://www.aumasson.jp/siphash/siphash.pdf) pseudo-random
 function is used to hash stake account addresses efficiently and uniformly
