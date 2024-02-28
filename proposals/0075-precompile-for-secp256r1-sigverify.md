@@ -1,6 +1,6 @@
 ---
-simd: "0048"
-title: Precompile for verifying secp256r1 sig.
+simd: "0075"
+title: Precompile for verifying secp256r1 sig (Supercedes SIMD-0048).
 authors:
   - Orion (Bunkr)
   - Jstnw (Bunkr)
@@ -8,13 +8,13 @@ authors:
 category: Standard
 type: Core
 status: Draft
-created: 2023-05-14
+created: 2024-02-27
 feature: (fill in with feature tracking issues once accepted)
 ---
 
+## Note
 
-## [DEPRECATED IN FAVOR OF SIMD-0075]
-
+Supercedes SIMD-0048
 
 ## Summary
 
@@ -218,17 +218,76 @@ precompiles.
 
 ### Implementation
 
-The precompile can be implemented using the `p256` crate at version `0.10.1`.
-This crate is part of the `Rust Crypto` library and implements the NIST P-256
-curve as well as ECDSA. It conforms with the test vectors found in
+#### Previous Consideration in SIMD-0048
+
+The precompile could be implemented using
+the `p256` crate at version `0.10.1`. This crate is part of the `Rust Crypto`
+library and implements the NIST P-256 curve as well as ECDSA in native Rust.
+It conforms with the test vectors found in
 [RFC6979](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5).
 
-- `p256::ecdsa::VerifyingKey::from_sec1_bytes()`
-- `p256::ecdsa::Signature::from_scalars()`
-- `p256::arithmetic::Scalar::is_high()`
-- `p256::ecdsa::VerifyingKey::verify()`
+#### SIMD-0075 Update
 
-Note: The crate is well maintained, but has never been externally audited.
+Due to the unaudited and somewhat unknown nature of the `p256` crate and
+the strict security and reproducibility considerations required to enable
+compatibility with Firedancer, we propose to implement the Precompile utilizing
+the `OpenSSL` [crate](https://crates.io/crates/openssl/0.10.57).
+The `OpenSSL` crate is already a dependency in the Anza client and has
+additionally been heavily scrutinized/tested by the broader public.
+
+Addtionally with regard to the development of Firedancer, the OpenSSL rust crate
+merely wraps and binds to the underlying C implementation of OpenSSL. This eases
+the effort in ensuring reproducibility between the Firedancer and Anza client.
+
+Our benchmarks also show that verifying a signature using the `OpenSSL` crate is ~3x
+faster than using the `p256` crate.
+
+Signature verification using the OpenSSL crate includes the following steps:
+
+1. Getting the curve order using the Nid::X9_62_PRIME256V1 identifier:
+
+   ```rust
+   EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)
+   ```
+
+2. Ensuring the `r` & `s` signature components fall within `curve_order - 1`
+3. Recreating the signature using the `r` & `s` signature components:
+
+   ```rust
+   let ecdsa_sig = openssl::ecdsa::EcdsaSig::from_private_components(r_bignum, s_bignum)
+
+   let der_sig = ecdsa_sig.to_der()
+   ```
+
+4. Computing the `half_order`of the curve and ensuring that `s < half_order`
+   (LowS Check)
+5. Parsing the public key bytes:
+
+   ```rust
+   let ec_point = EcPoint::from_bytes(&group, pubkey, &mut ctx)
+
+   let ec_key = EcKey::from_public_key(&group, &ec_point)
+
+   let pkey = PKey::from_ec_key(ec_key)
+   ```
+
+6. Creating a verfier from the public key and the openSSL SHA-256 hasher:
+
+   ```rust
+   Verifier::new(openssl::hash::MessageDigest::sha256(), &pkey)
+   ```
+
+7. Passing the message bytes to the verifier:
+
+   ```rust
+   verifier.update(message)
+   ```
+
+8. Verify signature across the message:
+
+   ```rust
+   verifier.verify(&der_sig)
+   ```
 
 ### Compute Cost / Efficiency
 
@@ -237,6 +296,10 @@ sufficiently powerful machine in order to determine average compute time per
 signature. Calculation of CUs would be based on the 1 CU / ns convention.
 The secp256k1 ecrecover syscall, which incurs a cost of 25_000 CUs, can be used
 as a reference point.
+
+Since precompiles don't incur a flat compute cost like syscalls, this comparison
+will just serve as a confirmation that the computation inside the precompile is 
+sufficiently efficient.
 
 This is in line with how previous precompiles for EC group operations and
 arithmetic were evaluated/benchmarked.
@@ -264,11 +327,9 @@ As such we would propose the following:
   as tests from the
   [Wycheproof Project](https://github.com/google/wycheproof#project-wycheproof)
 
-- Direct comparison and analysis of `p256` verification routines and group/field
-  operations with those found in the `prime256v1` OpenSSL implementation
+- Creating a map of what underlying OpenSSL calls get added to the runtime when
+  using the Rust bindings
 
-- Thorough auditing of the arithmetic and
-  decoding inside the `p256` crate
 
 ## Backwards Compatibility
 
@@ -276,3 +337,7 @@ Transactions using the instruction could not be used on Solana versions which do
 implement this feature. A Feature gate should be used to enable this feature
 when the majority of the cluster is using the required version. Transactions
 that do not use this feature are not impacted.
+
+```
+
+```
