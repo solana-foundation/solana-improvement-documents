@@ -239,8 +239,8 @@ Addtionally with regard to the development of Firedancer, the OpenSSL rust crate
 merely wraps and binds to the underlying C implementation of OpenSSL. This eases
 the effort in ensuring reproducibility between the Firedancer and Anza client.
 
-Our benchmarks also show that verifying a signature using the `OpenSSL` crate is ~3x
-faster than using the `p256` crate.
+Our benchmarks also show that verifying a signature using the `OpenSSL` crate is
+~3x faster than using the `p256` crate.
 
 Signature verification using the OpenSSL crate includes the following steps:
 
@@ -298,7 +298,7 @@ The secp256k1 ecrecover syscall, which incurs a cost of 25_000 CUs, can be used
 as a reference point.
 
 Since precompiles don't incur a flat compute cost like syscalls, this comparison
-will just serve as a confirmation that the computation inside the precompile is 
+will just serve as a confirmation that the computation inside the precompile is
 sufficiently efficient.
 
 This is in line with how previous precompiles for EC group operations and
@@ -329,7 +329,6 @@ As such we would propose the following:
 
 - Creating a map of what underlying OpenSSL calls get added to the runtime when
   using the Rust bindings
-
 
 ## Backwards Compatibility
 
