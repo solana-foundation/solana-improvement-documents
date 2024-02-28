@@ -1,6 +1,6 @@
 ---
 simd: "0075"
-title: Precompile for verifying secp256r1 sig (Supercedes SIMD-0048).
+title: Precompile for verifying secp256r1 sig.
 authors:
   - Orion (Bunkr)
   - Jstnw (Bunkr)
@@ -11,10 +11,6 @@ status: Draft
 created: 2024-02-27
 feature: (fill in with feature tracking issues once accepted)
 ---
-
-## Note
-
-Supercedes SIMD-0048
 
 ## Summary
 
