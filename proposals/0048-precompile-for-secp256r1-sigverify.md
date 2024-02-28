@@ -12,10 +12,6 @@ created: 2023-05-14
 feature: (fill in with feature tracking issues once accepted)
 ---
 
-
-## [DEPRECATED IN FAVOR OF SIMD-0075]
-
-
 ## Summary
 
 Adding a precompile to support the verification of signatures generated on
