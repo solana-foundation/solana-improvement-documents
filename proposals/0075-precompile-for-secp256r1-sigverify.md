@@ -226,7 +226,7 @@ It conforms with the test vectors found in
 
 Due to the unaudited and somewhat unknown nature of the `p256` crate and
 the strict security and reproducibility considerations required to enable
-compatibility with Firedancer, we propose to implement the Precompile utilizing
+compatibility with Firedancer, we propose to implement the precompile utilizing
 the `OpenSSL` [crate](https://crates.io/crates/openssl/0.10.57).
 The `OpenSSL` crate is already a dependency in the Anza client and has
 additionally been heavily scrutinized/tested by the broader public.
@@ -267,7 +267,7 @@ Signature verification using the OpenSSL crate includes the following steps:
    let pkey = PKey::from_ec_key(ec_key)
    ```
 
-6. Creating a verfier from the public key and the openSSL SHA-256 hasher:
+6. Creating a verfier from the public key and the OpenSSL SHA-256 hashing idendifier:
 
    ```rust
    Verifier::new(openssl::hash::MessageDigest::sha256(), &pkey)
