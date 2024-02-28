@@ -7,7 +7,7 @@ authors:
   - Dean (Web3 Builders Alliance)
 category: Standard
 type: Core
-status: Draft
+status: Withdrawn
 created: 2023-05-14
 feature: (fill in with feature tracking issues once accepted)
 ---
