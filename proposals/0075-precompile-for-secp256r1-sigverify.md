@@ -243,7 +243,7 @@ Signature verification using the OpenSSL crate includes the following steps:
 1. Getting the curve order using the Nid::X9_62_PRIME256V1 identifier:
 
    ```rust
-   EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)
+   let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)
    ```
 
 2. Ensuring the `r` & `s` signature components fall within `curve_order - 1`
