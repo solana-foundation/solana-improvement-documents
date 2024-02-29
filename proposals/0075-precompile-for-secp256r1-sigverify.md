@@ -227,14 +227,10 @@ It conforms with the test vectors found in
 
 Due to the unaudited and somewhat unknown nature of the `p256` crate and
 the strict security and reproducibility considerations required to enable
-compatibility with Firedancer, we propose to implement the precompile utilizing
+compatibility with other clients, we propose to implement the precompile utilizing
 the `OpenSSL` [crate](https://crates.io/crates/openssl/0.10.57).
 The `OpenSSL` crate is already a dependency in the Anza client and has
 additionally been heavily scrutinized/tested by the broader public.
-
-Addtionally with regard to the development of Firedancer, the OpenSSL rust crate
-merely wraps and binds to the underlying C implementation of OpenSSL. This eases
-the effort in ensuring reproducibility between the Firedancer and Anza client.
 
 Our benchmarks also show that verifying a signature using the `OpenSSL` crate is
 ~3x faster than using the `p256` crate.
@@ -312,11 +308,10 @@ forms of Two-Factor Authentication around those keypairs.
 
 ## Security Considerations
 
-As [Firedancer](https://github.com/firedancer-io/firedancer) is being developed
-in C, it is imperative that there can be bit-level reproducibility between
-the precompile implementations. Any discrepancy between the two implementations
-could cause a fork and or a chain halt. (Thank you @ripatel-fd for pointing this
-out and advocating for it)
+As multiple other clients are being developed, it is imperative that there can
+be bit-level reproducibility between the precompile implementations, especially
+with regard to cryptographic operations. Any discrepancy between implementations
+could cause a fork and or a chain halt.
 
 As such we would propose the following:
 
