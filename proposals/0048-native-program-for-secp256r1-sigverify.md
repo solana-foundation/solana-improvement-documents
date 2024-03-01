@@ -10,6 +10,7 @@ type: Core
 status: Withdrawn
 created: 2023-05-14
 feature: (fill in with feature tracking issues once accepted)
+superseded-by: "0075"
 ---
 
 ## Summary
