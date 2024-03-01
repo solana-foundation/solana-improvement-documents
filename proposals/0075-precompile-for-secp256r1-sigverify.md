@@ -10,7 +10,7 @@ type: Core
 status: Draft
 created: 2024-02-27
 feature: (fill in with feature tracking issues once accepted)
-supersedes: SIMD-0048
+supersedes: "0048"
 ---
 
 ## Summary
