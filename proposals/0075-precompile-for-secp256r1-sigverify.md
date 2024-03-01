@@ -128,17 +128,7 @@ of applications exclusively making use of compressed points, it
 seems a reasonable consideration to save 32 bytes of instruction
 data with a protocol that only accepts compressed points.
 
-**Note:** When it comes to public key encoding, the existing
-precompile for `secp256k1` utilizes a vastly different standard,
-accepting a 20 octet Ethereum address and recovery id to recover an
-SEC1 encoded uncompressed point. This is due to the primary aim of the
-program not being to verify ECDSA signatures but to provide parity with
-`ecrecover` on EVM. Conversely, the `ed25519` program, which is
-primarily concerned with verifying ed25519 signatures, utilises the most
-common ed25519 convention of encoding x_p as a single 32 octet string.
-As the goals of the `secp256r1` program are more analogous to those of the
-`ed25519` program, we propose the SEC1 compressed point encoding to conform
-to the most widely-used standard in common ECDSA applications.
+
 
 ### ECDSA / Signature Verification
 
