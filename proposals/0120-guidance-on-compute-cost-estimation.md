@@ -3,8 +3,8 @@ simd: '0120'
 title: Guidance on compute cost estimation
 authors:
   - Tao Zhu (Anza)
-category: Standard/Meta
-type: Core/Networking/Interface/Meta
+category: Standard
+type: Core
 status: Draft
 created: 2024-02-29
 feature: (fill in with feature tracking issues once accepted)
@@ -15,7 +15,7 @@ extends: (optional - fill this in if the SIMD extends the design of a previous
 
 ## Summary
 
-Recommands procedure to measure then estimate compute cost for programs.
+Recommends procedure to measure then estimate compute cost for programs.
 
 ## Motivation
 
