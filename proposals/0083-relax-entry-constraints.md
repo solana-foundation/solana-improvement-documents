@@ -43,6 +43,8 @@ Conflicting transactions are defined as transactions that either:
 2. one transaction requires a write-lock, and the other requires a read-lock on
    the same account.
 
+Tick entries are defined as entries that contain no transactions.
+
 ## Detailed Design
 
 Currently, if a transaction entry within a block contains transactions that
@@ -69,9 +71,12 @@ If the proposal is accepted, the individual entry constraints are as follows:
    ```
 
    where `Hash` and `VersionedTransaction` are defined in `solana-sdk`.
-2. An entry without any transactions is only valid if `num_hashes` matches the
+2. Tick entries are valid only if the sum of `num_hashes` in all entries,
+   including the tick entry itself, since the previous tick entry match the
    `hashes_per_tick` field of the `Bank`. This value is subject to change with
-   feature-gates, but is currently 12500.
+   feature gates, but is currently 12500. This means if a tick entry's
+   `num_hashes` field exceeds the `hashes_per_tick` field of the `Bank`, the
+   entry is invalid.
 
 If any of these constraints are violated, the entire block is invalid.
 
