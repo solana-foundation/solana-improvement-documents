@@ -234,25 +234,28 @@ See each step explained in details below.
    would be `67% - 5% - (100-90)% = 52%`.
 
    2. Sort all blocks passing the calculated threshold, and verify that they
-   form a single chain. If any block doesn't satisfy the following contraints:
-      1. Its stake is no greater than the stake of its parent block.
-      2. If it's the first block in the list, its parent block is the current
-         root. Otherwise its parent block is the block immediately ahead of it
-         in the list.
+   form a single chain. If it's the first block in the list, its parent block
+   should be the local root. Otherwise its parent block should be the one
+   immediately ahead of it in the list.
 
-   If any block does not satisfy any of the constraints, print the first
-   offending block and exit.
+   If any block does not satisfy above constraint, print the first offending
+   block and exit.
 
    3. If the list is empty, then output local root as the HeaviestFork.
    Otherwise output the last block in the list as the HeavistFork.
 
-   To see why the above algorithm is safe, assuming one block X is
-   optimistically confirmed before the restart, it would have `67%` stake,
-   discounting `5%` malicious and people not participating in wen_restart, it
-   should have at least `67% - 5% - stake_on_validators_not_in_restart` stake,
-   so it should pass the threshold and be in the list.
+   To see why the above algorithm is safe, we will prove that:
 
-   Also, any block in the list should only have at most one child in the list.
+   1. Any block optimistically confirmed before the restart will always be
+   on the list:
+
+   Assume block X is one such block, it would have `67%` stake, discounting
+   `5%` non-conforming and people not participating in wen_restart, it should
+   have at least `67% - 5% - stake_on_validators_not_in_restart` stake, so it
+   should pass the threshold and be in the list.
+
+   2. Any block in the list should only have at most one child in the list:
+
    Let's use `X` to denote `stake_on_validators_not_in_restart` for brevity.
    Assuming a block has child `A` and `B` both on the list, the children's
    combined stake would be `2 * (67% - 5% - X)`. Because we only allow one
@@ -262,6 +265,21 @@ See each step explained in details below.
    then `X > 39%`, this is not possible when we have at least 80% of the
    validators in restart. So we prove any block in the list can have at most
    one child in the list by contradiction.
+
+   3. If a block not optimistically confirmed before the restart is on the
+   list, it can only be at the end of the list and none of its siblings are
+   on the list.
+
+   Let's say block Y is the first not optimistically confirmed block on the
+   list, its parent Z is confirmed and on the list. We know from above point
+   that Z can only have 1 child on the list, therefore Y must be at the end
+   of the list while its siblings are not on the list.
+
+   Even if the last block A on the list may not be optimistically confirmed,
+   it already has at least `42% - 5% = 37%` stake, with no competing sibling
+   B getting more than `42%` stake. This is equal to the case where `5%` stake
+   jumped ship from fork B to fork A, 80% of the cluster can switch to fork B
+   if that turns out to be the heavist fork.
 
    After deciding heaviest block, gossip
    `RestartHeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X
