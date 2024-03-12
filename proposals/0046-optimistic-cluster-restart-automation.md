@@ -249,7 +249,7 @@ See each step explained in details below.
    1. Any block optimistically confirmed before the restart will always be
    on the list:
 
-   Assume block X is one such block, it would have `67%` stake, discounting
+   Assume block A is one such block, it would have `67%` stake, discounting
    `5%` non-conforming and people not participating in wen_restart, it should
    have at least `67% - 5% - stake_on_validators_not_in_restart` stake, so it
    should pass the threshold and be in the list.
@@ -270,15 +270,15 @@ See each step explained in details below.
    list, it can only be at the end of the list and none of its siblings are
    on the list.
 
-   Let's say block Y is the first not optimistically confirmed block on the
-   list, its parent Z is confirmed and on the list. We know from above point
-   that Z can only have 1 child on the list, therefore Y must be at the end
+   Let's say block D is the first not optimistically confirmed block on the
+   list, its parent E is confirmed and on the list. We know from above point
+   that E can only have 1 child on the list, therefore D must be at the end
    of the list while its siblings are not on the list.
 
-   Even if the last block A on the list may not be optimistically confirmed,
+   Even if the last block D on the list may not be optimistically confirmed,
    it already has at least `42% - 5% = 37%` stake, with no competing sibling
-   B getting more than `42%` stake. This is equal to the case where `5%` stake
-   jumped ship from fork B to fork A, 80% of the cluster can switch to fork B
+   E getting more than `42%` stake. This is equal to the case where `5%` stake
+   jumped ship from fork E to fork D, 80% of the cluster can switch to fork E
    if that turns out to be the heavist fork.
 
    After deciding heaviest block, gossip
