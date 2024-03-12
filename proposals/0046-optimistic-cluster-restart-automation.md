@@ -223,49 +223,45 @@ See each step explained in details below.
 
    After receiving `RestartLastVotedForkSlots` from the validators holding
    stake more than `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have"
-   category, replay all blocks and pick the heaviest fork by traversing from
-   local root like this:
+   category, replay all blocks and pick the heaviest fork like this:
 
-   1. If a block has more than 67% stake in `RestartLastVotedForkSlots`
-   messages, traverse down this block. Note that votes for children do count
-   towards the parent. So being a parent on the chosen fork means the parent
-   will not be rolled back either.
+   1. Calculate the threshold for a block to be on the heaviest fork, the
+   heaviest fork should have all blocks with possibility to be optimistically
+   confirmed. The number is `67% - 5% - stake_on_validators_not_in_restart`.
 
-   2. Define the "must have" threshold to be 62%. If traversing to a block with
-   more than one child, we check for each child
-   `vote_on_child + stake_on_validators_not_in_restart >= 62%`. If so, traverse
-   to the child.
+   For example, if 80% validators are in restart, the number would be
+   `67% - 5% - (100-80)% = 42%`. If 90% validators are in restart, the number
+   would be `67% - 5% - (100-90)% = 52%`.
 
-   For example, if 80% validators are in restart, child has 42% votes, then
-   42 + (100-80) = 62%, traverse to this child. 62% is chosen instead of 67%
-   because 5% could make the wrong votes.
+   2. Sort all blocks passing the calculated threshold, and verify that they
+   form a single chain. If any block doesn't satisfy the following contraints:
+      1. Its stake is no greater than the stake of its parent block.
+      2. If it's the first block in the list, its parent block is the current
+         root. Otherwise its parent block is the block immediately ahead of it
+         in the list.
 
-   Otherwise stop traversing the tree and use last visited block.
+   If any block does not satisfy any of the constraints, print the first
+   offending block and exit.
+
+   3. If the list is empty, then output local root as the HeaviestFork.
+   Otherwise output the last block in the list as the HeavistFork.
 
    To see why the above algorithm is safe, assuming one block X is
-   optimistically confirmed before the restart, we prove that it will always be
-   either the block picked or the ancestor of the block picked.
+   optimistically confirmed before the restart, it would have `67%` stake,
+   discounting `5%` malicious and people not participating in wen_restart, it
+   should have at least `67% - 5% - stake_on_validators_not_in_restart` stake,
+   so it should pass the threshold and be in the list.
 
-   Assume X is not picked, then:
-
-   1. If its parent Y is on the Heaviest fork, then either a sibling of X is
-   chosen or no child of Y is chosen. In either case
-   vote_on_X + stake_on_validators_not_in_restart < 62%, otherwise X would be
-   picked. This contradicts with the fact X got 67% votes before the restart,
-   because vote_on_X should have been greater than
-   67% - 5% (non-conforming) - stake_on_validators_not_in_restart.
-
-   2. If its parent Y is also not on the Heaviest fork, all ancestors of X
-   should have > 67% of the votes before restart. We should be able to find
-   the last ancestor of X on the Heaviest fork, then contradiction in previous
-   paragraph applies.
-
-   In some cases, we might pick a child with less than 67% votes before the
-   restart. Say a block X has child A with 43% votes and child B with 42%
-   votes, child A will be picked as the restart slot. Note that block X which
-   has more than 43% + 42% = 85% votes is the ancestor of the picked restart
-   slot, so the constraint that optimistically confirmed block never gets
-   rolled back is satisfied.
+   Also, any block in the list should only have at most one child in the list.
+   Let's use `X` to denote `stake_on_validators_not_in_restart` for brevity.
+   Assuming a block has child `A` and `B` both on the list, the children's
+   combined stake would be `2 * (67% - 5% - X)`. Because we only allow one
+   RestartHeaviestFork per pubkey, even if the any validator can put both
+   children in its RestartHeaviestFork, the children's total stake should be
+   less than `100% - 5% - X`. We can caculate that if `134% - 2 * X < 95% - X`,
+   then `X > 39%`, this is not possible when we have at least 80% of the
+   validators in restart. So we prove any block in the list can have at most
+   one child in the list by contradiction.
 
    After deciding heaviest block, gossip
    `RestartHeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X
