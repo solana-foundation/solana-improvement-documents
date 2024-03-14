@@ -47,12 +47,9 @@ beneficial.
   [SIMD 0089](https://github.com/solana-foundation/solana-improvement-documents/pull/89)
   that will own all feature accounts.
 - **Staged Features PDA:** The PDA under the Feature Gate program used to track
-  features submitted for activation for a particular epoch.
+  features submitted for activation.
 - **Support Signal PDA:** The PDA under the Feature Gate program used to store
   a bit mask of the staged features a node supports.
-- **Feature Tombstone:** A static address with no on-chain account for assigning
-  accounts under, effectively "archiving" them and removing them from the
-  Feature Gate program's owned accounts.
 
 ## Detailed Design
 
@@ -61,20 +58,20 @@ The new process is comprised of the following steps:
 1. **Feature Creation:** Contributors create feature accounts as they do now.
 2. **Staging Features for Activation:** In some epoch N, a multi-signature
    authority stages for activation some or all of the features created in step
-   1.
+   1, to be activated at the end of the *next epoch*.
 3. **Signaling Support for Staged Features:** During the next epoch (epoch N+1),
    validators signal which of the staged feature-gates they support in their
    software.
-4. **Activation and Garbage Collection:** At the end of epoch N+1, the runtime
-   activates the feature-gates that have the necessary stake support. At the
-   same time, the runtime also archives activated feature accounts and PDAs no
-   longer required by the process.
+4. **Feature Activation:** At the end of epoch N+1, the runtime activates the
+   feature-gates that have the required stake support.
 
 ### Step 1: Feature Creation
 
 The first step is creation of a feature account, done by submitting a
 transaction containing System instructions to fund, allocate, and assign the
 feature account to `Feature111111111111111111111111111111111111`.
+
+This step is unchanged from its original procedure.
 
 ### Step 2: Staging Features for Activation
 
@@ -92,20 +89,26 @@ expects:
   - Staged Features PDA: writable
   - Multi-signature authority: signer 
 
+One single PDA will be used to store two lists of features:
+
+- The list of features being considered for activation at the end of the
+  *current epoch*.
+- The list of features newly staged for activation, to be considered for
+  activation in the *next epoch*.
+
+Each list will be prefixed by the `u64` value of its corresponding epoch,
+and each list will have a maximum length of 8 (ie. `[Pubkey; 8]`).
+
 `StageFeatureForActivation` will add the provided feature ID to the **next
-epoch's** Staged Features PDA.
+epoch's** set of staged features.
 
-The Staged Features PDA for a given epoch stores a list of all feature IDs that
-were staged for activation during the previous epoch. This list shall have a
-maximum length of 8 (ie. `[Pubkey; 8]`).
+An example of how this account's state might work to coordinate both lists can
+be found here:
 
-The proposed seeds for deriving the Staged Features PDA are provided below,
-where the `<epoch>` is the epoch during which the contained feature IDs will be
-assessed for stake support and considered for activation.
+<https://github.com/buffalojoec/feature-gate-data-poc/blob/master/src/lib.rs>
 
-```
-"staged_features" + <epoch>
-```
+The Staged Features PDA could be derived simply from one literal seed:
+`"staged_features"`.
 
 ### Step 3: Signaling Support for Staged Features
 
@@ -142,7 +145,7 @@ nodes may still signal support for this feature. However, the runtime will not
 activate this feature if its corresponding feature account no longer exists
 on-chain.
 
-### Step 4: Activation and Garbage Collection
+### Step 4: Feature Activation
 
 During the epoch rollover, the runtime uses the validator support signals to
 determine which staged features to activate.
@@ -160,10 +163,8 @@ If a feature is not activated, either because it has been revoked or it did not
 meet the required stake support, it must be resubmitted according to Step 2.
 
 To ensure this new process doesn't overload the Feature Gate program's owned
-accounts, during the activation stage, garbage collection will:
-
-- Archive any activated feature accounts
-- Archive this epoch's Staged Features PDA
+accounts, during the activation stage, garbage collection will archive any
+activated feature accounts.
 
 The runtime "archives" an account by assigning it to the Feature Tombstone.
 
