@@ -19,6 +19,10 @@ based on a stake-weighted support threshold, rather than manual human action.
 With this new process, contributors no longer have to assess stake support for a
 feature before activation. Instead, the assessment is done by the runtime.
 
+> Note: This SIMD is subject to change based on the results of the SIMD to
+> introduce the Validator Epoch Stake Syscall, as defined below, to which a link
+> will be provided in this proposal when available.
+
 ## Motivation
 
 Feature gates wrap new cluster functionality, and typically change the rules of
@@ -48,8 +52,8 @@ beneficial.
   that will own all feature accounts.
 - **Staged Features PDA:** The PDA under the Feature Gate program used to track
   features submitted for activation.
-- **Support Signal PDA:** The PDA under the Feature Gate program used to store
-  a bit mask of the staged features a node supports.
+- **Validator Epoch Stake Syscall:** The new syscall that returns the current
+  epoch stake for a given vote account address.
 
 ## Detailed Design
 
@@ -89,15 +93,17 @@ expects:
   - Staged Features PDA: writable
   - Multi-signature authority: signer 
 
-One single PDA will be used to store two lists of features:
+One single PDA will be used to store two lists of features. Its data will be
+structured as follows:
 
-- The list of features being considered for activation at the end of the
-  *current epoch*.
-- The list of features newly staged for activation, to be considered for
-  activation in the *next epoch*.
-
-Each list will be prefixed by the `u64` value of its corresponding epoch,
-and each list will have a maximum length of 8 (ie. `[Pubkey; 8]`).
+- 8 bytes for the current epoch.
+- A fixed-size list of size 8 containing 32-byte feature IDs staged for
+  activation at the end of the *current epoch*.
+- A fixed-size list of size 8 containing the `u64` value of total stake support
+  for each feature ID in the prior list.
+- 8 bytes for the next epoch.
+- A fixed-size list of size 8 containing 32-byte feature IDs staged for
+  activation at the end of the *next epoch*.
 
 `StageFeatureForActivation` will add the provided feature ID to the **next
 epoch's** set of staged features.
@@ -122,19 +128,16 @@ expects:
 
 - Data: A `u8` bit mask of the staged features.
 - Accounts:
-  - Support Signal PDA: writable
+  - Staged Features PDA: writable
   - Vote account: signer
 
 A `1` bit represents support for a feature. For example, for staged features
 `[A, B, C, D, E, F, G, H]`, if a node wishes to signal support for all features
 except `E` and `H`, their `u8` value would be 246, or `11110110`.
 
-A node's submitted bit mask is then stored in a Support Signal PDA derived from
-that node's vote address. The proposed seeds are defined below.
-
-```
-"support_signal" + <vote_address>
-```
+A node's submitted bit mask is then used to add that node's current epoch stake
+to the Staged Features PDA for each feature for which it has signaled support.
+This is done by using the Validator Epoch Stake Syscall.
 
 Nodes should send a transaction containing this instruction at some arbitrary
 point during the epoch at least 128 slots before the end of the epoch and on
@@ -147,13 +150,9 @@ on-chain.
 
 ### Step 4: Feature Activation
 
-During the epoch rollover, the runtime uses the validator support signals to
-determine which staged features to activate.
-
-To do this, the runtime walks all of the vote accounts, derives their Support
-Signal PDA to read their bit mask, and tallies up the total stake support for
-each staged feature. The runtime will also zero-out each bit mask, resetting
-each Support Signal PDA for the next epoch.
+During the epoch rollover, the runtime can simply load the Staged Features PDA
+and calculate the stake - as a percentage of the total epoch stake - in support
+for each feature ID to determine which staged features to activate.
 
 Only features whose stake support meets the required threshold are activated.
 This threshold shall be set to 95% initially, but future iterations on the
@@ -162,14 +161,10 @@ process could allow feature key-holders to set a custom threshold per-feature.
 If a feature is not activated, either because it has been revoked or it did not
 meet the required stake support, it must be resubmitted according to Step 2.
 
-To ensure this new process doesn't overload the Feature Gate program's owned
-accounts, during the activation stage, garbage collection will archive any
-activated feature accounts.
-
-The runtime "archives" an account by assigning it to the Feature Tombstone.
-
-Created features that were not staged for activation or did not meet the
-required stake support will not be garbage collected.
+Once the epoch rollover is complete, as soon as the Feature Gate program is
+invoked again - either via `StageFeatureForActivation` or
+`SignalSupportForStagedFeature` - the Staged Features PDA's account state is
+updated and the process begins again.
 
 ## Alternatives Considered
 
