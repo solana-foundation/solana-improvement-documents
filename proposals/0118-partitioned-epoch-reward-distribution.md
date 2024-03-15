@@ -153,23 +153,30 @@ Prefixes indidate the offset of each field, and padding bytes are always zero.
 #[repr(C)] // C representation, 8-byte alignment
 struct EpochRewards{
    // whether the rewards period (calculation and distribution) is active
-   /* 0x00 */ active: bool, // byte. false: 0x00, true: 0x01
+   // byte. false: 0x00, true: 0x01
+   /* 0x00 */ active: bool,
 
-   /* 0x08 */ distribution_starting_block_height: u64, // little-endian unsigned 64-bit integer
+   // little-endian unsigned 64-bit integer
+   /* 0x08 */ distribution_starting_block_height: u64,
    
-   /* 0x10 */ num_partitions: u64, // little-endian unsigned 64-bit integer
+   // little-endian unsigned 64-bit integer
+   /* 0x10 */ num_partitions: u64,
    
-   /* 0x18 */ parent_blockhash: Hash, // byte-array of length 32
+   // byte-array of length 32
+   /* 0x18 */ parent_blockhash: Hash,
 
    // total points calculated for the current epoch, where points equals the sum
    // of delegated stake * credits observed for all delegations
-   /* 0x38 */ total_points: u128, // little-endian unsigned 128-bit integer
+   // little-endian unsigned 128-bit integer
+   /* 0x38 */ total_points: u128, 
 
    // total rewards for the current epoch, in lamports
-   /* 0x48 */ total_rewards: u64, // little-endian unsigned 64-bit integer
+   // little-endian unsigned 64-bit integer
+   /* 0x48 */ total_rewards: u64,
 
    // distributed rewards for the current epoch, in lamports
-   /* 0x50 */ distributed_rewards: u64, // little-endian unsigned 64-bit integer
+   // little-endian unsigned 64-bit integer
+   /* 0x50 */ distributed_rewards: u64, 
 }
 ```
 
