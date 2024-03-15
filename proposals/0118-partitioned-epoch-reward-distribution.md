@@ -136,7 +136,8 @@ I = (M * stake_address_hash) / 2^64
 
 The reward distribution phase happens after the reward computation phase, ie.
 during the second block in the epoch as per the current design. It lasts for `M`
-blocks (see previous section).
+blocks (see previous section). Rewards distribution for each block occurs before
+transaction processing occurs.
 
 #### `EpochRewards` Sysvar Account
 
@@ -184,9 +185,10 @@ The `EpochRewards` sysvar is repopulated at the start of the first block of the
 epoch (before any transactions are processed), as both the total epoch rewards
 and vote account rewards become available at this time. The
 `distributed_rewards` field is updated per reward distribution for each block in
-the reward distribution phase. The `active` field is set to false after the last
-partition is distributed (and `total_rewards == distributed_rewards`), ie.
-before processing transactions in block at height `X + M`.
+the reward distribution phase (before transaction processing). The `active`
+field is set to false after the last partition is distributed (and
+`total_rewards == distributed_rewards`), ie. before processing transactions in
+block at height `X + M`.
 
 #### Booting from Snapshot
 
