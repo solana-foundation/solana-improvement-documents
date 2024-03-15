@@ -147,7 +147,7 @@ include: the parameters needed to recalculate the reward partitions, the total
 rewards to be distributed, and the amount of rewards distributed so far.
 
 The layout of `EpochRewards` sysvar is shown in the following pseudo code.
-Prefixes indidate the offset of each field, and padding bytes are always zero.
+Prefixes indicate the offset of each field, and padding bytes are always zero.
 
 ```
 #[repr(C)] // C representation, 8-byte alignment
