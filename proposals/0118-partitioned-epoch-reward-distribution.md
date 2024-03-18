@@ -208,15 +208,18 @@ current block height can be discarded.
 
 ### Restrict Stake Account Mutation
 
-The stake accounts need to be preserved in credit-only state while distributions
-are in progress in order to prevent any changes interfering with reward
-distribution.
+In order to ensure partition recalculations will be the same across the
+distribution period, the number and addresses of stake accounts, as well as
+stake-delegation amounts, must remain unchanged. There are existing use-cases
+for crediting stake accounts at epoch boundaries; so as to not disrupt these
+credits, but otherwise take the most conservative approach, account credits will
+be the only stake-account changes permitted during distribution.
 
-Therefore, the Stake Program needs access to a syscall which reports whether the
-distribution phase is active. This new syscall `sol_get_epoch_rewards_sysvar`
-should return the values of the `EpochRewards` sysvar. All Stake Program
-instructions that mutate stake data or debit stake balances must be disabled
-when `EpochRewards::active` is true.
+To limit permissible actions, the Stake Program needs access to a syscall which
+reports whether the distribution phase is active. This new syscall
+`sol_get_epoch_rewards_sysvar` should return the values of the `EpochRewards`
+sysvar. All Stake Program instructions that mutate stake data or debit stake
+balances must be disabled when `EpochRewards::active` is true.
 
 Any transaction that attempts to invoke such an instruction will fail with this
 new error code:
