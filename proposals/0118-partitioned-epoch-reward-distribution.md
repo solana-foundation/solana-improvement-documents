@@ -151,33 +151,33 @@ The layout of `EpochRewards` sysvar is shown in the following pseudo code.
 Prefixes indicate the offset of each field, and padding bytes are always zero.
 
 ```
-#[repr(C)] // C representation, 8-byte alignment
+#[repr(C, align(16))] // C representation, 16-byte alignment
 struct EpochRewards{
-   // whether the rewards period (calculation and distribution) is active
-   // byte. false: 0x00, true: 0x01
-   /* 0x00 */ active: bool,
-
    // little-endian unsigned 64-bit integer
-   /* 0x08 */ distribution_starting_block_height: u64,
+   /* 0x00 */ distribution_starting_block_height: u64,
    
    // little-endian unsigned 64-bit integer
-   /* 0x10 */ num_partitions: u64,
+   /* 0x08 */ num_partitions: u64,
    
    // byte-array of length 32
-   /* 0x18 */ parent_blockhash: Hash,
+   /* 0x10 */ parent_blockhash: Hash,
 
    // total points calculated for the current epoch, where points equals the sum
    // of delegated stake * credits observed for all delegations
    // little-endian unsigned 128-bit integer
-   /* 0x38 */ total_points: u128, 
+   /* 0x30 */ total_points: u128, 
 
    // total rewards for the current epoch, in lamports
    // little-endian unsigned 64-bit integer
-   /* 0x48 */ total_rewards: u64,
+   /* 0x40 */ total_rewards: u64,
 
    // distributed rewards for the current epoch, in lamports
    // little-endian unsigned 64-bit integer
-   /* 0x50 */ distributed_rewards: u64, 
+   /* 0x48 */ distributed_rewards: u64, 
+
+   // whether the rewards period (calculation and distribution) is active
+   // byte. false: 0x00, true: 0x01
+   /* 0x50 */ active: bool,
 }
 ```
 
