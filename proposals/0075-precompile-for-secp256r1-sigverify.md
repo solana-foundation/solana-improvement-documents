@@ -21,6 +21,11 @@ signatures that already exists in form of the
 `KeccakSecp256k11111111111111111111111111111` and
 `Ed25519SigVerify111111111111111111111111111` precompiles.
 
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and
+"OPTIONAL" in this document are to be interpreted as described in
+RFC 2119.
+
 ## Motivation
 
 Solana has the opportunity to leverage the secure element of users' existing
@@ -102,6 +107,106 @@ The precompile's purpose is to verify signatures using ECDSA-256.
 (denoted in [RFC6460](https://www.ietf.org/rfc/rfc6460.txt) as
 ECDSA using the NIST P-256 curve and the SHA-256 hashing algorithm)
 
+Apart from the RFC mandated implementation the precompile must additionally take
+an opinionated stance on signature malleability.
+
+### Signature Malleability
+
+Due to X axis symmetry along the elliptic curve, for any ECDSA signature
+`(r, s)`, there also exists a valid signature `(r, n - s)`, where `n` is the
+order of the curve. This introduces "s malleability", allowing an attacker
+to produce an alternative version of `s` without invalidating the signature.
+
+The pitfalls of this in authentication systems can be particularly perilous,
+opening up certain implementations to signature replay attacks over the same
+message by simply flipping the `s` value over the curve.
+
+As the primary goal of the `secp256r1` program is secure signature validation
+for authentication purposes, the precompile must mitigate these attacks
+by enforcing the usage of `lowS` values, in which `s <= n/2`.
+
+As such, the program must immediately fail upon the detection of any
+signature that includes a `highS` value. This prevents any accidental
+succeptibility to signature malleability attacks.
+
+Note: The existing `secp256k1` precompile makes no attempt attempt to mitigate
+s malleability, as doing so would go against its primary goal of achieving
+`ecrecover` parity with EVM.
+
+### Implementation
+
+### Program
+
+ID: `Secp256r1SigVerify1111111111111111111111111`
+
+The program instruction must be composed of the following struct:
+
+In Pseudocode:
+
+```
+struct Secp256r1SigVerifyInstruction {
+    count: uint8 LE,                          // Number of signatures to check
+    padding: uint8 LE,                        // Single byte of padding
+    signatureOffsets: Array<Secp256r1SignatureOffsets>, // Array of signature offset structs
+}
+
+struct Secp256r1SignatureOffsets {
+    signature_offset: uint16 LE,              // Offset to secp256r1 signature of 64 bytes
+    signature_instruction_index: uint8 LE,   // Instruction index to find signature
+    public_key_offset: uint16 LE,             // Offset to compressed public key
+    public_key_instruction_index: uint8 LE,  // Instruction index to find public key
+    message_data_offset: uint16 LE,           // Offset to start of message data
+    message_data_size: uint16 LE,             // Size of message data
+    message_instruction_index: uint8 LE,     // Index of instruction data to get message data
+}
+```
+
+Multiple signatures can be verified. If any of the signatures fail to verify,
+an error must be returned.
+
+Therfore the instruction processing logic must follow the pseudocode below:
+
+```
+instructions = transactionInsructions;
+for i in 0..count {
+    signature = instructions[signature_instruction_index].data[signature_offset..signature_offset+64]
+    if signature_S == highS {
+      return Error
+    }
+    publicKey = instructions[public_key_instruction_index].data[public_key_offset..public_key_offset+33]
+    message = instructions[message_instruction_index].data[message_data_offset..message_data_offset+message_data_size]
+    result = secp256verify(publicKey, message, signature)
+    if result != true {
+      return Error
+    }
+}
+return Success
+```
+
+Additonally the precompile's core `verify` function must be constructed in accordance with the
+structure outlined in
+[sdk/src/precompiles.rs](https://github.com/solana-labs/solana/blob/9ffbe2afd8ab5b972c4ad87d758866a3e1bb87fb/sdk/src/precompiles.rs).
+
+### Compute Cost / Efficiency
+
+Benchmarking and compute cost calculations must be done in accordance with [SIMD-0121](https://github.com/solana-foundation/solana-improvement-documents/pull/121)
+
+Additionally, comparisons to existing precompiles should be done to check for
+comperable efficiency.
+
+## Impact
+
+Would enable the on-chain usage of Passkeys and the WebAuthn Standard, and
+turn the vast majority of modern smartphones into native hardware wallets.
+
+By extension, this would also enable the creation of account abstractions and
+forms of Two-Factor Authentication around those keypairs.
+
+## Security Considerations
+
+The following security considerations must be made for
+implementation of ECDSA over NIST P-256.
+
 ### Curve
 
 The curve parameters for NIST P-256/secp256r1/prime256v1 are
@@ -110,7 +215,7 @@ document in Section 2.7.2
 
 ### Point Encoding/Decoding
 
-The precompile should accept SEC1 encoded points in compressed form.
+The precompile must accept SEC1 encoded points in compressed form.
 The encoding and decoding of these is outlined in sections
 `2.3.3 Elliptic-Curve-Point-to-Octet-String Conversion`
 and `2.3.4 Octet-String-to-Elliptic-Curve-Point Conversion`
@@ -128,11 +233,9 @@ of applications exclusively making use of compressed points, it
 seems a reasonable consideration to save 32 bytes of instruction
 data with a protocol that only accepts compressed points.
 
-
-
 ### ECDSA / Signature Verification
 
-The precompile should implement the `Verifying Operation` outlined in
+The precompile must implement the `Verifying Operation` outlined in
 [SEC1](https://www.secg.org/sec1-v2.pdf#page=52)
 in Section 4.1.4 as well as in the
 [Digital Signature Standard (DSS)](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf#page=36)
@@ -145,158 +248,7 @@ in Section A.2.5 as well as at the
 [NIST CAVP](https://csrc.nist.gov/Projects/cryptographic-algorithm-validation-program/digital-signatures#ecdsa2vs)
 (Cryptographic Algorithm Validation Program)
 
-### Signature Malleability
-
-Due to X axis symmetry along the elliptic curve, for any ECDSA signature
-`(r, s)`, there also exists a valid signature `(r, n - s)`, where `n` is the
-order of the curve. This introduces "s malleability", allowing an attacker
-to produce an alternative version of `s` without invalidating the signature.
-
-The pitfalls of this in authentication systems can be particularly perilous,
-opening up certain implementations to signature replay attacks over the same
-message by simply flipping the `s` value over the curve.
-
-As the primary goal of the `secp256r1` program is secure signature validation
-for authentication purposes, the precompile should mitigate these attacks
-by enforcing the usage of `lowS` values, in which `s <= n/2`.
-
-As such, the program should immediately fail upon the detection of any
-signature that includes a `highS` value. This prevents any accidental
-succeptibility to signature malleability attacks.
-
-Note: The existing `secp256k1` precompile makes no attempt attempt to mitigate
-s malleability, as doing so would go against its primary goal of achieving
-`ecrecover` parity with EVM.
-
-### Program
-
-ID: `Secp256r1SigVerify1111111111111111111111111`
-
-The program instruction will be composed of the following:
-
-- A first u8 as the count for the number of signatures to check
-- Single byte of padding
-- The following struct serialized, for each signature to verify
-
-```rust
-struct Secp256r1SignatureOffsets {
-    signature_offset: u16,             // offset to secp256r1 signature of 64 bytes
-    signature_instruction_index: u16,  // instruction index to find signature
-    public_key_offset: u16,            // offset to compressed public key of 33 bytes
-    public_key_instruction_index: u16, // instruction index to find public key
-    message_data_offset: u16,          // offset to start of message data
-    message_data_size: u16,            // size of message data
-    message_instruction_index: u16,    // index of instruction data to get msg data
-}
-```
-
-Multiple signatures can be verified. If any of the signatures fail to verify,
-an error is returned.
-
-The program logic will be constructed and built using a `verify`
-function, as outlined in
-[sdk/src/precompiles.rs](https://github.com/solana-labs/solana/blob/9ffbe2afd8ab5b972c4ad87d758866a3e1bb87fb/sdk/src/precompiles.rs).
-
-Apart from the signature verification, the remaining
-logic should be constructed analogously to the existing
-[ed25519](https://github.com/solana-labs/solana/blob/master/sdk/src/ed25519_instruction.rs)
-& [secp256k1](https://github.com/solana-labs/solana/blob/9ffbe2afd8ab5b972c4ad87d758866a3e1bb87fb/sdk/src/secp256k1_instruction.rs#L4)
-precompiles.
-
-### Implementation
-
-#### Previous Consideration in SIMD-0048
-
-The precompile could be implemented using
-the `p256` crate at version `0.10.1`. This crate is part of the `Rust Crypto`
-library and implements the NIST P-256 curve as well as ECDSA in native Rust.
-It conforms with the test vectors found in
-[RFC6979](https://datatracker.ietf.org/doc/html/rfc6979#appendix-A.2.5).
-
-#### SIMD-0075 Update
-
-Due to the unaudited and somewhat unknown nature of the `p256` crate and
-the strict security and reproducibility considerations required to enable
-compatibility with other clients, we propose to implement the precompile utilizing
-the `OpenSSL` [crate](https://crates.io/crates/openssl/0.10.57).
-The `OpenSSL` crate is already a dependency in the Anza client and has
-additionally been heavily scrutinized/tested by the broader public.
-
-Our benchmarks also show that verifying a signature using the `OpenSSL` crate is
-~3x faster than using the `p256` crate.
-
-Signature verification using the OpenSSL crate includes the following steps:
-
-1. Getting the curve order using the Nid::X9_62_PRIME256V1 identifier:
-
-   ```rust
-   let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)
-   ```
-
-2. Ensuring the `r` & `s` signature components fall within `curve_order - 1`
-3. Recreating the signature using the `r` & `s` signature components:
-
-   ```rust
-   let ecdsa_sig = openssl::ecdsa::EcdsaSig::from_private_components(r_bignum, s_bignum)
-
-   let der_sig = ecdsa_sig.to_der()
-   ```
-
-4. Computing the `half_order`of the curve and ensuring that `s < half_order`
-   (LowS Check)
-5. Parsing the public key bytes:
-
-   ```rust
-   let ec_point = EcPoint::from_bytes(&group, pubkey, &mut ctx)
-
-   let ec_key = EcKey::from_public_key(&group, &ec_point)
-
-   let pkey = PKey::from_ec_key(ec_key)
-   ```
-
-6. Creating a verfier from the public key and the OpenSSL SHA-256 hashing idendifier:
-
-   ```rust
-   Verifier::new(openssl::hash::MessageDigest::sha256(), &pkey)
-   ```
-
-7. Passing the message bytes to the verifier:
-
-   ```rust
-   verifier.update(message)
-   ```
-
-8. Verify signature across the message:
-
-   ```rust
-   verifier.verify(&der_sig)
-   ```
-
-### Compute Cost / Efficiency
-
-Once the implementation is finished, benchmarking should take place on a
-sufficiently powerful machine in order to determine average compute time per
-signature. Calculation of CUs would be based on the 1 CU / ns convention.
-The secp256k1 ecrecover syscall, which incurs a cost of 25_000 CUs, can be used
-as a reference point.
-
-Since precompiles don't incur a flat compute cost like syscalls, this comparison
-will just serve as a confirmation that the computation inside the precompile is
-sufficiently efficient.
-
-This is in line with how previous precompiles for EC group operations and
-arithmetic were evaluated/benchmarked.
-See [PR#27961](https://github.com/solana-labs/solana/pull/27961) & [PR#28503](https://github.com/solana-labs/solana/pull/28503)
-
-## Impact
-
-Would enable the on-chain usage of Passkeys and the WebAuthn Standard, and
-turn the vast majority of modern smartphones into native hardware wallets.
-
-By extension, this would also enable the creation of account abstractions and
-forms of Two-Factor Authentication around those keypairs.
-
-## Security Considerations
+### General
 
 As multiple other clients are being developed, it is imperative that there can
 be bit-level reproducibility between the precompile implementations, especially
@@ -309,8 +261,8 @@ As such we would propose the following:
   as tests from the
   [Wycheproof Project](https://github.com/google/wycheproof#project-wycheproof)
 
-- Creating a map of what underlying OpenSSL calls get added to the runtime when
-  using the Rust bindings
+- Maintaining active communication with other clients to ensure parity and to 
+support potential changes if they arise.
 
 ## Backwards Compatibility
 
@@ -318,7 +270,3 @@ Transactions using the instruction could not be used on Solana versions which do
 implement this feature. A Feature gate should be used to enable this feature
 when the majority of the cluster is using the required version. Transactions
 that do not use this feature are not impacted.
-
-```
-
-```
