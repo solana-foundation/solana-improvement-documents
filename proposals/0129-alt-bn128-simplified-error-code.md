@@ -203,8 +203,9 @@ to `Ok(1)`, so low risk.
 
 ## Backwards Compatibility
 
-Two syscalls have not been enabled: `sol_alt_bn128_compression`, `sol_poseidon`.
-
 The syscall `sol_alt_bn128_group_op` is enabled in testnet, therefore we'll
 feature gate the change. Programs using this syscall may need to adapt to the
 simplified error code, but this isn't expected to be an issue in practice.
+
+For simplicity, we'll keep the change to all 3 syscalls under the same
+feature gate.
