@@ -1,8 +1,9 @@
 ---
 simd: '0127'
-title: sol_get_sysvar syscall
+title: Get-Sysvar Syscall
 authors:
-  - Richard Patel
+  - Richard Patel (Jump)
+  - Joe Caulfield (Anza)
 category: Standard
 type: Core
 status: Draft
@@ -11,170 +12,173 @@ created: 2024-03-15
 
 ## Summary
 
-SIMD-0127 introduces the syscall `sol_get_sysvar` which allows BPF programs
-to retrieve any sysvar.
+This proposal outlines a new syscall interface, specifically pertaining to
+sysvars, to retrieve dynamic ranges of sysvar data without fully copying the
+entire data structure. As a result, the existing sysvar interface will remain
+backwards compatible and could also support new methods for querying sysvar
+data.
 
-New invariants are placed on the sysvar cache to enable safe retrieval.
-
-Existing syscalls to retrieve sysvars are henceforth considered obsolete.
+With a unified syscall interface to handle retrieval of sysvar data, many
+existing syscalls will become obsolete, and the act of changing sysvar data
+layouts or adding new sysvars will involve much less overhead.
 
 ## Motivation
 
 Sysvars are special accounts that are implicitly modified by the runtime.
-Certain sysvars are essential for operation of the network.  For example, the
-system program reads the 'recent block hashes' sysvar to provide durable nonce
-functionality.
+Certain sysvars are essential for operation of the network, and many others are
+used by on-chain programs for a wide range of use cases.
 
-Currently, programs can read sysvars can using one of these three methods:
+The sysvar API should be completely consistent, available to all BPF programs,
+and capable of more easily handling changes in the future. The syscall API for
+sysvars should be designed to serve a wide range of requests on sysvar data
+without bloating the overall syscall interface.
 
-1. Via explicit account access by specifying the sysvar address in the list of
-   transaction accounts
-2. Via API calls to the sysvar cache (for native programs only)
-3. Via syscalls that copy the sysvar content to virtual machine memory
-   (for BPF programs only, does not work for all sysvars)
+### Consistent API
 
-Improvements to these APIs are motivated by the following reasons.
+Although it's true an on-chain program can access sysvar data by reading its
+account directly, many sysvars - such as `Clock` - can be accessed directly via
+syscalls, thereby not requiring an increase in transaction size to include the
+sysvar account key.
 
-### Allowing sysvar upgrades
+Furthermore, reducing the amount of account data mapped into virtual machine
+memory may also yield cost savings.
 
-The function signature of a `sol_get_{...}_sysvar` syscall is as follows:
+A consistent API should be present for accessing this data from on-chain
+programs.
 
-```c
-uint64_t sol_get_example_sysvar( void * dest_addr );
-```
+### Availability to BPF Programs
 
-When called, the syscall handler will copy the sysvar to the given memory
-location.  Notably, BPF programs do not inform the syscall handler of the
-expected size of the sysvar.  BPF programs thus effectively assume that the
-requested sysvars will forever have the same size.
+The proposed design herein would allow for access to previously unavailable
+sysvar data - such as `SlotHashes` and `StakeHistory`. Although retrieving the
+entire data structure may still be too heavy to copy into a BPF context,
+fragments of the data can be made accessible via calls like
+`SlotHashes::get_slot(slot)` and `StakeHistory::get_entry(epoch)`.
 
-This prevents future upgrades that shrink or extend sysvars.
+Additionally, as per [SIMD-0088](./0088-enable-core-bpf-programs.md), an effort
+is underway to reduce code complexity of the Solana runtime by porting native
+programs to Core BPF programs. These programs must be 100% backwards compatible,
+therefore requiring access to this sysvar data via syscalls and *not* via
+providing the account directly. Requiring the account would break the programs'
+ABIs.
 
-### Syscall API fragmentation
+### Reducing Syscall Bloat
 
-The following sysvars are currently accessible using syscalls:
+Currently, sysvar data layouts are very difficult to change. When called, the
+syscall handler will copy the entire sysvar to the given memory location.
 
-- `SysvarC1ock11111111111111111111111111111111` (via `sol_get_clock_sysvar`)
-- `SysvarEpochRewards1111111111111111111111111` (via `sol_get_epoch_rewards_sysvar`)
-- `SysvarEpochSchedu1e111111111111111111111111` (via `sol_get_epoch_schedule_sysvar`)
-- `SysvarFees111111111111111111111111111111111` (via `sol_get_fees_sysvar`)
-- `Sysvar1nstructions1111111111111111111111111` (indirectly via `sol_get_processed_sibling_instruction`)
-- `SysvarLastRestartS1ot1111111111111111111111` (via `sol_get_last_restart_slot`)
-- `SysvarRent111111111111111111111111111111111` (via `sol_get_rent_sysvar`)
+Notably, BPF programs do not inform the syscall handler of the expected size
+of the sysvar. BPF programs thus effectively assume that the requested sysvars
+will forever have the same size.
 
-BPF programs cannot access the following sysvars using syscalls.
+This prevents future upgrades that shrink or extend sysvars. In the same
+spirit, if a new sysvar is created, a new syscall must be created.
 
-- `SysvarRecentB1ockHashes11111111111111111111`
-- `SysvarRewards111111111111111111111111111111`
-- `SysvarS1otHashes111111111111111111111111111`
-- `SysvarS1otHistory11111111111111111111111111`
-- `SysvarStakeHistory1111111111111111111111111`
+Furthermore, if certain queries are requred by BPF programs - such as
+`SlotHashes::get_slot()` and `StakeHistory::get_entry()` - those single-element
+retrievals will *also* require new syscalls.
 
-Introducing a new syscall for every new sysvar results in bloat of the syscall
-interface.  The aforementioned function signature that most sysvar getters use
-is also inefficient for large accounts.  Copying the entire sysvar to VM memory
-might consume excessive compute units (e.g. 16392 bytes for 'stake history').
+It's worth noting that at the time of this writing, the work required for
+[SIMD-0088](./0088-enable-core-bpf-programs.md) will require at least five new
+syscalls if the existing design is not ratified.
 
-### Unblocking core BPF programs
-
-As per [SIMD-0088](./0088-enable-core-bpf-programs.md), an effort is underway
-to reduce code complexity of the Solana runtime by porting native programs to
-core BPF programs.
-
-These new programs target full compatibility with their predecessors to avoid
-introducing breaking API changes.  In some cases, native programs read a sysvar
-from the sysvar cache without requiring the user to include this sysvar in the
-transaction account list.  This happens in the stake program 'redelegate'
-instruction, for example.
-
-As a result, it is currently impossible to port certain native programs to core
-BPF programs.  Another factility to expose sysvars to the virtual machine is
-required.
-
-### Optimizing existing user programs
-
-Reading sysvars with the proposed syscall is expected to be more efficient than
-an explicit account access.  Removing explicit account accesses to sysvars will
-generally result in smaller transactions.  Reducing the amount of account data
-that is mapped into virtual machine memory may also yield cost savings.
+This tightly-coupled relationship between sysvars and syscalls will perpetually
+swell the syscall interface as changes are made, making maintainence and
+reimplementation difficult.
 
 ## Alternatives Considered
 
 Other mechanisms considered that provide sysvar data to BPF programs are as
 follows:
 
-### Sysvar-specific syscalls
+### Sysvar-Specific Syscalls
 
-TODO
+This approach would involve changing nothing. We'd continue on the same course,
+directly coupling new sysvar fetch functions to new syscalls.
 
-### New memory regions
+### New VM Memory Regions
 
-TODO
+A new memory region in the VM could be introduced to store sysvar data, which
+could then be made available to BPF programs through an interface around raw
+pointers, which loads the data similarly to the interface proposed herein.
+
+This approach would depend on direct mapping of host memory to VM memory,
+which has been in development for some time and requires further research
+and development to introduce safely to the VM ABI. This extensive R&D period
+would mean Core BPF program initiatives would remain blocked.
+
+Without direct mapping, sysvar data would be fully copied to this memory
+region each time a VM is created (currently one per transaction processed),
+causing a degradation in runtime performance and likely reducing compute
+by far less compared to the compute savings posed by this proposal.
 
 ## Detailed Design
 
-### Sysvar Cache
+By simply redefining the `get` API to accept `offset` and `length` parameters,
+one single `get` syscall can be used by all sysvars to retrieve data.
 
-TODO
-
-### Restrictions on sysvar data dependencies
-
-TODO
-
-### `sol_get_sysvar` syscalls
-
-TODO this is outdated
-
-```c
-/* sol_get_sysvar_size queries the serialized byte size of a sysvar.
-   It is equal to the length of the serialization of the sysvar value.
-   The sysvar value is taken in the sysvar cache.
-
-   sysvar_id points to the 32 byte address of the sysvar.
-
-   If a non-empty sysvar was found in the sysvar cache, returns the
-   byte size of that sysvar.
-
-   If the requested sysvar was not found, is corrupt, is
-   unsupported for the current feature set, or is zero size, returns 0.
-
-   This syscall aborts the transaction if (and only if):
-   - The compute budget was exhausted */
-
-uint64_t
-sol_get_sysvar_size( /* r1 */ void const * sysvar_id );
-
-/* sol_get_sysvar copies sysvar data to VM memory.
-
-   sysvar_id points to the 32 byte address of the sysvar.
-
-   A sysvar is valid if sol_get_sysvar_size(sysvar_id) returns non-zero.
-   If the sysvar is not valid, returns zero without writing to out.
-
-   The byte range [offset,offset+size) selects the range of data to be
-   copied. The sysvar data is the serialized value of the corresponding
-   sysvar cache entry.
-   The size of this sysvar data is returned by sol_get_sysvar_size.
-
-   Copies the sysvar data to [out,out+size) and returns 1 if the sysvar is valid.
-
-   This syscall aborts the transaction if:
-   - Range [out,out+size) is not writable
-   - The compute budget was exhausted */
-
-int
-sol_get_sysvar(
-  /* r1 */ void const * sysvar_id,
-  /* r2 */ uint8_t *    out,
-  /* r3 */ uint64_t     offset,
-  /* r4 */ uint64_t     size
-);
+```rust
+fn get(offset: usize, length: usize) -> &[u8];
 ```
+
+The specifics of returning optional values or errors can be left up to the
+implementation, but the following cases would be handled with errors:
+
+- The sysvar data is unavailable.
+- The sysavr data is corrupt.
+- The provided offset or length would be out of bounds on the sysvar data.
+
+Sysvars themselves should have internal logic for understanding their own size
+and the size of their entries if they are a list-based data structure. With this
+information, each sysvar can customize how it wishes to drive the `get` syscall.
+
+A list-based sysvar - say `SlotHashes` - could leverage this API like so:
+
+```rust
+fn get(index: usize) -> SlotHash {
+  let length = size_of::<SlotHash>(); 
+  let offset = index * length;
+  syscall::get(offset, length)
+}
+```
+
+Any sysvar that wishes to offer a more robust API would then be responsible for
+defining such an interface, rather than pushing that burden onto the syscall
+interface. For example, `SlotHashes` could offer something like the following:
+
+```rust
+fn get_hash(index: usize) -> Hash {
+  let offset = index * size_of::<SlotHash>() + size_of::<Slot>();
+  let length = size_of::<Hash>();
+  syscall::get(offset, length)
+}
+```
+
+Any additionally complex methods - such as binary searches - should be left to
+the on-chain program to implement locally. These should not be made available to
+BPF programs via the sysvar interface.
+
+The syscall interface for sysvars should only support `get` as defined above.
+
 
 ## Impact
 
-TODO
+As mentioned as partial motiviation for this proposal, the new syscall would
+make changing and adding new sysvars in the future much easier, which would be
+positively impactful to contributors.
+
+It also greatly reduces the complexity and required upkeep for the syscall
+interface.
+
+Furthermore, it unblocks the efforts to give BPF programs more access to
+sysvar data, so on-chain programs gain the ability to read more sysvar data
+without increasing transaction size.
 
 ## Security Considerations
 
-TODO
+This new syscall interface does increase the chances of improper management of
+bytes and offsets, which could throw critical errors.
+
+However, this can be mitigated in testing, and the upside for reducing the numbe
+of syscalls - thereby reducing the surface area for other critical bugs or
+explots - is a decent tradeoff.
+
