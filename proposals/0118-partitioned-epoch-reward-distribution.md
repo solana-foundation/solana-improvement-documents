@@ -219,7 +219,7 @@ To limit permissible actions, the Stake Program needs access to a syscall which
 reports whether the distribution phase is active. This new syscall
 `sol_get_epoch_rewards_sysvar` should return the values of the `EpochRewards`
 sysvar. All Stake Program instructions that mutate stake data or debit stake
-balances must be disabled when `EpochRewards::active` is true.
+account `lamports` balances must be disabled when `EpochRewards::active` is true.
 
 Any transaction that attempts to invoke such an instruction will fail with this
 new error code:
