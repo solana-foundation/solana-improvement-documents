@@ -8,6 +8,7 @@ category: Standard
 type: Core
 status: Draft
 created: 2024-03-15
+feature: (fill in with feature tracking issues once accepted)
 ---
 
 ## Summary
@@ -57,7 +58,7 @@ fragments of the data can be made accessible via calls like
 Additionally, as per [SIMD-0088](./0088-enable-core-bpf-programs.md), an effort
 is underway to reduce code complexity of the Solana runtime by porting native
 programs to Core BPF programs. These programs must be 100% backwards compatible,
-therefore requiring access to this sysvar data via syscalls and *not* via
+therefore requiring access to this sysvar data via syscalls and _not_ via
 providing the account directly. Requiring the account would break the programs'
 ABIs.
 
@@ -75,7 +76,7 @@ spirit, if a new sysvar is created, a new syscall must be created.
 
 Furthermore, if certain queries are requred by BPF programs - such as
 `SlotHashes::get_slot()` and `StakeHistory::get_entry()` - those single-element
-retrievals will *also* require new syscalls.
+retrievals will _also_ require new syscalls.
 
 It's worth noting that at the time of this writing, the work required for
 [SIMD-0088](./0088-enable-core-bpf-programs.md) will require at least five new
@@ -111,6 +112,10 @@ region each time a VM is created (currently one per transaction processed),
 causing a degradation in runtime performance and likely reducing compute
 by far less compared to the compute savings posed by this proposal.
 
+## New Terminology
+
+N/A.
+
 ## Detailed Design
 
 Defining one single `get` API to retrieve data from the sysvar cache can be used
@@ -136,7 +141,7 @@ Generally, the following cases would be handled with errors:
 
 - The sysvar data is unavailable.
 - The sysvar data is corrupt.
-- The provided offset or length would be out of bounds on the sysvar data. 
+- The provided offset or length would be out of bounds on the sysvar data.
 
 Sysvars themselves should have internal logic for understanding their own size
 and the size of their entries if they are a list-based data structure. With this
@@ -146,7 +151,7 @@ A list-based sysvar - say `SlotHashes` - could leverage this API like so:
 
 ```rust
 fn get(index: usize) -> SlotHash {
-  let length = size_of::<SlotHash>(); 
+  let length = size_of::<SlotHash>();
   let offset = index * length;
   syscall::get(offset, length)
 }
@@ -172,7 +177,7 @@ The syscall interface for sysvars should only support `get` as defined above.
 
 ## Impact
 
-As mentioned as partial motiviation for this proposal, the new syscall would
+As mentioned as partial motivation for this proposal, the new syscall would
 make changing and adding new sysvars in the future much easier, which would be
 positively impactful to contributors.
 
@@ -188,7 +193,6 @@ without increasing transaction size.
 This new syscall interface does increase the chances of improper management of
 bytes and offsets, which could throw critical errors.
 
-However, this can be mitigated in testing, and the upside for reducing the numbe
-of syscalls - thereby reducing the surface area for other critical bugs or
-explots - is a decent tradeoff.
-
+However, this can be mitigated in testing, and the upside for reducing the
+number of syscalls - thereby reducing the surface area for other critical bugs
+or exploits - is a worthy tradeoff.
