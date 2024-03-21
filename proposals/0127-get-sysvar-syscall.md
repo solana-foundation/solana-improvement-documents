@@ -2,7 +2,6 @@
 simd: '0127'
 title: Get-Sysvar Syscall
 authors:
-  - Richard Patel (Jump)
   - Joe Caulfield (Anza)
 category: Standard
 type: Core
@@ -112,30 +111,42 @@ region each time a VM is created (currently one per transaction processed),
 causing a degradation in runtime performance and likely reducing compute
 by far less compared to the compute savings posed by this proposal.
 
+Even with direct mapping, this change makes address translation more complex
+and therefore slows down _all_ memory accesses.
+
 ## New Terminology
 
 N/A.
 
 ## Detailed Design
 
-Defining one single `get` API to retrieve data from the sysvar cache can be used
-by all forward-facing sysvar interfaces. This `get` API should require the
-`sysvar_id` to retrieve data from, the `offset` at which to start copying data,
-and the `length` of the bytes to copy and return to the caller.
+A single `sol_get_sysvar` syscall can be defined, which can be used by all
+forward-facing sysvar interfaces to retrieve data from any sysvar.
 
-The `sysvar_id` can be the address of the sysvar account or simply a single-byte
-enum aligned with the available sysvars in the sysvar cache. This is an
-implementation detail.
+```c
+/**
+ * Retrieves a slice of data from a sysvar and copies it to VM memory.
+ *
+ * @param sysvar_id The identifier of the sysvar to retrieve data from.
+ *                  It should be a single byte representing the sysvar.
+ * @param var_addr  VM memory address to copy the retrieved data to.
+ * @param offset    The offset to start copying data from.
+ * @param length    The length of data to copy, in bytes.
+ * @return          A 64-bit unsigned integer error code:
+ *                    - 0 if the operation is successful.
+ *                    - Non-zero error code.
+ *
+ * If the operation is not successful, data will not be written to the
+ * provided VM memory address.
+ */
+uint64_t sol_get_sysvar(
+  /* r1 */ void const * sysvar_id,
+  /* r2 */ uint8_t *    var_addr,
+  /* r3 */ uint64_t     offset,
+  /* r4 */ uint64_t     length,
+);
 
-A psuedo-code representation of the `get` API is as follows, where the returned
-value is the slice of bytes from the requested sysvar.
-
-```rust
-fn get(sysvar_id: SysvarID, offset: usize, length: usize) -> &[u8];
 ```
-
-In reality, the syscall will write this slice of data to a memory address,
-exactly like the existing syscalls do for sysvar data.
 
 Generally, the following cases would be handled with errors:
 
@@ -147,27 +158,9 @@ Sysvars themselves should have internal logic for understanding their own size
 and the size of their entries if they are a list-based data structure. With this
 information, each sysvar can customize how it wishes to drive the `get` syscall.
 
-A list-based sysvar - say `SlotHashes` - could leverage this API like so:
-
-```rust
-fn get(index: usize) -> SlotHash {
-  let length = size_of::<SlotHash>();
-  let offset = index * length;
-  syscall::get(offset, length)
-}
-```
-
 Any sysvar that wishes to offer a more robust API would then be responsible for
 defining such an interface, rather than pushing that burden onto the syscall
 interface. For example, `SlotHashes` could offer something like the following:
-
-```rust
-fn get_hash(index: usize) -> Hash {
-  let offset = index * size_of::<SlotHash>() + size_of::<Slot>();
-  let length = size_of::<Hash>();
-  syscall::get(offset, length)
-}
-```
 
 Any additionally complex methods - such as binary searches - should be left to
 the on-chain program to implement locally. These should not be made available to
