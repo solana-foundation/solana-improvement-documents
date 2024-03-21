@@ -113,19 +113,30 @@ by far less compared to the compute savings posed by this proposal.
 
 ## Detailed Design
 
-By simply redefining the `get` API to accept `offset` and `length` parameters,
-one single `get` syscall can be used by all sysvars to retrieve data.
+Defining one single `get` API to retrieve data from the sysvar cache can be used
+by all forward-facing sysvar interfaces. This `get` API should require the
+`sysvar_id` to retrieve data from, the `offset` at which to start copying data,
+and the `length` of the bytes to copy and return to the caller.
+
+The `sysvar_id` can be the address of the sysvar account or simply a single-byte
+enum aligned with the available sysvars in the sysvar cache. This is an
+implementation detail.
+
+A psuedo-code representation of the `get` API is as follows, where the returned
+value is the slice of bytes from the requested sysvar.
 
 ```rust
-fn get(offset: usize, length: usize) -> &[u8];
+fn get(sysvar_id: SysvarID, offset: usize, length: usize) -> &[u8];
 ```
 
-The specifics of returning optional values or errors can be left up to the
-implementation, but the following cases would be handled with errors:
+In reality, the syscall will write this slice of data to a memory address,
+exactly like the existing syscalls do for sysvar data.
+
+Generally, the following cases would be handled with errors:
 
 - The sysvar data is unavailable.
-- The sysavr data is corrupt.
-- The provided offset or length would be out of bounds on the sysvar data.
+- The sysvar data is corrupt.
+- The provided offset or length would be out of bounds on the sysvar data. 
 
 Sysvars themselves should have internal logic for understanding their own size
 and the size of their entries if they are a list-based data structure. With this
@@ -158,7 +169,6 @@ the on-chain program to implement locally. These should not be made available to
 BPF programs via the sysvar interface.
 
 The syscall interface for sysvars should only support `get` as defined above.
-
 
 ## Impact
 
