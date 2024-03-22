@@ -12,11 +12,9 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-This proposal outlines a new syscall interface, specifically pertaining to
-sysvars, to retrieve dynamic ranges of sysvar data without fully copying the
-entire data structure. As a result, the existing sysvar interface will remain
-backwards compatible and could also support new methods for querying sysvar
-data.
+This proposal outlines a new syscall interface for sysvars; one which can
+retrieve dynamic ranges of sysvar data without fully copying the entire data
+structure.
 
 With a unified syscall interface to handle retrieval of sysvar data, many
 existing syscalls will become obsolete, and the act of changing sysvar data
@@ -128,7 +126,6 @@ forward-facing sysvar interfaces to retrieve data from any sysvar.
  * Retrieves a slice of data from a sysvar and copies it to VM memory.
  *
  * @param sysvar_id The identifier of the sysvar to retrieve data from.
- *                  It should be a single byte representing the sysvar.
  * @param var_addr  VM memory address to copy the retrieved data to.
  * @param offset    The offset to start copying data from.
  * @param length    The length of data to copy, in bytes.
@@ -167,6 +164,45 @@ the on-chain program to implement locally. These should not be made available to
 BPF programs via the sysvar interface.
 
 The syscall interface for sysvars should only support `get` as defined above.
+
+### Supported Sysvars
+
+Currently, the following sysvars are available to BPF programs:
+
+- `SysvarC1ock11111111111111111111111111111111` (via `sol_get_clock_sysvar`)
+- `SysvarEpochRewards1111111111111111111111111` (via `sol_get_epoch_rewards_sysvar`)
+- `SysvarEpochSchedu1e111111111111111111111111` (via `sol_get_epoch_schedule_sysvar`)
+- `SysvarFees111111111111111111111111111111111` (via `sol_get_fees_sysvar`)
+- `Sysvar1nstructions1111111111111111111111111` (indirectly via `sol_get_processed_sibling_instruction`)
+- `SysvarLastRestartS1ot1111111111111111111111` (via `sol_get_last_restart_slot`)
+- `SysvarRent111111111111111111111111111111111` (via `sol_get_rent_sysvar`)
+
+Currently, the following sysvars from the Sysvar Cache are _not_ available to
+BPF programs:
+
+- `SysvarS1otHashes111111111111111111111111111`
+- `SysvarS1otHistory11111111111111111111111111`
+- `SysvarStakeHistory1111111111111111111111111`
+
+The proposed unified syscall interface will support all non-deprecated sysvars
+in the Sysvar Cache.
+
+Unless specified otherwise, any new sysvars added to the Sysvar Cache in the
+future also become accessible through this syscall.
+
+The supported list is as follows:
+
+- `SysvarC1ock11111111111111111111111111111111`
+- `SysvarEpochRewards1111111111111111111111111`
+- `SysvarEpochSchedu1e111111111111111111111111`
+- `SysvarLastRestartS1ot1111111111111111111111`
+- `SysvarRent111111111111111111111111111111111`
+- `SysvarS1otHashes111111111111111111111111111`
+- `SysvarS1otHistory11111111111111111111111111`
+- `SysvarStakeHistory1111111111111111111111111`
+
+The existing individual syscalls for each supported sysvar will be deprecated in
+favor of the new unified syscall.
 
 ## Impact
 
