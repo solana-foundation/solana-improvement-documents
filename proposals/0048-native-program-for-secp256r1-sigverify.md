@@ -6,9 +6,8 @@ authors:
   - Jstnw (Bunkr)
 category: Standard
 type: Core
-status: Draft
+status: Withdrawn
 created: 2023-05-14
-feature: (fill in with feature tracking issues once accepted)
 ---
 
 ## Summary
@@ -17,7 +16,7 @@ Adding a Native Program to support the verification of signatures
 generated on the secp256r1 curve.
 Analogous to the support for secp256k1 and ed25519 signatures that already
 exists in form of
-the `KeccakSecp256k11111111111111111111111111111` and 
+the `KeccakSecp256k11111111111111111111111111111` and
 `Ed25519SigVerify111111111111111111111111111`
 native programs
 
@@ -89,7 +88,7 @@ The program instruction will be composed of the following:
 - Single byte of padding
 - The following struct serialized, for each signature to verify
 
-  
+
 ```rust
 struct Secp256r1SignatureOffsets {
     signature_offset: u16,             // offset to secp256r1 signature of 64 bytes
