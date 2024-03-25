@@ -19,8 +19,8 @@ This proposal introduces dynamic adjustments to the compute unit (CU) limit of
 Solana blocks based on network utilization at the end of each epoch. If the
 average block utilization exceeds 75%, the CU limit will increase by 20%;
 if it falls below 25%, the limit will decrease by 20%. This mechanism aims to
-optimize network performance by adapting to actual demand without centralized
-or arbitrary adjustments.
+optimize network performance by adapting to demonstrated compute capacity
+without centralized decisions about limits and without voting.
 
 ## Motivation
 
