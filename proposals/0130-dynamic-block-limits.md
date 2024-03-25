@@ -28,7 +28,7 @@ without voting.
 
 The goal of this proposal is to enhance the scalability and efficiency of the
 Solana network by dynamically adjusting block CU limits in response to actual
-network demand, ensuring Solana scale's with Moore's Law and exponentially
+network demand, ensuring Solana scales with Moore's Law and exponentially
 increasing bandwidth.
 
 ## Alternatives Considered
