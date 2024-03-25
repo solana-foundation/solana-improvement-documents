@@ -158,7 +158,7 @@ The syscall accepts the following inputs:
 - `endianness`: `0` for big endian input/output, `1` for little endian.
 - `vals_len`: number of input values to hash. Max supported 12 values.
 - `vals`: the input values to hash. In line with other hash syscalls,
-  this an array of buffers. For Poseidon, each buffer represents an element
+  this is an array of buffers. For Poseidon, each buffer represents an element
   in the curve scalar field, encoded as 32 bytes, with the specified
   endianness.
 
