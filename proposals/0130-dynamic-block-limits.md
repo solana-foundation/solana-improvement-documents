@@ -62,7 +62,7 @@ Decrease CU limit by 20% if:
 
 1. EAU is less than 25%.
 
-It is worth discussing the reasoning for the two critera for increasing the CU
+It is worth discussing the reasoning for the two criteria for increasing the CU
 limit. Since the block schedule is determined by stake, the first metric (EAU)
 serves as a stake-weighted metric of block utilization. This is a indicator of
 true current demand and capacity; the EAU can only be observed to be above the
@@ -71,9 +71,9 @@ is demand for it. **It is important to not increase CU limits if there is no dem
 for it, as arbitrarily increasing utilization  opens up a vector for validators
 to produce fat blocks that the rest of the network may struggle to replay.**
 
-The second metric is present to preserve protocol liveness liveness and responsive
-UX. If the SVSL is above the target threshold, it means that there are nodes in
-the supermajority that are struggling to replay and vote within the target latency.
+The second metric is present to preserve protocol liveness and responsive UX. If
+the SVSL is above the target threshold, it means that there are nodes in the
+supermajority that are struggling to replay and vote within the target latency.
 This threatens protocol liveness, as it can be an indicator of nodes within the
 supermajority not being able to catch up to the tip. Furthermore, vote slot
 latency is directly tied to the solana user experience; it can serve as a proxy
