@@ -150,6 +150,7 @@ Generally, the following cases would be handled with errors:
 - The sysvar data is unavailable.
 - The sysvar data is corrupt.
 - The provided offset or length would be out of bounds on the sysvar data.
+- The provided destination address `var_addr` is invalid.
 
 Sysvars themselves should have internal logic for understanding their own size
 and the size of their entries if they are a list-based data structure. With this
