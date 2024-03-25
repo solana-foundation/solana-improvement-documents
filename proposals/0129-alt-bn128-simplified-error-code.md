@@ -186,7 +186,7 @@ and other errors that may occur while calculating the Poseidon hash.
 Implementing the error logic inside validators will be much easier and less
 error prone.
 
-Dapp developers will have less fine-grain errors, but this is in line with all
+Dapp developers will have less fine-grained errors, but this is in line with all
 the other syscalls.
 
 ## Security Considerations
