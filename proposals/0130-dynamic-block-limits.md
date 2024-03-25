@@ -55,12 +55,13 @@ supermajority vote slot latency (SVSL).
 
 Increase CU limit by 20% if:
 
-1. EAU is greater than 75%.
-2. SVSL is below target vote slot latency (TBD).
+1. EAU is greater than 75%, **AND**
+2. SVSL is below threshold vote slot latency (TBD).
 
 Decrease CU limit by 20% if:
 
-1. EAU is less than 25%.
+1. EAU is less than 25%, **OR**
+2. SVSL is above threshold vote slot latency (TBD).
 
 It is worth discussing the reasoning for the two criteria for increasing the CU
 limit. Since the block schedule is determined by stake, the first metric (EAU)
@@ -70,6 +71,9 @@ threshold if the network demonstrates that it can handle such compute and that t
 is demand for it. **It is important to not increase CU limits if there is no demand
 for it, as arbitrarily increasing the CU limit opens up a vector for validators
 to produce fat blocks that the rest of the network may struggle to replay.**
+Thus, the increase criteria can be summarized as follows: increase capacity if
+there is demonstrated capacity and demand for it **AND** if it does not threaten
+protocol liveness or degrade UX.
 
 The second metric is present to preserve protocol liveness and responsive UX. If
 the SVSL is above the target threshold, it means that there are nodes in the
@@ -77,7 +81,9 @@ supermajority that are struggling to replay and vote within the target latency.
 This threatens protocol liveness, as it can be an indicator of nodes within the
 supermajority not being able to catch up to the tip. Furthermore, vote slot
 latency is directly tied to the solana user experience; it can serve as a proxy
-metric for finalization time.
+metric for finalization time. Thus, the decrease criteria can be summarized as
+follows: decrease capacity if there is no demonstrated demand for it **OR** if
+the current limits are threatening protocol liveness or degrading UX.
 
 By setting thresholds at 75% and 25%, this proposal very roughly targets a 50%
 block utilization. It is important to recognize that validator hardware is
