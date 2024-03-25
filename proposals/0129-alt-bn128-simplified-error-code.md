@@ -191,9 +191,9 @@ the other syscalls.
 
 ## Security Considerations
 
-One single error code reduces the risk that two different validator
-implementations could return a different error. Returning different error
-codes could be exploited to cause consensus failure.
+Simplifying to one single error code reduces the risk of two different validator
+implementations returining different error codes, which could be exploited
+to cause a consensus failure.
 
 This change will also hide some internal implementation details, for example
 the err code `TryIntoVecError`, which is a plus from a security perspective.
