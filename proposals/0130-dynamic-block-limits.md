@@ -18,9 +18,11 @@ extends: (optional - fill this in if the SIMD extends the design of a previous
 This proposal introduces dynamic adjustments to the compute unit (CU) limit of
 Solana blocks based on network utilization at the end of each epoch. If the
 average block utilization exceeds 75%, the CU limit will increase by 20%;
-if it falls below 25%, the limit will decrease by 20%. This mechanism aims to
-optimize network performance by adapting to demonstrated compute capacity
-without centralized decisions about limits and without voting.
+if it falls below 25%, the limit will decrease by 20%. A second metric based on
+vote slot latency is used to preserve protocol liveness and responsive UX. This
+proposal aims to optimize network performance by adapting to demonstrated
+compute capacity and demand without centralized decisions about limits and
+without voting.
 
 ## Motivation
 
@@ -40,13 +42,53 @@ centralized decision.
 - **Dynamic Block Limit**: Adjusting block CU limits based on network demand.
 - **Epoch Average Utilization**: The average CU utilization over an epoch.
 - **CU Limit Adjustment**: The process of modifying the block's CU limit.
+- **Supermajority Vote Slot Latency**: 67th percentile for the vote slot latency
+in an epoch.
 
 ## Detailed Design
 
 ### Implementation
 
-Record each block's CU utilization to calculate the average for the epoch.
-Increase CU limit by 20% if average utilization >75%, decrease by 20% if <25%.
+Record each block's CU utilization in an epoch and calcualate the epoch average
+utilization (EAU). Record the slot latency of votes in an epoch and calculate the
+supermajority vote slot latency (SVSL).
+
+Increase CU limit by 20% if:
+
+1. EAU is greater than 75%.
+2. SVSL is below target vote slot latency (TBD).
+
+Decrease CU limit by 20% if:
+
+1. EAU is less than 25%.
+
+It is worth discussing the reasoning for the two critera for increasing the CU
+limit. Since the block schedule is determined by stake, the first metric (EAU)
+serves as a stake-weighted metric of block utilization. This is a indicator of
+true current demand and capacity; the EAU can only be observed to be above the
+threshold if the network demonstrates that it can handle such compute and that there
+is demand for it. **It is important to not increase CU limits if there is no demand
+for it, as arbitrarily increasing utilization  opens up a vector for validators
+to produce fat blocks that the rest of the network may struggle to replay.**
+
+The second metric is present to preserve protocol liveness liveness and responsive
+UX. If the SVSL is above the target threshold, it means that there are nodes in
+the supermajority that are struggling to replay and vote within the target latency.
+This threatens protocol liveness, as it can be an indicator of nodes within the
+supermajority not being able to catch up to the tip. Furthermore, vote slot
+latency is directly tied to the solana user experience; it can serve as a proxy
+metric for finalization time.
+
+By setting thresholds at 75% and 25%, This proposal very roughly targets a 50%
+block utilization. It is important to recognize that validator hardware is
+inhomogeneous, and block producing capacity will vary from node to node. If the
+average utilization is too high, it means that the protocol is throttling nodes
+with high end hardware that could be producing more profitable blocks. If the average
+utilization is too low, then it means that the limits are either too high or there
+is no demonstrated demand for blockspace. By roughly targeting 50% utilization,
+and with the aforementioned checks in place, nodes with higher end hardware are
+allowed to produce slightly larger blocks than other nodes without threatening
+protocol liveness.
 
 **Safety Measures**: Implement maximum and minimum CU limits to prevent extreme adjustments.
 
@@ -60,9 +102,9 @@ epoch level.
 
 ## Impact
 
-**Validators**: Will benefit from more consistent network performance and
-potentially higher throughput during peak times. Revenue capacity will increase
-naturally with better hardware, incentivizing validators to upgrade collectively.
+**Validators**: Revenue capacity will increase naturally with better hardware,
+incentivizing validators to upgrade collectively. The lowest performing validators
+will eventually be forced toward better hardware and more bandwidth.
 
 **Core Contributors**: Need to consider implications on network stability and
 performance monitoring.
