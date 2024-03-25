@@ -49,7 +49,7 @@ in an epoch.
 
 ### Implementation
 
-Record each block's CU utilization in an epoch and calcualate the epoch average
+Record each block's CU utilization in an epoch and calculate the epoch average
 utilization (EAU). Record the slot latency of votes in an epoch and calculate the
 supermajority vote slot latency (SVSL).
 
@@ -79,7 +79,7 @@ supermajority not being able to catch up to the tip. Furthermore, vote slot
 latency is directly tied to the solana user experience; it can serve as a proxy
 metric for finalization time.
 
-By setting thresholds at 75% and 25%, This proposal very roughly targets a 50%
+By setting thresholds at 75% and 25%, this proposal very roughly targets a 50%
 block utilization. It is important to recognize that validator hardware is
 inhomogeneous, and block producing capacity will vary from node to node. If the
 average utilization is too high, it means that the protocol is throttling nodes
