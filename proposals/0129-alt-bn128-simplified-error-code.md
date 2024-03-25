@@ -30,7 +30,7 @@ Syscalls in Solana can return:
   as `Err(<something>)`
 
 Most syscalls only have a single error code returned to the program, i.e. `Ok(1)`.
-The family of Alt_BN128 syscalls, viceversa, has a richer set of error codes.
+The family of Alt_BN128 syscalls, vice versa, has a richer set of error codes.
 
 This proposal aims to simplify the error value for these syscalls, in line with
 all the other syscalls, and simply return `Ok(1)` (in addition to fatal errors,
