@@ -90,12 +90,12 @@ By setting thresholds at 75% and 25%, this proposal very roughly targets a 50%
 block utilization. It is important to recognize that validator hardware is
 inhomogeneous, and block producing capacity will vary from node to node. If the
 average utilization is too high, it means that the protocol is throttling nodes
-with high end hardware that could be producing more profitable blocks. If the average
-utilization is too low, then it means that the limits are either too high or there
-is no demonstrated demand for blockspace. By roughly targeting 50% utilization,
-and with the aforementioned checks in place, nodes with higher end hardware are
-allowed to produce slightly larger blocks than other nodes without threatening
-protocol liveness.
+with high end hardware that could be producing more profitable blocks. If the
+average utilization is too low, then it means that the limits are either too
+high or there is no demonstrated demand for blockspace. By roughly targeting 50%
+utilization, and with the aforementioned checks in place, nodes with higher end
+hardware are allowed to produce slightly larger blocks than other nodes without
+threatening protocol liveness.
 
 **Safety Measures**: Implement maximum and minimum CU limits to prevent extreme adjustments.
 
