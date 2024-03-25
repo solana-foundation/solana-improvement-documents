@@ -68,7 +68,7 @@ serves as a stake-weighted metric of block utilization. This is a indicator of
 true current demand and capacity; the EAU can only be observed to be above the
 threshold if the network demonstrates that it can handle such compute and that there
 is demand for it. **It is important to not increase CU limits if there is no demand
-for it, as arbitrarily increasing utilization  opens up a vector for validators
+for it, as arbitrarily increasing the CU limit opens up a vector for validators
 to produce fat blocks that the rest of the network may struggle to replay.**
 
 The second metric is present to preserve protocol liveness and responsive UX. If
