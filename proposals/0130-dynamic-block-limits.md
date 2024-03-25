@@ -65,9 +65,7 @@ Implementing dynamic block limits must not introduce vectors for DoS attacks or 
 ## Drawbacks
 
 - Complexity: Introducing dynamic block limits adds complexity to the network's operation and monitoring.
-- Predictability: Frequent changes in CU limits may affect the predictability of transaction processing times and fees.
 
 ## Backwards Compatibility
 
 - The proposal requires network-wide coordination for activation.
-- No direct breaking changes, but dApps and transaction submission strategies may need adjustments.
