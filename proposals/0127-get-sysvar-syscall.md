@@ -145,12 +145,13 @@ uint64_t sol_get_sysvar(
 
 ```
 
-Generally, the following cases would be handled with errors:
+If the following conditions are not met, this syscall will return an error:
 
-- The sysvar data is unavailable.
-- The sysvar data is corrupt.
-- The provided offset or length would be out of bounds on the sysvar data.
-- The provided destination address `var_addr` is invalid.
+- The sysvar data is available to read.
+- The sysvsr data is not corrupt.
+- `offset` + `length` is in the range `[0, 2^64)`.
+- `var_addr` + `length` is in the range `[0, 2^64)`.
+- Each byte in the range starting at `var_addr` of size `length` is writable.
 
 Sysvars themselves should have internal logic for understanding their own size
 and the size of their entries if they are a list-based data structure. With this
