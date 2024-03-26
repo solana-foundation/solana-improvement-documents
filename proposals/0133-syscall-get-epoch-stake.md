@@ -80,15 +80,6 @@ an access violation.
 If the provided vote address corresponds to an account that is not a vote
 account or does not exist, the syscall will write `0` for active stake. 
 
-The `InvokeContext` must be modified to store a pointer to the epoch's current
-stake, which will be used to obtain the query response for the syscall. The
-epoch's current stake should be a collection of fixed-size elements of the
-following structure:
-
-- 32 bytes for the vote address.
-- 8 bytes for the delegated stake.
-
-
 ## Impact
 
 This new syscall directly unlocks highly relevant network data for a wide range
