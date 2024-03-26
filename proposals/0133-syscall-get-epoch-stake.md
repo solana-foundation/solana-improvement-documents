@@ -74,7 +74,8 @@ uint64_t sol_get_epoch_stake(
 ```
 
 `var_addr` must be the starting address of at least 8 bytes of writable VM
-memory to store the `u64` response. If not, the syscall will return an error.
+memory to store the `u64` response. If not, the syscall will abort the VM with
+an access violation.
 
 If the provided vote address corresponds to an account that is not a vote
 account or does not exist, the syscall will write `0` for active stake. 
