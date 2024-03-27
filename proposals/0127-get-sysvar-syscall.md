@@ -148,43 +148,12 @@ uint64_t sol_get_sysvar(
 If the following conditions are not met, this syscall will return an error:
 
 - The sysvar data is available to read.
-- The sysvsr data is not corrupt.
+- The sysvar data is not corrupt.
 - `offset` + `length` is in the range `[0, 2^64)`.
 - `var_addr` + `length` is in the range `[0, 2^64)`.
 - Each byte in the range starting at `var_addr` of size `length` is writable.
 
-Sysvars themselves should have internal logic for understanding their own size
-and the size of their entries if they are a list-based data structure. With this
-information, each sysvar can customize how it wishes to drive the `get` syscall.
-
-Any sysvar that wishes to offer a more robust API would then be responsible for
-defining such an interface, rather than pushing that burden onto the syscall
-interface. For example, `SlotHashes` could offer something like the following:
-
-Any additionally complex methods - such as binary searches - should be left to
-the on-chain program to implement locally. These should not be made available to
-BPF programs via the sysvar interface.
-
-The syscall interface for sysvars should only support `get` as defined above.
-
 ### Supported Sysvars
-
-Currently, the following sysvars are available to BPF programs:
-
-- `SysvarC1ock11111111111111111111111111111111` (via `sol_get_clock_sysvar`)
-- `SysvarEpochRewards1111111111111111111111111` (via `sol_get_epoch_rewards_sysvar`)
-- `SysvarEpochSchedu1e111111111111111111111111` (via `sol_get_epoch_schedule_sysvar`)
-- `SysvarFees111111111111111111111111111111111` (via `sol_get_fees_sysvar`)
-- `Sysvar1nstructions1111111111111111111111111` (indirectly via `sol_get_processed_sibling_instruction`)
-- `SysvarLastRestartS1ot1111111111111111111111` (via `sol_get_last_restart_slot`)
-- `SysvarRent111111111111111111111111111111111` (via `sol_get_rent_sysvar`)
-
-Currently, the following sysvars from the Sysvar Cache are _not_ available to
-BPF programs:
-
-- `SysvarS1otHashes111111111111111111111111111`
-- `SysvarS1otHistory11111111111111111111111111`
-- `SysvarStakeHistory1111111111111111111111111`
 
 The proposed unified syscall interface will support all non-deprecated sysvars
 in the Sysvar Cache.
@@ -192,7 +161,10 @@ in the Sysvar Cache.
 Unless specified otherwise, any new sysvars added to the Sysvar Cache in the
 future also become accessible through this syscall.
 
-The supported list is as follows:
+Existing syscalls to fetch sysvar data will be deprecated in favor of the new
+unified syscall proposed herein.
+
+The supported list of sysvars for the proposed syscall will be as follows:
 
 - `SysvarC1ock11111111111111111111111111111111`
 - `SysvarEpochRewards1111111111111111111111111`
@@ -203,8 +175,10 @@ The supported list is as follows:
 - `SysvarS1otHistory11111111111111111111111111`
 - `SysvarStakeHistory1111111111111111111111111`
 
-The existing individual syscalls for each supported sysvar will be deprecated in
-favor of the new unified syscall.
+Sysvar APIs at the SDK level are responsible for defining exactly how the data
+can be accessed using the new syscall. For example, multiple SDKs may choose to
+allow users to access one element from a list-based sysvar at a time, while only
+a few may offer lookups or binary searches on the data.
 
 ## Impact
 
