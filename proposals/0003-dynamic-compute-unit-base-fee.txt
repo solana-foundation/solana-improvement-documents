@@ -1,0 +1,187 @@
+---
+simd: '0003'
+title: Dynamic Compute Unit Base Fee
+authors:
+  - Anatoly Yakovenko (Solana Labs)
+category: Sealevel Virtual Machine
+type: Standards Track
+status: Draft
+created: 2022-12-05
+---
+
+## Summary
+
+This proposal changes the base fee from being based on signatures
+per transaction to requested compute units per transaction, as well
+as adds a mechanism to dynamically adjust the base fee based on
+desired target load for the network.
+
+Original implementation of Solana had a dynamic governor that
+targeted blocks to be at 50% load. The governor was signature based,
+and was designed without compute units in mind.  As SVM matured
+compute units were added to track load instead of signatures, and
+priority fees were added for prioritizing transaction scheduling.
+The dynamic signature based governor was removed, and right now the
+network has no mechanism to try to target a specific load.
+
+The motivation for a 50% target load is two fold.  One is that at
+100% the heterogeneous hardware on the network doesn't perform
+uniformly.  This causes downstream issues with leaders delaying and
+missing their blocks, and overall performance degradation. Secondly,
+stuffing the ledger with full blocks without a fee is an attack on
+the verifiability of the ledger by 3rd parties. For example, a faulty
+majority of the validators start creating continuous full blocks
+while paying minimal base fees and zero priority fees.
+
+## Specification
+
+### Transaction Fees on solana
+
+There are two kinds of fees on solana, base fees, and priority fees.
+This proposal is focused on base fees only.  Base fees are automatic
+and are set by the network. Prior to this proposal the base fees
+were fixed, 0.000005 sol per signature.
+
+After this proposal has been implemented the base fees are set by
+the network based on current load, and the fee is charged per Compute
+Unit requested by the transaction.
+
+There are two ways the validators control the base fee on the
+network.  Validators can set the Maximum Compute Unit Limit, or the
+Lowest Base fee.
+
+### Maximum Compute Unit Limit
+
+Maximum block limit is defined as part of the solana validator
+client.  Currently it is at 48 million compute units.  The block
+target is 50% of the maximum, which is 24 million compute units.
+
+### Governor
+
+If the average load in compute units for the last 8 blocks > 50%,
+base fee goes up by 12.5%.  If the average load in compute units
+for the last 8 blocks < 50%, base fee drops by 12.5%.
+
+Note, the 12.5% and 8 slot limits are an approximation of eip 1559's
+targets per 12.5 second ethereum block.
+
+### Lowest Base Fee
+
+Lowest possible fee = 1000 lamports / 200_000 compute units.
+
+There is no maximum fee, see [###Votes].
+
+### Votes
+
+Votes are not exempt. Validators should start dropping non essential
+transactions to maintain load < 50% that includes votes and non
+votes after fees reach some critical point.
+
+Motivation for making votes pay the same exact base fee as other
+transactions is to prevent a faulty majority from stuffing the
+ledger with maximum votes.
+
+### Fee economics for validators
+
+Changes to the current fee model should come in a separate proposal,
+the following outlines two possible designs.
+
+#### Burn base and congestion fees only
+
+The original solana design had a 50% burn and 50% validator reward
+for all fees. With priority fees, this split is suboptimal.  A user
+and validator can prioritize via a side channel and avoid the burn
+for the priority portion of the fees all together. For example,
+instead of adding a 0.1 sol priority fee to the tx, user sends 0.75
+sol to the validator directly. The validator earns 25% more and the
+user spends 25% less, by bypassing the default priority fees.
+
+It's necessary to burn the congestion fees, otherwise a faulty
+majority is incentivized to keep the congestion fees high.
+
+With this proposal, the base fee, including the congestion fee,
+should be 100% burned, and the priority fee should 100% go to the
+block producer. The motivation for this split is that block
+verification is something that every participant has to pay for,
+even unstaked nodes. Prioritizing the top paying transactions out
+of 100gbps worth of spam is something that leaders have to acutely
+pay for. By rewarding 100% of the priority fees to the block producer,
+the incentive to use a side channel for prioritization fees is
+greatly reduced.
+
+#### Keep the 50/50 burn
+
+Generally, burning the user specified priorioty fee creates an
+incentive for the user to pay the validator for priority via a
+sidechannel.  If in the future, the solana protocol implements
+execution time preference for transactions using the same priority
+fee mechanism, it will not be possible to bypassed these fees without
+risk via sidechannel.
+
+General outline for execution time preference:
+
+1. Each block is segmented into 100ms slices. Currently that would
+be 16 PoH ticks.
+
+2. During replay, for each slice, the transactions are reordered
+by priority before execution.
+
+With multiple concurrent leaders, users best outcome for priority
+execution is to send the transaction to the closest leader and to
+pay the highest fee possible.
+
+### Maximum expected cost for users
+
+When users sign a tx, they are implicitly authorizing the network
+to charge up to the maximum fee possible. If all the blocks were
+full for the entire duration of a recent blockhash, the maximum fee
+growth is roughly 82x at a 12.5% rate and a max blockhash age of
+300. (1.125)^(300/8).
+
+To reduce the exposure, users can sign an older blockhash. One with
+a max lifetime of 30 slots would have a maximum fee increase of
+55%.
+
+Durable nonce transactions should limit their exposure via a maximum
+balance in the fee payer or cancel the transaction by invalidating
+the nonce with a different high priority tx.
+
+Burn economics may need to be considered in a separate proposal.
+
+### Constants
+
+* lowest fee per compute unit: 1000 lamports / 200_000 CUs
+* maximum CU's per block: 48m CUs
+* number of slots: 8
+* increase rate: 12.5%
+* decrease rate: 12.5%
+
+This maybe updated with a feature activation, or by median stake
+weighted value signaled by validators.
+
+### Alternative Solution For Vote base fees
+
+Increasing vote fees may be problematic for validators.  Alternative
+solution would be to reserve X% of the block for votes. For example:
+
+* 33% CUs are reserved for votes
+* 66% is the base fee threshold
+
+Validators always pay the lowest base fee for votes, but the maximum
+number of validators that are scheduled in the leader scheduler is
+
+* ((MAX_COMPUTE_LIMIT) * 1/3)/(VOTE_CU)
+
+Presently that would be (48m/3)/(5_000) = 3,200 voting validators.
+
+In this example, only the top 3,200 voting validators by stake
+weight would be added to the leader scheduler, and would be considered
+as active w.r.t. voting. Validators that do not have enough stake
+to be in the top 3,200 would be considered inactive and wouldn't
+be scheduled in the leader schedule and wouldn't earn any rewards
+from voting, and wouldn't be considered as part of the quorum in
+consensus.
+
+In this example, base fees would start increasing when load > 66%,
+and base fees would double only for non-vote transactions.  Votes
+would continue paying the lowest base fee.
