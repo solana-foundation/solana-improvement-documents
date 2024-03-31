@@ -79,6 +79,18 @@ violation.
 If the provided vote address corresponds to an account that is not a vote
 account or does not exist, the syscall will write `0` for active stake. 
 
+### Compute Unit Usage
+
+The syscall will always attempt to consume the same amount of CUs regardless of
+control flow.
+
+```
+(32 / cpi_per_u) + (8 / cpi_per_u)
+```
+
+- `syscall_base`: Base cost of a sysvall.
+- `cpi_per_u`: Number of account data bytes per CU charged during CPI.
+
 ## Impact
 
 Dapp developers will be able to query vote account stake for the current epoch
