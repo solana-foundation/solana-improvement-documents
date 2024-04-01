@@ -146,7 +146,7 @@ In Pseudocode:
 ```
 struct Secp256r1SigVerifyInstruction {
     count: uint8 LE,                          // Number of signatures to check
-    padding: uint8 LE,                        // Single byte of padding
+    padding: uint8 LE,                        // Single byte padding
     signatureOffsets: Array<Secp256r1SignatureOffsets>, // Array of signature offset structs
 }
 
@@ -164,10 +164,37 @@ struct Secp256r1SignatureOffsets {
 Multiple signatures can be verified. If any of the signatures fail to verify,
 an error must be returned.
 
-Therfore the instruction processing logic must follow the pseudocode below:
+If the instruction data is empty, the program must return an error.
+
+If `count == 0` and the length of the instruction data > 1, the program must
+return an error.
+
+If `count == 0` and the length of the instruction data is not at least
+`count * Secp256r1SignatureOffsets + 1`, the program must return an error.
+
+The instruction processing logic must follow the pseudocode below:
 
 ```
-instructions = transactionInsructions;
+/// `data` is the secp256r1 program's instruction data. `instruction_datas` is
+/// the full slice of instruction datas for all instructions in the transaction,
+/// including the secp256r1 program's instruction data.
+
+/// length_of_data is the length of `data`
+
+/// SERIALIZED_OFFSET_STRUCT_SIZE is the length of the serialized
+/// Secp256r1SignatureOffsets struct
+
+if length_of_data == 0 {
+  return Error
+}
+count = data[0]
+if count == 0 && length_of_data > 1 {
+  return Error
+}
+if length_of_data < (count * SERIALIZED_OFFSET_STRUCT_SIZE + 1) {
+  return Error
+}
+instructions = instruction_datas;
 for i in 0..count {
     signature = instructions[signature_instruction_index].data[signature_offset..signature_offset+64]
     if signature_S == highS {
@@ -204,7 +231,7 @@ forms of Two-Factor Authentication around those keypairs.
 
 ## Security Considerations
 
-The following security considerations must be made for
+The following security considerations must be made for the
 implementation of ECDSA over NIST P-256.
 
 ### Curve
@@ -250,8 +277,8 @@ in Section A.2.5 as well as at the
 
 ### General
 
-As multiple other clients are being developed, it is imperative that there can
-be bit-level reproducibility between the precompile implementations, especially
+As multiple other clients are being developed, it is imperative that there is
+bit-level reproducibility between the precompile implementations, especially
 with regard to cryptographic operations. Any discrepancy between implementations
 could cause a fork and or a chain halt.
 
@@ -261,8 +288,8 @@ As such we would propose the following:
   as tests from the
   [Wycheproof Project](https://github.com/google/wycheproof#project-wycheproof)
 
-- Maintaining active communication with other clients to ensure parity and to 
-support potential changes if they arise.
+- Maintaining active communication with other clients to ensure parity and to
+  support potential changes if they arise.
 
 ## Backwards Compatibility
 
