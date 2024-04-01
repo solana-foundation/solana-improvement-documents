@@ -9,17 +9,19 @@ category: Standard
 type: Core
 status: Withdrawn
 created: 2023-05-14
-feature: (fill in with feature tracking issues once accepted)
-superseded-by: "0075"
 ---
 
 ## Summary
 
-Adding a precompile to support the verification of signatures generated on
-the secp256r1 curve. Analogous to the support for secp256k1 and ed25519
-signatures that already exists in form of the
-`KeccakSecp256k11111111111111111111111111111` and
-`Ed25519SigVerify111111111111111111111111111` precompiles.
+
+Adding a Native Program to support the verification of signatures
+generated on the secp256r1 curve.
+Analogous to the support for secp256k1 and ed25519 signatures that already
+exists in form of
+the `KeccakSecp256k11111111111111111111111111111` and
+`Ed25519SigVerify111111111111111111111111111`
+native programs
+
 
 ## Motivation
 
@@ -187,6 +189,8 @@ The program instruction will be composed of the following:
 - A first u8 as the count for the number of signatures to check
 - Single byte of padding
 - The following struct serialized, for each signature to verify
+
+
 
 ```rust
 struct Secp256r1SignatureOffsets {
