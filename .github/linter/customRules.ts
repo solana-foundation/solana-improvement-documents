@@ -99,7 +99,7 @@ export const enforceMetadataStructure = {
     })
 
     Object.keys(frontMatter).forEach((key) => {
-      if (!(requiredMetadata as any)[key] && !(optionalMetadata as any)[key]) {
+      if (!(requiredMetadata as any)[key] && !optionalMetadata.includes(key)) {
         onError({
           lineNumber: 1,
           detail: `Front matter contains invalid metadata \`${key}\``,
@@ -119,9 +119,12 @@ const requiredMetadata = {
   created: {},
 }
 
-const optionalMetadata = {
-  feature: {},
-}
+const optionalMetadata = [
+  "feature",
+  "supersedes",
+  "superseded-by",
+  "extends",
+]
 
 export const metadataSimdIsValid = {
   names: ["front-matter-has-simd"],
