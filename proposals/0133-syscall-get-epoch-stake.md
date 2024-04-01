@@ -65,9 +65,6 @@ The specification for the proposed syscall is as follows:
 uint64_t sol_get_epoch_stake(/* r1 */ void const * vote_addr);
 ```
 
-If the provided vote address corresponds to an account that is not a vote
-account or does not exist, the syscall will write `0` for active stake. 
-
 ### Control Flow
 
 The syscall aborts the virtual machine if not all bytes in VM memory range
