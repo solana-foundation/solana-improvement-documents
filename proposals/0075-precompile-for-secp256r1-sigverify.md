@@ -147,17 +147,17 @@ In Pseudocode:
 struct Secp256r1SigVerifyInstruction {
     count: uint8 LE,                          // Number of signatures to check
     padding: uint8 LE,                        // Single byte padding
-    signatureOffsets: Array<Secp256r1SignatureOffsets>, // Array of signature offset structs
+    signatureOffsets: Array<Secp256r1SignatureOffsets>, // Array of structs
 }
 
 struct Secp256r1SignatureOffsets {
-    signature_offset: uint16 LE,              // Offset to secp256r1 signature of 64 bytes
-    signature_instruction_index: uint8 LE,   // Instruction index to find signature
-    public_key_offset: uint16 LE,             // Offset to compressed public key
-    public_key_instruction_index: uint8 LE,  // Instruction index to find public key
+    signature_offset: uint16 LE,              // Offset to signature
+    signature_instruction_index: uint8 LE,   // Instruction index to signature
+    public_key_offset: uint16 LE,             // Offset to public key
+    public_key_instruction_index: uint8 LE,  // Instruction index to  public key
     message_data_offset: uint16 LE,           // Offset to start of message data
     message_data_size: uint16 LE,             // Size of message data
-    message_instruction_index: uint8 LE,     // Index of instruction data to get message data
+    message_instruction_index: uint8 LE,     // Instruction index to message
 }
 ```
 
@@ -210,9 +210,8 @@ for i in 0..count {
 return Success
 ```
 
-Additonally the precompile's core `verify` function must be constructed in accordance with the
-structure outlined in
-[sdk/src/precompiles.rs](https://github.com/solana-labs/solana/blob/9ffbe2afd8ab5b972c4ad87d758866a3e1bb87fb/sdk/src/precompiles.rs).
+Additonally the precompile's core `verify` function must be constructed in
+accordance with the structure outlined in [sdk/src/precompiles.rs](https://github.com/solana-labs/solana/blob/9ffbe2afd8ab5b972c4ad87d758866a3e1bb87fb/sdk/src/precompiles.rs).
 
 ### Compute Cost / Efficiency
 
