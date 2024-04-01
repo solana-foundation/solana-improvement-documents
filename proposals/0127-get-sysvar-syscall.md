@@ -145,13 +145,37 @@ uint64_t sol_get_sysvar(
 
 ```
 
-If the following conditions are not met, this syscall will return an error:
+### Control Flow
 
-- The sysvar data is available to read.
-- The sysvar data is not corrupt.
-- `offset` + `length` is in the range `[0, 2^64)`.
-- `var_addr` + `length` is in the range `[0, 2^64)`.
-- Each byte in the range starting at `var_addr` of size `length` is writable.
+The syscall aborts the virtual machine if any of these conditions are true:
+
+- Not all bytes in VM memory range `[sysvar_id, sysvar_id + 32)` are readable.
+- Not all bytes in VM memory range `[var_addr, var_addr + length)` are writable.
+- `offset + length` is not in `[0, 2^64)`.
+- `var_addr + length` is not in `[0, 2^64)`.
+- Compute budget is exceeded.
+
+The syscall returns `1` if the sysvar is not present in the Sysvar Cache.
+
+The syscall returns `2` if `offset + length` is greater than the size of the
+sysvar.
+
+Otherwise, the syscall writes the sysvar data to the virtual memory at
+`var_addr` and returns `0`.
+
+### Compute Unit Usage
+
+The syscall will always attempt to consume the same amount of CUs regardless of
+control flow.
+
+CU usage is proportional to the `length` parameter.
+
+```
+sysvar_base + (32 / cpi_per_u) + max(mem_op_base, (length / cpi_per_u))
+```
+
+- `sysvar_base`: Base cost of accessing a sysvar.
+- `cpi_per_u`: Number of account data bytes per CU charged during CPI.
 
 ### Supported Sysvars
 
