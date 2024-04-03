@@ -82,7 +82,7 @@ The syscall will always attempt to consume the same amount of CUs regardless of
 control flow.
 
 ```
-syscall_base + (32/cpi_per_u) + mem_op_base
+syscall_base + floor(32/cpi_bytes_per_unit) + mem_op_base
 ```
 
 - `syscall_base`: Base cost of a sysvall.
