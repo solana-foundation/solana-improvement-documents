@@ -86,7 +86,8 @@ syscall_base + floor(32/cpi_bytes_per_unit) + mem_op_base
 ```
 
 - `syscall_base`: Base cost of a sysvall.
-- `cpi_per_u`: Number of account data bytes per CU charged during CPI.
+- `cpi_bytes_per_units`: Number of account data bytes per CU charged during CPI.
+- `mem_op_base`: Base cost of a memory operation syscall.
 
 ## Impact
 
