@@ -19,7 +19,7 @@ voting.
 
 ## Motivation
 
-Validators that violate lockout rules unfairly earn rewards and put cluster
+Validators that violate lockout rules unfairly earn rewards and put cluster.
 consensus at risk
 
 ## Alternatives Considered
