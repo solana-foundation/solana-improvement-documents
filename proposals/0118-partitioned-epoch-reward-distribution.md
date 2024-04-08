@@ -4,9 +4,9 @@ title: Partitioned Epoch Rewards Distribution
 authors: Haoran Yi (Anza), Justin Starry (Anza), Tyera Eulberg (Anza)
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-02-16
-feature: (fill in with feature tracking issues once accepted)
+feature: 9bn2vTJUsUcnpiZWbu2woSKtTGW3ErZC9ERv88SDqQjK, enable_partitioned_epoch_reward, https://github.com/anza-xyz/agave/issues/426
 supersedes: '0015'
 ---
 
