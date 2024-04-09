@@ -165,7 +165,7 @@ Otherwise, the syscall writes the sysvar data to the virtual memory at
 
 ### Compute Unit Usage
 
-The syscall will always attempt to consume the same amount of CUs regardless of
+The syscall will always consume the same amount of CUs regardless of
 control flow.
 
 CU usage is proportional to the `length` parameter.
