@@ -30,9 +30,15 @@ None
 
 ## Detailed Design
 
-When the feature - `deprecate legacy vote instructions`, with key
-`depVvnQ2UysGrhwdiwU42tCadZL8GcBb1i2GYhMopQv` is activated, processing of the
-following instructions will result in an `InvalidInstructionData` error:
+When the features:
+
+* `deprecate legacy vote instructions`, with key
+    `depVvnQ2UysGrhwdiwU42tCadZL8GcBb1i2GYhMopQv`
+* `enable tower sync vote instruction`, with key
+    `tSynMCspg4xFiCj1v3TDb4c7crMR5tSBhLz4sF7rrNA`
+
+are activated, the following instructions will result in an
+`InvalidInstructionData` error:
 
 * `Vote`
 * `VoteSwitch`
@@ -41,15 +47,16 @@ following instructions will result in an `InvalidInstructionData` error:
 * `CompactUpdateVoteState`
 * `CompactUpdateVoteStateSwitch`
 
+Enabling `deprecate legacy vote instructions` without 
+`enable tower sync vote instruction` should have no effect.
+
 ## Impact
 
 Sending transactions that include the mentioned instructions will fail.
 
 ## Security Considerations
 
-Implementations should ensure that the `TowerSync` instruction has been
-activated before enabling the `deprecate legacy vote instructions` feature,
-in order to ensure that at least one vote instruction available for the client.
+None
 
 ## Backwards Compatibility
 
