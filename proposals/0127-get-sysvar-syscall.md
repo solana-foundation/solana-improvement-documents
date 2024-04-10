@@ -185,9 +185,6 @@ in the Sysvar Cache.
 Unless specified otherwise, any new sysvars added to the Sysvar Cache in the
 future also become accessible through this syscall.
 
-Existing syscalls to fetch sysvar data will be deprecated in favor of the new
-unified syscall proposed herein.
-
 The supported list of sysvars for the proposed syscall will be as follows:
 
 - `SysvarC1ock11111111111111111111111111111111`
@@ -216,6 +213,15 @@ interface.
 Furthermore, it unblocks the efforts to give BPF programs more access to
 sysvar data, so on-chain programs gain the ability to read more sysvar data
 without increasing transaction size.
+
+One minor change is the behavior of verification of syscall availability for a
+given program. Currently, the availability of specific sysvar data can be
+verified by simply determining whether its corresponding syscall is available to
+the program during the verification step.
+
+With this change, even though the new unified syscall can be verified available
+during program verification, the actual availability of specific sysvar data is
+determined at runtime.
 
 ## Security Considerations
 
