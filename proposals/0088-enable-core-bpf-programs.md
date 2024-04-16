@@ -69,8 +69,7 @@ is used to create the BPF program accounts, replacing the existing native
 program at its original address with a legitimate BPF Upgradeable program.
 
 In the slot immediately following the feature activation, the program will *not*
-be invocable. It will be marked as `DelayedVisibility` in the program cache.
-This status will last one slot, then the program will return to being fully
+be invocable. This status will last one slot, then the program will be fully
 operational.
 
 No program IDs for existing native programs are changed by this migration
@@ -86,8 +85,8 @@ The migration process must adhere to the following steps:
 2. Generate a new keypair for the source buffer account.
 3. Create the buffer account and write the ELF bytes to it.
 4. Generate a new keypair for the feature gate.
-5. Create a new feature gate to replace the target program with the uploaded
-   ELF.
+5. Create a new feature gate to replace the target program with the source
+   buffer.
 6. Follow the existing process for activating features.
 
 ## Impact
