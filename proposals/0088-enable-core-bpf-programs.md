@@ -68,6 +68,11 @@ upgrade authority and the ELF bytes of its BPF implementation. A feature gate
 is used to create the BPF program accounts, replacing the existing native
 program at its original address with a legitimate BPF Upgradeable program.
 
+In the slot immediately following the feature activation, the program will *not*
+be invocable. It will be marked as `DelayedVisibility` in the program cache.
+This status will last one slot, then the program will return to being fully
+operational.
+
 No program IDs for existing native programs are changed by this migration
 process.
 
