@@ -155,13 +155,14 @@ The syscall aborts the virtual machine if any of these conditions are true:
 - `var_addr + length` is not in `[0, 2^64)`.
 - Compute budget is exceeded.
 
-All VM violations (above) are checked first, before attempting to return
-gracefully.
+All VM violations (above) are checked first, before to returning one of the
+following error codes. The following checks are completed in the order they
+appear below.
 
 The syscall returns the following graceful codes:
 
-- `2` if `offset + length` is greater than the length of the sysvar data.
-- `1` if the sysvar data is not present in the Sysvar Cache.
+- `2` if the sysvar data is not present in the Sysvar Cache.
+- `1` if `offset + length` is greater than the length of the sysvar data.
 - `0` if the process completed successfully and the requested sysvar data was
   written to the virtual memory at `var_addr`.
 
