@@ -226,7 +226,7 @@ new error code:
 
 ```
 StakeError {
-   EpochRewardsDistributionActive = 15,
+   EpochRewardsActive = 16,
 }
 ```
 
