@@ -196,7 +196,6 @@ The supported list of sysvars for the proposed syscall will be as follows:
 - `SysvarLastRestartS1ot1111111111111111111111`
 - `SysvarRent111111111111111111111111111111111`
 - `SysvarS1otHashes111111111111111111111111111`
-- `SysvarS1otHistory11111111111111111111111111`
 - `SysvarStakeHistory1111111111111111111111111`
 
 Sysvar APIs at the SDK level are responsible for defining exactly how the data
