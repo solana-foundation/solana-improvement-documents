@@ -5,9 +5,9 @@ authors:
   - Andrew Fitzgerald (Solana Labs)
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2023-11-02
-feature: (fill in with feature tracking issues once accepted)
+feature: ENTRYnPAoT5Swwx73YDGzMp3XnNH1kxacyvLosRHza1i
 ---
 
 ## Summary
