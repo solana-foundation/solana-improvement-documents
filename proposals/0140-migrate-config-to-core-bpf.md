@@ -47,10 +47,8 @@ usage based on the VM's compute unit meter.
 The program will be migrated to Core BPF using the procedure outlined in
 [SIMD 0088](./0088-enable-core-bpf-programs.md).
 
-The program's upgrade authority will be a multi-sig authority with keyholders
-from Anza Technology and may expand to include contributors from other validator
-client teams.
-In the future, this authority could be replaced by validator governance.
+The program will have no upgrade authority. If changes are required, for
+essential network operations, the program will be updated using feature-gates.
 
 ## Impact
 
@@ -61,9 +59,6 @@ All validator client teams can work to maintain the single Config program
 together.
 
 ## Security Considerations
-
-The program will be upgradeable. The upgrade authority will be a multi-sig held
-by core contributors.
 
 The program's reimplementation poses no new security considerations compared to
 the original builtin version.
