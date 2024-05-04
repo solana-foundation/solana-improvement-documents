@@ -62,24 +62,31 @@ published outlining at least the following details:
   program
 - How this changes to this program will be managed after it becomes BPF
 
-**Migrating a native program to core BPF** shall consist of deploying a
-BPF version of the native program to a new arbitrary address and using a
-feature gate to move the BPF program, replacing the existing native program at
-its original program address. No program IDs for existing native programs would
-be changed by this migration process.
+**Migrating a native program to core BPF** shall consist of creating a buffer
+account, owned by the BPF Upgradeable Loader, containing the program's desired
+upgrade authority and the ELF bytes of its BPF implementation. A feature gate
+is used to create the BPF program accounts, replacing the existing native
+program at its original address with a legitimate BPF Upgradeable program.
+
+In the slot immediately following the feature activation, the program will *not*
+be invocable. This status will last one slot, then the program will be fully
+operational.
+
+No program IDs for existing native programs are changed by this migration
+process.
 
 In the context of this design, **target program** refers to an existing native
-program, while **source program** refers to the BPF version to be moved into the
-existing program account.
+program, while **source buffer account** refers to the buffer account
+containing the BPF implementation of the target native program.
 
 The migration process must adhere to the following steps:
 
-1. Verifiably build the source BPF program.
-2. Generate a new keypair for the source program.
-3. Deploy the program to the source program address.
+1. Verifiably build the ELF of the BPF implementation.
+2. Generate a new keypair for the source buffer account.
+3. Create the buffer account and write the ELF bytes to it.
 4. Generate a new keypair for the feature gate.
-5. Create a new feature gate to replace the target program with the source BPF
-   program.
+5. Create a new feature gate to replace the target program with the source
+   buffer.
 6. Follow the existing process for activating features.
 
 ## Impact
