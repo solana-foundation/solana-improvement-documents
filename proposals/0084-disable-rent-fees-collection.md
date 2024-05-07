@@ -32,28 +32,28 @@ None
 
 ## Detailed Design
 
-When the feature - "disable rent fees collections" is activated, rent will no
-longer be collected from accounts nor will it be distributed to validators.
+When the feature "disable rent fees collections" is activated, rent will no
+longer be collected from accounts, nor will the fees be distributed to validators.
 
 Note that this does **not** change the requirement that existing rent-paying
-accounts, which need to be made rent-exempt first before any withdrawals can be
-make from them.
+accounts need to be made rent-exempt first, before any withdrawals can be
+made.
 
 ## Impact
 
-1. Other implementations of validator client will not need to implement rent
-   processing.
+1. Other validator client implementations will not need to implement rent
+   collection.
 
 1. The performance of validators will be better since there is no more rent
-   processing.
+   collection.
 
 ## Security Considerations
 
-There will be no more rent paying accounts once the feature is activated. It is
+There will be no more rent paying accounts before this feature is activated. It is
 already impossible to create any new rent paying accounts on the network, there
-should be no security issue. However, if for some reason rent paying accounts
+should be no security issues. However, if for some reason rent paying accounts
 still exist or are created in the network, when the feature is activated, the network
-will still work as expected. The only difference is just that no more rents are
+will still work as expected. The only difference is that rent fees will no longer be
 collected or distributed.
 
 
