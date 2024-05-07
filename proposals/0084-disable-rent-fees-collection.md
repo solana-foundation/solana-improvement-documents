@@ -44,7 +44,7 @@ distributed to validators.
 
 Note that this does **not** change the requirement that existing rent-paying
 accounts need to be made rent-exempt first, before any withdrawals can be
-made, should there are any such rent-paying accounts.
+made, should there be any such rent-paying accounts.
 
 ## Impact
 
