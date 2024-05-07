@@ -53,7 +53,7 @@ code is a non-trivial piece of code inside the bank. By removing it, we simply
 the overall code of bank, and we no longer need to maintain it in existing
 validator client code. This will also help to simplify the development of other
 validator client implementations, which don't need to replicate the rent
-collection logics.
+collection logic.
 
 
 ## Security Considerations
