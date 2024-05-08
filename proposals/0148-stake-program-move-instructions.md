@@ -15,10 +15,11 @@ feature: (fill in with feature tracking issues once accepted)
 We propose introducing two new instructions to the stake program for moving
 value between stake accounts with identical `Authorized` and `Lockup`:
 
-* `MoveStake`: Move a given `amount` of active stake from one fully active
-account to another fully active account, or from a fully active account to an
-inactive one, turning it into an active account. In all cases, rent-exempt
-balance is unaffected and minimum delegations are respected.
+* `MoveStake`: Move a given `amount` of active stake from one active account to
+another active account, or from a active account to an inactive one, turning it
+into an active account. If the entire source account delegation is moved, the
+source account becomes inactive. In all cases, rent-exempt balance is unaffected
+and minimum delegations are respected for accounts that end in an active state.
 * `MoveLamports`: Move a given `amount` of excess lamports from one active or
 inactive account to another active or inactive account, where "excess lamports"
 refers to lamports that are neither delegated stake nor required for
@@ -46,16 +47,15 @@ The purpose of the `MoveStake` instruction is to enable a flow whereby moving
 stake from a user's stake accounts U1 -> U2 from validator V1 to validator V2
 may proceed:
 
-* `MoveStake` the `amount` of stake from the user stake account U1 to a
-"transient" inactive account T holding sufficient lamports for rent exemption
-and minimum delegation. T instantly becomes a second active stake account
-delegated to V1 with `amount` stake.
+* `MoveStake` the `amount` of stake from the user stake account U1 to an
+inactive account T holding sufficient lamports for rent exemption. T instantly
+becomes a second active stake account delegated to V1 with `amount` stake.
 * `Deactivate` T and wait an epoch.
 * `DelegateStake` T to V2 and wait an epoch. T becomes an active stake account
-delegated to V2 with `amount + minimum_delegation` stake.
-* `MoveStake` the `amount` stake from T to U2. `Deactivate` T to return it to
-its initial state. Stake has moved from U1 to U2 with no outside lamports
-required and no new undelegated lamports in delegated stake accounts.
+delegated to V2 with `amount` stake.
+* `MoveStake` the `amount` stake from T to U2. T returns to its initial inactive
+state. Stake has moved from U1 to U2 with no outside lamports required and no
+new undelegated lamports becoming trapped in delegated stake accounts.
 
 The motivation for `MoveLamports` is to enable housekeeping tasks such as
 reclaiming lmaports from `Merge` destinations.
@@ -90,57 +90,96 @@ repeated splitting.
 
 ## Detailed Design
 
+For clarity of terminology inside this specification:
+
+* An "active" stake is in a `Stake` state with nonzero delegation, 100% of which
+is effective stake. There is no activating or deactivating stake.
+* An "inactive" stake is in an `Initialized` or `Stake` state. There is no
+effective, activating, or deactivating stake.
+* Any stake account with any amount of activating or deactivating stake is said
+to be in a "transient" state.
+
 ### `MoveStake`
 
 `MoveStake` requires 5 accounts:
 
-* Source stake account
-* Destination stake account
-* Clock
-* Stake history
-* Stake account authority
+0. Source stake account: Writable, owned by the stake program
+1. Destination stake account: Writable, owned by the stake program
+2. Clock: Read-only, with the fixed address
+`SysvarC1ock11111111111111111111111111111111`
+3. Stake history: Read-only, with the fixed address
+`SysvarStakeHistory1111111111111111111111111`
+4. Stake account authority: Read-only signer
 
-`MoveStake` requires 1 argument:
+`MoveStake` instruction data is 12 bytes, containing:
 
-* `amount`, a `u64` indicating the quantity of lamports to move
+* `0x10 0x00 0x00 0x00`, a fixed-value four-byte little-endian unsigned integer
+acting as the instruction discriminator
+* `amount`, an unaligned eight-byte little-endian unsigned integer indicating
+the quantity of lamports to move
 
 `MoveStake` aborts the transaction when:
 
 * `amount` is 0
+* Source or destination are not writable
+* Source or destination are not owned by the stake program
 * Source and destination have the same address
-* Source and destination do not have identical `Authorized` and `Lockup`
+* Source and destination do not have identical `Authorized`
+* If `Lockup` is in force, source and destination do not have identical `Lockup`
 * The stake account authority is not the `Staker` on both accounts
 * The stake account authority is not a signer
+* Source data length is not equal to the current version of `StakeState`
 * Destination data length is not equal to the current version of `StakeState`
-* Source is not fully active (100% of delegation is effective)
-* Destination is neither fully active nor fully inactive (initialized or
-deactivated)
+* Source is not active
+* Destination is neither active nor inactive
 * If destination is active, source and destination are not delegated to the same
 vote account
-* Moving `amount` stake would bring source below minimum delegation
+* Moving `amount` stake would leave source with a nonzero amount of stake less
+than the minimum delegation
 * Moving `amount` stake would fail to bring destination up to minimum delegation
 
 If all of these conditions hold, then:
 
 * Delegation and lamports on source are debited `amount`
 * Delegation and lamports on destination are credited `amount`
-* If destination is inactive, it is set to active with the same `Stake` as
-source, aside from delegation amount
+* If `amount` constitutes the full delegation on the source, source is reset to
+an `Initialized` state
+* If destination is inactive, destination becomes active with the same `Stake`
+as source, aside from delegation amount
+* TODO precisely define changes to `credits_observed`
 
 ### `MoveLamports`
 
-Accounts and arguments are identical to the above.
+`MoveLamports` requires 5 accounts:
+
+0. Source stake account: Writable, owned by the stake program
+1. Destination stake account: Writable, owned by the stake program
+2. Clock: Read-only, with the fixed address
+`SysvarC1ock11111111111111111111111111111111`
+3. Stake history: Read-only, with the fixed address
+`SysvarStakeHistory1111111111111111111111111`
+4. Stake account authority: Read-only signer
+
+`MoveLamports` instruction data is 12 bytes, containing:
+
+* `0x11 0x00 0x00 0x00`, a fixed-value four-byte little-endian unsigned integer
+acting as the instruction discriminator
+* `amount`, an unaligned eight-byte little-endian unsigned integer indicating
+the quantity of lamports to move
 
 `MoveLamports` aborts the transaction when:
 
 * `amount` is 0
+* Source or destination are not writable
+* Source or destination are not owned by the stake program
 * Source and destination have the same address
-* Source and destination do not have identical `Authorized` and `Lockup`
+* Source and destination do not have identical `Authorized`
+* If `Lockup` is in force, source and destination do not have identical `Lockup`
 * The stake account authority is not the `Staker` on both accounts
 * The stake account authority is not a signer
-* Source is neither fully active nor fully inactive
-* Destination is neither fully active nor fully inactive
-* `amount` exceeds source `lamports - stake - rent_exempt_reserve`
+* Source is neither active nor inactive
+* Destination is neither active nor inactive
+* `amount` exceeds source `lamports - effective_stake - rent_exempt_reserve`
 
 If all of these conditions hold, then:
 
@@ -150,12 +189,13 @@ If all of these conditions hold, then:
 ## Impact
 
 The primary utility of the proposed instructions is to support protocol
-developers in moving stake without controlling the `Withdrawer`. There is no
-loss of existing functionality.
+developers in moving value between stake accounts with the same authorities
+without controlling the `Withdrawer`. There is no loss of existing
+functionality.
 
 ## Security Considerations
 
-Care must be taken to ensure stakes are fully active, as moving delegations
+Care must be taken to ensure stakes are active, as moving delegations
 between accounts in any kind of transient state is fraught. Otherwise this
 change should be fairly low impact, as it does not require changing any existing
 logic, in particular avoiding making `Split` or `Merge` more permissive.
