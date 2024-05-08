@@ -169,8 +169,8 @@ If the instruction data is empty, the program must return an error.
 If `count == 0` and the length of the instruction data > 1, the program must
 return an error.
 
-If `count == 0` and the length of the instruction data is not at least
-`count * Secp256r1SignatureOffsets + 1`, the program must return an error.
+If `count > 0` and the length of the instruction data is not at least
+`count * sizeof(Secp256r1SignatureOffsets) + 2`, the program must return an error.
 
 The instruction processing logic must follow the pseudocode below:
 
