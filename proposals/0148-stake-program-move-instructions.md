@@ -16,7 +16,7 @@ We propose introducing two new instructions to the stake program for moving
 value between stake accounts with identical `Authorized` and `Lockup`:
 
 * `MoveStake`: Move a given `amount` of active stake from one active account to
-another active account, or from a active account to an inactive one, turning it
+another active account, or from an active account to an inactive one, turning it
 into an active account. If the entire source account delegation is moved, the
 source account becomes inactive. In all cases, rent-exempt balance is unaffected
 and minimum delegations are respected for accounts that end in an active state.
