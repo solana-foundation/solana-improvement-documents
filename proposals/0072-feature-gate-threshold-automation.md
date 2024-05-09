@@ -19,10 +19,6 @@ based on a stake-weighted support threshold, rather than manual human action.
 With this new process, contributors no longer have to assess stake support for a
 feature before activation. Instead, the assessment is done by the runtime.
 
-> Note: This SIMD is subject to change based on the results of the SIMD to
-> introduce the Validator Epoch Stake Syscall, as defined below, to which a link
-> will be provided in this proposal when available.
-
 ## Motivation
 
 Feature gates wrap new cluster functionality, and typically change the rules of
@@ -52,8 +48,9 @@ beneficial.
   that will own all feature accounts.
 - **Staged Features PDA:** The PDA under the Feature Gate program used to track
   features submitted for activation.
-- **Validator Epoch Stake Syscall:** The new syscall that returns the current
-  epoch stake for a given vote account address.
+- **Get Epoch Stake Syscall:** The new syscall introduced in
+  [SIMD 0133](https://github.com/solana-foundation/solana-improvement-documents/pull/133)
+  that returns the current epoch stake for a given vote account address.
 
 ## Detailed Design
 
@@ -137,7 +134,7 @@ except `E` and `H`, their `u8` value would be 246, or `11110110`.
 
 A node's submitted bit mask is then used to add that node's current epoch stake
 to the Staged Features PDA for each feature for which it has signaled support.
-This is done by using the Validator Epoch Stake Syscall.
+This is done by using the Get Epoch Stake Syscall.
 
 Nodes should send a transaction containing this instruction at some arbitrary
 point during the epoch at least 128 slots before the end of the epoch and on
