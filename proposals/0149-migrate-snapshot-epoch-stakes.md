@@ -125,8 +125,10 @@ epoch stakes entries to the new epoch stakes field. Note, however, that there
 are 3 different epoch stakes entry variants:
 
 1. Entries created during epoch boundaries which have full stake account data
-2. Entries deserialized from the old snapshot epoch stakes field which only have stake delegation state.
-3. Entries deserialized from the new snapshot epoch stakes field which have full stake state.
+2. Entries deserialized from the old snapshot epoch stakes field which only have
+    stake delegation state.
+3. Entries deserialized from the new snapshot epoch stakes field which have full
+    stake state.
 
 Only variants 1 and 3 can be serialized into the new epoch stakes field so any
 variant 2 epoch stakes entries will continue being serialized into the old epoch
