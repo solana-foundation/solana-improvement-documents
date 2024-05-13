@@ -93,14 +93,38 @@ expects:
 One single PDA will be used to store two lists of features. Its data will be
 structured as follows:
 
-- 8 bytes for the current epoch.
-- A fixed-size list of size 8 containing 32-byte feature IDs staged for
-  activation at the end of the *current epoch*.
-- A fixed-size list of size 8 containing the `u64` value of total stake support
-  for each feature ID in the prior list.
-- 8 bytes for the next epoch.
-- A fixed-size list of size 8 containing 32-byte feature IDs staged for
-  activation at the end of the *next epoch*.
+```c
+#define FEATURE_ID_SIZE 32
+#define MAX_FEATURES 8
+
+/**
+ * A Feature ID and its corresponding stake support, as signalled by validators.
+ */
+typedef struct {
+    /** Feature identifier (32 bytes). */
+    uint8_t feature_id[FEATURE_ID_SIZE];
+    /** Stake support (little-endian u64). */
+    uint8_t stake[8];
+} FeatureStake;
+
+/**
+ * Staged features for activation. 
+ */
+typedef struct {
+    /** The current epoch (little-endian u64). */
+    uint8_t current_epoch[8];
+    /**
+     * Features staged for activation at the end of the current epoch, with
+     * their corresponding signalled stake support.
+     */
+    FeatureStake current_feature_stakes[MAX_FEATURES];
+
+    /** The next epoch (little-endian u64). */
+    uint8_t next_epoch[8];
+    /** Feature IDs staged for the _next_ epoch. */
+    uint8_t next_features[MAX_FEATURES][FEATURE_ID_SIZE];
+} StagedFeatures;
+```
 
 `StageFeatureForActivation` will add the provided feature ID to the **next
 epoch's** set of staged features.
