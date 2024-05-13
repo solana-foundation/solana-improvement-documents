@@ -110,13 +110,13 @@ be found here:
 
 <https://github.com/buffalojoec/feature-gate-data-poc/blob/master/src/lib.rs>
 
-The Staged Features PDA could be derived simply from one literal seed:
+The Staged Features PDA will be derived simply from one literal seed:
 `"staged_features"`.
 
 ### Step 3: Signaling Support for Staged Features
 
 With an on-chain reference point to determine the features staged for activation
-for a particular epoch, nodes can signal their support for the staged features
+for a particular epoch, nodes will signal their support for the staged features
 supported by their software.
 
 A node signals its support for staged features by invoking the Feature Gate
@@ -128,6 +128,17 @@ expects:
   - Staged Features PDA: writable
   - Vote account: signer
 
+A bit mask is used as a compressed ordered list of indices. This has two main
+benefits:
+
+- Minimizes transaction size for nodes, requiring only one byte to describe
+  256 bytes (8 * 32) of data. The alternative would be sending `n` number of
+  32-byte addresses in each instruction.
+- Reduce compute required to search the list of staged features for a matching
+  address. The bitmask's format provides the Feature Gate program with the
+  indices it needs to store supported stake without searching through the staged
+  features for a match.
+
 A `1` bit represents support for a feature. For example, for staged features
 `[A, B, C, D, E, F, G, H]`, if a node wishes to signal support for all features
 except `E` and `H`, their `u8` value would be 246, or `11110110`.
@@ -138,10 +149,16 @@ This is done by using the Get Epoch Stake Syscall.
 
 Nodes should send a transaction containing this instruction at some arbitrary
 point during the epoch at least 128 slots before the end of the epoch and on
-startup after any reboot.
+startup after any reboot. Transactions sent too late (< 128 slots before epoch
+end) will be rejected by the Feature Gate program.
 
-Note: If a feature is revoked, the list of staged features will not change, and
-nodes may still signal support for this feature. However, the runtime will not
+If a node does not send this transaction, or sends it too late in the epoch (>
+128 slots before the end), their stake is not tallied. This is analogous to a
+node sending this transaction in a valid point in the epoch signalling support
+for zero features.
+
+If a feature is revoked, the list of staged features will not change, and nodes
+may still signal support for this feature. However, the runtime will not
 activate this feature if its corresponding feature account no longer exists
 on-chain.
 
@@ -154,6 +171,10 @@ for each feature ID to determine which staged features to activate.
 Only features whose stake support meets the required threshold are activated.
 This threshold shall be set to 95% initially, but future iterations on the
 process could allow feature key-holders to set a custom threshold per-feature.
+
+As mentioned previously, if a feature was revoked, it will no longer exist
+on-chain, and therefore will be not activated by the runtime, regardless of
+calculated stake support.
 
 If a feature is not activated, either because it has been revoked or it did not
 meet the required stake support, it must be resubmitted according to Step 2.
