@@ -105,7 +105,7 @@ enum VersionedEpochStakes {
 }
 ```
 
-### Snapshot Update Rollout
+### Snapshot Migration Phases
 
 Handling snapshot format changes is always a delicate operation to coordinate
 given that old software releases will not be able to deserialize snapshots from
@@ -115,16 +115,20 @@ new software releases properly. The rollout will require two phases:
 2. Enable serializing epoch stakes to the new field and phase out the old field
 
 During the first phase, validator software will be updated to attempt to
-deserialize the new epoch stakes field appended at the end of the bank snapshot.
-If the field doesn't exist, validators will continue using the old deserialized
-field. If the new epoch stakes field is deserialized successfully, the epoch
-stakes entries from this field will be merged with entries from the old field.
+deserialize the new epoch stakes field appended at the end of the bank snapshot
+and merge those entries with the epoch stakes entries deserialized from the old
+epoch stakes field. If the field doesn't exist, validators can assume that all
+epoch stakes entries are serialized in the old deserialized field.
 
 During the second phase, validator software will be updated to start serializing
 epoch stakes entries to the new epoch stakes field. Note, however, that there
-are 3 different epoch stakes entry variants:
+will still potentially be some epoch stake entries that are incompatible with
+the new epoch stakes field that must still be serialized to the old epoch stakes
+field.
 
-1. Entries created during epoch boundaries which have full stake account data
+There are 3 different epoch stakes entry variants:
+
+1. Entries created during epoch boundaries which have _full_ stake account data
 2. Entries deserialized from the old snapshot epoch stakes field which only have
     stake delegation state.
 3. Entries deserialized from the new snapshot epoch stakes field which have full
@@ -132,11 +136,17 @@ are 3 different epoch stakes entry variants:
 
 Only variants 1 and 3 can be serialized into the new epoch stakes field so any
 variant 2 epoch stakes entries will continue being serialized into the old epoch
-stakes field.
+stakes field. There are normally 6 epoch stakes entries serialized in each
+snapshot, so nodes will have to cross 6 epoch boundaries before they completely
+stop serializing any entries to the old epoch stakes snapshot field.
 
-We propose adding a new feature gate `migrate_epoch_stakes_snapshot_field` to
-facilitate the migration by activating phase 2 so that the implementation for
-both phases can be added to the next beta release.
+### Snapshot Rollout
+
+We propose merging the implementation for phase 1 into the next minor software
+release (e.g. v2.0) and then merging the implementation for phase 2 into the
+following minor software release (e.g v2.1).  This way, we can ensure that the
+whole cluster is running a version capable of reading the new snapshot field
+before any nodes start producing snapshots with that new field.
 
 ## Impact
 
