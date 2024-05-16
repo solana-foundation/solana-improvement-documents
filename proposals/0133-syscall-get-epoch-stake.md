@@ -12,7 +12,8 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-A syscall to retrieve a vote account's delegated stake for the current epoch.
+A syscall to retrieve a vote account's delegated stake or the total cluster
+stake for the current epoch.
 
 ## Motivation
 
@@ -54,10 +55,18 @@ The specification for the proposed syscall is as follows:
 
 ```c
 /**
- * Retrieves the total active stake delegated to a vote account for the current
- * epoch.
+ * Retrieves the total active stake delegated to a vote account, or for the
+ * entire cluster, for the current epoch.
+ *
+ * If a valid pointer for `vote_addr` is provided, returns the total active
+ * stake delegated to the vote account at the 32-byte address found at
+ * `var_addr`.
+ *
+ * If a null pointer is provided, returns the total active stake for the
+ * cluster.
  *
  * @param vote_addr     A pointer to 32 bytes representing the vote address.
+ *                      Can be a null pointer.
  * @return              A 64-bit unsigned integer representing the total
  *                      active stake delegated to the vote account at the
  *                      provided address.
@@ -67,32 +76,44 @@ uint64_t sol_get_epoch_stake(/* r1 */ void const * vote_addr);
 
 ### Control Flow
 
-The syscall aborts the virtual machine if not all bytes in VM memory range
-`[vote_addr, vote_addr + 32)` are readable.
+If `var_addr` is _not_ a null pointer:
 
-Otherwise, the syscall returns a `u64` integer representing the total active
-stake delegated to the vote account at the provided address.
+- The syscall aborts the virtual machine if not all bytes in VM memory range
+  `[vote_addr, vote_addr + 32)` are readable.
+- Otherwise, the syscall returns a `u64` integer representing the total active
+  stake delegated to the vote account at the provided address.
+  If the provided vote address corresponds to an account that is not a vote
+  account or does not exist, the syscall will return `0` for active stake.
 
-If the provided vote address corresponds to an account that is not a vote
-account or does not exist, the syscall will return `0` for active stake.
+If `var_addr` is a null pointer, the syscall returns a `u64` integer
+representing the total active stake on the cluster for the current epoch.
 
 ### Compute Unit Usage
 
-The syscall will always attempt to consume the same amount of CUs regardless of
-control flow.
+The syscall will always attempt to consume the same amount of CUs for both
+possible `var_addr` pointers, regardless of control flow.
+
+If `var_addr` is _not_ a null pointer:
 
 ```
-syscall_base + floor(32/cpi_bytes_per_unit) + mem_op_base
+syscall_base + floor(PUBKEY_BYTES/cpi_bytes_per_unit) + mem_op_base
 ```
 
-- `syscall_base`: Base cost of a sysvall.
+If `var_addr` is a null pointer:
+
+```
+syscall_base + mem_op_base
+```
+
+- `PUBKEY_BYTES`: 32 bytes for an Ed25519 public key.
+- `syscall_base`: Base cost of a syscall.
 - `cpi_bytes_per_units`: Number of account data bytes per CU charged during CPI.
 - `mem_op_base`: Base cost of a memory operation syscall.
 
 ## Impact
 
-Dapp developers will be able to query vote account stake for the current epoch
-from within on-chain programs.
+Dapp developers will be able to query vote account and cluster stake for the
+current epoch from within on-chain programs.
 
 ## Security Considerations
 
