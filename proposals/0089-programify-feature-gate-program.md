@@ -59,9 +59,12 @@ changes need only be done once, eliminating this duplication of work.
 
 ## Detailed Design
 
-The Feature Gate program shall be a Core BPF program whose upgrade authority
-will be a multi-sig authority with keyholders from Solana Labs and potentially
-Jito.
+A Core BPF program - the Feature Gate program - shall be placed at the address
+of `Feature111111111111111111111111111111111111` using the process outlined in
+[SIMD 0088](https://github.com/solana-foundation/solana-improvement-documents/pull/88).
+
+The program will have no upgrade authority. If changes are required, for
+essential network operations, the program will be updated using feature-gates.
 
 The program shall initially be designed to support one instruction:
 `RevokePendingActivation`. Any other instructions or functionality this program
@@ -73,21 +76,8 @@ its lamports balance. As a result, the runtime will no longer recognize this
 feature as pending, since it will no longer be owned by
 `Feature111111111111111111111111111111111111`.
 
-The official process outlined in 
-[SIMD 0088](https://github.com/solana-foundation/solana-improvement-documents/pull/88)
-for migrating a native program to Core BPF will be used to enable this new
-program, with the addition of the `RevokePendingActivation` instruction as a
-separate BPF prgoram-upgrade step.
-
-1. Migrate the native no-op program at
-   `Feature111111111111111111111111111111111111` to a Core BPF no-op, with the
-   new program's upgrade authority set to the Feature Gate multi-sig.
-2. Upgrade the Core BPF no-op to add the `RevokePendingActivation` instruction
-   using the new multi-sig authorization.
-
-Because the only change to the program is the addition of the
-`RevokePendingActivation` instruction, these steps will enable Core BPF Feature
-Gate without any changes to the existing feature activation process.
+The creation of this program will not change the existing feature activation
+process.
 
 ## Impact
 
@@ -107,13 +97,9 @@ that can modify feature accounts once they've been created under
 confidently update their state upon activation.
 
 With this proposal, a live BPF program - which can accept instructions from
-anyone and execute code - will be the owner of these accounts. This creates some
-risk if *both* the program's processor code as well as a secure system for
-upgrading the program are not properly managed.
-
-However, this program's upgrades will be protected by a multi-sig authority.
-Thoroughly reviewed and safe processor code should mitigate any new risks
-associated with this change.
+anyone and execute code - will be the owner of these accounts. This introduces
+new risks that must be mitigated through careful implementation of Feature Gate
+program functionality.
 
 ## Backwards Compatibility
 
