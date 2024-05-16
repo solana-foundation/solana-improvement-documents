@@ -171,15 +171,17 @@ A node's submitted bit mask is then used to add that node's current epoch stake
 to the Staged Features PDA for each feature for which it has signaled support.
 This is done by using the Get Epoch Stake Syscall.
 
-Nodes should send a transaction containing this instruction at some arbitrary
-point during the epoch at least 128 slots before the end of the epoch and on
-startup after any reboot. Transactions sent too late (< 128 slots before epoch
-end) will be rejected by the Feature Gate program.
+Nodes are required to submit a transaction containing this instruction:
 
-If a node does not send this transaction, or sends it too late in the epoch (>
-128 slots before the end), their stake is not tallied. This is analogous to a
-node sending this transaction in a valid point in the epoch signalling support
-for zero features.
+- Any time at least 4500 slots before the end of the epoch.
+- During startup after any reboot.
+
+Transactions sent too late (< 4500 slots before the epoch end) will be rejected
+by the Feature Gate program.
+
+If a node does not send this transaction or it is rejected, their stake is not
+tallied. This is analogous to a node sending this transaction in a valid point
+in the epoch signalling support for zero features.
 
 If a feature is revoked, the list of staged features will not change, and nodes
 may still signal support for this feature. However, the runtime will not
