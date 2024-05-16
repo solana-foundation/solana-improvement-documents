@@ -193,8 +193,9 @@ and calculate the stake - as a percentage of the total epoch stake - in support
 for each feature ID to determine which staged features to activate.
 
 Only features whose stake support meets the required threshold are activated.
-This threshold shall be set to 95% initially, but future iterations on the
-process could allow feature key-holders to set a custom threshold per-feature.
+This threshold will be hard-coded in the runtime to 95% initially, but future
+iterations on the process could allow feature key-holders to set a custom
+threshold per-feature.
 
 As mentioned previously, if a feature was revoked, it will no longer exist
 on-chain, and therefore will be not activated by the runtime, regardless of
