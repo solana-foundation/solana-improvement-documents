@@ -198,12 +198,34 @@ if length_of_data < (count * SERIALIZED_OFFSET_STRUCT_SIZE + 2) {
 }
 instructions = instruction_datas;
 for i in 0..count {
+    if signature_instruction_index >= instructions.length {
+          return Error
+    }
+      if signature_offset + 64 > instructions[signature_instruction_index].data.length {
+          return Error
+    }
     signature = instructions[signature_instruction_index].data[signature_offset..signature_offset+64]
+
     if signature_S == highS {
       return Error
     }
+
+    if public_key_instruction_index >= instructions.length {
+        return Error
+    }
+    if public_key_offset + 33 > instructions[public_key_instruction_index].data.length {
+        return Error
+    }
     publicKey = instructions[public_key_instruction_index].data[public_key_offset..public_key_offset+33]
+
+    if message_instruction_index >= instructions.length {
+        return Error
+    }
+    if message_data_offset + message_data_size > instructions[message_instruction_index].data.length {
+        return Error
+    }
     message = instructions[message_instruction_index].data[message_data_offset..message_data_offset+message_data_size]
+    
     result = secp256verify(publicKey, message, signature)
     if result != true {
       return Error
