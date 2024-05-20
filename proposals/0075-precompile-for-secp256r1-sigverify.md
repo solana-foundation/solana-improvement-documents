@@ -193,7 +193,7 @@ count = data[0]
 if count == 0 && length_of_data > 1 {
   return Error
 }
-if length_of_data < (count * SERIALIZED_OFFSET_STRUCT_SIZE + 1) {
+if length_of_data < (count * SERIALIZED_OFFSET_STRUCT_SIZE + 2) {
   return Error
 }
 instructions = instruction_datas;
