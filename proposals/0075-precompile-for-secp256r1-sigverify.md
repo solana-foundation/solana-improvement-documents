@@ -149,6 +149,8 @@ struct Secp256r1SigVerifyInstruction {
     padding: uint8 LE,                        // Single byte padding
     signatureOffsets: Array<Secp256r1SignatureOffsets>, // Array of structs
 }
+Note: Array<Secp256r1SignatureOffsets> does not contain any length prefixes or
+padding between elements.
 
 struct Secp256r1SignatureOffsets {
     signature_offset: uint16 LE,              // Offset to signature
