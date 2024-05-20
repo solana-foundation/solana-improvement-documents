@@ -201,7 +201,7 @@ for i in 0..count {
     if signature_instruction_index >= instructions.length {
           return Error
     }
-      if signature_offset + 64 > instructions[signature_instruction_index]
+    if signature_offset + 64 > instructions[signature_instruction_index]
       .data.length {
           return Error
     }
