@@ -2,7 +2,7 @@
 simd: '0072'
 title: Feature Gate Threshold Automation
 authors:
-  - Tyera Eulburg
+  - Tyera Eulberg
   - Joe Caulfield
 category: Standard
 type: Core
@@ -44,12 +44,12 @@ beneficial.
 ## New Terminology
 
 - **Feature Gate program:** The Core BPF program introduced in
-  [SIMD 0089](https://github.com/solana-foundation/solana-improvement-documents/pull/89)
+  [SIMD 0089](./0089-programify-feature-gate-program.md)
   that will own all feature accounts.
 - **Staged Features PDA:** The PDA under the Feature Gate program used to track
   features submitted for activation.
 - **Get Epoch Stake Syscall:** The new syscall introduced in
-  [SIMD 0133](https://github.com/solana-foundation/solana-improvement-documents/pull/133)
+  [SIMD 0133](./0133-syscall-get-epoch-stake.md)
   that returns the current epoch stake for a given vote account address.
 
 ## Detailed Design
@@ -76,7 +76,7 @@ This step is unchanged from its original procedure.
 
 ### Step 2: Staging Features for Activation
 
-A multi-signature authority, comprised of key-holders from Solana Labs and
+A multi-signature authority, comprised of key-holders from Anza and
 possibly other validator client teams in the future, will have the authority to
 stage created features for activation.
 In the future, this authority could be replaced by validator governance.
@@ -129,11 +129,6 @@ typedef struct {
 `StageFeatureForActivation` will add the provided feature ID to the **next
 epoch's** set of staged features.
 
-An example of how this account's state might work to coordinate both lists can
-be found here:
-
-<https://github.com/buffalojoec/feature-gate-data-poc/blob/master/src/lib.rs>
-
 The Staged Features PDA will be derived simply from one literal seed:
 `"staged_features"`.
 
@@ -171,7 +166,7 @@ A node's submitted bit mask is then used to add that node's current epoch stake
 to the Staged Features PDA for each feature for which it has signaled support.
 This is done by using the Get Epoch Stake Syscall.
 
-Nodes are required to submit a transaction containing this instruction:
+Nodes should submit a transaction containing this instruction:
 
 - Any time at least 4500 slots before the end of the epoch.
 - During startup after any reboot.
@@ -180,7 +175,7 @@ Transactions sent too late (< 4500 slots before the epoch end) will be rejected
 by the Feature Gate program.
 
 If a node does not send this transaction or it is rejected, their stake is not
-tallied. This is analogous to a node sending this transaction in a valid point
+tallied. This is analogous to a node sending this transaction at a valid slot
 in the epoch signalling support for zero features.
 
 If a feature is revoked, the list of staged features will not change, and nodes
@@ -190,14 +185,14 @@ on-chain.
 
 ### Step 4: Feature Activation
 
-During the epoch rollover, the runtime can simply load the Staged Features PDA
+During the epoch rollover, the runtime must load the Staged Features PDA
 and calculate the stake - as a percentage of the total epoch stake - in support
 for each feature ID to determine which staged features to activate.
 
-Only features whose stake support meets the required threshold are activated.
-This threshold will be hard-coded in the runtime to 95% initially, but future
-iterations on the process could allow feature key-holders to set a custom
-threshold per-feature.
+Every feature whose stake support meets the required threshold must be
+activated. This threshold will be hard-coded in the runtime to 95% initially,
+but future iterations on the process could allow feature key-holders to set a
+custom threshold per-feature.
 
 As mentioned previously, if a feature was revoked, it will no longer exist
 on-chain, and therefore will be not activated by the runtime, regardless of
