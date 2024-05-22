@@ -54,6 +54,18 @@ beneficial.
 
 ## Detailed Design
 
+This proposal outlines a new feature activation process. The new process
+includes changes to the runtime's feature activation process as well as the
+Core BPF Feature Gate program proposed in
+[SIMD 0089](./0089-programify-feature-gate-program.md).
+
+The new process will utilize the Feature Gate program to enable the runtime to
+activate staged features that meet the necessary stake support while preventing
+the activation of those that do not.
+
+Two new instructions, as well as two types of PDAs, will be added to the
+Feature Gate program. They are detailed in this proposal.
+
 The new process is comprised of the following steps:
 
 1. **Feature Creation:** Contributors create feature accounts as they do now.
@@ -81,8 +93,8 @@ possibly other validator client teams in the future, will have the authority to
 stage created features for activation.
 In the future, this authority could be replaced by validator governance.
 
-The multi-signature authority stages a feature for activation by invoking the
-Feature Gate program's `StageFeatureForActivation` instruction. This instruction
+The multi-signature authority stages a feature for activation by invoking a new
+Feature Gate program instruction: `StageFeatureForActivation`. This instruction
 expects:
 
 - Data: The feature ID
@@ -138,8 +150,8 @@ With an on-chain reference point to determine the features staged for activation
 for a particular epoch, nodes will signal their support for the staged features
 supported by their software.
 
-A node signals its support for staged features by invoking the Feature Gate
-program's `SignalSupportForStagedFeatures` instruction. This instruction
+A node signals its support for staged features by invoking another new Feature
+Gate program instruction: `SignalSupportForStagedFeatures`. This instruction
 expects:
 
 - Data: A `u8` bit mask of the staged features.
@@ -162,9 +174,11 @@ A `1` bit represents support for a feature. For example, for staged features
 `[A, B, C, D, E, F, G, H]`, if a node wishes to signal support for all features
 except `E` and `H`, their `u8` value would be 246, or `11110110`.
 
-A node's submitted bit mask is then used to add that node's current epoch stake
-to the Staged Features PDA for each feature for which it has signaled support.
-This is done by using the Get Epoch Stake Syscall.
+The `SignalSupportForStagedFeatures` instruction processor will provide the
+vote account's address to the `GetEpochStake` syscall to retrieve the stake
+delegated to that vote account for the epoch. Then, using the `1` values
+provided in the bitmask, the processor will add this stake value to each
+corresponding feature ID's stake support in the Staged Features PDA.
 
 Nodes should submit a transaction containing this instruction:
 
@@ -201,10 +215,21 @@ calculated stake support.
 If a feature is not activated, either because it has been revoked or it did not
 meet the required stake support, it must be resubmitted according to Step 2.
 
-Once the epoch rollover is complete, as soon as the Feature Gate program is
-invoked again - either via `StageFeatureForActivation` or
-`SignalSupportForStagedFeature` - the Staged Features PDA's account state is
-updated and the process begins again.
+Once the epoch rollover is complete, the Feature Gate program will reset the
+Staged Features PDA for the new epoch the very first time it is invoked
+without error in the new epoch. Both instructions - `StageFeatureForActivation`
+and `SignalSupportForStagedFeature` - will check the value for `next_epoch`
+against the *current epoch* value in the `Clock` sysvar before executing the
+steps outlined previously in this proposal. If a match is detected, the account
+state is reset for the new epoch as follows:
+
+1. The `current_feature_stakes` list is reset to an empty list.
+2. The `current_epoch` is set to the value of `next_epoch`.
+3. The feature IDs from the `next_features` list are written into the
+   `current_feature_stakes` list with stake support initialized to zero.
+4. The `next_epoch` value is set to the *next* upcoming epoch number
+   (`current_epoch` + 1).
+5. The `next_features` list is reset to an empty list.
 
 ## Alternatives Considered
 
