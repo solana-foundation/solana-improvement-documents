@@ -200,11 +200,14 @@ See each step explained in details below.
    validator can categorize blocks missing locally into 2 categories: must-have
    and ignored.
 
-   We set the line at 42% when 80% join the restart, it's possible that
-   different validators see different 80%, so their must-have blocks might
-   be different, but in reality this case should be rare. Whenever some block
-   gets to 42%, repair could be started, because when more validators join the
-   restart, this number will only go up but will never go down.
+   We set the line at 42%. Because we require that at least 80% join the restart,
+   so any block with less than 67% - (100 - 80)% - 5% = 42% can never be
+   optimistically confirmed before the restart.
+   
+   It's possible that different validators see different 80%, so their must-have
+   blocks might be different, but in reality this case should be rare. Whenever
+   some block gets to 42%, repair could be started, because when more validators
+   join the restart, this number will only go up but will never go down.
 
    Once the validator gets `RestartLastVotedForkSlots`, it can calculate which
    blocks must be repaired. When all those "must-have" blocks are repaired and
