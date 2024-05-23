@@ -102,7 +102,7 @@ syscall_base + floor(PUBKEY_BYTES/cpi_bytes_per_unit) + mem_op_base
 If `var_addr` is a null pointer:
 
 ```
-syscall_base + mem_op_base
+syscall_base
 ```
 
 - `PUBKEY_BYTES`: 32 bytes for an Ed25519 public key.
