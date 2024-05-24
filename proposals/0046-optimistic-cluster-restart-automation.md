@@ -77,6 +77,12 @@ around while the validators automatically try to reach consensus, the validator
 will halt and print debug information if anything goes wrong, and operators can
 set up their own monitoring accordingly.
 
+However, there are many ways an automatic restart can go wrong, mostly due to
+unforseen situations or software bugs. To make things really safe, we apply
+multiple checks durinng the restart, if any check fails, the automatic restart
+is halted and debugging info printed, waiting for human intervention. Therefore
+we say this is an optimistic cluster restart procedure.
+
 ## Alternatives Considered
 
 ### Automatically detect outage and perform `cluster restart`
@@ -269,7 +275,7 @@ protocol. We call these `non-conforming` validators.
    combined stake would be `2 * (67% - 5% - X)`. Because we only allow one
    RestartHeaviestFork per pubkey, even if the any validator can put both
    children in its RestartHeaviestFork, the children's total stake should be
-   less than `100% - 5% - X`. We can caculate that if `134% - 2 * X < 95% - X`,
+   less than `100% - 5% - X`. We can calculate that if `134% - 2 * X < 95% - X`,
    then `X > 39%`, this is not possible when we have at least 80% of the
    validators in restart. So we prove any block in the list can have at most
    one child in the list by contradiction.
@@ -284,10 +290,11 @@ protocol. We call these `non-conforming` validators.
    of the list while its siblings are not on the list.
 
    Even if the last block D on the list may not be optimistically confirmed,
-   it already has at least `42% - 5% = 37%` stake, with no competing sibling
-   E getting more than `42%` stake. This is equal to the case where `5%` stake
-   jumped ship from fork E to fork D, 80% of the cluster can switch to fork E
-   if that turns out to be the heavist fork.
+   it already has at least `42% - 5% = 37%` stake. Say F is its sibling with
+   the most stake, F can only have less than `42%` stake because it's not on
+   the list. So picking D over F is equal to the case where `5%` stake
+   switched from fork F to fork D, 80% of the cluster can switch to fork D
+   if that turns out to be the heaviest fork.
 
    After deciding heaviest block, gossip
    `RestartHeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X
