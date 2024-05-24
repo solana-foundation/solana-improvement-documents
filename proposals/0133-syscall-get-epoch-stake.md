@@ -78,20 +78,27 @@ uint64_t sol_get_epoch_stake(/* r1 */ void const * vote_addr);
 
 If `var_addr` is _not_ a null pointer:
 
-- The syscall aborts the virtual machine if not all bytes in VM memory range
-  `[vote_addr, vote_addr + 32)` are readable.
+- The syscall aborts the virtual machine if:
+    - Not all bytes in VM memory range `[vote_addr, vote_addr + 32)` are
+      readable.
+    - Compute budget is exceeded.
 - Otherwise, the syscall returns a `u64` integer representing the total active
   stake delegated to the vote account at the provided address.
   If the provided vote address corresponds to an account that is not a vote
   account or does not exist, the syscall will return `0` for active stake.
 
-If `var_addr` is a null pointer, the syscall returns a `u64` integer
-representing the total active stake on the cluster for the current epoch.
+If `var_addr` is a null pointer:
+
+- The syscall aborts the virtual machine if:
+    - Compute budget is exceeded.
+- Otherwise, the syscall returns a `u64` integer representing the total active
+  stake on the cluster for the current epoch.
 
 ### Compute Unit Usage
 
-The syscall will always attempt to consume the same amount of CUs for both
-possible `var_addr` pointers, regardless of control flow.
+The syscall will always consume a fixed amount of CUs regardless of control
+flow. This fixed amount can be one of two values, depending on whether a null
+pointer was provided for `var_addr`.
 
 If `var_addr` is _not_ a null pointer:
 
