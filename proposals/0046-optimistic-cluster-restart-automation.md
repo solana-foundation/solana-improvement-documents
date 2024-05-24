@@ -149,6 +149,10 @@ hash) to restart from:
 
 See each step explained in details below.
 
+We assume that as most 5% of the validators in restart can be malicious or
+contains bugs, this number is consistent with other algorithms in the consensus
+protocol. We call these `non-conforming` validators.
+
 ### Wen restart phase
 
 1. **gossip last vote and ancestors on that fork**
@@ -200,9 +204,10 @@ See each step explained in details below.
    validator can categorize blocks missing locally into 2 categories: must-have
    and ignored.
 
-   We set the line at 42%. Because we require that at least 80% join the restart,
-   so any block with less than 67% - (100 - 80)% - 5% = 42% can never be
-   optimistically confirmed before the restart.
+   We repairs all blocks with no less than 42% stake. The number is
+   `67% - 5% - stake_on_validators_not_in_restart`. We require that at least 80%
+   join the restart, any block with less than 67% - (100 - 80)% - 5% = 42% can
+   never be optimistically confirmed before the restart.
    
    It's possible that different validators see different 80%, so their must-have
    blocks might be different, but in reality this case should be rare. Whenever
