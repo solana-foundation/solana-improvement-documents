@@ -96,8 +96,6 @@ For clarity of terminology inside this specification:
 is effective stake. There is no activating or deactivating stake.
 * An "inactive" stake is in an `Initialized` or `Stake` state. There is no
 effective, activating, or deactivating stake.
-* Any stake account with any amount of activating or deactivating stake is said
-to be in a "transient" state.
 
 ### `MoveStake`
 
@@ -146,7 +144,8 @@ If all of these conditions hold, then:
 an `Initialized` state
 * If destination is inactive, destination becomes active with the same `Stake`
 as source, aside from delegation amount
-* TODO precisely define changes to `credits_observed`
+* `credits_observed` must be updated on the destination according to the same
+rules as `Merge`
 
 ### `MoveLamports`
 
@@ -197,6 +196,6 @@ functionality.
 ## Security Considerations
 
 Care must be taken to ensure stakes are active, as moving delegations
-between accounts in any kind of transient state is fraught. Otherwise this
+between accounts in any kind of intermediate state is fraught. Otherwise this
 change should be fairly low impact, as it does not require changing any existing
 logic, in particular avoiding making `Split` or `Merge` more permissive.
