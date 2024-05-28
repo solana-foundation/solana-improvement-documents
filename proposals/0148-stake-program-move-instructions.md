@@ -178,7 +178,8 @@ the quantity of lamports to move
 * The stake account authority is not the `Staker` on both accounts
 * The stake account authority is not a signer
 * Source is neither active nor inactive
-* Destination is neither active nor inactive
+* Destination is not a valid merge destination (active, inactive, or activating
+with zero effective stake)
 * `amount` exceeds source `lamports - effective_stake - rent_exempt_reserve`
 
 If all of these conditions hold, then:
