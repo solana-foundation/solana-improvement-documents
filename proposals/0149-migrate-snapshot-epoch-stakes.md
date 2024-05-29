@@ -35,7 +35,7 @@ We have discussed the following alternative approach:
 
 1. The missing stake state information can be retrieved from the current epoch's
 stakes cache instead of epoch stakes. However this alternative is risky because
-the current epoch's stake cache is be updated during rewards distribution with
+the current epoch's stake cache is being updated during rewards distribution with
 newly rewarded stake accounts and possibly newly created stake accounts as well.
 
 ## Detailed Design
