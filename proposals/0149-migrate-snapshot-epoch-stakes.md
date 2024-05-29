@@ -159,6 +159,9 @@ Missing or corrupted epoch stakes entries caused by faulty snapshot migration
 can cause validators to fork off from the cluster or cause the cluster to lose
 consensus if sufficient stake is affected.
 
+Care should be taken to ensure that implementations can detect corrupted
+or incorrect values.
+
 ## Backwards Compatibility
 
 Snapshot changes must be made in a backwards compatible way. Handling
