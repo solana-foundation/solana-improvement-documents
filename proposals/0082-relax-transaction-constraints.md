@@ -12,26 +12,37 @@ feature:
 
 ## Summary
 
-This proposal aims to relax some of the constraints on which individual
-transactions can be included in a valid block.
-The proposal does not relax the constraints required for a transaction to be
-executed.
+Transaction errors fall into two categories: protocol violating errors and
+runtime errors.
+Protocol violation errors are those that break some constraint of the protocol,
+and any blocks containing such transactions must be rejected by the network.
+Runtime errors are those that occur during the processing of a transaction, and
+generally these errors mean that state changes are limited to a few accounts,
+but the transaction itself may be included in a block.
+Any block containing a transaction that results in a runtime error is still
+valid.
+This proposal aims to change several protocol violation errors into runtime
+errors, in order to simplify the protocol, and give more flexibility to
+block-producer and block-validator implementations.
 
 ## Motivation
 
 The current protocol places many constraints on the structure and contents
-of blocks; if any constraints are broken, block-validators will mark the block
-as invalid.
+of blocks; if any constraints are broken, block-validators will mark the
+entire block as invalid.
 Many of these constraints are necessary, but some of them are not, and lead to
 additional complexity in the protocol.
 This proposal aims to relax some of the constraints at the individual
 transaction level, in order to simplify the protocol, and give more flexibility
 to block-producer and block-validator implementations.
 
-More specifically, this proposal aims to relax the constraints which require
-account state in order to determine the validity of a transaction's inclusion.
-The reason these constraints are targetted specifically, is that reliance on
-account state necessarily requires synchronous execution within the protocol.
+More specifically, this proposal changes several protocol violation errors into
+runtime errors.
+This means that transactions that would previously be dropped with an error,
+can now be included in a block, but will either not be executed at all, or
+will have limited state changes.
+The goal is to remove much of the reliance on account-state in order to
+validate a block.
 This proposal on its' own, will not enable asynchronous execution, but it will
 remove one of the barriers to asynchronous execution.
 
@@ -40,13 +51,15 @@ remove one of the barriers to asynchronous execution.
 1. Do nothing
     - This is the simplest option, as we could leave the protocol as is.
     However, this leaves the protocol more complex than it needs to be.
-2. Relax all but fee-paying constraint
-    - This was actually the initial proposal, but it was decided that it would
-    be better to relax as many constraints as possible, rather than just some.
-    Any reliance on account state, means the protocol requires synchronous
-    execution.
-    For this reason, the constraint on fee-paying was also decided to be
-    relaxed.
+2. Also relax fee-paying constraint
+    - This was considered, and included in the intially reviewed proposal.
+    However, this was decided to be moved to a separate follow-up proposal,
+    should this one be accepted.
+    There was significant disagreements on how exactly transactions that cannot
+    pay fees should be handled.
+    By keeping fee-paying as a constraint for the current proposal, it will
+    allow this proposal to be accepted more quickly, which will give
+    significant benefits to the network.
 3. Additionally, relax the address lookup table resolution constraint
     - This was considered, since it is a transaction-level constraint that is
     depdendent on account-state. However, due to entry-level and block-level
@@ -60,103 +73,188 @@ None
 
 ## Detailed Design
 
-Specifically, this proposal relaxes constraints that a transaction included in
-a block must:
+### Current Protocol-Violation Errors
 
-1. Have a fee-payer with enough funds to pay fees
-2. Have a valid nonce account, if specified
-3. Have program accounts that:
-   1. exist
-   2. are executable
-4. Have writable accounts that are:
-   1. not executable, unless owned by
-   `BPFLoaderUpgradeab1e11111111111111111111111`
-   2. if owned by `BPFLoaderUpgradeab1e11111111111111111111111`,
-   then `BPFLoaderUpgradeab1e11111111111111111111111` must be included
-   3. if owned by `Stake11111111111111111111111111111111111111`, then the
-   current slot must not be within the epoch stakes reward distribution period
-5. Have executable `BPFLoaderUpgradeab1e11111111111111111111111` owned accounts
-with `UpgradeableLoaderState::Program` state, and derived program data account
-that exist
-6. Have a call chain depth of 5 or less
-7. Have no builtin loader ownership chains
-(pending `4UDcAfQ6EcA6bdcadkeHpkarkhZGJ7Bpq7wTAiRMjkoi`)
-8. Have total loaded data size which does not exceed
-requested_loaded_accounts_data_size_limit
-(pending `DdLwVYuvDz26JohmgSbA7mjpJFgX5zP2dkp8qsF2C33V`)
+Prior to this change, the list of protocol violation errors at the individual
+transaction level are:
 
-The intent with relaxing these constraints is to minimize the amount of
-account-state which is required in order to validate a block. This gives more
-flexibility to when and how account-state is updated during both block
-production and validation.
+1. Transaction must be deserializable via `bincode` (or equivalent) into a structure:
 
-With these constraints removed, there is still one account-state constraint
-at the transaction level: address lookup table resolution.
-With this proposal, this constraint is intentionally not relaxed since it is
-necessary for validation of entry-level and block-level constraints.
-However, if/when those constraints are relaxed, this constraint should be
-relaxed as well.
+    ```rust
+    pub struct VersionedTransaction {
+        #[serde(with = "short_vec")]
+        pub signatures: Vec<Signature>,
+        pub message: VersionedMessage,
+    }
+    ```
 
-The relaxation of these constraints is only relaxed for transactions being
-included in a block. During block validation, if any of these constraints
-are broken, the entire block is marked invalid; with this proposal, the
-block is not marked invalid, but the transaction will not be executed.
-These constraints must still be satisfied in order for the transaction to be
-executed, and have an effect on account state.
-Any transaction included in the block, regardless of whether or not the
-transaction is executed, must be inserted into the status cache.
-Nonced transactions must advance the nonce account, even if the transaction,
-is not executed.
-However, there are some new considerations which must be taken into account,
-specifically as it relates to fees and block limits.
+    where `Signature` and `VersionedMessage` are defined in `solana-sdk`.
+2. Transaction serialized side must be less than or equal to 1232 bytes.
+3. Transaction signatures must be valid and in the same order as the static
+   account keys in the `VersionedMessage`.
+4. Transaction must have exactly the number of required signatures from the
+   `VersionedMessage` header.
+5. Transaction must not have more signatures than static account keys.
+6. The `VersionedMessage` must pass sanitization checks:
+    - The sum of the number of required signatures and the number of read-only
+      unsigned accounts must not be greater than the number of static account
+      keys.
+    - The number of readonly signed accounts must be less than the number of
+      required signatures.
+    - Each lookup table, if present, must be used to load at least one account.
+    - The total number of accounts, static or dynamic, must be less than 256.
+    - Each instruction's `program_id_index` must be less than the number of
+      static account keys.
+    - Each intruction's `program_id_index` must not be the payer index (0).
+    - All account indices in instructions must be less than the number of total
+      accounts.
+7. Transactions that use address look up tables must be resolvable:
+    - The address look up table account must exist.
+    - The address look up table account must be owned by the address look up
+      table program: `AddressLookupTab1e1111111111111111111111111`
+    - The address look up table account data must be deserializable into
+      `AddressLookupTable` as defined in `solana-sdk`.
+    - All account table indices specified in the transaction must be less than
+      the number of active addresses in the address look up table.
+8. Transactions containing pre-compile instructions must pass pre-compile
+   verification checks.
+9. The transaction must not load the same account more than once.
+10. The transaction must have fewer than 64 accounts.
+    - The limit is subject to change to 128 with the activation of
+      `9LZdXeKGeBV6hRLdxS1rHbHoEUsKqesCC2ZAPTPKJAbK`.
+11. The `recent_blockhash` of the transaction message must be valid:
+    - It must exist and not have an age greater than 150.
+    - OR the transaction must be a nonced transaction, and the nonce
+      account must exist and be valid for the given `recent_blockhash`.
+12. The transaction must not have already been processed.
+13. The transaction fee-payer account must:
+    - exist
+    - be owned by the the system program: `11111111111111111111111111111111`
+    - have more lamports than the fee
+    - have more lamports than the fee plus the minimum balance
+14. Any non-writable program accounts used in the transaction must exist,
+    regardless of if they are used in any instructions.
+15. The total loaded data size of the transaction must not exceed
+    `requested_loaded_accounts_data_size_limit`, or the default limit (64MB).
+16. Any account used as a program in a top-level instruction must:
+    - be the native loader: `NativeLoader1111111111111111111111111111111`
+    - OR
+      - exist
+      - be executable
+      - be owned by the native loader: `NativeLoader1111111111111111111111111111111`
+    - OR
+      - exist
+      - be executable
+      - the owner account be owned by the native loader: `NativeLoader1111111111111111111111111111111`
+      - the owner account must be executable
 
-### Fee-Paying
+### Proposed Protocol-Violation Errors
 
-Currently, if a transaction's fee-payer does not have enough funds to pay the
-fee, the transaction cannot be included in a block. With this proposal, it is
-possible for such a transaction to be included in the block, and there are
-four different possibilites for what happens to the fee-payer account:
+The proposal is to move some items of the above list from protocol violations to runtime errors.
+Specifically, the following constraints will remain as protocol violations:
 
-1. The fee-payer account does not exist (0 lamports)
-2. The fee-payer account does not have enough funds for the entire fee
-3. The fee-payer account has enough funds for the fee, but would no longer be
-rent-exempt
-4. The fee-payer account has enough funds for the fee, and would still be
-rent-exempt after paying the fee
+1. Transaction must be deserializable via `bincode` (or equivalent) into a structure:
 
-In case 1, the transaction should simply be ignored for execution, and have no
-effect on state.
-In case 2, the fee-paying account should be drained of all funds, with fees
-being paid to the block producer, and have no other effect on state.
-In case 3, the fee-paying account should be drained of all funds, with fees
-being paid to the block-producer, and the remainder of lamports being burnt,
-and have no other effect on state.
-In case 4, the fee-paying account should be charged the fee, and execution
-should proceed as normal if all other executability checks pass.
-Case 4 is the only case in which a transaction is possibly executed, and thus
-is the only case that has can have effect on account state beyond fees.
+    ```rust
+    pub struct VersionedTransaction {
+        #[serde(with = "short_vec")]
+        pub signatures: Vec<Signature>,
+        pub message: VersionedMessage,
+    }
+    ```
+
+    where `Signature` and `VersionedMessage` are defined in `solana-sdk`.
+2. Transaction serialized side must be less than or equal to 1232 bytes.
+3. Transaction signatures must be valid and in the same order as the static
+   account keys in the `VersionedMessage`.
+4. Transaction must have exactly the number of required signatures from the
+   `VersionedMessage` header.
+5. Transaction must not have more signatures than static account keys.
+6. The `VersionedMessage` must pass sanitization checks:
+    - The sum of the number of required signatures and the number of read-only
+      unsigned accounts must not be greater than the number of static account
+      keys.
+    - The number of readonly signed accounts must be less than the number of
+      required signatures.
+    - Each lookup table, if present, must be used to load at least one account.
+    - The total number of accounts, static or dynamic, must be less than 256.
+    - Each instruction's `program_id_index` must be less than the number of
+      static account keys.
+    - Each intruction's `program_id_index` must not be the payer index (0).
+    - All account indices in instructions must be less than the number of total
+      accounts.
+7. Transactions that use address look up tables must be resolvable:
+    - The address look up table account must exist.
+    - The address look up table account must be owned by the address look up
+      table program: `AddressLookupTab1e1111111111111111111111111`
+    - The address look up table account data must be deserializable into
+      `AddressLookupTable` as defined in `solana-sdk`.
+    - All account table indices specified in the transaction must be less than
+      the number of active addresses in the address look up table.
+8. The `recent_blockhash` of the transaction message must be valid:
+    - It must exist and not have an age greater than 150.
+    - OR the transaction must be a nonced transaction, and the nonce
+      account must exist and be valid for the given `recent_blockhash`.
+9. The transaction must not have already been processed.
+10. The transaction fee-payer account must:
+    - exist
+    - be owned by the the system program: `11111111111111111111111111111111`
+    - have more lamports than the fee
+    - have more lamports than the fee plus the minimum balance
+
+### Proposed New Runtime Errors
+
+The following constraints will be moved to become runtime errors.
+Transactions that break these constraints may be included in a block.
+The fee-payer account must be charged fees, nonce advanced, but the transaction
+will not be executed.
+
+1. Transactions containing pre-compile instructions must pass pre-compile
+   verification checks.
+2. The transaction must not load the same account more than once.
+3. The transaction must have fewer than 64 accounts.
+    - The limit is subject to change to 128 with the activation of
+      `9LZdXeKGeBV6hRLdxS1rHbHoEUsKqesCC2ZAPTPKJAbK`.
+4. Any non-writable program accounts used in the transaction must exist,
+   regardless of if they are used in any instructions.
+5. The total loaded data size of the transaction must not exceed
+   `requested_loaded_accounts_data_size_limit`, or the default limit (64MB).
+6. Any account used as a program in a top-level instruction must:
+    - be the native loader: `NativeLoader1111111111111111111111111111111`
+    - OR
+      - exist
+      - be executable
+      - be owned by the native loader: `NativeLoader1111111111111111111111111111111`
+    - OR
+      - exist
+      - be executable
+      - the owner account be owned by the native loader: `NativeLoader1111111111111111111111111111111`
+      - the owner account must be executable
 
 ### Block-Limits
 
-Pending the activation of `2ry7ygxiYURULZCrypHhveanvP5tzZ4toRwVp89oCNSj`,
-validators must validate a block is within block-limits.
-With this proposal, some transactions may not be executable, but will still
-count towards block-limits.
-Transactions have a cost towards block limits without needing to execute the
-transaction.
-The cost of a transaction consists of signature verification, write locks for
-accounts, builtin instructions, requested or default bpf compute units, and
-data size costs.
-With this proposal, regardless of whether a transaction can pay fees, or is
-executed, the total cost of the transaction will count towards block limits.
+This proposal allows for transactions which do not execute to be included in a
+block.
+This was not previously possible, so how transaction costs are applied to
+limits must be clarified.
+This proposal proposes that an included unexecuted transaction should have all
+non-execution transaction costs applied towards block-limits, as well as all
+the writable account limits.
 
-If these transactions did not count towards block-limits, the validation of
-block-limits would require the validator to check whether or not a transaction
-is executable, which negates the benefits of this proposal.
+### Rationale
 
-Additionally, if these transactions did not count towards block-limits, a
-malicious leader could produce a block with non-executable transactions and
-overload the network.
+The intent with relaxing these constraints is to reduce the amount of
+account-state which is required in order to validate a block.
+This gives more flexibility to when and how account-state is updated during
+both block production and validation.
+Particularly with the relaxation of the program account constraints,
+block-packing can be done without needing to load large program accounts
+for the initial decision to include or not.
+This is a major step towards asynchronous block production and validation.
+
+Any transaction included in the block, regardless of whether or not the
+transaction is executed, must be charged fees, inserted into the status cache,
+and the nonce account, if present, must be advanced.
 
 ## Impact
 
@@ -164,28 +262,19 @@ overload the network.
   included and will be charged fees.
   - Users must be more careful when constructing transactions to ensure they
     are executable if they don't want to waste fees
-- The validity of a block is no longer dependent on intra-block account-state
-updates. This is because the only account-state required for transaction
-validation is the ALT resolution, which is resolved at the beginning of a slot.
-  - Block-production could be done asynchronously
-  - Block-validation could be done without execution, but still relies on the
-  execution of previous blocks.
+- Block-production is simplified as it can be done without needing to load
+  large program accounts for the initial decision to include or not.
 
 ## Security Considerations
 
-- Removing fee-paying requirement could allow validator clients to produce
-  blocks that do not pay fees. If not checked by block-producer, this could
-  allow malicious users to abuse such producers/leaders.
+None
 
 ## Drawbacks
 
-- Any dynamic fees based on block utilization cannot/should not reward the
-block-producer directly. Otherwise, this incentivizes block-producers to fill
-blocks with non-fee paying transactions in order to raise fees.
-- Non-fee paying transactions included in a block will be recorded in long-term
-transaction history. Without any fees being paid, there is no way to reward
-long-term storage of these transactions. It is important to note, there is also
-currently no way to reward this storage.
+- Users must be more careful about what they sign, as they will be charged fees
+  for transactions that are included in a block, even if they are not executed.
+- This will likely break a lot of tooling, such as explorers, which may expect
+  all transactions to attempt execution.
 
 ## Backwards Compatibility
 
