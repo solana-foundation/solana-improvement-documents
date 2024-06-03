@@ -69,13 +69,13 @@ Feature Gate program. They are detailed in this proposal.
 The new process is comprised of the following steps:
 
 1. **Feature Creation:** Contributors create feature accounts as they do now.
-2. **Staging Features for Activation:** In some epoch N, a multi-signature
+2. **Staging Features for Activation:** In some epoch `N-1`, a multi-signature
    authority stages for activation some or all of the features created in step
-   1, to be activated at the end of the *next epoch*.
-3. **Signaling Support for Staged Features:** During the next epoch (epoch N+1),
+   1, to be activated at the end of the *next epoch* (epoch `N`).
+3. **Signaling Support for Staged Features:** During the next epoch (epoch `N`),
    validators signal which of the staged feature-gates they support in their
    software.
-4. **Feature Activation:** At the end of epoch N+1, the runtime activates the
+4. **Feature Activation:** At the end of epoch `N`, the runtime activates the
    feature-gates that have the required stake support.
 
 ### Step 1: Feature Creation
@@ -102,8 +102,24 @@ expects:
   - Staged Features PDA: writable
   - Multi-signature authority: signer 
 
-One single PDA will be used to store two lists of features. Its data will be
-structured as follows:
+A PDA will be created for each epoch in which features are staged to be
+activated. If no features are staged for a given epoch, that epoch's
+corresponding PDA is not created.
+
+These PDAs will not be garbage collected and can be referenced for historical
+purposes.
+
+When the first feature for an epoch is staged, the PDA is created. The
+`StageFeatureForActivation` processor will debit from the multisig enough
+lamports to allocate the new Staged Features PDA.
+
+The address of the Staged Features PDA for a given epoch is derived as follows:
+
+```
+"staged_features" + < epoch number >
+```
+
+The data for the Staged Features PDA will be structured as follows:
 
 ```c
 #define FEATURE_ID_SIZE 32
@@ -123,26 +139,26 @@ typedef struct {
  * Staged features for activation. 
  */
 typedef struct {
-    /** The current epoch (little-endian u64). */
-    uint8_t current_epoch[8];
     /**
      * Features staged for activation at the end of the current epoch, with
      * their corresponding signalled stake support.
      */
     FeatureStake current_feature_stakes[MAX_FEATURES];
-
-    /** The next epoch (little-endian u64). */
-    uint8_t next_epoch[8];
-    /** Feature IDs staged for the _next_ epoch. */
-    uint8_t next_features[MAX_FEATURES][FEATURE_ID_SIZE];
 } StagedFeatures;
 ```
 
-`StageFeatureForActivation` will add the provided feature ID to the **next
-epoch's** set of staged features.
+`StageFeatureForActivation` may only be invoked during epoch `N-1`, where `N` is
+the epoch number used to derive the Staged Features program-derived address.
+This is checked by the Feature Gate program using the Clock sysvar.
 
-The Staged Features PDA will be derived simply from one literal seed:
-`"staged_features"`.
+Features staged during epoch `N-1` are staged to be activated at the end of
+epoch `N`.
+
+`StageFeatureForActivation` will add the provided feature ID to the list with
+stake support initialized to `0`.
+
+As depicted in the above layout, a maximum of 8 features can be staged for a
+given epoch.
 
 ### Step 3: Signaling Support for Staged Features
 
@@ -180,6 +196,10 @@ delegated to that vote account for the epoch. Then, using the `1` values
 provided in the bitmask, the processor will add this stake value to each
 corresponding feature ID's stake support in the Staged Features PDA.
 
+Just like the `StageFeatureForActivation` instruction, the Clock sysvar will be
+used to ensure the Staged Features PDA corresponding to the *current* epoch was
+provided.
+
 Nodes should submit a transaction containing this instruction:
 
 - Any time at least 4500 slots before the end of the epoch.
@@ -214,22 +234,6 @@ calculated stake support.
 
 If a feature is not activated, either because it has been revoked or it did not
 meet the required stake support, it must be resubmitted according to Step 2.
-
-Once the epoch rollover is complete, the Feature Gate program will reset the
-Staged Features PDA for the new epoch the very first time it is invoked
-without error in the new epoch. Both instructions - `StageFeatureForActivation`
-and `SignalSupportForStagedFeature` - will check the value for `next_epoch`
-against the *current epoch* value in the `Clock` sysvar before executing the
-steps outlined previously in this proposal. If a match is detected, the account
-state is reset for the new epoch as follows:
-
-1. The `current_feature_stakes` list is reset to an empty list.
-2. The `current_epoch` is set to the value of `next_epoch`.
-3. The feature IDs from the `next_features` list are written into the
-   `current_feature_stakes` list with stake support initialized to zero.
-4. The `next_epoch` value is set to the *next* upcoming epoch number
-   (`current_epoch` + 1).
-5. The `next_features` list is reset to an empty list.
 
 ## Alternatives Considered
 
