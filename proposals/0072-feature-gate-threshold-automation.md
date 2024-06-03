@@ -100,7 +100,8 @@ expects:
 - Data: The feature ID
 - Accounts:
   - Staged Features PDA: writable
-  - Multi-signature authority: signer 
+  - Multi-signature authority: signer
+  - Payer: optional signer
 
 A PDA will be created for each epoch in which features are staged to be
 activated. If no features are staged for a given epoch, that epoch's
@@ -110,10 +111,12 @@ These PDAs will not be garbage collected and can be referenced for historical
 purposes.
 
 When the first feature for an epoch is staged, the PDA is created. The
-`StageFeatureForActivation` processor will debit from the multisig enough
-lamports to allocate the new Staged Features PDA.
+`StageFeatureForActivation` processor will debit from the payer account enough
+lamports to allocate the new Staged Features PDA. A payer account must be
+provided for the first staged feature.
 
-The address of the Staged Features PDA for a given epoch is derived as follows:
+The address of the Staged Features PDA for a given epoch is derived as follows,
+where `epoch number` is a little-endian `u64`:
 
 ```
 "staged_features" + < epoch number >
