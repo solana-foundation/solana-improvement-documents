@@ -200,17 +200,9 @@ Just like the `StageFeatureForActivation` instruction, the Clock sysvar will be
 used to ensure the Staged Features PDA corresponding to the *current* epoch was
 provided.
 
-Nodes should submit a transaction containing this instruction:
-
-- Any time at least 4500 slots before the end of the epoch.
-- During startup after any reboot.
-
-Transactions sent too late (< 4500 slots before the epoch end) will be rejected
-by the Feature Gate program.
-
-If a node does not send this transaction or it is rejected, their stake is not
-tallied. This is analogous to a node sending this transaction at a valid slot
-in the epoch signalling support for zero features.
+If a node does not send this transaction successfully during the current epoch,
+their stake is not tallied. This is analogous to a node signalling support for
+zero features.
 
 If a feature is revoked, the list of staged features will not change, and nodes
 may still signal support for this feature. However, the runtime will not
