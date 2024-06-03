@@ -196,8 +196,8 @@ delegated to that vote account for the epoch. Then, using the `1` values
 provided in the bitmask, the processor will add this stake value to each
 corresponding feature ID's stake support in the Staged Features PDA.
 
-Just like the `StageFeatureForActivation` instruction, the Clock sysvar will be
-used to ensure the Staged Features PDA corresponding to the *current* epoch was
+Similar to the `StageFeatureForActivation` instruction, the Clock sysvar will be
+used to ensure the Staged Features PDA corresponding to the *current* epoch `N` was
 provided.
 
 If a node does not send this transaction successfully during the current epoch,
