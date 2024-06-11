@@ -51,7 +51,10 @@ n/a
 
 ## Detailed Design
 
-### Generic Precompile
+We first propose a specification for precompiles. Then we propose changes
+to the existing precompiles with respect to the specification.
+
+### Precompile Specification
 
 Precompiles are special native programs designed to verify additional
 signatures. Each precompile consists of a single `verify` instruction.
