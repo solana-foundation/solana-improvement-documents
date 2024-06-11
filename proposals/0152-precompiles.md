@@ -60,7 +60,9 @@ Precompiles are special native programs designed to verify additional
 signatures. Each precompile consists of a single `verify` instruction.
 
 Precompiles are executed right after transaction signature verification,
-they run without the VM and without loading any account.
+they run without the VM and without loading any account. From a cost
+perspective, they're included in the transaction fee (each signature to
+verify counts as a transaction signature), but don't require any compute units.
 
 If a transaction contains more than 8 precompile signatures, it must fail.
 
@@ -74,14 +76,15 @@ The precompile instruction `verify` accepts the following data:
 struct PrecompileVerifyInstruction {
   num_signatures:  u8,                       // Number of signatures to verify
   padding:         u8,                       // Single byte padding
-  offsets:         Array<PrecompileOffsets>, // Array of offsets
+  offsets:         PrecompileOffsets[],      // Array of `num_signatures` offsets
   additionalData?: Bytes,                    // Optional additional data, e.g.
                                              // signatures included in the same
                                              // instruction
 }
 
 struct PrecompileOffsets {
-  signature_offset: u16 LE,                  // Offset to signature
+  signature_offset: u16 LE,                  // Offset to signature (offset within
+                                             // the specified instruction data)
   signature_instruction_index: u16 LE,       // Instruction index to signature
   public_key_offset: u16 LE,                 // Offset to public key
   public_key_instruction_index: u16 LE,      // Instruction index to  public key
@@ -111,6 +114,9 @@ To retrieve `signature`, `public_key`, and `message`:
    - If the index is invalid, return Error
 2. Return `length` bytes starting from `offset`
    - If this exceeds the `instruction_data` length, return Error
+
+Note that fields (offsets) can overlap, for example the same public key or
+message can be referred to by multiple instances of `PrecompileOffsets`.
 
 If the precompile `verify` function returns any error, the whole transaction
 should fail. Therefore, the type of error is irrelevant and is left as an
