@@ -150,7 +150,8 @@ transaction level are:
 
 ### Proposed Protocol-Violation Errors
 
-The proposal is to move some items of the above list from protocol violations to runtime errors.
+The proposal is to move some items of the above list from protocol violations
+to runtime errors.
 Specifically, the following constraints will remain as protocol violations:
 
 1. Transaction must be deserializable via `bincode` (or equivalent) into a structure:
