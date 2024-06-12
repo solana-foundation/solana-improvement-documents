@@ -35,19 +35,19 @@ N/A.
 
 ## Detailed Design
 
-The Address Lookup Table program will be reimplemented in order to be compiled
+The Address Lookup Table program is reimplemented in order to be compiled
 to BPF and executed by the BPF loader.
 
-The reimplemented program's ABI will exactly match that of the original.
+The reimplemented program's ABI exactly matches that of the original.
 
-The reimplemented program's functionality will exactly match that of the
-original, differing only in compute usage. Instead it will have dynamic compute
+The reimplemented program's functionality exactly matches that of the
+original, differing only in compute usage. Instead it has dynamic compute
 usage based on the VM's compute unit meter.
 
-The program will be migrated to Core BPF using the procedure outlined in
+The program shall be migrated to Core BPF using the procedure outlined in
 [SIMD 0088](./0088-enable-core-bpf-programs.md).
 
-The program will have no upgrade authority. If changes are required, for
+The program has no upgrade authority. If changes are required, for
 essential network operations, the program will be updated using feature-gates.
 
 ## Impact
