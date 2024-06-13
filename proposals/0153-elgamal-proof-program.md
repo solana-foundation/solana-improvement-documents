@@ -28,13 +28,7 @@ that verify zero-knowledge proofs that are tailor made for `Transfer` and
 
 The ZK Token Proof program is a native built-in program that is part of the
 validator client. These types of programs should generally not favor any specific
-application/program like the SPL Token program. Furthermore the logic
-contained in the ZK Token Proof program enables private transfer of SPL tokens.
-The SPL Token program is limited to confidential transfers (not
-anonymous) and it contains an audit feature which enables authorities to decrypt
-any confidential transfers. Nevertheless, including these type of privacy related
-proof verification logic in the validator client can provide unnecessary legal
-burden to the maintainers of the Solana validator clients.
+application/program like the SPL Token program.
 
 In this document, we propose that we deprecate the existing ZK Token Proof
 program and replace it with a more general ZK ElGamal Proof program that is
@@ -48,8 +42,7 @@ required for a token transfer instruction.
 ## Alternatives Considered
 
 We can activate the ZK Token Proof program. However, as explained above, this is
-too specific to a particular application and also provides unnecessary burden to
-Solana validator clients as the program contains privacy related logic.
+too specific to a particular application.
 
 We can deprecate the ZK Token Proof program. However, the program still contains
 useful zero-knowledge proofs that are very general and will benefit many
@@ -70,145 +63,37 @@ n/a
 ## Detailed Design
 
 The new ZK ElGamal Proof program contains a strict subset of the proof
-verification instructions in the original ZK Token Proof program. We list the
-current list of the instructions in the ZK Token Proof program and denote
-whether they are included, removed, or renamed in the new ZK ElGamal Proof
-program.
+verification [instructions](https://github.com/anza-xyz/agave/blob/master/zk-token-sdk/src/zk_token_proof_instruction.rs#L48)
+in the original ZK Token Proof program. We list the
+the instructions in the ZK Token Proof program that are to be either renamed or
+removed in the new ZK ElGamal Proof program.
 
-```rust
-pub enum ProofInstruction {
-    /// Close a zero-knowledge proof context state.
-    ///
-    /// This instruction will be left unchanged.
-    CloseContextState,
+The following set of instructions will be RENAMED:
 
-    /// Verify a zero-balance proof.
-    ///
-    /// A zero-balance proof certifies that an ElGamal ciphertext encrypts the
-    /// value zero.
-    ///
-    /// This instruction will be RENAMED to `VerifyZeroCiphertext`.
-    VerifyZeroBalance,
+- `VerifyZeroBalance`: Verifies a proof that certifies that an ElGamal
+  ciphertext encrypts the value zero.
 
-    /// Verify a withdraw zero-knowledge proof.
-    ///
-    /// This instruction verifies zero-knowledge proofs that is necessary for
-    /// the `Withdraw` instruction in SPL Token.
-    ///
-    /// This instruction will be REMOVED.
-    VerifyWithdraw,
+  This instruction will be RENAMED to `VerifyZeroCiphertext`.
 
-    /// Verify a ciphertext-ciphertext equality proof.
-    ///
-    /// A ciphertext-ciphertext equality proof certifies that two ElGamal
-    /// ciphertexts encrypt the same message.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyCiphertextCiphertextEquality,
+- `VerifyFeeSigma`: Verifies a proof that certifies that a tuple of Pedersen
+  commitments satisfy a percentage relation.
 
-    /// Verify a transfer zero-knowledge proof.
-    ///
-    /// This instruction verifies zero-knowledge proofs that is necessary for
-    /// the `Transfer` instruction in SPL Token.
-    ///
-    /// This instruction will be REMOVED.
-    VerifyTransfer,
+  This instruction will be RENAMED to `VerifyPercentageWithCap`.
 
-    /// Verify a transfer with fee zero-knowledge proof.
-    ///
-    /// This instruction verifies zero-knowledge proofs that is necessary for
-    /// the `Transfer` instruction in SPL Token.
-    ///
-    /// This instruction will be REMOVED.
-    VerifyTransferWithFee,
+The following set of instructions will be REMOVED:
 
-    /// Verify a public key validity zero-knowledge proof.
-    ///
-    /// A public key validity proof certifies that an ElGamal public key is
-    /// well-formed and the prover knows the corresponding secret key.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyPubkeyValidity,
+- `VerifyWithdraw`: Verifies the zero-knowledge proofs that are necessary for the
+  `Withdraw` instruction in SPL Token.
 
-    /// Verify a 64-bit range proof.
-    ///
-    /// A range proof is defined with respect to a Pedersen commitment. The
-    /// 64-bit range proof certifies that a Pedersen commitment holds an
-    /// unsigned 64-bit number.
-    ///
-    /// This instruction is not specific to the SPL Token program, but since it
-    /// can be subsumed by the `VerifyBatchRangeProofU64` instruction below, it
-    /// will be REMOVED.
-    VerifyRangeProofU64,
+- `VerifyTransfer`: Verifies the zero-knowledge proofs that are necessary for
+  the `Transfer` instruction in SPL Token.
 
-    /// Verify a 64-bit batched range proof.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyBatchedRangeProofU64,
+- `VerifyTransferWithFee`: Verifies the zero-knowledge proofs that are necessary
+  for the `Transfer` instruction in SPL Token.
 
-    /// Verify 128-bit batched range proof.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyBatchedRangeProofU128,
-
-    /// Verify 256-bit batched range proof.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyBatchedRangeProofU256,
-
-    /// Verify a ciphertext-commitment equality proof.
-    ///
-    /// A ciphertext-commitment equality proof certifies that an ElGamal
-    /// ciphertext and a Pedersen commitment encrypt/encode the same message.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyCiphertextCommitmentEquality,
-
-    /// Verify a grouped-ciphertext with 2 handles validity proof.
-    ///
-    /// A grouped-ciphertext validity proof certifies that a grouped ElGamal
-    /// ciphertext is well-defined, i.e. the ciphertext can be decrypted by
-    /// private keys associated with its decryption handles.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyGroupedCiphertext2HandlesValidity,
-
-    /// Verify a batched grouped-ciphertext with 2 handles validity proof.
-    ///
-    /// A grouped-ciphertext validity proof certifies that a grouped ElGamal
-    /// ciphertext is well-defined, i.e. the ciphertext can be decrypted by
-    /// private keys associated with its decryption handles.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyBatchedGroupedCiphertext2HandlesValidity,
-
-    /// Verify a fee sigma proof.
-    ///
-    /// A `VerifyFeeSigma` proof certifies that a tuple of Pedersen commitments
-    /// satisfy a percentage relation.
-    ///
-    /// This instruction will be RENAMED to `VerifyPercentageWithCap`.
-    VerifyFeeSigma,
-
-    /// Verify a grouped-ciphertext with 3 handles validity proof.
-    ///
-    /// A grouped-ciphertext validity proof certifies that a grouped ElGamal
-    /// ciphertext is well-defined, i.e. the ciphertext can be decrypted by
-    /// private keys associated with its decryption handles.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyGroupedCiphertext3HandlesValidity,
-
-    /// Verify a batched grouped-ciphertext with 3 handles validity proof.
-    ///
-    /// A grouped-ciphertext validity proof certifies that a grouped ElGamal
-    /// ciphertext is well-defined, i.e. the ciphertext can be decrypted by
-    /// private keys associated with its decryption handles.
-    ///
-    /// This instruction will be left unchanged.
-    VerifyBatchedGroupedCiphertext3HandlesValidity,
-}
-```
+- `VerifyRangeProofU64`: Verifies that a Pedersen commitment contains a positive
+  64-bit value. This instruction is not specific to the SPL Token program, but
+  it can be subsumed by the existing `VerifyBatchRangeProofU64` instruction.
 
 The implementation of the instructions that are not removed will remain the
 same.
