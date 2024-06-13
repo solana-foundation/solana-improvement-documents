@@ -27,7 +27,7 @@ that verify zero-knowledge proofs that are tailor made for `Transfer` and
 `Withdraw` instructions in the SPL Token confidential transfer extension.
 
 The ZK Token Proof program is a native built-in program that is part of the
-validator client. These type of programs should generally not favor any specific
+validator client. These types of programs should generally not favor any specific
 application/program like the SPL Token program. Furthermore the logic
 contained in the ZK Token Proof program enables private transfer of SPL tokens.
 The SPL Token program is limited to confidential transfers (not
@@ -41,7 +41,7 @@ program and replace it with a more general ZK ElGamal Proof program that is
 application independent. The new ZK ElGamal Proof program inherits parts of the
 ZK Token Proof program that is independent of any specific application like
 the logic to verify the validity of a public key or range of the encrypted in an
-ElGamal ciphertext. It leaves out parts of the logic that is specific
+ElGamal ciphertext. It leaves out parts of the logic that are specific
 to the SPL Token application like the logic to verify a zero-knowledge proof
 required for a token transfer instruction.
 
@@ -213,7 +213,7 @@ pub enum ProofInstruction {
 The implementation of the instructions that are not removed will remain the
 same.
 
-Instead of the modifying the existing ZK Token Proof program into ZK ElGamal
+Instead of modifying the existing ZK Token Proof program into the ZK ElGamal
 Proof program, we propose to simply remove the ZK Token Proof program altogether
 and add a new built-in ZK ElGamal Proof program. The existing ZK Token Proof
 program is not yet activated on any of the clusters.
