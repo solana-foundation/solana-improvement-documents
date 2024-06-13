@@ -58,7 +58,7 @@ state. Stake has moved from U1 to U2 with no outside lamports required and no
 new undelegated lamports becoming trapped in delegated stake accounts.
 
 The motivation for `MoveLamports` is to enable housekeeping tasks such as
-reclaiming lmaports from `Merge` destinations.
+reclaiming lamports from `Merge` destinations.
 
 ## Alternatives Considered
 
@@ -70,7 +70,7 @@ such as allowing `DelegateStake` to accept an active stake account to begin
 activating an account's excess (non-rent non-stake) lamports, or allowing a
 `Split` source to `Deactivate` enough stake to cover rent-exemption for the new
 account. However, Multistake is a much larger design/engineering project, and
-we have to solve this sooner than it would be ready.
+we have to solve the existing proble sooner than Multistake would be ready.
 * We discussed various proposals for allowing `Merge` to leave behind the
 source account or `Split` to split into any mergeable destination. However this
 confuses the presently clear distinction between these two operations and
