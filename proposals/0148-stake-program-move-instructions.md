@@ -99,15 +99,11 @@ effective, activating, or deactivating stake.
 
 ### `MoveStake`
 
-`MoveStake` requires 5 accounts:
+`MoveStake` requires 3 accounts:
 
 0. Source stake account: Writable, owned by the stake program
 1. Destination stake account: Writable, owned by the stake program
-2. Clock: Read-only, with the fixed address
-`SysvarC1ock11111111111111111111111111111111`
-3. Stake history: Read-only, with the fixed address
-`SysvarStakeHistory1111111111111111111111111`
-4. Stake account authority: Read-only signer
+2. Stake account authority: Read-only signer
 
 `MoveStake` instruction data is 12 bytes, containing:
 
@@ -149,15 +145,11 @@ rules as `Merge`
 
 ### `MoveLamports`
 
-`MoveLamports` requires 5 accounts:
+`MoveLamports` requires 3 accounts:
 
 0. Source stake account: Writable, owned by the stake program
 1. Destination stake account: Writable, owned by the stake program
-2. Clock: Read-only, with the fixed address
-`SysvarC1ock11111111111111111111111111111111`
-3. Stake history: Read-only, with the fixed address
-`SysvarStakeHistory1111111111111111111111111`
-4. Stake account authority: Read-only signer
+2. Stake account authority: Read-only signer
 
 `MoveLamports` instruction data is 12 bytes, containing:
 
