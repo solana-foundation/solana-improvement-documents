@@ -105,8 +105,10 @@ program is not yet activated on any of the clusters.
 
 ## Impact
 
-The existing ZK Token Proof program will be deprecated and removed. A new ZK
-ElGamal Proof program will be added to the list of built-in programs.
+The existing ZK Token Proof program in the address
+`ZkTokenProof1111111111111111111111111111111` will be deprecated and removed. A
+new ZK ElGamal Proof program will be added to the list of built-in programs in
+the address `ZkE1Gama1Proof11111111111111111111111111111`.
 
 ## Security Considerations
 
