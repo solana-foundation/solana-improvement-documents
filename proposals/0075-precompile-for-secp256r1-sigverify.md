@@ -141,7 +141,7 @@ ID: `Secp256r1SigVerify1111111111111111111111111`
 
 In accordance with [SIMD
 0152](https://github.com/solana-foundation/solana-improvement-documents/pull/152)
-programs ```verify``` instruction will accept the following data:
+the programs ```verify``` instruction must accept the following data:
 
 In Pseudocode:
 
@@ -173,7 +173,7 @@ an error must be returned.
 
 In accordance with [SIMD
 0152](https://github.com/solana-foundation/solana-improvement-documents/pull/152)
-the behavior of the program is as follows:
+the behavior of the program must be as follows:
 
 1. If instruction `data` is empty, return error.
 2. The first byte of `data` is the number of signatures `num_signatures`.
