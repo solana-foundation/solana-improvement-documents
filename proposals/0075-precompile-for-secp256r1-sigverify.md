@@ -221,9 +221,6 @@ function verify() {
     return Error
   }
   num_signatures = data[0]
-  if num_signatures > 8 {
-    return Error
-  }
   if num_signatures == 0 && length_of_data > 1 {
     return Error
   }
@@ -245,10 +242,7 @@ function verify() {
       if !signature {
         return Error
       }
-      if signature_S == highS {
-      return Error
-      }
-      
+
       public_key = get_data_slice(all_tx_data,
                                   offsets.public_key_instruction_index,
                                   offsets.public_key_offset,
@@ -266,6 +260,10 @@ function verify() {
       }
 
       // sigverify includes validating signature and public_key
+      // the additional highS check is done here
+      if signature_S == highS {
+      return Error
+      }
       result = sigverify(signature, public_key, message)
       if result != Success {
         return Error
@@ -273,7 +271,7 @@ function verify() {
     }
     return Success
 }
-
+// This function is re-used across precompiles in accordance with SIMD-0152
 fn get_data_slice(all_tx_data, instruction_index, offset, length) {
   // Get the right instruction_data
   if instruction_index == 0xFFFF {
