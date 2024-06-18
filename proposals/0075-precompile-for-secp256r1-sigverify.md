@@ -248,6 +248,7 @@ function verify() {
       if signature_S == highS {
       return Error
       }
+      
       public_key = get_data_slice(all_tx_data,
                                   offsets.public_key_instruction_index,
                                   offsets.public_key_offset,
