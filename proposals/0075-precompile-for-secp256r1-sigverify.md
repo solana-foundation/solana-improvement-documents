@@ -147,8 +147,8 @@ In Pseudocode:
 
 ```
 struct Secp256r1SigVerifyInstruction {
-    num_signatures: uint8 LE,                 // Number of signatures to verify
-    padding: uint8 LE,                        // Single byte padding
+    num_signatures: uint8 LE,                  // Number of signatures to verify
+    padding: uint8 LE,                         // Single byte padding
     offsets: Array<Secp256r1SignatureOffsets>, // Array of offset structs
     additionalData?: Bytes,                    // Optional additional data, e.g.
                                                // signatures included in the same
@@ -162,8 +162,8 @@ struct Secp256r1SignatureOffsets {
     signature_instruction_index: uint16 LE,   // Instruction index to signature
     public_key_offset: uint16 LE,             // Offset to public key
     public_key_instruction_index: uint16 LE,  // Instruction index to  public key
-    message_offset: uint16 LE,           // Offset to start of message data
-    message_length: uint16 LE,             // Size of message data
+    message_offset: uint16 LE,                // Offset to start of message data
+    message_length: uint16 LE,                // Size of message data
     message_instruction_index: uint16 LE,     // Instruction index to message
 }
 ```
