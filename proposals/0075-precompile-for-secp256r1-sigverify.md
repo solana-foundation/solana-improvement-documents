@@ -139,40 +139,67 @@ s malleability, as doing so would go against its primary goal of achieving
 
 ID: `Secp256r1SigVerify1111111111111111111111111`
 
-The program instruction must be composed of the following struct:
+In accordance with [SIMD
+0152](https://github.com/solana-foundation/solana-improvement-documents/pull/152)
+programs ```verify``` instruction will accept the following data:
 
 In Pseudocode:
 
 ```
 struct Secp256r1SigVerifyInstruction {
-    count: uint8 LE,                          // Number of signatures to check
+    num_signatures: uint8 LE,                 // Number of signatures to verify
     padding: uint8 LE,                        // Single byte padding
-    signatureOffsets: Array<Secp256r1SignatureOffsets>, // Array of structs
+    offsets: Array<Secp256r1SignatureOffsets>, // Array of offset structs
+    additionalData?: Bytes,                    // Optional additional data, e.g.
+                                               // signatures included in the same
+                                               // instruction
 }
 Note: Array<Secp256r1SignatureOffsets> does not contain any length prefixes or
 padding between elements.
 
 struct Secp256r1SignatureOffsets {
     signature_offset: uint16 LE,              // Offset to signature
-    signature_instruction_index: uint8 LE,   // Instruction index to signature
+    signature_instruction_index: uint16 LE,   // Instruction index to signature
     public_key_offset: uint16 LE,             // Offset to public key
-    public_key_instruction_index: uint8 LE,  // Instruction index to  public key
-    message_data_offset: uint16 LE,           // Offset to start of message data
-    message_data_size: uint16 LE,             // Size of message data
-    message_instruction_index: uint8 LE,     // Instruction index to message
+    public_key_instruction_index: uint16 LE,  // Instruction index to  public key
+    message_offset: uint16 LE,           // Offset to start of message data
+    message_length: uint16 LE,             // Size of message data
+    message_instruction_index: uint16 LE,     // Instruction index to message
 }
 ```
 
-Multiple signatures can be verified. If any of the signatures fail to verify,
+Up to 8 signatures can be verified. If any of the signatures fail to verify,
 an error must be returned.
 
-If the instruction data is empty, the program must return an error.
+In accordance with [SIMD
+0152](https://github.com/solana-foundation/solana-improvement-documents/pull/152)
+the behavior of the program is as follows:
 
-If `count == 0` and the length of the instruction data > 1, the program must
-return an error.
+1. If instruction `data` is empty, return error.
+2. The first byte of `data` is the number of signatures `num_signatures`.
+3. If `num_signatures` is 0, return error.
+4. Expect (enough bytes of `data` for) `num_signatures` instances of
+   `Secp256r1SignatureOffsets`.
+5. For each signature:
+   a. Read `offsets`: an instance of `Secp256r1SignatureOffsets`
+   b. Based on the `offsets`, retrieve `signature`, `public_key`, and
+      `message` bytes. If any of the three fails, return error.
+   c. Invoke the actual `sigverify` function. If it fails, return error.
 
-If `count > 0` and the length of the instruction data is not at least
-`count * sizeof(Secp256r1SignatureOffsets) + 2`, the program must return an error.
+To retrieve `signature`, `public_key`, and `message`:
+
+1. Get the `instruction_index`-th `instruction_data`
+   - The special value `0xFFFF` means "current instruction"
+   - If the index is invalid, return Error
+2. Return `length` bytes starting from `offset`
+   - If this exceeds the `instruction_data` length, return Error
+
+Note that fields (offsets) can overlap, for example the same public key or
+message can be referred to by multiple instances of `Secp256r1SignatureOffsets`.
+
+If the precompile `verify` function returns any error, the whole transaction
+should fail. Therefore, the type of error is irrelevant and is left as an
+implementation detail.
 
 The instruction processing logic must follow the pseudocode below:
 
@@ -186,56 +213,85 @@ The instruction processing logic must follow the pseudocode below:
 /// SERIALIZED_OFFSET_STRUCT_SIZE is the length of the serialized
 /// Secp256r1SignatureOffsets struct
 
-if length_of_data == 0 {
-  return Error
-}
-count = data[0]
-if count == 0 && length_of_data > 1 {
-  return Error
-}
-if length_of_data < (count * SERIALIZED_OFFSET_STRUCT_SIZE + 2) {
-  return Error
-}
-instructions = instruction_datas;
-for i in 0..count {
-    if signature_instruction_index >= instructions.length {
-          return Error
-    }
-    if signature_offset + 64 > instructions[signature_instruction_index]
-      .data.length {
-          return Error
-    }
-    signature = instructions[signature_instruction_index].data[signature_offset..signature_offset+64]
+/// SERIALIZED_PUBLIC_KEY_LENGTH and SERIALIZED_SIGNATURE_LENGTH represent the 
+/// length of the serialized public key and signature respectively
 
-    if signature_S == highS {
+function verify() {
+  if length_of_data == 0 {
+    return Error
+  }
+  num_signatures = data[0]
+  if num_signatures > 8 {
+    return Error
+  }
+  if num_signatures == 0 && length_of_data > 1 {
+    return Error
+  }
+  if length_of_data < (num_signatures * SERIALIZED_OFFSET_STRUCT_SIZE + 2) {
+    return Error
+  }
+  all_tx_data = { data, instruction_datas }
+  data_start_position = 2
+
+  for i in 0..num_signatures {
+      offsets = (Secp256r1SignatureOffsets) 
+        all_tx_data.data[data_start_position..data_start_position + SERIALIZED_OFFSET_STRUCT_SIZE]
+      data_position += SERIALIZED_OFFSET_STRUCT_SIZE
+
+      signature = get_data_slice(all_tx_data,
+                                offsets.signature_instruction_index,
+                                offsets.signature_offset
+                                signature_length)
+      if !signature {
+        return Error
+      }
+      if signature_S == highS {
+      return Error
+      }
+      public_key = get_data_slice(all_tx_data,
+                                  offsets.public_key_instruction_index,
+                                  offsets.public_key_offset,
+                                  SERIALIZED_PUBLIC_KEY_LENGTH)
+      if !public_key {
+        return Error
+      }
+
+      message = get_data_slice(all_tx_data,
+                              offsets.message_instruction_index,
+                              offsets.message_offset
+                              offsets.message_length)
+      if !message {
+        return Error
+      }
+
+      // sigverify includes validating signature and public_key
+      result = sigverify(signature, public_key, message)
+      if result != Success {
+        return Error
+      }
+    }
+    return Success
+}
+
+fn get_data_slice(all_tx_data, instruction_index, offset, length) {
+  // Get the right instruction_data
+  if instruction_index == 0xFFFF {
+    instruction_data = all_tx_data.data
+  } else {
+    if instruction_index >= num_instructions {
       return Error
     }
+    instruction_data = all_tx_data.instruction_datas[instruction_index]
+  }
 
-    if public_key_instruction_index >= instructions.length {
-        return Error
-    }
-    if public_key_offset + 33 > instructions[public_key_instruction_index]
-    .data.length {
-        return Error
-    }
-    publicKey = instructions[public_key_instruction_index]
-    .data[public_key_offset..public_key_offset+33]
+  start = offset
+  end = offset + length
+  if end > instruction_data_length {
+    return Error
+  }
 
-    if message_instruction_index >= instructions.length {
-        return Error
-    }
-    if message_data_offset + message_data_size > instructions[message_instruction_index]
-    .data.length {
-        return Error
-    }
-    message = instructions[message_instruction_index].data[message_data_offset..message_data_offset+message_data_size]
-
-    result = secp256verify(publicKey, message, signature)
-    if result != true {
-      return Error
-    }
-}
-return Success
+  return instruction_data[start..end]
+}    
 ```
 
 Additonally the precompile's core `verify` function must be constructed in
