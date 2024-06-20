@@ -129,7 +129,7 @@ transaction level are:
 12. The transaction must not have already been processed.
 13. The transaction fee-payer account must:
     - exist
-    - be owned by the the system program: `11111111111111111111111111111111`
+    - be owned by the system program: `11111111111111111111111111111111`
     - have more lamports than the fee
     - have more lamports than the fee plus the minimum balance
 14. Any non-writable program accounts used in the transaction must exist,
@@ -199,7 +199,7 @@ Specifically, the following constraints will remain as protocol violations:
 9. The transaction must not have already been processed.
 10. The transaction fee-payer account must:
     - exist
-    - be owned by the the system program: `11111111111111111111111111111111`
+    - be owned by the system program: `11111111111111111111111111111111`
     - have more lamports than the fee
     - have more lamports than the fee plus the minimum balance
 
