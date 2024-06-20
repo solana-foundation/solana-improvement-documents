@@ -108,14 +108,14 @@ transaction level are:
     - Each instruction's `program_id_index` must not be the payer index (0).
     - All account indices in instructions must be less than the number of total
       accounts.
-7. Transactions that use address look up tables must be resolvable:
-    - The address look up table account must exist.
-    - The address look up table account must be owned by the address look up
+7. Transactions that use address lookup tables must be resolvable:
+    - The address lookup table account must exist.
+    - The address lookup table account must be owned by the address lookup
       table program: `AddressLookupTab1e1111111111111111111111111`
-    - The address look up table account data must be deserializable into
+    - The address lookup table account data must be deserializable into
       `AddressLookupTable` as defined in `solana-sdk`.
     - All account table indices specified in the transaction must be less than
-      the number of active addresses in the address look up table.
+      the number of active addresses in the address lookup table.
 8. Transactions containing pre-compile instructions must pass pre-compile
    verification checks.
 9. The transaction must not load the same account more than once.
@@ -184,14 +184,14 @@ Specifically, the following constraints will remain as protocol violations:
     - Each instruction's `program_id_index` must not be the payer index (0).
     - All account indices in instructions must be less than the number of total
       accounts.
-7. Transactions that use address look up tables must be resolvable:
-    - The address look up table account must exist.
-    - The address look up table account must be owned by the address look up
+7. Transactions that use address lookup tables must be resolvable:
+    - The address lookup table account must exist.
+    - The address lookup table account must be owned by the address lookup
       table program: `AddressLookupTab1e1111111111111111111111111`
-    - The address look up table account data must be deserializable into
+    - The address lookup table account data must be deserializable into
       `AddressLookupTable` as defined in `solana-sdk`.
     - All account table indices specified in the transaction must be less than
-      the number of active addresses in the address look up table.
+      the number of active addresses in the address lookup table.
 8. The `recent_blockhash` of the transaction message must be valid:
     - It must exist and not have an age greater than 150.
     - OR the transaction must be a nonced transaction, and the nonce
