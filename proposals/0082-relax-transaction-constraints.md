@@ -62,7 +62,7 @@ remove one of the barriers to asynchronous execution.
     significant benefits to the network.
 3. Additionally, relax the address lookup table resolution constraint
     - This was considered, since it is a transaction-level constraint that is
-    depdendent on account-state. However, due to entry-level and block-level
+    dependent on account-state. However, due to entry-level and block-level
     constraints that rely on the address lookup table resolution, this
     constraint cannot easily be relaxed without also relaxing those
     constraints.
@@ -105,7 +105,7 @@ transaction level are:
     - The total number of accounts, static or dynamic, must be less than 256.
     - Each instruction's `program_id_index` must be less than the number of
       static account keys.
-    - Each intruction's `program_id_index` must not be the payer index (0).
+    - Each instruction's `program_id_index` must not be the payer index (0).
     - All account indices in instructions must be less than the number of total
       accounts.
 7. Transactions that use address look up tables must be resolvable:
@@ -181,7 +181,7 @@ Specifically, the following constraints will remain as protocol violations:
     - The total number of accounts, static or dynamic, must be less than 256.
     - Each instruction's `program_id_index` must be less than the number of
       static account keys.
-    - Each intruction's `program_id_index` must not be the payer index (0).
+    - Each instruction's `program_id_index` must not be the payer index (0).
     - All account indices in instructions must be less than the number of total
       accounts.
 7. Transactions that use address look up tables must be resolvable:
