@@ -130,7 +130,7 @@ is descriptive)
 - Fill in the proposal. Put care into the details: proposals that do not
 present convincing motivation, demonstrate lack of understanding of the
 design's impact, or are disingenuous about the drawbacks or alternatives tend
-to be poorly received. Low quality proposals with limited engagement will be closed regularly.
+to be poorly received. Low quality proposals with limited engagement will be closed by SIMD repository maintainers.
 - Submit a pull request.
 - Now that your proposal has an open pull request, use the issue number of the
 PR to update the `XXXX-` prefix to the number.
@@ -162,8 +162,7 @@ implementing their accepted feature.
 
 ### Activated
 
-Once a proposal has been implemented, tested, and finally activated on mainnet it's
-status 
+A proposal will have the status Activated once it has been implemented, tested, and finally activated on mainnet. 
 
 ### Living
 
