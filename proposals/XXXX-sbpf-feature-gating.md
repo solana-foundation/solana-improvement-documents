@@ -39,17 +39,17 @@ Based on this SBPF version field a validator implementation must load and execut
 - any earlier SBPF version must be executed (can still be executed)
 - exactly the SBPF version must be executed (can now be executed)
 
-Deprecation feature gates control program execution and fees thereof (CU costs). Instead of having each version be deprecated individually these would happen in larger blocks composed of multiple version numbers to reduce the amount of redeployment required from dapp develpers. In order to avoid a "rugpull" like surprise for users of programs which depend on a versions that are about to be deprecated a linear "ramp up" in CU costs must commence at feature activation and finally end in the denial of execution at a fixed slot offset after the feature activation.
+Deprecation feature gates control program execution and fees thereof (CU costs). Instead of having each version be deprecated individually these would happen in larger blocks composed of multiple version numbers to reduce the amount of redeployment required from dapp developers. In order to avoid a "rugpull" like surprise for users of programs which depend on a versions that are about to be deprecated a linear "ramp up" in CU costs must commence at feature activation and finally end in the denial of execution at a fixed slot offset after the feature activation.
 
 ## Alternatives Considered
 
 ### Use the runtime global feature gating mechanism
 This would mean all programs need to be redeployed simultaneously at feature activation and that they would each require an alternative version to be prepared and uploaded to be switched to (redeployed) on feature activation. This would increase the complexity of program management in loaders and require dapp developers to double the locked tokens in their deployed programs.
 
-It also means that validator implementations would have to handle a massive ammount of loading, parsing, relocation, verification and possibly compilation of programs in a single block. It took the Agave team two years to develop, implement, test and deploy this capability. It is desireable for other validator implementations to avoid having to do the same.
+It also means that validator implementations would have to handle a massive amount of loading, parsing, relocation, verification and possibly compilation of programs in a single block. It took the Agave team two years to develop, implement, test and deploy this capability. It is desirable for other validator implementations to avoid having to do the same.
 
 ### Coupling the feature gating to the loader, not the individual program accounts
-The version number could be impled by the loader a program was deployed in, effectively shifting the encoding from the program account content to the owner field. This would require a new loader address for each SBPF version, as the program management and execution logic could be shared for the most part. However, new loaders would necessitate a way to migrate programs between loaders upon redeployment.
+The version number could be implied by the loader a program was deployed in, effectively shifting the encoding from the program account content to the owner field. This would require a new loader address for each SBPF version, as the program management and execution logic could be shared for the most part. However, new loaders would necessitate a way to migrate programs between loaders upon redeployment.
 
 ## Impact
 
@@ -57,7 +57,7 @@ Active dapp developers who redeploy their programs regularly will (upon feature 
 
 Less active dapp developers who do not redeploy their programs will be nagged by their users to redeploy their programs once the deprecation CU cost ramps up.
 
-Finalized programs which simply can not be redeployed will instead have their userbase slowly migrate their funds to alternative programs.
+Finalized programs which simply can not be redeployed will instead have their user base slowly migrate their funds to alternative programs.
 
 Validator implementations will have to support multiple code paths in the time between the introduction feature activation and the fixed slot offset after the deprecation feature activation.
 
