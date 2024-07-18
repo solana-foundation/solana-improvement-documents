@@ -118,7 +118,10 @@ proposal author -- the reviewers, and the Solana Core Contributors.
 
 Before you begin writing a formal proposal, you should vet your idea. Ask the
 Solana core community first if an idea is original to avoid wasting time on
-something that will be rejected based on prior research. Be sure to post your ideas to the [SIMD ideas discussion page](https://github.com/solana-foundation/solana-improvement-documents/discussions/categories/ideas) and gather feedback before making your formal Proposal
+something that will be rejected based on prior research. Be sure to post your
+ideas to the 
+[SIMD ideas discussion page](https://github.com/solana-foundation/solana-improvement-documents/discussions/categories/ideas)
+and gather feedback before making your formal Proposal
 
 ### Draft
 
@@ -130,7 +133,8 @@ is descriptive)
 - Fill in the proposal. Put care into the details: proposals that do not
 present convincing motivation, demonstrate lack of understanding of the
 design's impact, or are disingenuous about the drawbacks or alternatives tend
-to be poorly received. Low quality proposals with limited engagement will be closed by SIMD repository maintainers.
+to be poorly received. Low quality proposals with limited engagement will be 
+closed by SIMD repository maintainers.
 - Submit a pull request.
 - Now that your proposal has an open pull request, use the issue number of the
 PR to update the `XXXX-` prefix to the number.
@@ -162,7 +166,8 @@ implementing their accepted feature.
 
 ### Activated
 
-A proposal will have the status Activated once it has been implemented, tested, and finally activated on mainnet. 
+A proposal will have the status Activated once it has been implemented,
+tested, and finally activated on mainnet. 
 
 ### Living
 
