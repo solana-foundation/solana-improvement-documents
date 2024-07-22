@@ -104,8 +104,10 @@ flowchart LR
   Idea ---> Draft;
   Draft ---> Review;
   Review ---> Accepted;
-  Accepted ---> Implemented
+  Accepted ---> Implemented;
+  Implemented ---> Activated;
   Review ---> Living;
+  Accepted ---> Withdrawn;
 
   Draft ---> Stagnant;
   Review ---> Stagnant;
@@ -164,6 +166,9 @@ issue for tracking across clusters should also be created. While it is not
 far the most effective way to see a proposal through to completion: authors
 should not expect that other project developers will take on responsibility for
 implementing their accepted feature.
+
+### Implemented
+When all relevant teams have completed development of the feature the SIMD's is "Implemented"
 
 ### Activated
 
