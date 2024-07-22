@@ -168,6 +168,7 @@ should not expect that other project developers will take on responsibility for
 implementing their accepted feature.
 
 ### Implemented
+
 When all relevant teams have completed development of the feature the SIMD's is "Implemented"
 
 ### Activated
