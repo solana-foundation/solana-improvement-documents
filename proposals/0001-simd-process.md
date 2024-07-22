@@ -104,6 +104,7 @@ flowchart LR
   Idea ---> Draft;
   Draft ---> Review;
   Review ---> Accepted;
+  Accepted ---> Implemented
   Review ---> Living;
 
   Draft ---> Stagnant;
