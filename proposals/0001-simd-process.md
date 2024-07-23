@@ -169,7 +169,8 @@ implementing their accepted feature.
 
 ### Implemented
 
-When all relevant teams have completed development of the SIMD's feature, the SIMD is "Implemented".
+When all relevant teams have completed development of the SIMD's feature, the 
+SIMD is "Implemented".
 
 ### Activated
 
