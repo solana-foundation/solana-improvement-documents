@@ -169,12 +169,12 @@ implementing their accepted feature.
 
 ### Implemented
 
-When all relevant teams have completed development of the feature the SIMD's is "Implemented"
+When all relevant teams have completed development of the SIMD's feature, the SIMD is "Implemented".
 
 ### Activated
 
 A proposal will have the status Activated once it has been implemented,
-tested, and finally activated on mainnet. 
+tested, and finally activated on mainnet beta. 
 
 ### Living
 
