@@ -1,6 +1,6 @@
 ---
 simd: 'XXXX'
-title: Feature Gating for SBPF
+title: Explicit versioning and feature gating of SBPF programs
 authors:
   - Alexander Meißner
 category: Standard
@@ -11,25 +11,25 @@ created: 2024-07-15
 
 ## Summary
 
-A feature gating and deprecation mechanism for SBPF programs based on their individual program accounts.
+An explicit versioning system for SBPF programs, that allows enabling or disabling features on a per-program basis. 
 
 ## Motivation
 
-Over the past three years engineers maintaining the program runtime and virtual machine have identified a list of weaknesses and shortcomings in the SBPF bytecode / ISA, as well as its container format the loading thereof.
+SBPF has evolved over the years and will continue to evolve. Changes are necessary among other reasons to improve performance, address security concerns and provide new, better features to dapp developers. 
 
-Some of these changes reduce complexity for validator implementations, thereby improving overall performance and reducing attack surface; others enable dapps to use cheaper paths for equivalent computations or remove foot guns for dapp developers.
+Today, the only way to introduce changes to the program runtime is via feature gates [link that explains what feature gates are]. For example we have used feature gates in the past to restrict new deployments of programs owned by deprecated loaders. Feature gates alone are not sufficient to evolve SBPF though - we are missing a mechanism to enable (or disable) specific features on a per-program basis. 
 
-Changes were made via global feature activation in cases where the negative impact on already deployed programs was deemed minimal. In a few cases only the deployment of new programs was restricted, while already deployed programs can still be executed. All other cases in which a recompilation with an updated toolchain and subsequent redeployment (both done by the dapp developers / ecosystem) are necessary were put on hold. So far, these have been accumulated under the term SBPF-v2.
+As an example, over two years ago we decided to change the way the stack works for SBPF programs - from allocating a fixed 4kB per function frame, to letting functions dynamically specify how much stack they need. This change was implemented in both the program runtime and the toolchain (LLVM), but as of today it has not yet been deployed, because it's essentially too hard to do so: upon executing a program, should the program runtime use the old or the new stack allocation strategy?
 
-However, to facilitate a more streamlined rollout and testing it is likely beneficial to split up SBPF-v2 into multiple smaller releases.
+We propose to introduce an explicit versioning scheme for SBPF programs: programs will encode which SBPF version they are compiled for; based on this version, the program runtime will alter its behavior. 
 
 ## New Terminology
 
-None.
+SBPF version: the SBPF version number a program was compiled for.
 
 ## Detailed Design
 
-Every program must signal which change set it was compiled for via the `e_flags` field in the [ELF header](https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html). Thus, the feature gating would not be runtime global, and not be based on the loader, but on every program individually. The `e_flags` field is effectively a toolchain compatibility version number as each change set will be a superset of all changes that came before. In order to prevent an "extension hell" it is not possible to opt into specific changes, instead the entire change set is reduced to a single SBPF version number.
+Every program must signal which SBPF version it was compiled for via the `e_flags` field in the [ELF header](https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html). Thus, the feature gating would not be runtime global, and not be based on the loader, but on every program individually. The `e_flags` field is effectively a toolchain compatibility version number as each change set will be a superset !!!NOT correct, eg dynamic frames is not a superset!!!  of all changes that came before. In order to prevent an "extension hell" it is not possible to opt into specific changes, instead the entire change set is reduced to a single SBPF version number.
 
 Block explorers are recommended to display the SBPF version field for program accounts.
 
