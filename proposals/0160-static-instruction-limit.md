@@ -3,7 +3,7 @@ simd: '0160'
 title: Static Instruction Limit
 authors:
   - Andrew Fitzgerald (anza)
-category: Standard/Meta
+category: Standard
 type: Core
 status: Draft
 created: 2024-07-24
