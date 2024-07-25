@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0160'
 title: Static Instruction Limit
 authors:
   - Andrew Fitzgerald (anza)
