@@ -3,6 +3,7 @@ simd: 'XXXX'
 title: Explicit versioning and feature gating of SBPF programs
 authors:
   - Alexander Meißner
+  - Alessandro Decina
 category: Standard
 type: Core
 status: Draft
@@ -21,7 +22,7 @@ Today, the only way to introduce changes to the program runtime is via feature g
 
 As an example, over two years ago we decided to change the way the stack works for SBPF programs - from allocating a fixed 4kB per function frame, to letting functions dynamically specify how much stack they need. This change was implemented in both the program runtime and the toolchain (LLVM), but as of today it has not yet been deployed, because it's essentially too hard to do so: upon executing a program, should the program runtime use the old or the new stack allocation strategy?
 
-We propose to introduce an explicit versioning scheme for SBPF programs: programs will encode which SBPF version they are compiled for; based on this version, the program runtime will alter its behavior. 
+We propose to introduce an explicit versioning scheme for SBPF programs: programs will encode which SBPF version they are compiled for; based on this version, the program runtime will alter its behavior. In order to prevent an "extension hell" it will not be possible to opt into specific changes via flags, instead an entire set of changes is reduced to a single SBPF version.
 
 ## New Terminology
 
@@ -29,17 +30,22 @@ SBPF version: the SBPF version number a program was compiled for.
 
 ## Detailed Design
 
-Every program must signal which SBPF version it was compiled for via the `e_flags` field in the [ELF header](https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html). Thus, the feature gating would not be runtime global, and not be based on the loader, but on every program individually. The `e_flags` field is effectively a toolchain compatibility version number as each change set will be a superset !!!NOT correct, eg dynamic frames is not a superset!!!  of all changes that came before. In order to prevent an "extension hell" it is not possible to opt into specific changes, instead the entire change set is reduced to a single SBPF version number.
+Every program must signal which SBPF version it was compiled for via the `e_flags` field in the [ELF header](https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html). Block explorers are recommended to display this SBPF version field for program accounts.
 
-Block explorers are recommended to display the SBPF version field for program accounts.
+For each SBPF version two feature gates will control its availability:
+- One to enable deployment and execution of that SBPF version, which includes disabling deployment (but not execution) of all earlier versions.
+- Another to first disincentivize (via CU costs) and later disable execution of that SBPF version, so that the runtime and virtual machine can reduce their complexity again. This feature gate can be shared by multiple SBPF versions, effectively deprecating larger blocks of versions in order to reduce the amount of redeployment required from dapp developers.
 
-Based on this SBPF version field a validator implementation must load and execute each individual program differently according to the SBPF version it requires. Introduction feature gates (one for each SBPF version) control the allowed re/deployed and execution of programs. Upon activation of an introduction feature gate for a new SBPF version programs compiled for:
-- any earlier SBPF version must be rejected by the loader (can not be re/deployed anymore)
-- exactly the SBPF version must be accepted by the loader (can now be re/deployed)
-- any earlier SBPF version must be executed (can still be executed)
-- exactly the SBPF version must be executed (can now be executed)
-
-Deprecation feature gates control program execution and fees thereof (CU costs). Instead of having each version be deprecated individually these would happen in larger blocks composed of multiple version numbers to reduce the amount of redeployment required from dapp developers. In order to avoid a "rugpull" like surprise for users of programs which depend on a versions that are about to be deprecated a linear "ramp up" in CU costs must commence at feature activation and finally end in the denial of execution at a fixed slot offset after the feature activation.
+#### Example
+| SBPF version | becomes deployable and executable | ceases to be deployable | ceases to be executable |
+| ------------ | --------------------------------- | ----------------------- | ----------------------- |
+| v1           |                                   | Feature gate A          | Feature gate G          |
+| v2           | Feature gate A                    | Feature gate B          | Feature gate G          |
+| v3           | Feature gate B                    | Feature gate C          | Feature gate G          |
+| v4           | Feature gate C                    | Feature gate D          | Feature gate H          |
+| v5           | Feature gate D                    | Feature gate E          | Feature gate H          |
+| v6           | Feature gate E                    | Feature gate F          | Feature gate H          |
+| v7           | Feature gate F                    |                         |                         |
 
 ## Alternatives Considered
 
