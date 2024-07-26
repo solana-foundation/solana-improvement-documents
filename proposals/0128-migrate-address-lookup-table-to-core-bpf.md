@@ -44,6 +44,9 @@ The reimplemented program's functionality exactly matches that of the
 original, differing only in compute usage. Instead it has dynamic compute
 usage based on the VM's compute unit meter.
 
+The reimplemented program can be found here:
+https://github.com/solana-program/address-lookup-table.
+
 The program shall be migrated to Core BPF using the procedure outlined in
 [SIMD 0088](./0088-enable-core-bpf-programs.md).
 
