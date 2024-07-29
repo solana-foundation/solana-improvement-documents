@@ -281,12 +281,13 @@ export const metadataStatusIsValid = {
 
     const validStatus = [
       "Idea",
-      "Draft",
+      "Draft", 
       "Review",
       "Accepted",
       "Stagnant",
       "Withdrawn",
       "Implemented",
+      "Activated",
     ]
 
     if (!validStatus.includes(status)) {

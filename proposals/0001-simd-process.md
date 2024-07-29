@@ -3,6 +3,7 @@ simd: '0001'
 title: Solana Proposal Process
 authors:
   - Jacob Creech (Solana Foundation)
+  - Ben Hawkins (Solana Foundation)
 category: Meta
 type: Meta
 status: Living
@@ -83,6 +84,7 @@ The stages in a lifecycle of a proposal are as follows:
 - Stagnant
 - Withdrawn
 - Implemented
+- Activated
 
 ```mermaid
 flowchart LR
@@ -102,7 +104,10 @@ flowchart LR
   Idea ---> Draft;
   Draft ---> Review;
   Review ---> Accepted;
+  Accepted ---> Implemented;
+  Implemented ---> Activated;
   Review ---> Living;
+  Accepted ---> Withdrawn;
 
   Draft ---> Stagnant;
   Review ---> Stagnant;
@@ -116,9 +121,10 @@ proposal author -- the reviewers, and the Solana Core Contributors.
 
 Before you begin writing a formal proposal, you should vet your idea. Ask the
 Solana core community first if an idea is original to avoid wasting time on
-something that will be rejected based on prior research. It is thus recommended
-to discuss the proposal on the Solana Tech Discord under the #core-technology
-channel.
+something that will be rejected based on prior research. Be sure to post your
+ideas to the 
+[SIMD ideas discussion page](https://github.com/solana-foundation/solana-improvement-documents/discussions/categories/ideas)
+and gather feedback before making your formal Proposal
 
 ### Draft
 
@@ -130,7 +136,8 @@ is descriptive)
 - Fill in the proposal. Put care into the details: proposals that do not
 present convincing motivation, demonstrate lack of understanding of the
 design's impact, or are disingenuous about the drawbacks or alternatives tend
-to be poorly received.
+to be poorly received. Low quality proposals with limited engagement will be 
+closed by SIMD repository maintainers.
 - Submit a pull request.
 - Now that your proposal has an open pull request, use the issue number of the
 PR to update the `XXXX-` prefix to the number.
@@ -159,6 +166,16 @@ issue for tracking across clusters should also be created. While it is not
 far the most effective way to see a proposal through to completion: authors
 should not expect that other project developers will take on responsibility for
 implementing their accepted feature.
+
+### Implemented
+
+When all relevant teams have completed development of the SIMD's feature, the 
+SIMD is "Implemented".
+
+### Activated
+
+A proposal will have the status Activated once it has been implemented,
+tested, and finally activated on mainnet beta. 
 
 ### Living
 
