@@ -44,7 +44,7 @@ valid, the block producer is able to collect fees for including the transaction.
 ## Detailed Design
 
 The Solana protocol will no longer reject blocks with transactions that have
-failed precompile verification or have non-fee payer transacation-level
+failed precompile verification or have non-fee payer transaction-level
 signatures that fail verification.  Such transactions will be allowed to be
 recorded in a block and signature verification failures should be handled
 similarly to how SVM program errors are handled. The transaction will be
