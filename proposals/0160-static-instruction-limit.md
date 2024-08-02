@@ -32,7 +32,17 @@ worst-case performance.
 
 ## Alternatives Considered
 
-Do nothing.
+- Do nothing.
+- Allow transactions with more than 64 top-level instructions to be included in
+  blocks, but skip execution only taking fees.
+  - Checking the number of top-level instructions in a transaction is a
+    relatively cheap operation and can be done very early in the processing of
+    a transaction, similar to the current check that the number of required
+    signatures matches the number of signatures provided.
+  - Additionally, if we still allow more than 64 top-level instructions in a
+    transaction we would still need to parse all the instructions to determine
+    the fee, so there is a performance benefit in strictly limiting the number
+    of top-level instructions.
 
 ## New Terminology
 
