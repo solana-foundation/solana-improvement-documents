@@ -13,7 +13,7 @@ feature: (fill in with feature tracking issues once accepted)
 
 The Solana protocol currently prohibits block producers from including
 transactions with any invalid signature whether that signature be the fee-payer
-signature, other transaction-level signatueres or precompile instruction-level
+signature, other transaction-level signatures or precompile instruction-level
 signatures. This constraint is not ideal since block producers may have to do
 work to verify all of the signatures used in a transaction without a guarantee
 that they can receive a fee from the transaction.
@@ -44,11 +44,16 @@ valid, the block producer is able to collect fees for including the transaction.
 ## Detailed Design
 
 The Solana protocol will no longer reject blocks with transactions that have
-failed precompile verification or have invalid non-fee payer transacation-level
-signatures. Such transactions will be allowed to be recorded in a block and
-signature verification failures should be handled similarly to how SVM program
-errors are handled. The transaction will be committed, fees deducted, but no
-other account state changes should be persisted.
+failed precompile verification or have non-fee payer transacation-level
+signatures that fail verification.  Such transactions will be allowed to be
+recorded in a block and signature verification failures should be handled
+similarly to how SVM program errors are handled. The transaction will be
+committed, fees deducted, but no other account state changes should be
+persisted.
+
+The signature count included in the bank hash calculation should still include
+the number of transaction-level signatures for all transactions included in a
+block regardless of verification success.
 
 ## Impact
 
