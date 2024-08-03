@@ -387,14 +387,21 @@ which belong to an epoch which is > 1 epoch away from its root. If a validator
 has very old root so it can't proceed, it will exit and report error.
 
 * The stake weight of each slot is calculated using the epoch the slot is in.
-If a validator is missing epoch stakes for a new epoch, it will use the epoch
-stakes of its root to approximate the results, and update all calculation once
-the first bank has been accepted in the new epoch.
+Because right now epoch stakes are calculated 1 epoch ahead of time, and we
+only handle outages spanning 7 hours, the local root bank should have the
+epoch stakes for all epochs we need.
 
-* When calculating cluster wide threshold (e.g. how many validators are in the
-restart), use the stake weight of the slot selected in `RestartHeaviestFork`.
-If no slot has been selected yet, use Epoch stakes of local root bank to
-approximate and update later.
+* When aggregating `RestartLastVotedForkSlots`, for any epoch with at least one
+slot X having > 42% stake, calculate the stake of active validators in this
+epoch. Only exit this stage if all epochs reaching the above bar has > 80%
+stake. This is a bit restrictive, but it guarantees that whichever slot we
+select for HeaviestFork, we have enough validators in the restart. Note that
+the epoch containing local root should always be considered, because root
+should have > 42% stake.
+
+* When aggregating `RestartHeaviestFork`, use the stake weight of the slot
+selected in `RestartHeaviestFork`. If others don't agree with us on the same
+slot, we won't be able to proceed anyway.
 
 * The `stake_committed_percent` in `RestartHeaviestFork` should always be
 calculated using the stakes on the selected slot.
