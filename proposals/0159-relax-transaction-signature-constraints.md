@@ -55,6 +55,11 @@ The signature count included in the bank hash calculation should still include
 the number of transaction-level signatures for all transactions included in a
 block regardless of verification success.
 
+Since the nonce authority for durable nonce transactions may be different from
+the fee payer, such transactions may need an additional signature verification
+in order to be committed to a block and avoid unauthorized usage of on-chain
+nonce accounts. 
+
 ## Impact
 
 End users that submit transactions with invalid precompile instructions or
