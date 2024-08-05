@@ -89,7 +89,7 @@ transaction level are:
     ```
 
     where `Signature` and `VersionedMessage` are defined in `solana-sdk`.
-2. Transaction serialized side must be less than or equal to 1232 bytes.
+2. Transaction serialized size must be less than or equal to 1232 bytes.
 3. Transaction signatures must be valid and in the same order as the static
    account keys in the `VersionedMessage`.
 4. Transaction must have exactly the number of required signatures from the
@@ -163,7 +163,7 @@ Specifically, the following constraints will remain as protocol violations:
     ```
 
     where `Signature` and `VersionedMessage` are defined in `solana-sdk`.
-2. Transaction serialized side must be less than or equal to 1232 bytes.
+2. Transaction serialized size must be less than or equal to 1232 bytes.
 3. Transaction signatures must be valid and in the same order as the static
    account keys in the `VersionedMessage`.
 4. Transaction must have exactly the number of required signatures from the
