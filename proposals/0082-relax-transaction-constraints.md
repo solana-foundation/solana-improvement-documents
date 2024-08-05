@@ -132,11 +132,9 @@ transaction level are:
     - be owned by the system program: `11111111111111111111111111111111`
     - have more lamports than the fee
     - have more lamports than the fee plus the minimum balance
-14. Any non-writable program accounts used in the transaction must exist,
-    regardless of if they are used in any instructions.
-15. The total loaded data size of the transaction must not exceed
+14. The total loaded data size of the transaction must not exceed
     `requested_loaded_accounts_data_size_limit`, or the default limit (64MB).
-16. Any account used as a program in a top-level instruction must:
+15. Any account used as a program in a top-level instruction must:
     - be the native loader: `NativeLoader1111111111111111111111111111111`
     - OR
       - exist
@@ -216,11 +214,9 @@ will not be executed.
 3. The transaction must have fewer than 64 accounts.
     - The limit is subject to change to 128 with the activation of
       `9LZdXeKGeBV6hRLdxS1rHbHoEUsKqesCC2ZAPTPKJAbK`.
-4. Any non-writable program accounts used in the transaction must exist,
-   regardless of if they are used in any instructions.
-5. The total loaded data size of the transaction must not exceed
+4. The total loaded data size of the transaction must not exceed
    `requested_loaded_accounts_data_size_limit`, or the default limit (64MB).
-6. Any account used as a program in a top-level instruction must:
+5. Any account used as a program in a top-level instruction must:
     - be the native loader: `NativeLoader1111111111111111111111111111111`
     - OR
       - exist
