@@ -145,6 +145,22 @@ transaction level are:
       - be executable
       - the owner account be owned by the native loader: `NativeLoader1111111111111111111111111111111`
       - the owner account must be executable
+16. Durable nonce transactions must:
+    - use a recent blockhash value different from the durable nonce for the
+      current bank
+    - have at least one transaction instruction, the first of which is
+      designated the nonce advance instruction which must:
+        - invoke the system program `11111111111111111111111111111111`
+        - have instruction data that deserializes to the
+          `SystemInstruction::AdvanceNonceAccount` variant
+        - have at least one account input, the first of which is designated the
+          nonce address/account which must:
+           - be loaded with a write-lock
+           - be owned by the system program: `11111111111111111111111111111111`
+           - be deserializable to non-legacy initialized nonce state
+           - have a durable nonce hash equal to the transaction's recent
+             blockhash field
+    - be signed by the nonce authority deserialized from the nonce account
 
 ### Proposed Protocol-Violation Errors
 
@@ -200,6 +216,22 @@ Specifically, the following constraints will remain as protocol violations:
     - be owned by the system program: `11111111111111111111111111111111`
     - have more lamports than the fee
     - have more lamports than the fee plus the minimum balance
+11. Durable nonce transactions must:
+    - use a recent blockhash value different from the durable nonce for the
+      current bank
+    - have at least one transaction instruction, the first of which is
+      designated the nonce advance instruction which must:
+        - invoke the system program `11111111111111111111111111111111`
+        - have instruction data that deserializes to the
+          `SystemInstruction::AdvanceNonceAccount` variant
+        - have at least one account input, the first of which is designated the
+          nonce address/account which must:
+           - be loaded with a write-lock
+           - be owned by the system program: `11111111111111111111111111111111`
+           - be deserializable to non-legacy initialized nonce state
+           - have a durable nonce hash equal to the transaction's recent
+             blockhash field
+    - be signed by the nonce authority deserialized from the nonce account
 
 ### Proposed New Runtime Errors
 
