@@ -79,11 +79,19 @@ dispatch
 - Use the instruction **data**, not instruction **accounts**, to receive the
 callee address as a parameter, in case they want a dynamic dispatch
 
+Transaction building should append the required program accounts, which are not
+passed as instruction accounts, at the end of the transaction accounts list.
+How the dapps describe which callee prorgams they require to be present in the
+transaction is explicitly left unspecified.
+
 ## Security Considerations
 
 None.
 
 ## Backwards Compatibility
+
+Programs remain unaffected the way they are, unless they want to profit from
+this change. In that case they can do one of the following:
 
 Existing programs, which have hard-coded the callee statically and only need it
 as any instruction account to satisfy the constraint imposed by the runtime,
@@ -92,5 +100,4 @@ order not to shift the indices of the other instruction accounts.
 
 All other existing programs, which dynamically call whatever is passed in a
 specific instruction account will have to be updated and redeployed to benefit
-from the lifting of the restriction. Otherwise they remain unaffected the way
-they are.
+from the lifting of the restriction.
