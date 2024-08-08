@@ -85,6 +85,9 @@ None.
 
 ## Backwards Compatibility
 
+Programs remain unaffected the way they are, unless they want to profit from
+this change. In that case they can do one of the following:
+
 Existing programs, which have hard-coded the callee statically and only need it
 as any instruction account to satisfy the constraint imposed by the runtime,
 can be fed a placeholder like `NativeLoader1111111111111111111111111111111`, in
@@ -92,5 +95,4 @@ order not to shift the indices of the other instruction accounts.
 
 All other existing programs, which dynamically call whatever is passed in a
 specific instruction account will have to be updated and redeployed to benefit
-from the lifting of the restriction. Otherwise they remain unaffected the way
-they are.
+from the lifting of the restriction.
