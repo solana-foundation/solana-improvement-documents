@@ -62,7 +62,7 @@ only removing checks of the `is_executable` flag. A complete removal of the
 flag can be addressed in a subsequent proposal. Thus, the following must remain
 unaffected for now:
 
-- Setting of the `is_executable` flag during program deployment
+- Setting of the `is_executable` flag during program deployment in loader-v3
 - Calculation of the account hashes
 - Minimization of snapshots
 - Serialization of instruction accounts `is_executable` flag for dapps
@@ -73,10 +73,11 @@ These checks of the `is_executable` flag must be removed:
 
 - `ExecutableLamportChange` during execution (transaction succeeds instead)
 
-These checks of the `is_executable` flag are irrelevant to consensus as
-transactions which try to invoke accounts, which do not contain programs,
-continue to fail without them. They should still be removed because all
-implementations should aim to produce the same error codes:
+These checks of the `is_executable` flag do not influence whether transactions
+fail or succeed because they are all covered by other checks. Thus, only the
+thrown error codes will change, which does not affect consensus. Nevertheless,
+they should still be removed because all implementations should aim to produce
+the same error codes:
 
 - during transaction loading:
   - `InvalidProgramForExecution` (fallthrough to `UnsupportedProgramId` during
@@ -112,7 +113,8 @@ failed verification or not owned by a loader
 - `IncorrectProgramId` for unrecognized built-in programs
 
 All in all, the following error messages related to invocation of program
-accounts will be coalesced into `UnsupportedProgramId`:
+accounts will be coalesced into `UnsupportedProgramId`, but some of them will
+remain in use in other circumstances unrelated to program execution:
 
 - `InvalidProgramForExecution`
 - `AccountNotExecutable`
