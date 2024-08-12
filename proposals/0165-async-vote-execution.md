@@ -12,12 +12,15 @@ supersedes: null
 superseded-by: null
 extends: null
 ---
+
 ## Summary
+
 Separate the execution of vote and non-vote transactions in each block. The
 vote transactions will be verified and executed first, then the non-vote
 transactions will be executed later asynchronously to finalize the block.
 
 ## Motivation
+
 Currently the vote transactions and non-vote transactions are mixed together in
 a block, the vote transactions are only processed in consensus when the whole
 block has been frozen and all transactions in the block have been verified and
@@ -42,6 +45,7 @@ hard to make sure everyone executes every block within 400ms, on average majorit
 of the cluster should be able to keep up.
 
 ## New Terminology
+
 - `VED`: Vote Execution Domain, Vote transactions and all its dependencies (e.g.
 fee payers for votes).
 - `VED Bankhash`: The hash calculated after executing only vote transactions in
@@ -54,6 +58,7 @@ in a block. If there are no non-vote transactions, use default hash.
 ## Detailed Design
 
 ### Allow leader to skip execution of transactions (Bankless Leader)
+
 There is already on-going effort to totally skip execution of all transactions
 when leader pack new blocks. See SIMD 82, SIMD 83, and related trackers:
 https://github.com/anza-xyz/agave/issues/2502
@@ -65,10 +70,12 @@ such a setup we gain smaller speedup without much benefits, it is a possible
 route during rollouts though.
 
 ### Separating vote transactions and dependencies into a different domain
+
 To make sure vote transactions can be executed independently, we need to
 isolate its dependencies.
 
 #### Remove clock program's dependency on votes
+
 Introduce new transaction `ClockBump` to remove current clock program's
 dependency on votes.
 
@@ -77,8 +84,10 @@ every 12 slots to correct the clock drift. A small script can be used to
 refund well-behaving leaders the cost of the transactions.
 
 #### Split vote accounts into two accounts in VED and UED respectively
+
 We need to allow users move money in and out of the vote accounts, but
 we also need the vote accounts to vote in VED. So there will be two accounts:
+
 - `VoteTowerAccount`: tracks tower state and vote authority, it will be
 in `VED`, it is updated by vote transactions and tracks vote credits.
 - `VoteAccount`: everything else currently in vote accounts, it will be
@@ -87,6 +96,7 @@ in `UED`, users can move funds in and out of `VoteAccount` freely.
 The two accounts are synced every Epoch when the rewards are calculated.
 
 ### Separate the VED and UED Domains
+
 - Only Vote or System program can read and write accounts in `VED`
 - Other programs can only read accounts in `VED`
 - Users can't directly access accounts in `VED` but they can move accounts
@@ -94,6 +104,7 @@ from `VED` to `UED` and vice versa. Moving accounts from one domain to
 another takes 1 Epoch, and the migration happens at Epoch boundary
 
 ### Enable Async Vote Executions
+
 1. The leader will no longer execute any transactions before broadcasting
 the block it packed. We do have block-id (Merkle tree root) to ensure
 everyone receives the same block.
