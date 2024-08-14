@@ -62,6 +62,10 @@ nonce accounts.
 
 ### Transaction Errors
 
+While transaction errors are not required to be consistent for clients reaching
+consensus, they should follow the following specification to give consistent
+responses to downstream users and clients.
+
 Precompile verification errors should now be mapped to
 `InstructionError::Custom(u32)` such that each `PrecompileError` variant below
 maps to a custom error code as annotated below:
