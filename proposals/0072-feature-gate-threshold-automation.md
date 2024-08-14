@@ -48,6 +48,9 @@ beneficial.
   that will own all feature accounts.
 - **Staged Features PDA:** A PDA under the Feature Gate program used to track
   features submitted for activation per epoch.
+- **Validator Support Signal PDA:** A PDA under the Feature Gate program used to
+  track a validator's support signal bitmask, which signals which features they
+  support.
 - **Get Epoch Stake Syscall:** The new syscall introduced in
   [SIMD 0133](./0133-syscall-get-epoch-stake.md)
   that returns the current epoch stake for a given vote account address.
@@ -172,12 +175,49 @@ supported by their software.
 
 A node signals its support for staged features by invoking another new Feature
 Gate program instruction: `SignalSupportForStagedFeatures`. This instruction
-expects:
+expects the Validator Support Signal PDA (defined below) to either exist or be
+funded with enough rent-exempt lamports to initialize state. The processor will
+allocate, assign, and initialize the account if it does not exist.
+
+The `SignalSupportForStagedFeatures` instruction is structured as follows:
 
 - Data: A `u8` bit mask of the staged features.
 - Accounts:
   - Staged Features PDA: writable
-  - Vote account: signer
+  - Validator Support Signal PDA: writable
+  - Vote account
+  - Authorized voter: signer
+  - System program (required only for initializing)
+
+The authorized voter signer must match the authorized voter stored in the vote
+account's state.
+
+The `SignalSupportForStagedFeatures` instruction processor will provide the
+vote account's address to the `GetEpochStake` syscall to retrieve the stake
+delegated to that vote account for the epoch. Then, using the `1` values
+provided in the bitmask (defined below), the processor will add this stake value
+to each corresponding feature ID's stake support in the Staged Features PDA.
+
+A node's stake support for features is always accounted for using their most
+recently sent bitmask. Each time a node sends a bitmask, if a previous bitmask
+was already sent for that node, their previous bitmask is first used to deduct
+stake support before adding stake support for the features signalled by the new
+bitmask.
+
+Similar to the `StageFeatureForActivation` instruction, the Clock sysvar will be
+used to ensure the Staged Features PDA corresponding to the *current* epoch `N` was
+provided.
+
+If a node does not send this instruction successfully during the current epoch,
+their stake is not tallied. This is analogous to a node signalling support for
+zero features.
+
+If a feature is revoked, the list of staged features will not change, and nodes
+may still signal support for this feature. However, the runtime will not
+activate this feature if its corresponding feature account no longer exists
+on-chain.
+
+#### Signal Bitmask
 
 A bit mask is used as a compressed ordered list of indices. This has two main
 benefits:
@@ -194,24 +234,61 @@ A `1` bit represents support for a feature. For example, for staged features
 `[A, B, C, D, E, F, G, H]`, if a node wishes to signal support for all features
 except `E` and `H`, their `u8` value would be 246, or `11110110`.
 
-The `SignalSupportForStagedFeatures` instruction processor will provide the
-vote account's address to the `GetEpochStake` syscall to retrieve the stake
-delegated to that vote account for the epoch. Then, using the `1` values
-provided in the bitmask, the processor will add this stake value to each
-corresponding feature ID's stake support in the Staged Features PDA.
+#### Validator Support Signal PDA State
 
-Similar to the `StageFeatureForActivation` instruction, the Clock sysvar will be
-used to ensure the Staged Features PDA corresponding to the *current* epoch `N` was
-provided.
+A Validator Support Signal PDA will be created for each vote account. It will
+store the node's submitted bitmasks.
 
-If a node does not send this instruction successfully during the current epoch,
-their stake is not tallied. This is analogous to a node signalling support for
-zero features.
+As mentioned previously, a node's most recently submitted bitmask is considered
+their signal for the epoch. Validator Support Signal state allows one bitmask
+per epoch, but can store multiple epochs of historical bitmasks. This is useful
+for querying stake support post-epoch. When a new bitmask is submitted for an
+epoch with an existing entry in the account state, it is overwritten.
 
-If a feature is revoked, the list of staged features will not change, and nodes
-may still signal support for this feature. However, the runtime will not
-activate this feature if its corresponding feature account no longer exists
-on-chain.
+These accounts are never garbage collected since they are reused every epoch.
+This means nodes are only required to pay for rent-exemption once.
+
+The address of the Validator Support Signal PDA (for a given epoch?) is derived
+as follows, where `vote_address` is the 32 bytes of the validator's vote address.
+
+```
+"support_signal" <vote_address>
+```
+
+The data for the Validator Support Signal PDA will be structured as follows:
+
+```c
+#define MAX_SIGNALS 4
+
+/**
+ * A validator's support signal bitmask along with the epoch the signal
+ * corresponds to.
+ */
+typedef struct {
+    /**
+     * The epoch the support signal corresponds to (u64 serialized to
+     * little-endian).
+    */
+    uint8_t epoch[8];
+    /** The support signal bitmask. */
+    u8 signal;
+    /** Padding for 8-byte alignment. */
+    uint8_t _padding[7];
+} SupportSignalWithEpoch;
+
+/**
+ * A validator's support signal bitmasks with their corresponding epochs.
+ */
+typedef struct {
+    /**
+     * The support signal bitmasks with their corresponding epochs.
+     */
+    SupportSignalWithEpoch signals[MAX_SIGNALS];
+} ValidatorSupportSignal;
+```
+
+As depicted in the above layout, a validator's signal can be stored (and
+queried) for up to 4 epochs.
 
 ### Step 4: Feature Activation
 
