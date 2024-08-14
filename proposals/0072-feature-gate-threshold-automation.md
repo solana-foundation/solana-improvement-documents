@@ -212,11 +212,6 @@ If a node does not send this instruction successfully during the current epoch,
 their stake is not tallied. This is analogous to a node signalling support for
 zero features.
 
-If a feature is revoked, the list of staged features will not change, and nodes
-may still signal support for this feature. However, the runtime will not
-activate this feature if its corresponding feature account no longer exists
-on-chain.
-
 #### Signal Bitmask
 
 A bit mask is used as a compressed ordered list of indices. This has two main
@@ -292,21 +287,25 @@ queried) for up to 4 epochs.
 
 ### Step 4: Feature Activation
 
-During the epoch rollover, the runtime must load the Staged Features PDA
-and calculate the stake - as a percentage of the total epoch stake - in support
-for each feature ID to determine which staged features to activate.
+At the end of the epoch, the runtime loads the Staged Features PDA for the
+current epoch and calculates the stake - as a percentage of the total epoch
+stake - in support of each feature to determine which staged features to
+activate.
 
 Every feature whose stake support meets the required threshold must be
 activated. This threshold will be hard-coded in the runtime to 95% initially,
-but future iterations on the process could allow feature key-holders to set a
-custom threshold per-feature.
+but future iterations on the process could make this threshold configurable.
 
-As mentioned previously, if a feature was revoked, it will no longer exist
-on-chain, and therefore will be not activated by the runtime, regardless of
-calculated stake support.
+Features can be revoked at any point up until this step (staged or unstaged). If
+a feature is revoked, nodes may still have signalled support for it, but the
+runtime will not activate the feature since the account will not exist on-chain.
+For more information, see the
+[Feature Gate Program's](https://github.com/solana-program/feature-gate)
+`RevokePendingActivation` instruction, as proposed in
+[SIMD 0089](./0089-programify-feature-gate-program.md).
 
-If a feature is not activated, either because it has been revoked or it did not
-meet the required stake support, it must be resubmitted according to Step 2.
+If a feature is not activated, it must be resubmitted according to Step 2. If it
+is revoked, it must be resubmitted according to Step 1.
 
 ## Alternatives Considered
 
