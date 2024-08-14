@@ -46,8 +46,8 @@ beneficial.
 - **Feature Gate program:** The Core BPF program introduced in
   [SIMD 0089](./0089-programify-feature-gate-program.md)
   that will own all feature accounts.
-- **Staged Features PDA:** The PDA under the Feature Gate program used to track
-  features submitted for activation.
+- **Staged Features PDA:** A PDA under the Feature Gate program used to track
+  features submitted for activation per epoch.
 - **Get Epoch Stake Syscall:** The new syscall introduced in
   [SIMD 0133](./0133-syscall-get-epoch-stake.md)
   that returns the current epoch stake for a given vote account address.
@@ -63,8 +63,8 @@ The new process will utilize the Feature Gate program to enable the runtime to
 activate staged features that meet the necessary stake support while preventing
 the activation of those that do not.
 
-Two new instructions, as well as two types of PDAs, will be added to the
-Feature Gate program. They are detailed in this proposal.
+Two new instructions and one new type of PDA will be added to the Feature Gate
+program. They are detailed in this proposal.
 
 The new process is comprised of the following steps:
 
@@ -95,31 +95,42 @@ In the future, this authority could be replaced by validator governance.
 
 The multi-signature authority stages a feature for activation by invoking a new
 Feature Gate program instruction: `StageFeatureForActivation`. This instruction
-expects:
+expects the Staged Features PDA (defined below) to either exist or be funded
+with enough rent-exempt lamports to initialize state. The processor will
+allocate, assign, and initialize the account if it does not exist.
 
-- Data: The feature ID
+The `StageFeatureForActivation` instruction is structured as follows:
+
+- Data: None
 - Accounts:
+  - Feature account
   - Staged Features PDA: writable
   - Multi-signature authority: signer
-  - Payer: optional signer
+  - System program (required only for initializing)
 
-A PDA will be created for each epoch in which features are staged to be
-activated. If no features are staged for a given epoch, that epoch's
-corresponding PDA is not created.
+Note that features can only be staged in the epoch prior to the target
+activation epoch. This means a feature staged by invoking
+`StageFeatureForActivation` in epoch `N-1` is scheduled for activation (through
+the process below) at the end of epoch `N`. This is checked by the `Clock`
+sysvar.
+
+When a feature is staged for activation, initial stake support is zero.
+
+#### Staged Features PDA State
+
+A Staged Features PDA will be created for each epoch in which features are
+staged to be activated. If no features are staged for a given epoch, that
+epoch's corresponding Staged Features PDA will never be initialized and thus
+will not exist.
 
 These PDAs will not be garbage collected and can be referenced for historical
 purposes.
 
-When the first feature for an epoch is staged, the PDA is created. The
-`StageFeatureForActivation` processor will debit from the payer account enough
-lamports to allocate the new Staged Features PDA. A payer account must be
-provided for the first staged feature.
-
 The address of the Staged Features PDA for a given epoch is derived as follows,
-where `epoch number` is a little-endian `u64`:
+where `epoch` is a `u64` serialized to eight little-endian bytes:
 
 ```
-"staged_features" + < epoch number >
+"staged_features" + <epoch>
 ```
 
 The data for the Staged Features PDA will be structured as follows:
@@ -132,10 +143,10 @@ The data for the Staged Features PDA will be structured as follows:
  * A Feature ID and its corresponding stake support, as signalled by validators.
  */
 typedef struct {
-    /** Feature identifier (32 bytes). */
+    /** Feature identifier (32 bytes for public key). */
     uint8_t feature_id[FEATURE_ID_SIZE];
-    /** Stake support (little-endian u64). */
-    uint8_t stake[8];
+    /** Stake support (u64 serialized to little-endian). */
+    uint8_t stake_support[8];
 } FeatureStake;
 
 /**
@@ -146,19 +157,9 @@ typedef struct {
      * Features staged for activation at the end of the current epoch, with
      * their corresponding signalled stake support.
      */
-    FeatureStake current_feature_stakes[MAX_FEATURES];
+    FeatureStake features[MAX_FEATURES];
 } StagedFeatures;
 ```
-
-`StageFeatureForActivation` may only be invoked during epoch `N-1`, where `N` is
-the epoch number used to derive the Staged Features program-derived address.
-This is checked by the Feature Gate program using the Clock sysvar.
-
-Features staged during epoch `N-1` are staged to be activated at the end of
-epoch `N`.
-
-`StageFeatureForActivation` will add the provided feature ID to the list with
-stake support initialized to `0`.
 
 As depicted in the above layout, a maximum of 8 features can be staged for a
 given epoch.
@@ -203,7 +204,7 @@ Similar to the `StageFeatureForActivation` instruction, the Clock sysvar will be
 used to ensure the Staged Features PDA corresponding to the *current* epoch `N` was
 provided.
 
-If a node does not send this transaction successfully during the current epoch,
+If a node does not send this instruction successfully during the current epoch,
 their stake is not tallied. This is analogous to a node signalling support for
 zero features.
 
