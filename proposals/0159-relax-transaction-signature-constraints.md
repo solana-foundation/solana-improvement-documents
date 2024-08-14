@@ -45,7 +45,7 @@ valid, the block producer is able to collect fees for including the transaction.
 
 The Solana protocol will no longer reject blocks with transactions that have
 failed precompile verification or have non-fee payer transaction-level
-signatures that fail verification.  Such transactions will be allowed to be
+signatures that fail verification. Such transactions will be allowed to be
 recorded in a block and signature verification failures should be handled
 similarly to how SVM program errors are handled. The transaction will be
 committed, fees deducted, but no other account state changes should be
@@ -59,6 +59,31 @@ Since the nonce authority for durable nonce transactions may be different from
 the fee payer, such transactions may need an additional signature verification
 in order to be committed to a block and avoid unauthorized usage of on-chain
 nonce accounts. 
+
+### Transaction Errors
+
+Precompile verification errors should now be mapped to
+`InstructionError::Custom(u32)` such that each `PrecompileError` variant below
+maps to a custom error code as annotated below:
+
+```rust
+pub enum PrecompileError {
+    InvalidPublicKey,           // 0u32
+    InvalidRecoveryId,          // 1u32
+    InvalidSignature,           // 2u32
+    InvalidDataOffsets,         // 3u32
+    InvalidInstructionDataSize, // 4u32
+}
+```
+
+Non-fee payer transaction-level signature verification errors should be mapped
+to a new `TransactionError` variant which includes the index of the first failed
+signature in the transaction. This variant will be serialized in the ledger via
+bincode or protobuf at variant index `38`.
+
+```rust
+TransactionError::InvalidSignature { signature_index: u8}, // 38u32
+```
 
 ## Impact
 
