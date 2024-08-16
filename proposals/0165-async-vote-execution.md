@@ -6,7 +6,7 @@ authors:
 category: Standard
 type: Core
 status: Draft
-created: 2024-08-11T00:00:00.000Z
+created: 2024-08-11
 feature: null
 supersedes: null
 superseded-by: null
@@ -43,6 +43,10 @@ transaction executions.
 The non-vote transactions do need to be executed eventually. Even though it's
 hard to make sure everyone executes every block within 400ms, on average majority
 of the cluster should be able to keep up.
+
+## Alternatives Considered
+
+To be filled.
 
 ## New Terminology
 
@@ -118,3 +122,17 @@ some percentage of the validators agree on the `UED bankhash`.
 confirmed `VED bankhash` (currently proposed at 1/2 of the Epoch)
 5. Add alerts if `UED bankhash` differs when the `VED bankhash` is the same.
 This is potentially an event worthy of cluster restart.
+
+## Impact
+
+Since we will eliminate the impact of non-vote transaction execution speed,
+we should expect to see fewer forking and late blocks.
+
+## Security Considerations
+
+We do need to monitor and address the possibility of UED bankhash mismatches
+when VED bankhash matches.
+
+## Backward Compatibility
+
+Most of the changes would require feature gates.
