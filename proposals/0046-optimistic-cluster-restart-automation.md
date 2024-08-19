@@ -391,13 +391,13 @@ Because right now epoch stakes are calculated 1 epoch ahead of time, and we
 only handle outages spanning 7 hours, the local root bank should have the
 epoch stakes for all epochs we need.
 
-* When aggregating `RestartLastVotedForkSlots`, for any epoch with at least one
-slot X having > 42% stake, calculate the stake of active validators in this
-epoch. Only exit this stage if all epochs reaching the above bar has > 80%
-stake. This is a bit restrictive, but it guarantees that whichever slot we
-select for HeaviestFork, we have enough validators in the restart. Note that
-the epoch containing local root should always be considered, because root
-should have > 42% stake.
+* When aggregating `RestartLastVotedForkSlots`, for any epoch with validators
+voting for any slot in this epoch having at least 33% stake, calculate the
+stake of active validators in this epoch. Only exit this stage if all epochs
+reaching the above bar has > 80% stake. This is a bit restrictive, but it
+guarantees that whichever slot we select for HeaviestFork, we have enough
+validators in the restart. Note that the epoch containing local root should
+always be considered, because root should have > 33% stake.
 
 * When aggregating `RestartHeaviestFork`, use the stake weight of the slot
 selected in `RestartHeaviestFork`. If others don't agree with us on the same
