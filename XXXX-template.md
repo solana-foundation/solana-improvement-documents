@@ -24,11 +24,6 @@ A brief summary of what the feature is.
 Why are we doing this? What use cases does it support? What is the expected
 outcome?
 
-## Alternatives Considered
-
-What alternative designs were considered and what pros/cons does this feature
-have relative to them?
-
 ## New Terminology
 
 Is there any new terminology introduced with this proposal?
@@ -49,6 +44,11 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
 document are to be interpreted as described in [RFC
 2119](https://www.ietf.org/rfc/rfc2119.txt) and [RFC
 8174](https://www.ietf.org/rfc/rfc8174.txt).
+
+## Alternatives Considered
+
+What alternative designs were considered and what pros/cons does this feature
+have relative to them?
 
 ## Impact
 
