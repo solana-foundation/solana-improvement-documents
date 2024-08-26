@@ -58,7 +58,8 @@ Accounts of programs owned by loader-v4 must have the following layout:
   - `u64` Slot in which the program was last deployed, retracted or
   initialized.
   - `[u8; 32]` Authority address which can send program management
-  instructions.
+  instructions. Or if the status is finalized, then the address of the next
+  version of the program.
   - `u64` status enum:
     - Enum variant `0u64`: Retracted, program is in maintenance
     - Enum variant `1u64`: Deployed, program is ready to be executed
@@ -228,23 +229,46 @@ necessarily the current one, but the one of the epoch of the next slot
 - Instruction accounts:
   - `[writable]` The program account to change the authority of.
   - `[signer]` The current authority of the program.
-  - `[signer]` Optional, the new authority of the program.
+  - `[signer]` The new authority of the program.
 - Instruction data:
   - Enum variant `4u32`
 - Behavior:
-  - Check there are at least two instruction accounts,
+  - Check there are at least three instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
   - Verify the program account
-  - In case a new authority was provided (instruction account at index 2):
-    - Check that it signed as well,
-    otherwise throw `MissingRequiredSignature`
-    - Check that the authority stored in the program account is different
-    from the one provided, otherwise throw `InvalidArgument`
-    - Copy the new authority address into the program account
-  - In case no new authority was provided:
-    - Check that the status stored in the program account is deployed,
+  - Check that the new authority (instruction account at index 2)
+  signed as well, otherwise throw `MissingRequiredSignature`
+  - Check that the authority stored in the program account is different
+  from the one provided, otherwise throw `InvalidArgument`
+  - Copy the new authority address into the program account
+
+#### Finalize
+
+- Instruction accounts:
+  - `[writable]` The program account to change the authority of.
+  - `[signer]` The current authority of the program.
+  - `[]` Optional, the reserved address for the next version of the program.
+- Instruction data:
+  - Enum variant `5u32`
+- Behavior:
+  - Check there are at least three instruction accounts,
+    otherwise throw `NotEnoughAccountKeys`
+  - Verify the program account
+  - Check that the status stored in the program account is deployed,
     otherwise throw `InvalidArgument`
-    - Change the status stored in the program account to finalized
+  - for the program account of the next version
+  (instruction account at index 2) check that:
+    - the owner of the program account is loader-v4,
+    otherwise throw `InvalidAccountOwner`
+    - the program account is at least as long enough for the header,
+    otherwise throw `AccountDataTooSmall`
+    - the authority stored in the program account is the one provided,
+    otherwise throw `IncorrectAuthority`
+    - the status stored in the program account is not finalized,
+    otherwise throw `Immutable`
+  - Copy the address of the next version into the next version field stored in
+  the previous versions program account
+  - Change the status stored in the program account to finalized
 
 ## Impact
 
@@ -252,6 +276,9 @@ This proposal:
 
 - covers all the use cases loader-v3 had but in a cleaner way and comes with
 a specification.
+- allows finalized programs to mark which other program supersedes them which
+can then be offered as an option in forntends. This provides a more secure
+alternative to redeployment / upgrading of programs at the same address.
 - makes deployment slightly cheaper for dapp developers as they would no longer
 have to burn funds for the rent exception of the proxy account.
 - provides an alternative redeployment path which does not require a big
