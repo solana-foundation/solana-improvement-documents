@@ -5,9 +5,12 @@ authors:
   - Haoran Yi
 category: Standard
 type: Core
-status: Draft
+status: Activated
 created: 2023-12-13
-feature: https://github.com/solana-labs/solana/issues/33970
+feature: [7WeS1vfPRgeeoXArLh7879YcB9mgE9ktjPDtajXeWfXn](https://github.com/solana-labs/solana/issues/34424)
+development:
+  - Anza - [Implemented](https://github.com/solana-labs/solana/pull/35164)
+  - Firedancer - Implemented
 ---
 
 ## Summary

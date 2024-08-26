@@ -5,9 +5,12 @@ authors:
   - Christian Kamm
 category: Standard
 type: Core
-status: Draft
+status: Implemented
 created: 2023-05-17
-feature: (fill in with feature tracking issues once accepted)
+feature: [5TuppMutoyzhUSfuYdhgzD47F92GL1g89KpCZQKqedxP](https://github.com/solana-labs/solana/issues/33325)
+development: 
+ - Anza - [Implemented](https://github.com/solana-labs/solana/pull/31640) but held 
+ - Firedancer - Prioritized
 ---
 
 ## Summary

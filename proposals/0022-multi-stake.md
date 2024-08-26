@@ -5,9 +5,9 @@ authors:
   - Jon Cinque (Solana Labs)
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2023-01-20
-feature: (fill in with feature tracking issues once accepted)
+feature: ()
 ---
 
 ## Summary

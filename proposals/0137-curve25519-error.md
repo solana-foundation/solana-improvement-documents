@@ -5,12 +5,12 @@ authors:
   - Sam Kim
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-04-08
-feature:
-supersedes:
-superseded-by:
-extends:
+feature: [FuS3FPfJDKSNot99ECLXtp3rueq36hMNStJkPJwWodLh](https://github.com/anza-xyz/agave/issues/1132)
+development:
+  - Anza - [Implemented](https://github.com/anza-xyz/agave/pull/412)
+  - Firedancer - WIP
 ---
 
 ## Summary

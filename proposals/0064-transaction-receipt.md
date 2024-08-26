@@ -7,9 +7,9 @@ authors:
   - Harsh Patel (Tinydancer)
 category: Standard
 type: Core
-status: Draft
+status: Stale
 created: 2023-06-20
-feature: (fill in with feature tracking issues once accepted)
+feature: N/A
 ---
 
 ## Summary

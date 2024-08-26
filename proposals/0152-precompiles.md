@@ -5,12 +5,11 @@ authors:
   - Emanuele Cesena
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-06-03
-feature:
-supersedes:
-superseded-by:
-extends:
+feature: ed9tNscbWLYBooxWA7FE2B5KHWs8A6sxfY8EzezEcoo
+development:
+  - Anza - [implemented](https://github.com/anza-xyz/agave/pull/1876)
 ---
 
 ## Summary

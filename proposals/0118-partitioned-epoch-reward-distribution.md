@@ -6,8 +6,11 @@ category: Standard
 type: Core
 status: Accepted
 created: 2024-02-16
-feature: 9bn2vTJUsUcnpiZWbu2woSKtTGW3ErZC9ERv88SDqQjK, enable_partitioned_epoch_reward, https://github.com/anza-xyz/agave/issues/426
+feature: [9bn2vTJUsUcnpiZWbu2woSKtTGW3ErZC9ERv88SDqQjK](https://github.com/anza-xyz/agave/issues/426)
 supersedes: '0015'
+developement:
+   - Anza - [Implemented](https://github.com/anza-xyz/agave/pull/427)
+   - Firedancer - Implemented
 ---
 
 ## Summary

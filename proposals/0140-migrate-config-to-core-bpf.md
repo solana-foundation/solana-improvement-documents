@@ -7,7 +7,10 @@ category: Standard
 type: Core
 status: Draft
 created: 2024-04-02
-feature: (fill in with feature tracking issues once accepted)
+feature: [2Fr57nzzkLYXW695UdDxDeR5fhnZWSttZeZYemrnpGFV](https://github.com/anza-xyz/agave/issues/1378)
+development:
+  - Anza - [Implemented](https://github.com/anza-xyz/agave/pull/1379)
+  - Firedancer - Not started
 ---
 
 ## Summary

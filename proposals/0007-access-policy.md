@@ -5,7 +5,7 @@ authors:
 - Jacob Creech (Solana Foundation)
 category: Meta
 type: Meta
-status: Draft
+status: Living
 created: 2022-12-10
 ---
 
@@ -34,7 +34,7 @@ in accordance with Github access policies.
 
 ## Motivation
 
-Shamelessly borrowing from [Mozilla's access
+Shamelessly borrowing from [Mozilla's access 
 policy](https://www.mozilla.org/en-US/about/governance/policies/commit/access-policy/)
 : 
 

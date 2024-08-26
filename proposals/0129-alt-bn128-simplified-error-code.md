@@ -5,12 +5,12 @@ authors:
   - Emanuele Cesena
 category: Standard
 type: Core
-status: Draft
+status: Activated
 created: 2024-03-19
-feature:
-supersedes:
-superseded-by:
-extends:
+feature: [JDn5q3GBeqzvUa7z67BbmVHVdE3EbUAjvFep3weR3jxX](https://github.com/anza-xyz/agave/issues/320)
+development:
+  - Anza - [Implemented](https://github.com/anza-xyz/agave/pull/294)
+  - Firedancer - Implemented
 ---
 
 ## Summary

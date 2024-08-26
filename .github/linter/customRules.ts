@@ -281,7 +281,6 @@ export const metadataStatusIsValid = {
 
     const validStatus = [
       "Idea",
-      "Draft", 
       "Review",
       "Accepted",
       "Stagnant",
