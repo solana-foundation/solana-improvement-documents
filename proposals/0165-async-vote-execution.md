@@ -16,8 +16,16 @@ extends: null
 ## Summary
 
 Separate the execution of vote and non-vote transactions in each block. The
-vote transactions will be verified and executed first, then the non-vote
-transactions will be executed later asynchronously to finalize the block.
+vote transactions and non-vote transactions will be verified and executed
+independently. Because the vote transactions are normally much faster to
+execute, under most cases this means vote transactions will finish
+execution first.
+
+The eventual goal is to completely separate vote and non-vote transaction
+executions. But right now we still have some dependency that non-vote
+transactions need to read the vote state in its parent block, so currently we
+restrict that non-vote transactions cannot start execution until the vote
+transactions of its parent block has finished.
 
 ## Motivation
 
@@ -78,14 +86,21 @@ route during rollouts though.
 To make sure vote transactions can be executed independently, we need to
 isolate its dependencies.
 
-#### Remove clock program's dependency on votes
+#### Remove clock program's dependency on votes (postponed)
 
-Introduce new transaction `ClockBump` to remove current clock program's
-dependency on votes.
+The eventual goal is to introduce new transaction `ClockBump` to remove
+current clock program's dependency on votes.
 
 The transaction `ClockBump` is sent by a leader with at least 0.5% stake
 every 12 slots to correct the clock drift. A small script can be used to
 refund well-behaving leaders the cost of the transactions.
+
+But currently we will keep the clock calculation as is, since the clock
+sysvar uses the vote-state of the parent block to calculate average
+timestamp, and we have restrictions that the UED transactions in a
+block cannot start execution until the VED transactions in its
+ancestors have finished. So we can currently leave clock sysvar
+calculation as is.
 
 #### Split vote accounts into two accounts in VED and UED respectively
 
