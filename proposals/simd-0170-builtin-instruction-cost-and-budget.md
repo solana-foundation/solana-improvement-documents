@@ -1,6 +1,6 @@
 ---
 simd: '0170'
-title: Allocate percise builtin instructions budget
+title: Allocate precise builtin instructions budget
 authors:
   - Tao Zhu (Anza)
 category: Standard
@@ -117,7 +117,7 @@ prioritization fee the user pays but also lowers the transaction's priority.
 Users who previously relied on including builtin instructions, instead of
 explicitly setting compute-unit limits, to allocate budget for their
 transactions may experience an increase in transaction failures. To avoid this,
-users are encouraged to use set_compute_unit_limits to explicitly request the
+users are encouraged to use set_compute_unit_limit to explicitly request the
 necessary budget for their transactions.
 
 ## Security Considerations
