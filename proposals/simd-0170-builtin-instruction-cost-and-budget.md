@@ -1,6 +1,6 @@
 ---
 simd: '0170'
-title: Allocate percise builtin instructions budget
+title: Specifying CU Definitions for Built-ins
 authors:
   - Tao Zhu (Anza)
 category: Standard
@@ -15,109 +15,88 @@ extends:
 
 ## Summary
 
-Builtin instructions always consume a statically defined amount of compute
-units (CUs). Therefore, they should allocate the exact same amount of compute
-budget and count the same amount toward the block limit during the banking
-stage.
+1. Built-in programs should consume a predefined number of CUs for each
+   instruction.
+2. Since built-ins can invoke other programs (CPI), they should allocate enough
+   but granular CUs to ensure successful execution without over-allocation.
 
 ## Motivation
 
-Builtin instructions in the SVM consume their static DEFAULT_COMPUTE_UNITS from
-the compute budget during execution. These DEFAULT_COMPUTE_UNITS are also
-counted against block limits during the banking stage. However, historically,
-builtin instructions have been allocated DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT
-units of compute budget. This discrepancy between the allowed consumption and
-the actual usage tracked for block limits has led to several issues that need
-to be addressed.
+This proposal addresses two key issues related to CU allocation and consumption
+for built-in programs while aiming to avoid adding unnecessary complexity.
 
-Allocating DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT instead of the actual
-DEFAULT_COMPUTE_UNITS for builtin instructions distorts the tracking of
-transaction compute budgets. This can result in more expensive instructions
-being executed when they should fail due to exceeding the budget. Consequently,
-the cost tracker may need to account for additional compute units toward block
-limits after transaction execution, potentially producing blocks that exceed
-those limits.
+1. **Accurate CU tracking without post-execution adjust-up**: Currently,
+   built-in instructions deduct a fixed amount of CUs (DEFAULT_COMPUTE_UNITS)
+from both the CU meter and block limits after execution. However, the CU meter
+allocates a much larger value (DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT) to each
+built-in instruction. This discrepancy creates imprecise CU tracking and may
+require block producers to account for additional CUs after a transaction's
+execution, potentially causing block limits to be exceeded.
 
-Furthermore, maintaining consistency in transaction costs between the banking
-stage and SVM would simplify the code logic and make reasoning more
-straightforward.
+   Furthermore, built-ins can conditionally CPI into other programs, introducing
+variability in CU consumption. This unpredictability makes it difficult to
+allocate CUs upfront solely based on CUs builtin consumes during execution, also
+adds complexity to the tracking process.
+
+2. **Preventing over-allocation of CUs**: Over-allocating CUs for built-ins
+   reduces block density, lowers network throughput, and can degrade block
+producer performance by causing repeated transaction retries. Avoiding excessive
+CU allocation is critical for maximizing block efficiency and minimizing network
+delays.
+
+To resolve these issues, we propose statically defining the CU cost of built-in
+instructions based on worst-case scenarios, including potential CPI calls. A
+unified MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT will standardize CU allocation
+for both block producers and the CU meter.
 
 ## Alternatives Considered
 
-- One possible alternative approach would be to maintain the current allocation
-of compute budget for builtin instructions but add logic to the cost tracker
-to account for the discrepancy during tracking. However, this would add
-complexity and could introduce additional corner cases, potentially leading to
-more issues.
+1. **Maintain current CU allocation with additional tracking logic**: One option
+   is to keep the current DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT for built-ins
+and add/modify tracking logic to the cost tracker. This would address the
+discrepancy between CU allocation and consumption but increase system
+complexity. The added logic could introduce corner cases and potential bugs,
+raising the risk of issues in the transaction pipeline.
 
-- Another alternative would be to treat builtin instructions the same as other
-instructions by allocating DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT units for them
-as well. However, this approach has concerns. DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT
-is a very conservative estimate, currently set at 200,000 CUs per instruction.
-Estimating all builtin instructions, including votes and transfers, would cause
-the banking stage to significantly over-reserve block space during block
-production, potentially leading to under-packed blocks. Additionally, if it's
-known that builtin instructions will consume a fixed amount of CUs, it doesn't
-make sense to estimate them with a generic DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT.
+2. **Treat built-ins like regular instructions**: Another approach would be to
+   allocate DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT for built-ins as for other
+instructions. However, this fails to address over-allocation. Unlike regular
+instructions, the execution of built-ins is more predictable and usually
+requires significantly fewer CUs than BPF instructions. This approach would
+allocate more CUs than necessary, undermining the goal of efficient CU usage.
 
-## New Terminology
-
-None
+3. **Declare both max and default CU values for built-ins**: A more precise
+   approach would be to require built-ins to declare both a maximum CU
+allocation (MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT) and a default CU value
+for each instruction (DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS). This would
+allow fine-tuned CU allocation based on each instruction’s potential execution
+path. However, this introduces new constraints for existing and future
+built-ins, requiring updates to comply with these rules, which could
+overcomplicate the design.
 
 ## Detailed Design
 
-To ensure consistency, the following three changes are proposed:
+1. **Statically define CUs per instruction**: Assign a fixed CU consumption
+   (DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS) to each built-in instruction
+rather than per built-in program.
+2. **Set a static maximum CU allocation**: Propose a global limit of 5,000 CUs
+   (MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT) to cover worst-case scenarios,
+including CPI operations.
+3. **Handling invalid CU requests**: Transactions will fail if they request:
+   - More than MAX_COMPUTE_UNIT_LIMIT
+   - Less than the sum of all included built-in instructions'
+     MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT
 
-1. Allocate Static Compute Budget for Builtin Instructions:
-   When the compute-unit-limit is not explicitly requested, the compute budget
-should always allocate the statically defined DEFAULT_COMPUTE_UNITS for builtin
-instructions, including compute-budget instructions.
-
-   Currently, when set_compute_unit_limit is not used, all instructions are
-allocated DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT, capped by the transaction's
-MAX_COMPUTE_UNIT_LIMIT. However, compute-budget instructions historically
-haven't had any units allocated. This can lead to over-packed blocks in
-certain scenarios.
-
-   [Example 1](https://github.com/anza-xyz/agave/pull/2746/files#diff-c6c8658338536afbf59d65e9f66b71460e7403119ca76e51dc9125e1719f4f52R13403-R13429):
-   A transaction consists of a Transfer and an expensive non-builtin instruction.
-If the non-builtin instruction requires more than DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT
-CUs, the over-budgeting for Transfer allows the expensive instruction to
-execute to completion, forcing an upward adjustment.
-
-   [Example 2](https://github.com/anza-xyz/agave/pull/2746/files#diff-c6c8658338536afbf59d65e9f66b71460e7403119ca76e51dc9125e1719f4f52R13431-R13455):
-   A builtin instruction that might call other instructions (CPI) would fail
-without explicitly requesting more CUs. However, this isn't currently happening.
-
-2. Respect Explicit Compute Unit Requests During Block Production:
-   When a compute-unit-limit is explicitly requested, always use it to reserve
-block space during block production, even if there are no user-space instructions.
-
-   [Example 3](https://github.com/anza-xyz/agave/pull/2746/files#diff-c6c8658338536afbf59d65e9f66b71460e7403119ca76e51dc9125e1719f4f52R13457-R13484)
-   The cost model ignores explicitly requested CUs for transactions has all
-buitin instructions, resulting in an upward adjustment instead of the usual
-downward adjustment.
-
-3. Fail Transactions with Invalid Compute Unit Limits Early:
-   If set_compute_unit_limit sets an invalid value, the transaction should fail
-before being sent for execution.
-   "invalid value" is defined as `> MAX_COMPUTE_UNIT_LIMIT || < Sum(builtin_instructions)`
-
-   [Example 4](https://github.com/anza-xyz/agave/pull/2746/files#diff-c6c8658338536afbf59d65e9f66b71460e7403119ca76e51dc9125e1719f4f52R13344-R13373):
-   If the explicitly requested CU limit is invalid, the transaction should
-fail during sanitization, saving it from being sent to the SVM for execution.
-
-
-*Note*: Users are encouraged to explicitly request a reasonable amount of
-compute-unit-limits. Requesting more than needed not only increases the
-prioritization fee the user pays but also lowers the transaction's priority.
+If a transaction consists only of built-ins, no explicit CU request should be
+required. If a CU request is made, the requested limit will override the max
+allocation in #2.
 
 ## Impact
 
 Users who previously relied on including builtin instructions, instead of
 explicitly setting compute-unit limits, to allocate budget for their
 transactions may experience an increase in transaction failures. To avoid this,
-users are encouraged to use set_compute_unit_limits to explicitly request the
+users are encouraged to use set_compute_unit_limit to explicitly request the
 necessary budget for their transactions.
 
 ## Security Considerations
