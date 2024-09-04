@@ -320,6 +320,7 @@ first round, then broadcast again. If there is still no block with more than
 75% stake, then the algorithm fails and halts. Otherwise it proceeds.
 
 To see why this is safe, we will prove that:
+
 1. Any block which was optimistically confirmed must be an ancestor of the
 block selected in the first round.
 
