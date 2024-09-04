@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0172'
 title: Reduce default CU per instruction to zero
 authors:
   - Tao Zhu (Anza)
