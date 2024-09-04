@@ -224,7 +224,7 @@ protocol. We call these `non-conforming` validators.
    blocks must be repaired. When all those "must-have" blocks are repaired and
    replayed, it can proceed to step 3.
 
-3. **gossip current heaviest fork**
+3. **gossip current heaviest fork (round 1)**
 
    The main goal of this step is to "vote" the heaviest fork to restart from.
 
@@ -302,6 +302,37 @@ protocol. We call these `non-conforming` validators.
    `RestartHeaviestFork` messages so that we can proceed to next step when
    enough validators are ready.
 
+4. **gossip current heaviest fork(round 2)**
+
+The above steps should converge on one restart slot if there is no duplicate
+block and everyone has the same set of `RestartLastVotedForkSlots`. However,
+in the rare case that many validators joined the restart when the almost 80%
+of the cluster has already joined, it's possible that different validators
+see a different set of validators with 80% stake, so they may make different
+choices in `RestartHeaviestFork`.
+
+We add another round of `RestartHeaviestFork` to solve this problem. If the
+first round of `RestartHeaviestFork` fails to reach conclusion, and there is
+no hash mismatch on any block, then we start second round of `RestartHeaviestFork`
+based solely on the first round of `RestartHeaviestFork`. Everyone will
+select the common ancestor of any block with more than 5% stake in the
+first round, then broadcast again. If there is still no block with more than
+75% stake, then the algorithm fails and halts. Otherwise it proceeds.
+
+To see why this is safe, we will prove that:
+1. Any block which was optimistically confirmed must be an ancestor of the
+block selected in the first round.
+
+No matter which 80% of the cluster is selected, our previous analysis holds.
+
+2. If more than 5% of stake agree on a block to which my picked block is not
+an ancestor, that means the block I picked wasn't optimistically confirmed.
+
+Because we can only have less than 5% non-conforming validators, even if one
+honest validator saw that the block I picked should not be optimistically
+confirmed with the set of 80% stake it sees, this is enough evidence that
+we should retrace back to an ancestor of the block I picked previously.
+
 ### Exit `wen restart phase`
 
 **Restart if everything okay, halt otherwise**
@@ -367,13 +398,11 @@ included in the Slashing rules in the future.
 ### Handling oscillating votes
 
 Non-conforming validators could change their last votes back and forth, this
-could lead to instability in the system. But our algorithm already built in
-safety buffers so < 5% of non-conforming validators will not change the
-conclusion. Considering that during an outage, an operator could find out that
-wrong info was sent out and try to correct it. We allow
-`RestartLastVotedForkSlots` be changed and new values will be used. But we will
-log warning messages about this. We allow `RestartHeaviestFork` to change until
-the validator exits `wen restart phase`.
+could lead to instability in the system. We forbid any change of slot or hash
+in `RestartLastVotedForkSlots` or `RestartHeaviestFork`, everyone will stick
+with the first value received, and discrepancies will be recorded in the proto
+file for later slashing. We do allow the slot and hash to change in different
+rounds of `RestartHeaviestFork` though.
 
 ### Handling multiple epochs
 
