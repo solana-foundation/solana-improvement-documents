@@ -224,7 +224,7 @@ protocol. We call these `non-conforming` validators.
    blocks must be repaired. When all those "must-have" blocks are repaired and
    replayed, it can proceed to step 3.
 
-3. **gossip current heaviest fork (round 1)**
+3. **gossip current heaviest fork (round 0)**
 
    The main goal of this step is to "vote" the heaviest fork to restart from.
 
@@ -302,7 +302,7 @@ protocol. We call these `non-conforming` validators.
    `RestartHeaviestFork` messages so that we can proceed to next step when
    enough validators are ready.
 
-4. **gossip current heaviest fork(round 2)**
+4. **gossip current heaviest fork(round 1)**
 
 The above steps should converge on one restart slot if there is no duplicate
 block and everyone has the same set of `RestartLastVotedForkSlots`. However,
