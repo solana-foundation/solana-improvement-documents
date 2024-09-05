@@ -92,8 +92,11 @@ The proposal will lead to more densely packed blocks, increasing revenue for
 block producers.
 
 2. Developer Adjustments:
-Developers will be more inclined to explicitly include set-compute-unit-limit
-for their transactions, ensuring accurate compute unit allocation.
+Developers will be more inclined, or even required, to explicitly use
+`set-compute-unit-limit` for their transactions to ensure accurate compute unit
+allocation. However, adding compute-budget instructions reduces the available
+space within the 1232-byte transaction limit, which could pose challenges for
+some developers.
 
 3. No Impact on Simple Transactions:
 Simple transactions, such as transfers, and other builtin-only transactions
