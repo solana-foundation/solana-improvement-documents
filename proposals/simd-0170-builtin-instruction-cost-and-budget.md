@@ -66,30 +66,79 @@ None
 
 ## Detailed Design
 
-To ensure consistency, the following three changes are proposed:
+The following changes are proposed to ensure consistent CU allocation and
+consumption for builtin instructions: transactions containing only builtin
+instructions should not need to explicitly request compute-unit-limits, and
+these transactions should execute without any cost adjustment. If a transaction
+explicitly sets a compute-unit-limit, the requested limit will be applied
+accordingly.
 
-1. Allocate Static Compute Budget for Builtin Instructions:
-   When the compute-unit-limit is not explicitly requested, the compute budget
-should always allocate the statically defined DEFAULT_COMPUTE_UNITS for builtin
-instructions, including compute-budget instructions.
+1. Allocate Compute Budget per Builtin Instruction:
 
-   Currently, when set_compute_unit_limit is not used, all instructions are
-allocated DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT, capped by the transaction's
-MAX_COMPUTE_UNIT_LIMIT. However, compute-budget instructions historically
-haven't had any units allocated. This can lead to over-packed blocks in
-certain scenarios.
+  When set_compute_unit_limit is not explicitly requested, the compute budget
+  should always allocate the maximum number of compute units (MAX_COMPUTE_UNIT)
+  as declared by each individual instruction, including compute-budget
+  instructions.
 
-   [Example 1](https://github.com/anza-xyz/agave/pull/2746/files#diff-c6c8658338536afbf59d65e9f66b71460e7403119ca76e51dc9125e1719f4f52R13403-R13429):
-   A transaction consists of a Transfer and an expensive non-builtin instruction.
-If the non-builtin instruction requires more than DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT
-CUs, the over-budgeting for Transfer allows the expensive instruction to
-execute to completion, forcing an upward adjustment.
+  Currently, when no set_compute_unit_limit is used, all instructions are
+  allocated a DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT, which is capped by the
+  transaction’s MAX_COMPUTE_UNIT_LIMIT. However, historically, no CUs have been
+  allocated for compute-budget instructions, which can lead to over-packed
+  blocks in certain cases.
 
-   [Example 2](https://github.com/anza-xyz/agave/pull/2746/files#diff-c6c8658338536afbf59d65e9f66b71460e7403119ca76e51dc9125e1719f4f52R13431-R13455):
-   A builtin instruction that might call other instructions (CPI) would fail
-without explicitly requesting more CUs. However, this isn't currently happening.
+  Example Scenarios:
+
+  [Example 1](https://github.com/anza-xyz/agave/pull/2746/files#diff-c6c8658338536afbf59d65e9f66b71460e7403119ca76e51dc9125e1719f4f52R13403-R13429):
+  A transaction contains both a Transfer instruction and an expensive non-
+  builtin instruction. If the non-builtin instruction requires more compute
+  units than the DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT, over-budgeting for the
+  Transfer instruction allows the expensive instruction to complete execution,
+  forcing an upward adjustment of the compute units used.
+
+  [Example 2](https://github.com/anza-xyz/agave/pull/2746/files#diff-c6c8658338536afbf59d65e9f66b71460e7403119ca76e51dc9125e1719f4f52R13431-R13451):
+  A builtin instruction that calls (CPI) other instructions may not reserve
+  enough CUs. Upon successful execution, this under-reservation forces an
+  upward adjustment.
+
+### Detailed Changes:
+
+  1.1 Changes to Builtin Programs:
+
+    - Each builtin program will now expose the DEFAULT_COMPUTE_UNIT for each of
+    its instructions (similar to how ZK programs do it).
+    - Each instruction will also expose its MAX_COMPUTE_UNIT, which represents
+    the worst-case scenario. This MAX_COMPUTE_UNIT accounts for any variation,
+    such as the instruction calling (CPI-ing) other instructions based on input
+    data or account states. It must be equal to or greater than the
+    DEFAULT_COMPUTE_UNIT.
+    - This makes builtin programs more transparent about their compute usage.
+    During execution, the runtime will use the DEFAULT_COMPUTE_UNIT to track
+    actual compute usage, while MAX_COMPUTE_UNIT will be used to allocate the
+    compute budget.
+
+  1.2 Changes to Builtin-Default-Costs Crate:
+
+    Instead of the current dictionary of [builtin program, DEFAULT_COMPUTE_UNIT],
+    a new dictionary will be created with [instruction, MAX_COMPUTE_UNIT].
+    This will allow the system to accurately calculate compute allocation for
+    each instruction, factoring in its potential CPIs.
+
+  1.3 Call-Site Implementation:
+
+    - Instruction Type Lookup: At the call-site (e.g., in the compute budget or
+    cost model), the type of builtin instruction will be determined.
+    - If the instruction type cannot be identified, a small number of CUs will
+    be allocated to account for basic work done on the transaction, such as
+    deserialization or instruction type lookup.
+    - If the instruction type is determined, the system will allocate the
+    MAX_COMPUTE_UNIT for that instruction.
+    - The transaction’s program_id_index will only be checked once during this
+    process, and the result will be cached to prevent redundant lookups for
+    efficiency.
+
 
 2. Respect Explicit Compute Unit Requests During Block Production:
+
    When a compute-unit-limit is explicitly requested, always use it to reserve
 block space during block production, even if there are no user-space instructions.
 
@@ -99,6 +148,7 @@ buitin instructions, resulting in an upward adjustment instead of the usual
 downward adjustment.
 
 3. Fail Transactions with Invalid Compute Unit Limits Early:
+
    If set_compute_unit_limit sets an invalid value, the transaction should fail
 before being sent for execution.
    "invalid value" is defined as `> MAX_COMPUTE_UNIT_LIMIT || < Sum(builtin_instructions)`
