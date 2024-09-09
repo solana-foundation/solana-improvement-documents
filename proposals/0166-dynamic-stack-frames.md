@@ -71,40 +71,41 @@ execution environment.
 
 
 We will introduce a new register R11 in the virtual machine, which is going 
-to hold the stack pointer. The program can only write to such a register and 
-modify it through the `add64 reg, imm` instruction. The verifier will enforce 
-these constraints on deployed programs. For further information about the 
-changes in the ISA, refer to the [SPF spec document](https://github.com/solana-labs/rbpf/blob/main/doc/bytecode.md).
+to hold the stack pointer. The program must only write to such a register and 
+modify it through the `add64 reg, imm` (op code `0x07`) instruction. The 
+verifier must enforce these constraints on deployed programs. For further 
+information about the  changes in the ISA, refer to the 
+[SPF spec document](https://github.com/solana-labs/rbpf/blob/main/doc/bytecode.md).
 
-The R11 register will work in tandem with the R10 (frame pointer) register. 
+The R11 register must work in tandem with the R10 (frame pointer) register. 
 The former is write-only to the program, and the latter is read-only to the 
 program, forming a common design pattern in hardware engineering. More 
 details of this usage are in the following section.
 
 ### Changes in the execution environment
 
-The R10 register will continue to hold the frame pointer, but we will manage 
+The R10 register must continue to hold the frame pointer, but we will manage 
 it differently. With fixed frames, when there is a function call we add 4096 
-to R10 and subtract it when the function returns. In the new scheme, we will 
+to R10 and subtract it when the function returns. In the new scheme, we must 
 assign the value of R11 to R10 at function calls, and save R10’s former value 
 so that we can restore it when the function returns.
 
 The introduction of dynamic stack frames will change the direction of stack 
 growth. Presently, we stack frames on top of each other, but the memory usage 
 in them grows downward. In the new frame setting, both the placement of new 
-frames and the memory usage inside frames will be downward.
+frames and the memory usage inside frames must be downward.
 
 The stack frame gaps feature, which creates a memory layout where frames are 
 interleaved with equally sized gaps, are not compatible with dynamic stack 
-frames and will be deactivated.
+frames and must be deactivated.
 
 ### Changes in code generation
 
 In the compiler side, dynamic stack frames allow for some optimizations. 
 First, when a function does not need any stack allocated variable, code 
-generation will not create any instruction to modify R11. In addition, we 
+generation must not create any instruction to modify R11. In addition, we 
 can stop using R5 as a stack spill register when a function call receives 
-more than five arguments. With dynamic stack frames, the compiler will use 
+more than five arguments. With dynamic stack frames, the compiler must use 
 registers R1 to R5 for the first five arguments and place remainder arguments 
 in the callee frame, instead of placing them in the caller’s frame. This new 
 call convention obviates the need to use R5 for retrieving the caller’s frame 
@@ -113,7 +114,7 @@ pointer address to access those parameters.
 ### Identification of programs
 
 As per the description in SIMD-0161, programs compiled with dynamic stack 
-frames will contain the XX flag on their ELF header `e_flags` field.
+frames must contain the XX flag on their ELF header `e_flags` field.
 
 ## Impact
 
