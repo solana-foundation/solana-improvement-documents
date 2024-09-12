@@ -146,8 +146,8 @@ confirmed.
 3. After repair is complete, the validator counts votes on each fork and
 computes local heaviest fork.
 
-4. A leader which is configured on command line sends out its heaviest fork
-to everyone.
+4. A leader which is configured on everyone's command line sends out its
+heaviest fork to everyone.
 
 5. Each validator verifies that the leader's choice is reasonable:
 
