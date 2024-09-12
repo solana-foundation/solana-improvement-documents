@@ -291,9 +291,9 @@ protocol. We call these `non-conforming` validators.
 
 4. **Verify the heaviest fork of the leader**
 
-   While everyone will calculate its own heaviest fork in previous step, only one
-   leader specified on command line will send out its heaviest fork via Gossip.
-   Everyone else will check and accept the choice from the leader only.
+   While everyone will calculate its own heaviest fork in previous step, only
+   one leader specified on command line will send out its heaviest fork via
+   Gossip. Everyone else will check and accept the choice from the leader only.
 
    We use a new gossip message `RestartHeaviestFork`, its fields are:
 
@@ -301,20 +301,20 @@ protocol. We call these `non-conforming` validators.
    * `hash`: `Hash` bank hash of the picked block.
 
    After deciding heaviest block, the leader gossip
-   `RestartHeaviestFork(X.slot, X.hash)` out, where X is the latest picked block.
-   The leader will stay up until manually restarted by its operator.
+   `RestartHeaviestFork(X.slot, X.hash)` out, where X is the block the leader
+   picked locally in previous step. The leader will stay up until manually
+   restarted by its operator.
 
-   Non-leader validator will discard `RestartHeaviestFork` sent by everyone else.
-   Upon receiving the heaviest fork from the leader, it will perform the
-   following checks:
+   For every non-leader validator, it will perform the following actions on the
+   heaviest fork sent by the leader:
 
-   1. If the bank selected is missing locally, repair this slot and all slots with
-   higher stake.
+   1. If the bank selected is missing locally, repair this slot and all slots
+   with higher stake.
 
    2. Check that the bankhash of selected slot matches the data locally.
 
-   3. Verify that the selected fork contains local root is on the same fork as
-   local heaviest fork.
+   3. Verify that the selected fork contains local root, and that its local
+   heaviest fork slot is on the same fork as the leader's choice.
 
    If any of the above repair or check fails, exit with error message, the leader
    may have made a mistake and this needs manual intervention.
