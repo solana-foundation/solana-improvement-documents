@@ -217,14 +217,14 @@ protocol. We call these `non-conforming` validators.
    join the restart, any block with less than 67% - (100 - 80)% - 5% = 42% can
    never be optimistically confirmed before the restart.
    
-   It's possible that different validators see different 80%, so their must-have
-   blocks might be different, but in reality this case should be rare. Whenever
-   some block gets to 42%, repair could be started, because when more validators
-   join the restart, this number will only go up but will never go down.
+   It's possible that different validators see different 80%, so their
+   must-have blocks might be different, but there will be another repair round
+   in the final step so this is fine. Whenever some block gets to 42%, repair
+   could be started, because when more validators join the restart, this number
+   will only go up but will never go down.
 
-   Once the validator gets `RestartLastVotedForkSlots`, it can calculate which
-   blocks must be repaired. When all those "must-have" blocks are repaired and
-   replayed, it can proceed to step 3.
+   When a validator gets `RestartLastVotedForkSlots` from 80% of the stake, and
+   all those "must-have" blocks are repaired, it can proceed to next step.
 
 3. **Calculate heaviest fork**
 
