@@ -2,7 +2,7 @@
 simd: '0046'
 title: Optimistic cluster restart automation
 authors:
-  - Wen Xu (Solana Labs)
+  - Wen Xu (Anza)
 category: Standard
 type: Core
 status: Draft
