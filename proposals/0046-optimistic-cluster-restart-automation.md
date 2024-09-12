@@ -331,8 +331,8 @@ version, restart slot, and expected bankhash will be printed to the logs.
 After the snapshot generation is complete, a non leader then exits with exit
 code `200` to indicate work is complete.
 
-A leader will stay up as long as possible to make sure any later comers get the
-`RestartHeaviestFork` message.
+A leader will stay up until restarted by the operator to make sure any late
+comers get the `RestartHeaviestFork` message.
 
 ## Impact
 
