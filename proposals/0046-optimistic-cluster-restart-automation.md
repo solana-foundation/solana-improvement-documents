@@ -224,16 +224,7 @@ protocol. We call these `non-conforming` validators.
    blocks must be repaired. When all those "must-have" blocks are repaired and
    replayed, it can proceed to step 3.
 
-3. **gossip current heaviest fork (round 0)**
-
-   The main goal of this step is to "vote" the heaviest fork to restart from.
-
-   We use a new gossip message `RestartHeaviestFork`, its fields are:
-
-   * `slot`: `u64` slot of the picked block.
-   * `hash`: `Hash` bank hash of the picked block.
-   * `stake_committed_percent`: `u16` total percentage of stakes of the
-   validators it received `RestartHeaviestFork` messages from.
+3. **Calculate heaviest fork**
 
    After receiving `RestartLastVotedForkSlots` from the validators holding
    stake more than `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have"
@@ -296,84 +287,50 @@ protocol. We call these `non-conforming` validators.
    switched from fork F to fork D, 80% of the cluster can switch to fork D
    if that turns out to be the heaviest fork.
 
-   After deciding heaviest block, gossip
-   `RestartHeaviestFork(X.slot, X.hash, committed_stake_percent)` out, where X
-   is the latest picked block. We also gossip stake of received
-   `RestartHeaviestFork` messages so that we can proceed to next step when
-   enough validators are ready.
+4. **Verify the heaviest fork of the leader**
 
-4. **gossip current heaviest fork(round 1)**
+   While everyone will calculate its own heaviest fork in previous step, only one
+   leader specified on command line will send out its heaviest fork via Gossip.
+   Everyone else will check and accept the choice from the leader only.
 
-The above steps should converge on one restart slot if there is no duplicate
-block and everyone has the same set of `RestartLastVotedForkSlots`. However,
-in the rare case that many validators joined the restart when the almost 80%
-of the cluster has already joined, it's possible that different validators
-see a different set of validators with 80% stake, so they may make different
-choices in `RestartHeaviestFork`.
+   We use a new gossip message `RestartHeaviestFork`, its fields are:
 
-We add another round of `RestartHeaviestFork` to solve this problem. If the
-first round of `RestartHeaviestFork` fails to reach conclusion, and there is
-no hash mismatch on any block, then we start second round of `RestartHeaviestFork`
-based solely on the first round of `RestartHeaviestFork`. Everyone will
-select the common ancestor of any block with more than 5% stake in the
-first round, then broadcast again. If there is still no block with more than
-75% stake, then the algorithm fails and halts. Otherwise it proceeds.
+   * `slot`: `u64` slot of the picked block.
+   * `hash`: `Hash` bank hash of the picked block.
 
-To see why this is safe, we will prove that:
+   After deciding heaviest block, the leader gossip
+   `RestartHeaviestFork(X.slot, X.hash)` out, where X is the latest picked block.
+   The leader will stay up until manually restarted by its operator.
 
-1. Any block which was optimistically confirmed must be an ancestor of the
-block selected in the first round.
+   Non-leader validator will discard `RestartHeaviestFork` sent by everyone else.
+   Upon receiving the heaviest fork from the leader, it will perform the
+   following checks:
 
-No matter which 80% of the cluster is selected, our previous analysis holds.
+   1. If the bank selected is missing locally, repair this slot and all slots with
+   higher stake.
 
-2. If more than 5% of stake agree on a block to which my picked block is not
-an ancestor, that means the block I picked wasn't optimistically confirmed.
+   2. Check that the bankhash of selected slot matches the data locally.
 
-Because we can only have less than 5% non-conforming validators, even if one
-honest validator saw that the block I picked should not be optimistically
-confirmed with the set of 80% stake it sees, this is enough evidence that
-we should retrace back to an ancestor of the block I picked previously.
+   3. Verify that the selected fork contains local root is on the same fork as
+   local heaviest fork.
 
-### Exit `wen restart phase`
+   If any of the above repair or check fails, exit with error message, the leader
+   may have made a mistake and this needs manual intervention.
 
-**Restart if everything okay, halt otherwise**
+5. **Generate incremental snapshot and exit**
 
-The main purpose in this step is to decide the `cluster restart slot` and the
-actual block to restart from.
+If the previous step succeeds, the validator immediately starts adding a hard
+fork at the designated slot and perform set root. Then it will start generating
+an incremental snapshot at the agreed upon `cluster restart slot`. This way the
+hard fork will be included in the newly generated snapshot. After snapshot
+generation completes, the `--wait_for_supermajority` args with correct shred
+version, restart slot, and expected bankhash will be printed to the logs.
 
-All validators in restart keep counting the number of `RestartHeaviestFork`
-where `received_heaviest_stake` is higher than `RESTART_STAKE_THRESHOLD`. Once
-a validator counts that `RESTART_STAKE_THRESHOLD` of the validators send out
-`RestartHeaviestFork` where `received_heaviest_stake` is higher than
-`RESTART_STAKE_THRESHOLD`, it starts the following checks:
+After the snapshot generation is complete, a non leader then exits with exit
+code `200` to indicate work is complete.
 
-* Whether all `RestartHeaviestFork` have the same slot and same bank Hash.
-Because validators are only sending slots instead of bank hashes in 
-`RestartLastVotedForkSlots`, it's possible that a duplicate block can make the
-cluster unable to reach consensus. So bank hash needs to be checked as well.
-
-* The voted slot is equal or a child of local optimistically confirmed slot.
-
-If all checks pass, the validator immediately starts add a hard fork at the
-designated slot and update the root. Then it will start generating an
-incremental snapshot at the agreed upon `cluster restart slot`. This way the
-hard fork will be included in the newly generated snapshot.
-
-After the snapshot generation is complete, it then automatically executes the
---wait_for_supermajority logic with the agreed upon slot and hash, the
-validator operators do not need to change the command line arguments here.
-
-Before a validator enters restart, it will still propagate
-`RestartLastVotedForkSlots` and `RestartHeaviestFork` messages in gossip. After
-the restart,its shred_version will be updated so it will no longer send or
-propagate gossip messages for restart.
-
-If any of the checks fails, the validator immediately prints out all debug info,
-sends out metrics so that people can be paged, and then halts.
-
-After the restart is complete, validators will automatically function in normal
-mode, the validator operators can update the command line arguments to update
-shred_version and remove --wen_restart at a convenient time later.
+A leader will stay up as long as possible to make sure any later comers get the
+`RestartHeaviestFork` message.
 
 ## Impact
 
@@ -389,12 +346,12 @@ operators don't need to manually generate and download snapshots again.
 The two added gossip messages `RestartLastVotedForkSlots` and
 `RestartHeaviestFork` will only be sent and processed when the validator is
 restarted in the new proposed optimistic `cluster restart` mode. They will also
-be filtered out if a validator is not in this mode. So random validator\
+be filtered out if a validator is not in this mode. So random validator
 restarting in the new mode will not bring extra burden to the system.
 
-Non-conforming validators could send out wrong `RestartLastVotedForkSlots` and
-`RestartHeaviestFork` messages to mess with `cluster restart`s, these should be
-included in the Slashing rules in the future.
+Non-conforming validators could send out wrong `RestartLastVotedForkSlots`
+messages to mess with `cluster restart`s, these should be included in the
+Slashing rules in the future.
 
 ### Handling oscillating votes
 
@@ -402,8 +359,7 @@ Non-conforming validators could change their last votes back and forth, this
 could lead to instability in the system. We forbid any change of slot or hash
 in `RestartLastVotedForkSlots` or `RestartHeaviestFork`, everyone will stick
 with the first value received, and discrepancies will be recorded in the proto
-file for later slashing. We do allow the slot and hash to change in different
-rounds of `RestartHeaviestFork` though.
+file for later slashing.
 
 ### Handling multiple epochs
 
@@ -428,13 +384,6 @@ reaching the above bar has > 80% stake. This is a bit restrictive, but it
 guarantees that whichever slot we select for HeaviestFork, we have enough
 validators in the restart. Note that the epoch containing local root should
 always be considered, because root should have > 33% stake.
-
-* When aggregating `RestartHeaviestFork`, use the stake weight of the slot
-selected in `RestartHeaviestFork`. If others don't agree with us on the same
-slot, we won't be able to proceed anyway.
-
-* The `stake_committed_percent` in `RestartHeaviestFork` should always be
-calculated using the stakes on the selected slot.
 
 ## Backwards Compatibility
 
