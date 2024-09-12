@@ -144,10 +144,12 @@ validator repairs all blocks which could potentially have been optimistically
 confirmed.
 
 3. After repair is complete, the validator counts votes on each fork and
-sends out local heaviest fork.
+computes local heaviest fork.
 
-4. Each validator counts if enough nodes can agree on one block (same slot and
-hash) to restart from:
+4. A leader which is configured on command line sends out its heaviest fork
+to everyone.
+
+5. Each validator verifies that the leader's choice is reasonable:
 
    1. If yes, proceed and restart
 
