@@ -8,7 +8,7 @@ type: Core
 status: Draft
 created: 2024-09-05
 feature: TBD
-extends: SIMD-0161
+extends: SIMD-0161, SIMD-0174
 ---
 
 ## Summary
@@ -46,6 +46,11 @@ The `CALLX` instruction encodes its source register in the immediate field.
 This is makes the instruction decoder more complex because it is the only case
 in which a register is encoded in the immediate field, for no reason.
 
+With all of the above changes and the ones defined in SIMD-0174, the memory
+related instructions can be moved into the ALU instruction classes. Doing so
+would free up 8 instruction classes completely, giving us back three bits of
+instruction encoding.
+
 ## Alternatives Considered
 
 None.
@@ -63,14 +68,26 @@ removed (see motivation).
 
 ### Changes to the Bytecode Verifier
 
-A program containing the `LDDW` instruction (opcodes `0x18` and `0x00`) must
-throw `VerifierError::UnknownOpCode` during verification.
+A program containing one of the following instructions must throw
+`VerifierError::UnknownOpCode` during verification:
 
-A program containing the `HOR64` instruction (opcode `0xF7`) must
-**not** throw `VerifierError::UnknownOpCode` during verification anymore.
+- the `LDDW` instruction (opcodes `0x18` and `0x00`)
+- the `LE` instruction (opcode `0xD4`)
+- the moved opcodes:
+  - `0x72`, `0x71`, `0x73` (`STB`, `LDXB`, `STXB`)
+  - `0x6A`, `0x69`, `0x6B` (`STH`, `LDXH`, `STXH`)
+  - `0x62`, `0x61`, `0x63` (`STW`, `LDXW`, `STXW`)
+  - `0x7A`, `0x79`, `0x7B` (`STDW`, `LDXDW`, `STXDW`)
 
-A program containing the `LE` instruction (opcode `0xD4`) must throw
-`VerifierError::UnknownOpCode` during verification.
+A program containing one of the following instructions must **not** throw
+`VerifierError::UnknownOpCode` during verification anymore:
+
+- the `HOR64` instruction (opcode `0xF7`)
+- the moved opcodes:
+  - `0x27`, `0x2C`, `0x2F` (`STB`, `LDXB`, `STXB`)
+  - `0x37`, `0x3C`, `0x3F` (`STH`, `LDXH`, `STXH`)
+  - `0x87`, `0x8C`, `0x8F` (`STW`, `LDXW`, `STXW`)
+  - `0x97`, `0x9C`, `0x9F` (`STDW`, `LDXDW`, `STXDW`)
 
 When a `CALLX` instruction (opcode `0x8D`) is encountered during verification,
 the `src` register field must be verified instead of the `imm` immediate field.
@@ -85,6 +102,14 @@ then bitwise OR it into the given `dst` register.
 
 For the `CALLX` instruction (opcode `0x8D`) the jump destination must be read
 from the `src` register field instead of the `imm` immediate field.
+
+The execution behavior of the moved instructions is transferred to their new
+opcodes:
+
+- `0x72` => `0x27`, `0x71` => `0x2C`, `0x73` => `0x2F`
+- `0x6A` => `0x37`, `0x69` => `0x3C`, `0x6B` => `0x3F`
+- `0x62` => `0x87`, `0x61` => `0x8C`, `0x63` => `0x8F`
+- `0x7A` => `0x97`, `0x79` => `0x9C`, `0x7B` => `0x9F`
 
 ## Impact
 
