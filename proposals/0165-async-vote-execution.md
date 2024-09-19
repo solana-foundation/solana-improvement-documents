@@ -15,33 +15,34 @@ extends: null
 
 ## Summary
 
-Separate the execution of vote and non-vote transactions in each block. The
-vote transactions and non-vote transactions will be verified and executed
-independently. Because the vote transactions are normally much faster to
-execute, under most cases this means vote transactions will finish
-execution first.
+Optimistically execute all vote transactions in a block to determine fork
+selection in consensus early on, before all the transactions in the block
+are fully executed and the actual fee payers for vote transactions are
+checked.
 
-The eventual goal is to completely separate vote and non-vote transaction
-executions. But right now we still have some dependency that non-vote
-transactions need to read the vote state in its parent block, so currently we
-restrict that non-vote transactions cannot start execution until the vote
-transactions of its parent block has finished.
+This allows us to more quickly converge on one chain of blocks, so that
+validators don't have to execute any blocks not on selected fork. This saves
+CPU and memory resource needed in replay, it also ensures that the cluster
+will have fewer forks that are caused by slow transaction execution.
 
 ## Motivation
 
 Currently the vote transactions and non-vote transactions are mixed together in
 a block, the vote transactions are only processed in consensus when the whole
 block has been frozen and all transactions in the block have been verified and
-executed. This is a problem because slow running non-vote transactions may affect
-how fast the votes are processed and then affect the ability of consensus to
-pick the correct fork.
+executed. This is a problem because slow running non-vote transactions may
+affect how fast the votes are processed and then affect the ability of
+consensus to pick the correct fork. It may also mean that the leader will more
+often build on a minority fork so the blocks it packed will be discarded later.
 
 With different hardware and running environment, there will always be some
 difference on speed of transaction execution between validators. Generally
 speaking, because vote transactions are so simple, the variation between vote
-execution should be smaller than that between non-vote executions. Therefore,
-if we only execute vote transactions in a block before voting on the block,
-it is more likely validators can reach consensus faster.
+execution should be smaller than that between non-vote executions. Also the
+vote transactions are very simple and lock-free, so they normally execute
+faster than non-vote transactions. Therefore, if we only execute vote
+transactions in a block before voting on the block, it is more likely
+validators can reach consensus faster.
 
 Even with async vote execution, forks can still happen because of
 various other situations, like network partitions or mis-configured validators.
@@ -49,23 +50,31 @@ This work just reduces the chances of forks caused by variance in non-vote
 transaction executions.
 
 The non-vote transactions do need to be executed eventually. Even though it's
-hard to make sure everyone executes every block within 400ms, on average majority
-of the cluster should be able to keep up.
+hard to make sure everyone executes every block within 400ms, on average
+majority of the cluster should be able to keep up.
 
 ## Alternatives Considered
 
-To be filled.
+### Separating vote and non-vote transactions into different domains
+
+An earlier proposal of Async Execution proposes that we separate vote and
+non-vote transactions into different domains, so that we can execute them
+independently. The main concerns were:
+
+* We need to introduce one bit in AccountsDB for every account, this
+complicates the implementation
+
+* Topping off the vote fee payer accounts becomes difficult. We need to add a
+bounce account to move fees from user domain to vote domain, and the process
+may take one epoch
 
 ## New Terminology
 
-- `VED`: Vote Execution Domain, Vote transactions and all its dependencies (e.g.
-fee payers for votes).
 - `VED Bankhash`: The hash calculated after executing only vote transactions in
-a block. If there are no votes, use default hash.
-- `UED`: User Execution Domain, currently everything other than votes. We may
-have more domains in the future.
-- `UED Bankhash`: The hash calculated after executing only non-vote transactions
-in a block. If there are no non-vote transactions, use default hash.
+a block without checking fee payers. If there are no votes, use default hash.
+- `UED Bankhash`: The hash calculated after executing all transactions in a
+block, checking fee payers for all transactions. This is the same as the
+bankhash we use today.
 
 ## Detailed Design
 
@@ -81,61 +90,58 @@ execute other transactions and compare with the bankhash of the leader. But in
 such a setup we gain smaller speedup without much benefits, it is a possible
 route during rollouts though.
 
-### Separating vote transactions and dependencies into a different domain
+### Optimistically execute vote transactions and vote on selected forks
 
-To make sure vote transactions can be executed independently, we need to
-isolate its dependencies.
+This step is optimistic in the sense that validators do not check the fee
+payers when executing the vote transactions in a block. They assume vote
+transactions will not fail due to insufficient fees, apply the execution
+results to select the correct fork, then immediately vote on the bank with
+only the hash result of the vote transactions.
 
-#### Remove clock program's dependency on votes (postponed)
+This is safe because the list of validators and their corresponding stake
+has already been determined at the beginning of the Epoch. The stake we used
+is correct in fork selection.
 
-The eventual goal is to introduce new transaction `ClockBump` to remove
-current clock program's dependency on votes.
+### Replay the full block on selected forks later
 
-The transaction `ClockBump` is sent by a leader with at least 0.5% stake
-every 12 slots to correct the clock drift. A small script can be used to
-refund well-behaving leaders the cost of the transactions.
+Once a validator determined the fork it will vote on, only blocks on this fork
+will be replayed. The replay process is the same as today, all transactions
+(vote and non-vote) will be executed to determine the final bankhash. The
+computed bankhash will be attached to vote instructions. So we can still detect
+non-determinism (same of set of instructions leading to different results) as
+today, just we might find discrepancies at a later time.
 
-But currently we will keep the clock calculation as is, since the clock
-sysvar uses the vote-state of the parent block to calculate average
-timestamp, and we have restrictions that the UED transactions in a
-block cannot start execution until the VED transactions in its
-ancestors have finished. So we can currently leave clock sysvar
-calculation as is.
+In this step the validators will check the fee payers of vote transactions. So
+each vote transaction is executed twice: once in the optimistical voting stage
+*without* checking fee payer, and once in this stage *with* checking fee payer.
+If a staked validator does not have vote fee covered for specific votes, we
+will not accept the vote today, while in the future we accept the vote in fork
+selection, but does not actually give vote credits because the transaction
+failed.
 
-#### Split vote accounts into two accounts in VED and UED respectively
-
-We need to allow users move money in and out of the vote accounts, but
-we also need the vote accounts to vote in VED. So there will be two accounts:
-
-- `VoteTowerAccount`: tracks tower state and vote authority, it will be
-in `VED`, it is updated by vote transactions and tracks vote credits.
-- `VoteAccount`: everything else currently in vote accounts, it will be
-in `UED`, users can move funds in and out of `VoteAccount` freely.
-
-The two accounts are synced every Epoch when the rewards are calculated.
-
-### Separate the VED and UED Domains
-
-- Only Vote or System program can read and write accounts in `VED`
-- Other programs can only read accounts in `VED`
-- Users can't directly access accounts in `VED` but they can move accounts
-from `VED` to `UED` and vice versa. Moving accounts from one domain to
-another takes 1 Epoch, and the migration happens at Epoch boundary
+A side benefit of this design is that the sysvars have all been calculated and
+determined in the optimistical voting stage, also the fork of blocks are known,
+so it may be possible to release more parallelism when executing blocks in this
+stage.
 
 ### Enable Async Vote Executions
 
 1. The leader will no longer execute any transactions before broadcasting
 the block it packed. We do have block-id (Merkle tree root) to ensure
 everyone receives the same block.
-2. Upon receiving a new block, the validator computes the `VED bankhash`,
-then vote on this block and also gives its latest `UED bankhash` on the
-same fork. The `UED bankhash` will most likely be hash of an ancestor of
-the received block.
-3. A block is not considered Optimistically Confirmed or Finalized until
+2. Upon receiving a new block, the validator executes only the vote
+transactions without checking the fee payers. The result is immediately
+applied in consensus to select a fork. Then votes are sent out for the
+selected fork with the `VED bankhash` for the tip of the fork and the
+most recent `UED bankhash`.
+3. The blocks on the selected forks are scheduled to be replayed. When
+a block is replayed, all transactions are executed with fee payers checked.
+This is the same as the replay we use today.
+4. A block is not considered Optimistically Confirmed or Finalized until
 some percentage of the validators agree on the `UED bankhash`.
-4. Add assertion that confirmed `UED bankhash` is not too far away from the
+5. Add assertion that confirmed `UED bankhash` is not too far away from the
 confirmed `VED bankhash` (currently proposed at 1/2 of the Epoch)
-5. Add alerts if `UED bankhash` differs when the `VED bankhash` is the same.
+6. Add alerts if `UED bankhash` differs when the `VED bankhash` is the same.
 This is potentially an event worthy of cluster restart.
 
 ## Impact
@@ -145,8 +151,9 @@ we should expect to see fewer forking and late blocks.
 
 ## Security Considerations
 
-We do need to monitor and address the possibility of UED bankhash mismatches
-when VED bankhash matches.
+We do need to monitor and address the possibility of bankhash mismatches
+when the tip of the fork is far away from the slot where bankhash mismatch
+happened.
 
 ## Backward Compatibility
 
