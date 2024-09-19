@@ -70,9 +70,9 @@ may take one epoch
 
 ## New Terminology
 
-- `VED Bankhash`: The hash calculated after executing only vote transactions in
+* `VED Bankhash`: The hash calculated after executing only vote transactions in
 a block without checking fee payers. If there are no votes, use default hash.
-- `UED Bankhash`: The hash calculated after executing all transactions in a
+* `UED Bankhash`: The hash calculated after executing all transactions in a
 block, checking fee payers for all transactions. This is the same as the
 bankhash we use today.
 
