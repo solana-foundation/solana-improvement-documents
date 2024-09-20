@@ -70,11 +70,11 @@ may take one epoch
 
 ## New Terminology
 
-* `VED Bankhash`: The hash calculated after executing only vote transactions in
-a block without checking fee payers. If there are no votes, use default hash.
-* `UED Bankhash`: The hash calculated after executing all transactions in a
-block, checking fee payers for all transactions. This is the same as the
-bankhash we use today.
+* `Ephemeral Bankhash`: The hash calculated after executing only vote
+transactions in a block without checking fee payers. If there are no votes,
+use default hash.
+* `Final Bankhash`: The bankhash as we know it today. This is a hash calculated
+after executing all transactions in a block, checking fee payers for all.
 
 ## Detailed Design
 
@@ -132,17 +132,17 @@ everyone receives the same block.
 2. Upon receiving a new block, the validator executes only the vote
 transactions without checking the fee payers. The result is immediately
 applied in consensus to select a fork. Then votes are sent out for the
-selected fork with the `VED bankhash` for the tip of the fork and the
-most recent `UED bankhash`.
+selected fork with the `Ephemeral bankhash` for the tip of the fork and the
+most recent `Final bankhash`.
 3. The blocks on the selected forks are scheduled to be replayed. When
 a block is replayed, all transactions are executed with fee payers checked.
 This is the same as the replay we use today.
 4. A block is not considered Optimistically Confirmed or Finalized until
-some percentage of the validators agree on the `UED bankhash`.
-5. Add assertion that confirmed `UED bankhash` is not too far away from the
-confirmed `VED bankhash` (currently proposed at 1/2 of the Epoch)
-6. Add alerts if `UED bankhash` differs when the `VED bankhash` is the same.
-This is potentially an event worthy of cluster restart.
+some percentage of the validators agree on the `Ephemeral bankhash`.
+5. Add assertion that confirmed `Final bankhash` is not too far away from the
+confirmed `Ephemeral bankhash` (currently proposed at 1/2 of the Epoch)
+6. Add alerts if `Final bankhash` differs when the `Ephemeral bankhash` is the
+same. This is potentially an event worthy of cluster restart.
 
 ## Impact
 
