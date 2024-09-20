@@ -90,7 +90,7 @@ execute other transactions and compare with the bankhash of the leader. But in
 such a setup we gain smaller speedup without much benefits, it is a possible
 route during rollouts though.
 
-### Optimistically execute vote transactions and vote on selected forks
+### Calculate ephemeral hash executing votes only and vote on selected forks
 
 This step is optimistic in the sense that validators do not check the fee
 payers when executing the vote transactions in a block. They assume vote
