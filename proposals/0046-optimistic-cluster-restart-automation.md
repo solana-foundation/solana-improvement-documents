@@ -146,10 +146,10 @@ confirmed.
 3. After repair is complete, the validator counts votes on each fork and
 computes local heaviest fork.
 
-4. A leader which is configured on everyone's command line sends out its
+4. A coordinator which is configured on everyone's command line sends out its
 heaviest fork to everyone.
 
-5. Each validator verifies that the leader's choice is reasonable:
+5. Each validator verifies that the coordinator's choice is reasonable:
 
    1. If yes, proceed and restart
 
@@ -289,24 +289,25 @@ protocol. We call these `non-conforming` validators.
    switched from fork F to fork D, 80% of the cluster can switch to fork D
    if that turns out to be the heaviest fork.
 
-4. **Verify the heaviest fork of the leader**
+4. **Verify the heaviest fork of the coordinator**
 
    While everyone will calculate its own heaviest fork in previous step, only
-   one leader specified on command line will send out its heaviest fork via
-   Gossip. Everyone else will check and accept the choice from the leader only.
+   one coordinator specified on command line will send out its heaviest fork
+   via Gossip. Everyone else will check and accept the choice from the
+   coordinator only.
 
    We use a new gossip message `RestartHeaviestFork`, its fields are:
 
    * `slot`: `u64` slot of the picked block.
    * `hash`: `Hash` bank hash of the picked block.
 
-   After deciding heaviest block, the leader gossip
-   `RestartHeaviestFork(X.slot, X.hash)` out, where X is the block the leader
-   picked locally in previous step. The leader will stay up until manually
-   restarted by its operator.
+   After deciding heaviest block, the coordinator gossip
+   `RestartHeaviestFork(X.slot, X.hash)` out, where X is the block the
+   coordinator picked locally in previous step. The coordinator will stay up
+   until manually restarted by its operator.
 
-   For every non-leader validator, it will perform the following actions on the
-   heaviest fork sent by the leader:
+   For every non-coordinator validator, it will perform the following actions
+   on the heaviest fork sent by the coordinator:
 
    1. If the bank selected is missing locally, repair this slot and all slots
    with higher stake.
@@ -314,10 +315,13 @@ protocol. We call these `non-conforming` validators.
    2. Check that the bankhash of selected slot matches the data locally.
 
    3. Verify that the selected fork contains local root, and that its local
-   heaviest fork slot is on the same fork as the leader's choice.
+   heaviest fork slot is on the same fork as the coordinator's choice.
 
-   If any of the above repair or check fails, exit with error message, the leader
-   may have made a mistake and this needs manual intervention.
+   If any of the above repair or check fails, exit with error message, the
+   coordinator may have made a mistake and this needs manual intervention.
+
+   When exiting this step, no matter what a non-coordinator validator chooses,
+   it will send a `RestartHeaviestFork` back to leader to report its status.
 
 5. **Generate incremental snapshot and exit**
 
@@ -328,11 +332,13 @@ hard fork will be included in the newly generated snapshot. After snapshot
 generation completes, the `--wait_for_supermajority` args with correct shred
 version, restart slot, and expected bankhash will be printed to the logs.
 
-After the snapshot generation is complete, a non leader then exits with exit
-code `200` to indicate work is complete.
+After the snapshot generation is complete, a non coordinator then exits with
+exit code `200` to indicate work is complete.
 
-A leader will stay up until restarted by the operator to make sure any late
-comers get the `RestartHeaviestFork` message.
+A coordinator will stay up until restarted by the operator to make sure any
+late comers get the `RestartHeaviestFork` message. It also aggregates the
+`RestartHeaviestFork` messages sent by the non-coordinators to report on the
+status of the cluster.
 
 ## Impact
 
