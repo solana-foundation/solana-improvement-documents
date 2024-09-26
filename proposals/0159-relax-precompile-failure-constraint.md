@@ -26,8 +26,8 @@ included in a block even if verification fails.
 ## Alternatives Considered
 
 Also considered relaxing the constraint of having valid non-fee payer
-transaction-level signatures but those signatures are not signed the fee payer
-so they could be altered in-flight.
+transaction-level signatures but those signatures are not signed by the fee
+payer so they could be altered in-flight.
 
 ## New Terminology
 
