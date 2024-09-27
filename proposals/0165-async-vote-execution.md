@@ -132,7 +132,8 @@ appropriate checks.
 
 There is no protocol enforced order of block replay for various validator
 implemenations, but when vote instructions are sent out, the `(slot, hash)`
-is the hash of latest replayed block on the selected fork.
+is the hash of latest replayed block on the selected fork. New vote
+transactions should be sent when the ephemeral hash or final hash changes.
 
 Once a validator determined the fork it will vote on, it can prioritize
 replaying blocks on the selected fork. The replay process is the same as today,
