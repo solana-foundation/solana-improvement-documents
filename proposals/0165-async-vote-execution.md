@@ -92,6 +92,12 @@ route during rollouts though.
 
 ### Calculate ephemeral hash executing votes only and vote on selected forks
 
+Two new fields will be added to `TowerSync` vote transaction:
+
+* `ephemeral_hash`: This is the hash obtained by hashing blockid and all
+vote transactions in the block together. Used primarily in consensus.
+* `ephemeral_slot`: This is the slot where the ephemeral_hash is calculated.
+
 This step is optimistic in the sense that validators do not check the fee
 payers when executing the vote transactions in a block. They assume vote
 transactions will not fail due to insufficient fees, apply the execution
