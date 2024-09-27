@@ -102,6 +102,26 @@ This is safe because the list of validators and their corresponding stake
 has already been determined at the beginning of the Epoch. The stake we used
 is correct in fork selection.
 
+To make sure the vote casted would be the same as that after replaying the
+whole block, we need to be consistent on whether we mark the block dead, so
+that the ephemeral hash vote doesn't vote on a block which will be marked
+dead later. Currently a block can be dead for the following reasons:
+
+1. Unable to load data from blockstore
+2. Invalid block (wrong number of ticks, duplicate block, bad last fec, etc)
+3. Error while set root
+4. Invalid transaction
+
+For the first two, the same check can be performed computing ephemeral hash.
+We will set root on a bank only when it has full hash computed later, so the
+behavior will be the same as now.
+
+The only operation we can't check is invalid transaction, since we will skip
+all non-vote transaction execution, there is no way we can check for validity
+of those. The intention of this check was to prevent spams. We will remove
+this check and rely on economic incentives so that the leader can perform
+appropriate checks.
+
 ### Replay the full block on selected forks later
 
 Once a validator determined the fork it will vote on, only blocks on this fork
