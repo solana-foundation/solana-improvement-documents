@@ -130,12 +130,16 @@ appropriate checks.
 
 ### Replay the full block on selected forks later
 
-Once a validator determined the fork it will vote on, only blocks on this fork
-will be replayed. The replay process is the same as today, all transactions
-(vote and non-vote) will be executed to determine the final bankhash. The
-computed bankhash will be attached to vote instructions. So we can still detect
-non-determinism (same of set of instructions leading to different results) as
-today, just we might find discrepancies at a later time.
+There is no protocol enforced order of block replay for various validator
+implemenations, but when vote instructions are sent out, the `(slot, hash)`
+is the hash of latest replayed block on the selected fork.
+
+Once a validator determined the fork it will vote on, it can prioritize
+replaying blocks on the selected fork. The replay process is the same as today,
+all transactions (vote and non-vote) will be executed to determine the final
+bankhash. The computed bankhash will be attached to vote instructions. So we
+can still detect non-determinism (same of set of instructions leading to
+different results) as today, just we might find discrepancies at a later time.
 
 In this step the validators will check the fee payers of vote transactions. So
 each vote transaction is executed twice: once in the optimistical voting stage
