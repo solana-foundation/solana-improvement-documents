@@ -92,18 +92,10 @@ otherwise throw `UnsupportedProgramId`
 otherwise throw `AccountDataTooSmall`
 - the status stored in the program account is not retracted,
 otherwise throw `UnsupportedProgramId`
-- the program account was not deployed recently (delay-visibility),
-otherwise throw `UnsupportedProgramId`
+- the program account was not deployed within the current slot
+(delay visibility), otherwise throw `UnsupportedProgramId`
 - the executable file stored in the program account passes executable
 verification, otherwise throw `UnsupportedProgramId`
-
-Otherwise the execution semantics stay the same as in loader-v2 and v3.
-Delay-visibility also stays the same as in loader-v3:
-
-- Re/deployed programs act as closed until the end of the slot,
-only then becoming available for execution
-- The feature set that the executable file is verified against is not
-necessarily the current one, but the one of the epoch of the next slot
 
 ### Program Management Instructions
 
@@ -185,8 +177,8 @@ necessarily the current one, but the one of the epoch of the next slot
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
   - Verify the program account
-  - Check that the deployment cooldown expired,
-  otherwise throw `InvalidArgument`
+  - Check that the slot stored in the program account is not the current
+  (deployment cooldown), otherwise throw `InvalidArgument`
   - Check that the status stored in the program account is retracted
     otherwise throw `InvalidArgument`
   - In case a source program was provided (instruction account at index 2):
@@ -195,6 +187,8 @@ necessarily the current one, but the one of the epoch of the next slot
     otherwise throw `InvalidArgument`
     - Check that the executable file stored in the source program account
     passes executable verification
+    - The feature set that the executable file is verified against is not
+necessarily the current one, but the one of the epoch of the next slot
     - Copy the entire source program account into the program account
     - Set the length of the source program account to zero
     - Transfer all funds of the  source program account to the program
@@ -216,8 +210,8 @@ necessarily the current one, but the one of the epoch of the next slot
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
   - Verify the program account
-  - Check that the deployment cooldown expired,
-  otherwise throw `InvalidArgument`
+  - Check that the slot stored in the program account is not the current
+  (deployment cooldown), otherwise throw `InvalidArgument`
   - Check that the status stored in the program account is deployed,
     otherwise throw `InvalidArgument`
   - Note: The slot is **not** set to the current slot to allow a
