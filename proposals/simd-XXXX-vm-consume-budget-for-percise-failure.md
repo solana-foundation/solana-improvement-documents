@@ -15,7 +15,7 @@ extends:
 
 ## Summary
 
-Adjusting how CU consumption is measured based on the conditions of Basic Block execution: successful completion will charge actual CUs, or requested CU if exceptions during Basic Block execution.
+Adjusting how CU consumption is measured based on the conditions of transaction execution: successful completion will consume actual CUs, but certain irregular failures will result in the transaction automatically consuming all requested CUs.
 
 ## Motivation
 
@@ -25,13 +25,15 @@ In the Solana protocol, tracking transaction Compute Unit (CU) consumption is a 
 
 ### Proposed Change:
 
-To improve performance, Solana programs are often compiled into Basic Blocks — linear sequences of BPF instructions with a single entry and exit point, and no loops or branches. Basic Blocks allow for efficient execution by reducing the overhead associated with tracking CU consumption for each individual BPF instruction.
+To improve performance, Solana programs are often compiled with a JIT that works at the level of Basic Blocks — linear sequences of sBPF instructions with a single entry and exit point, and no loops or branches. Basic Blocks allow for efficient execution by reducing the overhead associated with tracking CU consumption for each individual BPF instruction.
 
-When a Basic Block is executed successfully (i.e., it exits at the final BPF instruction in the block), the total CU consumption is deterministic and can be calculated before execution. This ensures that CU accounting for successful transactions is accurate and predictable, enabling all clients to agree on the transaction’s execution cost.
+Other than in rare, exceptional situations discussed below, the total CU consumption for a Basic Block is deterministic and, and CU accounting can be done once per basic block instead of at each instruction.
+A transaction completing successfully or with most errors implies that execution exited each basic block at its single exit point, 
+and thus that the total CU consumption of the execution is equal to the sum of the CU cost of each Basic Block executed.
 
 However, when an exception is thrown during the execution of a Basic Block (e.g., a null memory dereference or other faults), determining the exact number of CUs consumed up to the point of failure requires additional effort. For instance, the Agave client implements a mechanism that tracks the Instruction Pointer (IP) or Program Counter (PC) to backtrack and estimate the CUs consumed when an exception occurs. More details on this mechanism can be found [here](https://github.com/solana-labs/rbpf/blob/57139e9e1fca4f01155f7d99bc55cdcc25b0bc04/src/jit.rs#L267).
 
-While this approach is effective, it introduces additional work and complexity. These mechanisms are often implementation-specific, and requiring all clients to track the exact number of executed BPF instructions for consensus is costly and unnecessary. Such precision is not essential for protocol-level consensus.
+While this approach is effective, it introduces additional work and complexity. These mechanisms are often implementation-specific, and requiring all clients to track the exact number of executed BPF instructions for consensus is costly and unnecessary. Such precision is not essential for protocol-level consensus, especially since these cases are rare.
 
 ### Clarified Protocol Behavior:
 
