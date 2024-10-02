@@ -1,6 +1,6 @@
 ---
 simd: '0166'
-title: Dynamic stack frames in SBF
+title: SBPF Dynamic stack frames
 authors:
   - Alexander Meißner
   - Alessandro Decina
