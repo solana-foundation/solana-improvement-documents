@@ -110,56 +110,8 @@ in the middle of executing basic block, results in consuming all requested CUs.
 
 ## Detailed Design
 
-Banking stage and Replay stage collect transaction execution results and CUs
-consumed at
-[here](https://github.com/anza-xyz/agave/blob/master/core/src/banking_stage/committer.rs#L99)
-and
-[here](https://github.com/anza-xyz/agave/blob/master/ledger/src/blockstore_processor.rs#L239),
-respectively.
-
-Where the `committed_tx.executed_units` are accumulated value of each
-Instruction `compute_unit_consumed`, which essentially is the changes of
-invoke_context's CU_meter.
-
-We propose VM to deplete CU meter when irregular failure occurs during
-execution, which is following errors in Agave:
-
-```
-EbpfError::DivideByZero
-EbpfError::DivideOverflow
-EbpfError::CallOutsideTextSegment
-EbpfError::InvalidInstruction
-EbpfError::InvalidVirtualAddress
-```
-
-And in Firedancer:
-
-```
-#define FD_VM_ERR_SIGSPLIT    ( -9) /* split multiword instruction (e.g. jump into the middle of a multiword instruction) */
-#define FD_VM_ERR_SIGILL      (-12) /* illegal instruction (e.g. opcode is not valid) */
-#define FD_VM_ERR_SIGSEGV     (-13) /* illegal memory address (e.g. read/write to an address not backed by any memory) */
-#define FD_VM_ERR_SIGBUS      (-14) /* misaligned memory address (e.g. read/write to an address with inappropriate alignment) */
-#define FD_VM_ERR_SIGRDONLY   (-15) /* illegal write (e.g. write to a read only address) */
-#define FD_VM_ERR_SIGFPE      (-18) /* divide by zero */
-```
-
-In this way, detecting irregular failure is fully encapsulated within VMs, call
-sites can continue work on Execution Results without change.
-
-### Alternatives:
-
-No changes to VM, instead at call sites, e.g. at Banking Stage and Replay Stage
-to check execution results then determine how many CUs to consume, like this:
-
-```
-let execution_cu = match transaction.execution_results {
-  irregualr_execution_failure => transaction.requested_cu,
-  _ => committed_tx.executed_cu,
-};
-```
-
-This alternative requires mapping VM error to runtime InstructionError, and
-pushing irregualr failure detection upstream to call sites.
+If VM execution returns any error except `SyscallError`, transaction's CU meter
+should be depleted; otherwise the actual executed CUs shall be consumed.
 
 ## Impact
 
