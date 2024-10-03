@@ -65,7 +65,7 @@ phase. `call imm` (opcode `0x85`) instructions must only refer to internal
 calls and its immediate field must only be interpreted as a relative address 
 to jump from the program counter. 
 
-### Change of opcode for the exit instrcution
+### Change of opcode for the exit instruction
 
 The opcode `0x9D` must represent the exit instruction, while the old opcode 
 `0x95` must now be assigned to the new syscall instruction.
