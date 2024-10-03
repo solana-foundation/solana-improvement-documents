@@ -1,5 +1,5 @@
 ---
-simd: '0176'
+simd: '0178'
 title: SBPF Static Syscalls
 authors:
   - Alessandro Decina
