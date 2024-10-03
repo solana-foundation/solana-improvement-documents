@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0180'
 title: Leader Schedule Migration
 authors: Justin Starry (Anza)
 category: Standard
