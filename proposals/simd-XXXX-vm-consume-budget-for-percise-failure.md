@@ -95,7 +95,7 @@ None
 
 ## New Terminology
 
-- [Basic Block](https://en.wikipedia.org/wiki/Basic_block):i In the context of
+- [Basic Block](https://en.wikipedia.org/wiki/Basic_block): In the context of
   JIT execution and BPF processing, a Basic Block is a sequence of BPF
 instructions that forms a single, linear flow of control with no loops or
 conditional branches except for the entry and exit points. It represents a
@@ -104,6 +104,9 @@ sequentially through to the last instruction without deviation. The Basic Block
 is characterized by its predictable execution path, allowing for efficient
 budget checks and optimizations, as its Compute Unit (CU) cost can be determined
 before execution and verified at the end of the block.
+
+- Irregular transaction failure: A rare case that a Transaction execution aborts
+in the middle of executing basic block, results in consuming all requested CUs.
 
 ## Detailed Design
 
