@@ -40,7 +40,7 @@ efficient execution by reducing the overhead associated with tracking CU
 consumption for each individual BPF instruction.
 
 Other than in rare, exceptional situations discussed below, the total CU
-consumption for a Basic Block is deterministic and, and CU accounting can be
+consumption for a Basic Block is deterministic and CU accounting can be
 done once per basic block instead of at each instruction.  A transaction
 completing successfully or with most errors implies that execution exited each
 basic block at its single exit point, and thus that the total CU consumption of
