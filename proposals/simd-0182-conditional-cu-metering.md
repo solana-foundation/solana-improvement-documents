@@ -1,12 +1,12 @@
 ---
-simd: 'XXXX'
+simd: '0182'
 title: Conditional CU metering
 authors:
   - Tao Zhu (Anza)
 category: Standard
 type: Core
 status: Draft
-created: 2024-MM-DD
+created: 2024-10-03
 feature:
 supersedes:
 superseded-by:
