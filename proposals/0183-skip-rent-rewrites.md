@@ -48,6 +48,10 @@ to its balance.  If rent collection does not collect rent (i.e. the account's
 balance is unchanged), but *does* change the account's `rent epoch`, the
 account must still be stored.
 
+To state another consequence explicitly, since these accounts will not be
+rewritten, they will no longer be part of the accounts delta hash nor the
+incremental accounts hash.
+
 ## Impact
 
 Validators will see performance improvements:
