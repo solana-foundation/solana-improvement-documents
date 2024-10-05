@@ -266,13 +266,12 @@ protocol. We call these `non-conforming` validators.
    Let's use `X` to denote `stake_on_validators_not_in_restart` for brevity.
    Assuming a block has child `A` and `B` both on the list, the children's
    combined stake would be `2 * (67% - 5% - X)`. Because we only allow one
-   RestartHeaviestFork per pubkey, every conforming validator should select
-   either `A` or `B`, even if the non-conforming validators could select both.
-   So the children's total stake should be less than `100% + 5% - X`. We can
-   calculate that if `134% - 2 * X < 100% + 5% - X`, then `X > 29%`, this is
-   not possible when we have at least 80% of the validators in restart. So we
-   prove any block in the list can have at most one child in the list by
-   contradiction.
+   RestartHeaviestFork per pubkey, every validator should select either `A`
+   or `B`, it's easy to find and filter out vialators who selected both. So the
+   children's total stake should be less than `100% - X`. We can calculate that
+   if `124% - 2 * X < 100% - X`, then `X > 24%`, this is not possible when we
+   have at least 80% of the validators in restart. So we prove any block in the
+   list can have at most one child in the list by contradiction.
 
    3. If a block not optimistically confirmed before the restart is on the
    list, it can only be at the end of the list and none of its siblings are
