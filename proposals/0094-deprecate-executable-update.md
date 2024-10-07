@@ -59,11 +59,12 @@ This will affect the following scenarios.
 
 - program accounts hash after deployment. Since this change is guarded by a
   feature, program accounts hash change won't break consensus.
-- any dapps that depend on `is_executable` to be true on the serialized
-  instruction accounts. Existing program deployed on chain will work fine.
-  However, if the program is redeployed, it may be broken. Before redeployment,
-  dapps developer will need to check and update the program if it depends on
-  `is_executable`.
+- any dapps that depend on
+  `solana_program::account_info::AccountInfo.executable` to be true on the
+  serialized instruction accounts. Existing program deployed on chain will work
+  fine. However, if the program is redeployed, it may be broken. Before
+  redeployment, dapps developer will need to check and update the program if it
+  depends on `solana_program::account_info::AccountInfo.executable`.
 
 ## Security Considerations
 
