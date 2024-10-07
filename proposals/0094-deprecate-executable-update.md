@@ -29,7 +29,8 @@ deprecate its update during bpf program deployment for loader-v3.
 
 ## Alternatives Considered
 
-None
+1. Emulate account "executable" from owner and account's data. It turns out the
+   emulate is very expensive. It increases "serialization" time by more than 10X.
 
 ## New Terminology
 
@@ -40,7 +41,17 @@ None
 When the feature - "deprecate executable update" is activated, the bpf loader-V3
 will no longer update *executable* flag to true after program deployment.
 
-The "executable" flag remains false after program deployment.
+The "executable" flag remains false after program deployment. In future, we may
+consider not to serialize account executable any more.
+
+Another change is that CPI won't ignore changes made by caller to instruction
+accounts. Currently, during CPI call, if the callee account's executable is set,
+the existing instruction account is used without going through the translation.
+With this change, there is no special shortcut for the instruction accounts.
+They will all go through the general translation code path. Since it is a more
+general code path, we are guaranteed to be correct. The slightly downside is
+that it become less efficient in theory. But we don't think there is going to
+noticeable differences.
 
 ## Impact
 
@@ -53,10 +64,6 @@ This will affect the following scenarios.
   However, if the program is redeployed, it may be broken. Before redeployment,
   dapps developer will need to check and update the program if it depends on
   `is_executable`.
-- CPI won't ignore changes made by caller to instruction accounts (Currently CPI
-  ignores changes made by the caller to instruction accounts which has the
-  `is_executable` flag set). For correctness, this change will be fine. It just
-  becomes a bit less efficient with more checks.
 
 ## Security Considerations
 
