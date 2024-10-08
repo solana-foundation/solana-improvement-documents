@@ -16,7 +16,8 @@ created: 2024-09-27
 This SIMD introduces a new instruction syscall in the SBPF instruction set to 
 represent syscalls. Such a change aims to remove relocations when resolving 
 syscalls and simplify the instruction set, allowing for the straightforward 
-differentiation between external and internal calls.
+differentiation between external and internal calls. In addition, it proposes 
+a new `return` instruction to supersede the `exit` instruction.
 
 ## Motivation
 
@@ -65,10 +66,16 @@ phase. `call imm` (opcode `0x85`) instructions must only refer to internal
 calls and its immediate field must only be interpreted as a relative address 
 to jump from the program counter. 
 
-### Change of opcode for the exit instruction
+### New return instruction
 
-The opcode `0x9D` must represent the exit instruction, while the old opcode 
-`0x95` must now be assigned to the new syscall instruction.
+The opcode `0x9D` must represent the return instruction, which supersedes the 
+`exit` instruction. The opcode (opcode `0x95`), previously assigned to the 
+`exit` instruction, must now be interpreted as the new syscall instruction.
+
+The verifier must detect an SBPF V1 program containing the `0x9D` opcode and 
+throw a `VerifierError::UnknowOpCode`. Likewise, if, by any means, a V1 
+program reaches the execution stage containing the `0x9D` opcode, an 
+`EbpfError::UnsupportedInstruction` must be raised.
 
 ## Alternatives Considered
 
