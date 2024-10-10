@@ -9,7 +9,7 @@ status: Accepted
 created: 2024-06-03
 feature: ed9tNscbWLYBooxWA7FE2B5KHWs8A6sxfY8EzezEcoo
 development:
-  - Anza - [implemented](https://github.com/anza-xyz/agave/pull/1876)
+  - Anza - implemented (https://github.com/anza-xyz/agave/pull/1876)
 ---
 
 ## Summary

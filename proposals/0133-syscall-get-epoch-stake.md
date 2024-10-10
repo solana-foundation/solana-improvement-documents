@@ -7,9 +7,9 @@ category: Standard
 type: Core
 status: Implemented
 created: 2024-03-25
-feature: '[7mScTYkJXsbdrcwTQRs7oeCSXoJm4WjzBsRyf8bCU3Np](https://github.com/anza-xyz/agave/issues/884)'
+feature: 7mScTYkJXsbdrcwTQRs7oeCSXoJm4WjzBsRyf8bCU3Np (https://github.com/anza-xyz/agave/issues/884)
 development:
-  - Anza - [Implemented](https://github.com/solana-foundation/solana-improvement-documents/pull/133)
+  - Anza - Implemented (https://github.com/solana-foundation/solana-improvement-documents/pull/133)
   - Firedancer - Implemented
 ---
 

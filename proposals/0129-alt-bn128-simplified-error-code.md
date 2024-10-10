@@ -7,9 +7,9 @@ category: Standard
 type: Core
 status: Activated
 created: 2024-03-19
-feature: '[JDn5q3GBeqzvUa7z67BbmVHVdE3EbUAjvFep3weR3jxX](https://github.com/anza-xyz/agave/issues/320)'
+feature: JDn5q3GBeqzvUa7z67BbmVHVdE3EbUAjvFep3weR3jxX (https://github.com/anza-xyz/agave/issues/320)
 development:
-  - Anza - [Implemented](https://github.com/anza-xyz/agave/pull/294)
+  - Anza - Implemented (https://github.com/anza-xyz/agave/pull/294)
   - Firedancer - Implemented
 ---
 

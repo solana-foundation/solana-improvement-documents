@@ -7,9 +7,9 @@ category: Standard
 type: Core
 status: Accepted
 created: 2024-04-08
-feature: '[FuS3FPfJDKSNot99ECLXtp3rueq36hMNStJkPJwWodLh](https://github.com/anza-xyz/agave/issues/1132)'
+feature: FuS3FPfJDKSNot99ECLXtp3rueq36hMNStJkPJwWodLh (https://github.com/anza-xyz/agave/issues/1132)
 development:
-  - Anza - [Implemented](https://github.com/anza-xyz/agave/pull/412)
+  - Anza - Implemented (https://github.com/anza-xyz/agave/pull/412)
   - Firedancer - WIP
 ---
 

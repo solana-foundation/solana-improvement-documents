@@ -7,9 +7,9 @@ category: Standard
 type: Core
 status: Activated
 created: 2023-12-13
-feature: '[7WeS1vfPRgeeoXArLh7879YcB9mgE9ktjPDtajXeWfXn](https://github.com/solana-labs/solana/issues/34424)'
+feature: 7WeS1vfPRgeeoXArLh7879YcB9mgE9ktjPDtajXeWfXn (https://github.com/solana-labs/solana/issues/34424)
 development:
-  - Anza - [Implemented](https://github.com/solana-labs/solana/pull/35164)
+  - Anza - Implemented (https://github.com/solana-labs/solana/pull/35164)
   - Firedancer - Implemented
 ---
 
