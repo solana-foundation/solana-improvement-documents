@@ -287,6 +287,7 @@ export const metadataStatusIsValid = {
       "Withdrawn",
       "Implemented",
       "Activated",
+      "Living"
     ]
 
     if (!validStatus.includes(status)) {
