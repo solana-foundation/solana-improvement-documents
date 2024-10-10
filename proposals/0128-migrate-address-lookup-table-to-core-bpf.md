@@ -5,7 +5,7 @@ authors:
   - Joe Caulfield - Anza Technology
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-03-13
 feature: (fill in with feature tracking issues once accepted)
 ---

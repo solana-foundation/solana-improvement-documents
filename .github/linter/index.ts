@@ -134,7 +134,10 @@ async function main() {
     errorCount += linted[lint].length
   }
   if (errorCount > 0) {
-    throw new Error(JSON.stringify(linted))
+    const lintedErrors = Object.fromEntries(
+      Object.entries(linted).filter(([key, value]) => !(Array.isArray(value) && value.length === 0))
+    );
+    throw new Error(JSON.stringify(lintedErrors))
   }
 }
 

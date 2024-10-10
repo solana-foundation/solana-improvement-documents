@@ -3,6 +3,7 @@ simd: '0007'
 title: SIMD Access Policy
 authors:
 - Jacob Creech (Solana Foundation)
+- Ben Hawkins (Solana Foundation)
 category: Meta
 type: Meta
 status: Living

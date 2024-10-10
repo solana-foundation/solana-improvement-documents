@@ -124,6 +124,7 @@ const optionalMetadata = [
   "supersedes",
   "superseded-by",
   "extends",
+  "development",
 ]
 
 export const metadataSimdIsValid = {
@@ -287,6 +288,7 @@ export const metadataStatusIsValid = {
       "Withdrawn",
       "Implemented",
       "Activated",
+      "Stale",
       "Living"
     ]
 
