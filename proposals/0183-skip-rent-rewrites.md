@@ -5,7 +5,7 @@ authors:
   - brooks@anza.xyz
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-10-04
 feature: https://github.com/solana-labs/solana/issues/26599
 ---

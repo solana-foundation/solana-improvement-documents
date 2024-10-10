@@ -7,7 +7,7 @@ authors:
   - wencoding
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2022-12-12
 feature: (fill in with feature tracking issues once accepted)
 ---
