@@ -288,7 +288,6 @@ export const metadataStatusIsValid = {
       "Withdrawn",
       "Implemented",
       "Activated",
-      "Stale",
       "Living"
     ]
 
