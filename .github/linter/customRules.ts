@@ -124,6 +124,7 @@ const optionalMetadata = [
   "supersedes",
   "superseded-by",
   "extends",
+  "development",
 ]
 
 export const metadataSimdIsValid = {
@@ -281,13 +282,13 @@ export const metadataStatusIsValid = {
 
     const validStatus = [
       "Idea",
-      "Draft", 
       "Review",
       "Accepted",
       "Stagnant",
       "Withdrawn",
       "Implemented",
       "Activated",
+      "Living"
     ]
 
     if (!validStatus.includes(status)) {

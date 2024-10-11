@@ -5,12 +5,8 @@ authors:
   - Sam Kim
 category: Standard
 type: Core
-status: Draft
-created: 2024-06-13T00:00:00.000Z
-feature: null
-supersedes: null
-superseded-by: null
-extends: null
+status: Accepted
+created: 2024-06-13
 ---
 ## Summary
 

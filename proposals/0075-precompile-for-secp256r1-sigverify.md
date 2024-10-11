@@ -7,7 +7,7 @@ authors:
   - Dean (Web3 Builders Alliance)
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-02-27
 feature: (fill in with feature tracking issues once accepted)
 supersedes: "0048"
