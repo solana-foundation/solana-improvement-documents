@@ -23,7 +23,7 @@ stage.
 ## Motivation
 
 Builtin instructions in the SVM consume their static DEFAULT_COMPUTE_UNITS from
-the compute budget during execution. These DEFAULT_COMPUTE_UNITS are also
+the compute meter during execution. These DEFAULT_COMPUTE_UNITS are also
 counted against block limits during the banking stage. However, historically,
 builtin instructions have been allocated DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT
 units of compute budget. This discrepancy between the allowed consumption and
@@ -88,7 +88,7 @@ production, CU metering during execution and elsewhere.
 3. Transaction requesting invalid Compute Units shall fail; where "invalid" is
    defined as:
    - greater than `MAX_COMPUTE_UNIT_LIMIT`, or
-   - lesser than sum of all included builtin instructions' default CUs;
+   - lesser than sum of all included builtin instructions' ALLOCATE_COMPUTE_UNITS;
 
 ## Impact
 
