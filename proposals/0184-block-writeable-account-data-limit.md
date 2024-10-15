@@ -5,7 +5,7 @@ authors:
   - Brennan Watt (Anza)
 category: Standard
 type: Core
-status: Draft
+status: Idea
 created: 2024-10-15
 feature: (fill in with feature tracking issues once accepted)
 supersedes:
@@ -52,20 +52,21 @@ determine when a block is "full" and validators to mark slots dead that do not
 adhere to these limits.
 
 This feature could be implemented like so (using Agave client as reference):
-- Update the cost model to compute the aggregate size of all accounts marked
+
+1. Update the cost model to compute the aggregate size of all accounts marked
   writeable for each transaction. This can be done similarly to how
   `data_bytes_len_total` is computed inside `get_transaction_cost` but limited
   to accounts marked writeable.
-- Update the cost tracker to check the current writeable account data in the
+2. Update the cost tracker to check the current writeable account data in the
   block being produced + the amount of account data that would be written with
   the current transaction against the total block limit in the would_fit
   function
-- Store the write limit in a constant such as
+3. Store the write limit in a constant such as
   `MAX_BLOCK_ACCOUNTS_DATA_SIZE_WRITEABLE` and set this to `2_000_000_000`
   (2GB).
-- Add a new `CostTrackerError` type `WouldExceedAccountDataWriteableBlockLimit`
+4. Add a new `CostTrackerError` type `WouldExceedAccountDataWriteableBlockLimit`
   and return this error if block limit is exceeded.
-- Treat this new error type (`WouldExceedAccountDataWriteableBlockLimit`) as
+5. Treat this new error type (`WouldExceedAccountDataWriteableBlockLimit`) as
   retryable in execute_and_commit_transactions_locked
 
 There is an edge case where if a single transaction tries to consume more than
