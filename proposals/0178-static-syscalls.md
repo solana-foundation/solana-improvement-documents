@@ -77,6 +77,57 @@ throw a `VerifierError::UnknowOpCode`. Likewise, if, by any means, a V1
 program reaches the execution stage containing the `0x9D` opcode, an 
 `EbpfError::UnsupportedInstruction` must be raised.
 
+### Syscall numbering convention
+
+Syscalls must be represented by a unique integer to maintain a dense lookup 
+table data structure for indexing and dispatch. For a clear correlation 
+between the existing syscalls and their respective identification number, 
+syscalls must strictly follow the numbering below.
+
+|           Syscall name                   |  Number  |
+|------------------------------------------|----------|
+|   abort                                  |    1     |
+|   sol_panic_                             |    2     |
+|   sol_memcpy_                            |    3     |
+|   sol_memmove_                           |    4     |
+|   sol_memset_                            |    5     |
+|   sol_memcmp_                            |    6     |
+|   sol_log                                |    7     |
+|   sol_log_64                             |    8     |
+|   sol_log_pubkey                         |    9     |
+|   sol_log_compute_units_                 |    10    |
+|   sol_alloc_free_                        |    11    |
+|   sol_invoke_signed_c                    |    12    |
+|   sol_invoke_signed_rust                 |    13    |
+|   sol_set_return_data                    |    14    |
+|   sol_get_return_data                    |    15    |
+|   sol_log_data                           |    16    |
+|   sol_sha256                             |    17    |
+|   sol_keccak256                          |    18    |
+|   sol_secp256k1_recover                  |    19    |
+|   sol_blake3                             |    20    |
+|   sol_poseidon                           |    21    |
+|   sol_get_processed_sibling_instruction  |    22    |
+|   sol_get_stack_height                   |    23    |
+|   sol_curve_validate_point               |    24    |
+|   sol_curve_group_op                     |    25    |
+|   sol_curve_multiscalar_mul              |    26    |
+|   sol_curve_pairing_map                  |    27    |
+|   sol_alt_bn128_group_op                 |    28    |
+|   sol_alt_bn128_compression              |    29    |
+|   sol_big_mod_exp                        |    30    |
+|   sol_remaining_compute_units            |    31    |
+|   sol_create_program_address             |    32    |
+|   sol_try_find_program_address           |    33    |
+|   sol_get_sysvar                         |    34    |
+|   sol_get_epoch_stake                    |    35    |
+|   sol_get_clock_sysvar                   |    36    |
+|   sol_get_epoch_schedule_sysvar          |    37    |
+|   sol_get_last_restart_slot              |    38    |
+|   sol_get_epoch_rewards_slot             |    39    |
+|   sol_get_fees_sysvar                    |    40    |
+|------------------------------------------|----------|
+
 ## Alternatives Considered
 
 None.
