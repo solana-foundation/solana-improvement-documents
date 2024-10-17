@@ -4,7 +4,7 @@ title: Block Revenue Sharing
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2024-03-10
 feature: (fill in with feature tracking issues once accepted)
 ---
