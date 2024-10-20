@@ -126,6 +126,7 @@ syscalls must strictly follow the numbering below.
 |   sol_get_last_restart_slot              |    38    |
 |   sol_get_epoch_rewards_slot             |    39    |
 |   sol_get_fees_sysvar                    |    40    |
+|   sol_get_rent_sysvar                    |    41    |
 |------------------------------------------|----------|
 
 ## Alternatives Considered
