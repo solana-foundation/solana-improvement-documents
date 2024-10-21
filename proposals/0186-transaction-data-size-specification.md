@@ -16,7 +16,8 @@ Before a transaction can be executed, every account it may read from or write to
 must be loaded, including any programs it may call. The amount of data a
 transaction is allowed to load is capped, and if it exceeds that limit, loading
 is aborted. This functionality is already implemented in the validator. The
-purpose of this SIMD is to explicitly define how transaction size is calculated.
+purpose of this SIMD is to explicitly define how loaded transaction data size is
+calculated.
 
 ## Motivation
 
@@ -139,5 +140,5 @@ This SIMD requires a feature gate.
 
 ## Backwards Compatibility
 
-Transactions that call LoaderV3 programs via CPI and are extremely close to the
-64MiB limit may now exceed it.
+Transactions that currently have a total transaction data size close to the
+64MiB limit, which call LoaderV3 programs via CPI, may now exceed it and fail.
