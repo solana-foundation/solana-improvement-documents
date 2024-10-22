@@ -59,7 +59,7 @@ Consequently, system calls in the Solana SDK and in any related compiler tools
 must be registered as function pointers, whose address is a natural number 
 greater than zero, representing their position in a syscall lookup table. The 
 verifier must enforce that the immediate of a syscall instruction points to a 
-valid syscall, and throw `VerifierError::InvalidFunction` otherwise.
+valid syscall, and throw `VerifierError::InvalidSyscall` otherwise.
 
 This new instruction comes together with modifications in the verification 
 phase. `call imm` (opcode `0x85`) instructions must only refer to internal 
