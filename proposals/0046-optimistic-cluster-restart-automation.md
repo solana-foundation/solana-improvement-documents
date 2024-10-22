@@ -230,7 +230,7 @@ protocol. We call these `non-conforming` validators.
 
    After receiving `RestartLastVotedForkSlots` from the validators holding
    stake more than `RESTART_STAKE_THRESHOLD` and repairing slots in "must-have"
-   category, replay all blocks and pick the heaviest fork like this:
+   category, pick the heaviest fork like this:
 
    1. Calculate the threshold for a block to be on the heaviest fork, the
    heaviest fork should have all blocks with possibility to be optimistically
@@ -288,6 +288,9 @@ protocol. We call these `non-conforming` validators.
    the list. So picking D over F is equal to the case where `5%` stake
    switched from fork F to fork D, 80% of the cluster can switch to fork D
    if that turns out to be the heaviest fork.
+
+   After picking the appropriate slot, replay the block and all its ancestors
+   to get the bankhash for the picked slot.
 
 4. **Verify the heaviest fork of the coordinator**
 
