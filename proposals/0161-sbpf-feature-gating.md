@@ -6,7 +6,7 @@ authors:
   - Alessandro Decina
 category: Standard
 type: Core
-status: Draft
+status: Idea
 created: 2024-07-15
 ---
 
@@ -64,27 +64,35 @@ complexity again. This feature gate can be shared by multiple SBPF versions,
 effectively deprecating larger blocks of versions in order to reduce the amount
 of redeployment required from dapp developers.
 
+### Version discriminator
+
+Currently the protocol deems every value of `e_flags` which is not `0x0020` as
+being SBPF v0 and thus valid. This clearly does not scale for multiple versions
+and must therefore be changed. With the activation of the first feature gate
+which enables the deployment and execution of the first new SBPF version the
+discriminator must switch to directly interpret `e_flags` as SBPF version.
+
 ### Example
 
 | SBPF version | becomes deployable and executable | ceases to be deployable |
 | ------------ | --------------------------------- | ----------------------- |
-| v1           |                                   | Feature gate A          |
-| v2           | Feature gate A                    | Feature gate B          |
-| v3           | Feature gate B                    | Feature gate C          |
-| v4           | Feature gate C                    | Feature gate D          |
-| v5           | Feature gate D                    | Feature gate E          |
-| v6           | Feature gate E                    | Feature gate F          |
-| v7           | Feature gate F                    |                         |
+| v0           |                                   | Feature gate A          |
+| v1           | Feature gate A                    | Feature gate B          |
+| v2           | Feature gate B                    | Feature gate C          |
+| v3           | Feature gate C                    | Feature gate D          |
+| v4           | Feature gate D                    | Feature gate E          |
+| v5           | Feature gate E                    | Feature gate F          |
+| v6           | Feature gate F                    |                         |
 
 | SBPF version | ceases to be executable |
 | ------------ | ----------------------- |
+| v0           | Feature gate G          |
 | v1           | Feature gate G          |
 | v2           | Feature gate G          |
-| v3           | Feature gate G          |
+| v3           | Feature gate H          |
 | v4           | Feature gate H          |
 | v5           | Feature gate H          |
-| v6           | Feature gate H          |
-| v7           |                         |
+| v6           |                         |
 
 ## Alternatives Considered
 
