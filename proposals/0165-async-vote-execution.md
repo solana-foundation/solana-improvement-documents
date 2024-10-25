@@ -173,7 +173,8 @@ some percentage of the validators agree on the `Ephemeral bankhash`.
 5. Add assertion that confirmed `Final bankhash` is not too far away from the
 confirmed `Ephemeral bankhash` (currently proposed at 1/2 of the Epoch)
 6. Add alerts if `Final bankhash` differs when the `Ephemeral bankhash` is the
-same. This is potentially an event worthy of cluster restart.
+same. This is potentially an event worthy of cluster restart. If more than
+1/3 of the validators claim a different `Final bankhash`, halt and exit.
 
 ## Impact
 
