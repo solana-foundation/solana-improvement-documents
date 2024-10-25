@@ -55,12 +55,30 @@ None
 
 ## Detailed Design
 
-1. Statically define CUs per instruction: Assign a fixed CU consumption
-   (DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS) to each builtin instruction
-rather than per builtin program.
-2. Set a static maximum CU allocation: Propose a global limit of 5,000 CUs
-   (MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT) to cover worst-case scenarios,
-including CPI operations.
+1. Define Compute Units (CUs) on a per-instruction basis: Each builtin
+   instruction is assigned a predetermined, static CU consumption value, denoted
+as DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS, rather than a program-wide
+allocation. When the virtual machine (VM) invokes a builtin instruction, the
+specified DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS is consistently deducted
+from the CU Meter.
+
+2. Establish a static maximum CU allocation: Define a global compute unit limit
+   of 5,000 CUs, denoted as MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT, to
+accommodate worst-case execution scenarios, including potential Cross-Program
+Invocations (CPIs). This uniform limit is applied to each builtin program
+instruction and is used to configure both CU meter allocations and block
+producer CU limits reservation for all builtin instructions.
+
+The 5,000 CU threshold is derived from analysis of existing builtin programs.
+For instance, the `AddressLookupTable`’s `CreateLookupTable` makes the highest
+number of CPI calls (up to three invocations of the `System` program), resulting
+in a maximum CU demand of 1,200 CUs (750 + 3 × 150). Similarly, 
+`UpgradeableLoader`’s `ExtendProgram`, which may invoke the `System` program
+once, requires a peak CU of 2,520 (2,370 + 150), representing the most
+resource-intensive operation among current builtins. The proposed 5,000 CU
+ceiling nearly doubles this requirement, providing ample margin for future
+builtins that may have increased complexity.
+
 3. Handling invalid CU requests: Transactions will fail if they request:
    - More than MAX_COMPUTE_UNIT_LIMIT
    - Less than the sum of all included builtin instructions'
