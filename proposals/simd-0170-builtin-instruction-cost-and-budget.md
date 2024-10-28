@@ -63,21 +63,21 @@ specified DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS is consistently deducted
 from the CU Meter.
 
 2. Establish a static maximum CU allocation: Define a global compute unit limit
-   of 5,000 CUs, denoted as MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT, to
+   of 3,000 CUs, denoted as MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT, to
 accommodate worst-case execution scenarios, including potential Cross-Program
 Invocations (CPIs). This uniform limit is applied to each builtin program
 instruction and is used to configure both CU meter allocations and block
 producer CU limits reservation for all builtin instructions.
 
-The 5,000 CU threshold is derived from analysis of existing builtin programs.
-For instance, the `AddressLookupTable`’s `CreateLookupTable` makes the highest
-number of CPI calls (up to three invocations of the `System` program), resulting
-in a maximum CU demand of 1,200 CUs (750 + 3 × 150). Similarly, 
-`UpgradeableLoader`’s `ExtendProgram`, which may invoke the `System` program
-once, requires a peak CU of 2,520 (2,370 + 150), representing the most
-resource-intensive operation among current builtins. The proposed 5,000 CU
-ceiling nearly doubles this requirement, providing ample margin for future
-builtins that may have increased complexity.
+The 3,000 CU threshold is based on analysis of current built-in programs and
+reflects the unlikely need for additional complexity. For instance, the
+`AddressLookupTable`’s `CreateLookupTable` performs the highest number of CPI
+calls (up to three invocations of the System program), resulting in a maximum
+CU demand of 1,200 CUs (750 + 3 × 150). Similarly, `UpgradeableLoader`’s
+`ExtendProgram`, which may invoke the System program once, requires up to
+2,520 CUs (2,370 + 150), representing the most resource-intensive operation
+among current built-ins. The proposed 3,000 CU limit slightly exceeds this
+requirement, allowing for controlled flexibility without an excessive margin.
 
 3. Handling invalid CU requests: Transactions will fail if they request:
    - More than MAX_COMPUTE_UNIT_LIMIT
