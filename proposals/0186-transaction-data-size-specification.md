@@ -32,6 +32,10 @@ loader is also included in the accounts list, it is counted twice.
 programdata depending on how the program account is used on the transaction.
 Programdata is also itself counted if included in the transaction accounts list.
 This means programdata may be counted zero, one, or two times per transaction.
+* Due to certain quirks of implementation, accounts owned by loaders which do
+not contain valid programs for execution may or may not be counted against the
+transaction data size total depending on how it is used on the transaction. This
+includes, but is not limited to, LoaderV3 buffer accounts.
 
 All validator clients must arrive at precisely the same transaction data size
 for all transactions because a difference of one byte can determine whether a
@@ -106,6 +110,10 @@ is an instruction account.
 
 There is no special handling for programs owned by the native loader, LoaderV1,
 or LoaderV2.
+
+There is no special handling for non-executable accounts owned by the loaders.
+These are to be included in the transaction data size total under all
+circumstances.
 
 Account size for programs owned by LoaderV4 is left undefined. This SIMD should
 be amended to define the required semantics before LoaderV4 is enabled on any
