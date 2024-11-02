@@ -12,10 +12,9 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 A new mechanism for is proposed to allow validators to share part of their block
-fee and tip revenue with their delegators. Commission rates from validator vote
-accounts will be used by the protocol to calculate post-commission rewards that
-will be automatically distributed to delegated stake accounts at the end of each
-epoch.
+revenue with their delegators. Commission rates from validator vote accounts
+will be used by the protocol to calculate post-commission rewards that will be
+automatically distributed to delegated stake accounts at the end of each epoch.
 
 ## Motivation
 
@@ -57,8 +56,8 @@ interfere will reward calculations for the previous epoch.
 ## New Terminology
 
 Stake Rewards Pool Account: An account that records how many rewards from block
-fees and tips earned by a particular validator will be distributed to stake
-delegators at the end of an epoch.
+revenue earned by a particular validator will be distributed to stake delegators
+at the end of an epoch.
 
 ## Detailed Design
 
@@ -68,8 +67,11 @@ After all transactions are processed in a block for a given leader, rather than
 collecting all block revenue into the validator identity account, the protocol
 will check if the validator's vote account has specified commission rates and
 collector addresses in the new vote account version described in SIMD-XXXX.
-Block revenue is composed of two revenue sources: block fees and block tips,
-which are configured by validators independently.
+Block revenue could be composed of multiple distinct revenue sources such as
+block fees and block tips which are configured by validators independently but
+for the sake of simplifying this proposal, it's assumed that there will only be
+a single revenue source for now: block fees, which includes both base signature
+fees and priority fees.
 
 If the commission rate and collector account for a revenue source aren't set,
 all revenue will be collected into the validator's identity account as before.
@@ -83,12 +85,18 @@ would be rent-exempt after the deposit.
 For each revenue source, the amount of rewards that will be distributed to stake
 delegators is calculated by subtracting the commission from the block revenue.
 This amount will be deposited in a stake rewards pool account derived from the
-block producer's vote address.
+block producer's vote address. Note that this differs from how post-commission
+inflation rewards are calculated because no lamports are burned during the
+commission split. In contrast, post-commission inflation rewards are calculated
+by multiplying the amount of inflation rewards by `(100 - commission rate)` and
+then using integer division to divide by hundred. Since both commission and
+post-commission round down fractional lamports via integer division, any
+leftover lamports are effectively burned.
 
 If the reward distribution amount is non-zero, a stake rewards pool account
 address should be derived from the validator's vote account and loaded from
-accounts db. The address MUST be derived with the following derivation seeds
-for the stake program:
+accounts db. The address MUST be derived with the following derivation seeds for
+the stake program:
 
 ```rust
 let rewards_pool_address = Pubkey::create_program_address(
@@ -121,15 +129,49 @@ Once the derived stake rewards pool account exists and is initialized along with
 a rent exempt balance, its balance should be increased by the amount of
 post-commission revenue for each revenue source.
 
-### Block Fee and Tip Distribution
+### Stake Rewards Pool Distribution
 
 At the beginning of an epoch, for each unique vote account in the previous
 epoch's leader schedule, the protocol REQUIRES checking if a derived stake
 rewards pool account exists, is initialized, and has a lamport surplus above its
 rent-exempt balance. For every stake rewards pool with a lamport surplus, the
-lamport surplus is divided evenly by delegated stake weight across all stake
-accounts and these amounts will be included into a list of reward entries which
-MUST be partitioned and distributed according to SIMD-0118. 
+lamport surplus is considered to be activating stake.
+
+#### Epoch Stake Activation Limit
+
+Only 9% of the previous epoch's total active stake can be activated in a new
+epoch. In order to prevent opening a loophole to circumvent that limit, stake
+rewards pool distributions will also be limited such that the sum of all new
+stake activations and all stake rewards pool distributions cannot exceed 9% of
+the previous epoch's total active stake.
+
+To calculate the amount of stake rewards to be distributed for a given stake
+rewards pool account, the protocol must first compute the sum of all stake
+pending activation and all stake pending distribution from rewards pools, let's
+call this value `P`. Then the protocol should multiply the previous epoch's
+effective stake by 9 and integer divided by 100 to get the maximum amount of
+stake that can be activated this epoch, let's call this value `M`. If `P > M`,
+then not all pending stake will get activated this epoch. For each stake rewards
+pool, if `P <= M` then entire lamport surplus will be distributed, but if `P >
+M` the amount of stake to be distributed will be calculated by multiplying the
+lamport surplus by `P` and then integer dividing by `M`. Let's call the
+distribution amount for a given stake rewards pool account `d`.
+
+#### Individual Stake Reward
+
+The amount of lamports distributed to an individual stake reward can be
+calculated by first summing all of the lamports that were actively staked during
+the previous epoch for a given vote account, let's call this value `a`. Then,
+the reward for an invididual stake account can be calculated by multiplying the
+active stake for an individual stake account by `d` and then integer dividing by
+`a`. Fractional lamports will be discarded so not all `d` lamports for a given
+stake rewards pool will be distributed. After calculating all individual stake
+rewards, the remaining lamports from `d` should be subtracted from the stake
+rewards pool balance and burned.
+
+These stake reward distribution amounts for each stake account will be included
+into a list of reward entries which MUST be partitioned and distributed
+according to SIMD-0118.
 
 When reward entries are used to distribute rewards pool funds during paritioned
 rewards distribution, the stake rewards pool account balance must be deducted
