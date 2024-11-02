@@ -13,7 +13,7 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 During a cluster restart following an outage, make validators enter a separate
-recovery protocol that uses gossip to exchange local status and automatically 
+recovery protocol that uses Gossip to exchange local status and automatically 
 reach consensus on the block to restart from. Proceed to restart if validators
 in the restart can reach agreement, or print debug information and halt
 otherwise. To distinguish the new restart process from other operations, we
@@ -47,7 +47,7 @@ reached. We call this preparation phase where block production and voting are
 paused the `wen restart phase`.
 
 * `wen restart shred version`: right now we update `shred_version` during a
-`cluster restart`, it is used to verify received shreds and filter gossip
+`cluster restart`, it is used to verify received shreds and filter Gossip
 peers. In the proposed optimistic `cluster restart` plan, we introduce a new
 temporary shred version in the `wen restart phase` so validators in restart
 don't interfere with those not in restart. Currently this `wen restart shred
@@ -57,7 +57,7 @@ version` is calculated using `(current_shred_version + 1) % 0xffff`.
 restart so they can make decision for the whole cluster. If everything works
 perfect, we only need 2/3 of the total stake. However, validators could die
 or perform abnormally, so we currently set the `RESTART_STAKE_THRESHOLD` at
-80%, which is the same as now.
+80%, which is the same as what we use now for `--wait_for_supermajority`.
 
 ## Motivation
 
@@ -98,17 +98,17 @@ we can get human's attention. And it doesn't solve the cases where new binary
 is needed. So for now we still plan to have human in the loop.
 
 After we gain more experience with the restart approach in this proposal, we
-may slowly try to automate more parts to improve cluster reliability.
+may slowly try to make the process more automatic to improve reliability.
 
-### Use gossip and consensus to figure out restart slot before the restart
+### Use Gossip and consensus to figure out restart slot before the restart
 
 The main difference between this and the current restart proposal is this 
 alternative tries to make the cluster automatically enter restart preparation 
 phase without human intervention.
 
 While getting humans out of the loop improves recovery speed, there are
-concerns about recovery gossip messages interfering with normal gossip 
-messages, and automatically start a new message in gossip seems risky.
+concerns about recovery Gossip messages interfering with normal Gossip 
+messages, and automatically start a new message in Gossip seems risky.
 
 ### Automatically reduce block production in an outage
 
@@ -143,8 +143,8 @@ voted fork information to all other validators in restart.
 validator repairs all blocks which could potentially have been optimistically
 confirmed.
 
-3. After repair is complete, the validator counts votes on each fork and
-computes local heaviest fork.
+3. After enough validators are in restart and repair is complete, the validator
+counts votes on each fork and computes local heaviest fork.
 
 4. A coordinator which is configured on everyone's command line sends out its
 heaviest fork to everyone.
@@ -163,12 +163,12 @@ protocol. We call these `non-conforming` validators.
 
 ### Wen restart phase
 
-1. **gossip last vote and ancestors on that fork**
+1. **Gossip last vote and ancestors on that fork**
 
    The main goal of this step is to propagate most recent ancestors on the last
    voted fork to all others in restart.
 
-   We use a new gossip message `RestartLastVotedForkSlots`, its fields are:
+   We use a new Gossip message `RestartLastVotedForkSlots`, its fields are:
 
    * `last_voted_slot`: `u64` the slot last voted, this also serves as
    last_slot for the bit vector.
@@ -177,24 +177,28 @@ protocol. We call these `non-conforming` validators.
    slots on sender's last voted fork. the least significant bit is always
    `last_voted_slot`, most significant bit is `last_voted_slot-65535`.
 
-   The number of ancestor slots sent is hard coded at 65535, because that's
-   400ms * 65535 = 7.3 hours, we assume that most validator administrators 
-   would have noticed an outage within 7 hours, and the optimistic 
-   confirmation must have halted within 64k slots of the last confirmed block.
-   Also 65535 bits nicely fits into u16, which makes encoding more compact.
-   If a validator restarts after 7 hours past the outage, it cannot join the
-   restart this way. If enough validators failed to restart within 7 hours,
-   then we fallback to the manual, interactive `cluster restart` method.
+   The max distance between oldest ancestor slot and last voted slot is hard
+   coded at 65535, because that's 400ms * 65535 = 7.3 hours, we assume that
+   most validator administrators would have noticed an outage within 7 hours,
+   and the optimistic confirmation must have halted within 64k slots of the
+   last confirmed block. Also 65535 bits nicely fits into u16, which makes
+   encoding more compact. If a validator restarts after 7 hours past the
+   outage, it cannot join the restart this way. If enough validators failed to
+   restart within 7 hours, then we fallback to the manual, interactive
+   `cluster restart` method.
 
    When a validator enters restart, it uses `wen restart shred version` to
-   avoid interfering with those outside the restart. There is a slight chance
-   that the `wen restart shred version` would collide with the shred version
-   after the `wen restart phase`, but even if this rare case occurred, we plan
-   to flush gossip after successful restart so it should not be a problem.
+   avoid interfering with those outside the restart. To be extra cautious, we
+   will also filter out `RestartLastVotedForkSlots` and `RestartHeaviestFork`
+   (described later) in Gossip if a validator is not in `wen restart phase`.
+   There is a slight chance that the `wen restart shred version` would collide
+   with the shred version after the `wen restart phase`, but with the filtering
+   described above it should not be a problem.
 
-   To be extra cautious, we will also filter out `RestartLastVotedForkSlots`
-   and `RestartHeaviestFork` (described later) in gossip if a validator is not in
-   `wen restart phase`.
+   When a validator receives `RestartLastVotedForkSlots` from someone else, it
+   will discard all slots smaller than the local root. Because the local root
+   should be an `optimistic confirmed` slot, it does not need to keep any slot
+   older than local root.
 
 2. **Repair ledgers up to the restart slot**
 
@@ -240,16 +244,13 @@ protocol. We call these `non-conforming` validators.
    `67% - 5% - (100-80)% = 42%`. If 90% validators are in restart, the number
    would be `67% - 5% - (100-90)% = 52%`.
 
-   2. Sort all blocks passing the calculated threshold, and verify that they
-   form a single chain. If it's the first block in the list, its parent block
-   should be the local root. Otherwise its parent block should be the one
-   immediately ahead of it in the list.
+   2. Sort all blocks over the threshold by slot number, and verify that they
+   form a single chain. The first block in the list should be the local root.
 
    If any block does not satisfy above constraint, print the first offending
    block and exit.
 
-   3. If the list is empty, then output local root as the HeaviestFork.
-   Otherwise output the last block in the list as the HeavistFork.
+   The list should not be empty, it should contain at least the local root.
 
    To see why the above algorithm is safe, we will prove that:
 
@@ -294,17 +295,17 @@ protocol. We call these `non-conforming` validators.
 
 4. **Verify the heaviest fork of the coordinator**
 
-   While everyone will calculate its own heaviest fork in previous step, only
-   one coordinator specified on command line will send out its heaviest fork
-   via Gossip. Everyone else will check and accept the choice from the
-   coordinator only.
+   There will be one coordinator specified on the command line of everyone's
+   command line. Even though everyone will calculate its own heaviest fork in
+   previous step, only the coordinator's heaviest fork will be checked and
+   optionally accepted by others.
 
-   We use a new gossip message `RestartHeaviestFork`, its fields are:
+   We use a new Gossip message `RestartHeaviestFork`, its fields are:
 
    * `slot`: `u64` slot of the picked block.
    * `hash`: `Hash` bank hash of the picked block.
 
-   After deciding heaviest block, the coordinator gossip
+   After deciding the heaviest block, the coordinator Gossip
    `RestartHeaviestFork(X.slot, X.hash)` out, where X is the block the
    coordinator picked locally in previous step. The coordinator will stay up
    until manually restarted by its operator.
@@ -325,15 +326,17 @@ protocol. We call these `non-conforming` validators.
 
    When exiting this step, no matter what a non-coordinator validator chooses,
    it will send a `RestartHeaviestFork` back to leader to report its status.
+   This reporting is just for ease of aggregating the cluster's status at the
+   coordinator, it doesn't have other effects.
 
 5. **Generate incremental snapshot and exit**
 
 If the previous step succeeds, the validator immediately starts adding a hard
-fork at the designated slot and perform set root. Then it will start generating
-an incremental snapshot at the agreed upon `cluster restart slot`. This way the
-hard fork will be included in the newly generated snapshot. After snapshot
-generation completes, the `--wait_for_supermajority` args with correct shred
-version, restart slot, and expected bankhash will be printed to the logs.
+fork at the designated slot and perform `set_root`. Then it will start
+generating an incremental snapshot at the agreed upon `cluster restart slot`.
+After snapshot generation completes, the `--wait_for_supermajority` args with
+correct shred version, restart slot, and expected bankhash will be printed to
+the logs.
 
 After the snapshot generation is complete, a non coordinator then exits with
 exit code `200` to indicate work is complete.
@@ -345,20 +348,19 @@ status of the cluster.
 
 ## Impact
 
-This proposal adds a new wen restart mode to validators, during this phase
-the validators will not participate in normal cluster activities, which is the
-same as now. Compared to today's `cluster restart`, the new mode may mean more
-network bandwidth and memory on the restarting validators, but it guarantees
-the safety of optimistically confirmed user transactions, and validator 
-operators don't need to manually generate and download snapshots again. 
+This proposal adds a new `wen restart` mode to validators, under this mode the
+validators will not participate in normal cluster activities. Compared to
+today's `cluster restart`, the new mode may mean more network bandwidth and
+memory on the restarting validators, but it guarantees the safety of
+optimistically confirmed user transactions, and validator operators don't need
+to manually generate and download snapshots during a `cluster restart`. 
 
 ## Security Considerations
 
-The two added gossip messages `RestartLastVotedForkSlots` and
+The two added Gossip messages `RestartLastVotedForkSlots` and
 `RestartHeaviestFork` will only be sent and processed when the validator is
-restarted in the new proposed optimistic `cluster restart` mode. They will also
-be filtered out if a validator is not in this mode. So random validator
-restarting in the new mode will not bring extra burden to the system.
+restarted in `wen restart` mode. So random validator restarting in the new
+mode will not clutter the Gossip CRDS table of a normal system.
 
 Non-conforming validators could send out wrong `RestartLastVotedForkSlots`
 messages to mess with `cluster restart`s, these should be included in the
@@ -381,12 +383,14 @@ are made:
 
 * Every validator only handles 2 epochs, any validator will discard slots
 which belong to an epoch which is > 1 epoch away from its root. If a validator
-has very old root so it can't proceed, it will exit and report error.
+has very old root so it can't proceed, it will exit and report error. Since
+we assume an outage will be discovered within 7 hours and one epoch is roughly
+two days, handling 2 epochs should be enough.
 
 * The stake weight of each slot is calculated using the epoch the slot is in.
 Because right now epoch stakes are calculated 1 epoch ahead of time, and we
-only handle outages spanning 7 hours, the local root bank should have the
-epoch stakes for all epochs we need.
+only handle 2 epochs, the local root bank should have the epoch stakes for all
+epochs we need.
 
 * When aggregating `RestartLastVotedForkSlots`, for any epoch with validators
 voting for any slot in this epoch having at least 33% stake, calculate the
@@ -401,4 +405,4 @@ always be considered, because root should have > 33% stake.
 This change is backward compatible with previous versions, because validators
 only enter the new mode during new restart mode which is controlled by a
 command line argument. All current restart arguments like
---wait-for-supermajority and --expected-bank-hash will be kept as is for now.
+`--wait-for-supermajority` and `--expected-bank-hash` will be kept as is.
