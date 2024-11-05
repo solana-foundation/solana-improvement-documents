@@ -15,9 +15,10 @@ feature: (fill in with feature tracking issues once accepted)
 Before a transaction can be executed, every account it may read from or write to
 must be loaded, including any programs it may call. The amount of data a
 transaction is allowed to load is capped, and if it exceeds that limit, loading
-is aborted. This functionality is already implemented in the validator. The
-purpose of this SIMD is to explicitly define how loaded transaction data size is
-calculated.
+is aborted. This functionality is already implemented in the validator.
+
+This SIMD defines a new algorithm for calculating the consensus-enforced total
+size of loaded transaction data during transaction processing.
 
 ## Motivation
 
@@ -79,15 +80,16 @@ The proposed algorithm is as follows:
     * A program ID for an instruction.
     * The fee-payer.
 2. Each account's size is determined solely by the byte length of its data prior
-to transaction execution.
-3. For any `LoaderV3` program account, add the size of the programdata account
-it references, if it exists.
+to transaction execution, irrespective of it is used on the transaction.
+3. For any loaded account identified as a `LoaderV3` program account, add the
+size of the programdata account it references to its own size, irrespective of
+how the program account is used on the transaction.
 4. The total transaction size is the sum of these sizes.
 
 Transactions may include a
 `ComputeBudgetInstruction::SetLoadedAccountsDataSizeLimit` instruction to define
-a data size limit for the transaction. Otherwise, the default limit is 64MiB
-(`64 * 1024 * 1024` bytes).
+a lower data size limit for the transaction. Otherwise, the default limit is
+64MiB (`64 * 1024 * 1024` bytes).
 
 If a transaction exceeds its data size limit, the transaction is failed. Fees
 will be charged once `enable_transaction_loading_failure_fees` is enabled.
