@@ -7,7 +7,7 @@ authors:
   - Lucas Steuernagel
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2024-08-19T00:00:00.000Z
 feature: null
 supersedes: null
@@ -110,6 +110,24 @@ registers R1 to R5 for the first five arguments and place remainder arguments
 in the callee frame, instead of placing them in the caller’s frame. This new 
 call convention obviates the need to use R5 for retrieving the caller’s frame 
 pointer address to access those parameters.
+
+### Changes in the verifier
+
+The additional constraints for the verifier only encompass new rules for the 
+introduction of the R11 register. It can only appear coupled with a `add64` 
+(opcode `0x07`) instruction. If that is not the case, the verifier must throw 
+a `VerifierError::InvalidSourceRegister` when it is the source register of an 
+instruction and `VerifierError::InvalidDestinationRegister` when it is the 
+destination register of an instruction. Additionally, it must not be the 
+target register for the `callx` (opcode 0x9D) instructions, otherwise a 
+`VerifierError::InvalidRegister` must be raised. 
+
+The verification rules for the R10 register must remain unchanged. It must not 
+be the target register for the `callx` (opcode 0x9D) instructions, otherwise a 
+`VerifierError::InvalidRegister` must be raised. It must also not be the 
+destination register of non-store instructions, otherwise a 
+`VerifierError::CannotWriteToR10` must be thrown.
+
 
 ### Identification of programs
 
