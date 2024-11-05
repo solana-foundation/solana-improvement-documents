@@ -24,14 +24,13 @@ one vote account version update is needed.
 ### Revenue Collection Customization
 
 - There is only one commission rate stored in vote account state but validators
-with to be able to use different commission rates for different income streams
-like block rewards and tips.
+want to be able to use different commission rates for different income streams
+like block rewards.
 
 - It's not possible to customize which accounts income is collected into.
-Currently all block rewards and tips are always collected into the validator
-identity account which cannot be a cold wallet since the identity needs to sign
-a lot of messages for various network protocols used in Solana like turbine,
-gossip, and QUIC.
+Currently all block rewards are collected into the validator identity account
+which cannot be a cold wallet since the identity needs to sign a lot of messages
+for various network protocols used in Solana like turbine, gossip, and QUIC.
 
 ### Authorized voter bookkeeping
 
@@ -56,24 +55,18 @@ expressed a desire to be able to tune revenue streams indpendently.
 
 ## New Terminology
 
-- Block Fees Collector: The account used to collect commissioned block fees for
-validators. Previously collected by default into the validator identity account.
-
-- Block Tips Collector: The account used to collect commissioned block tips for
-validators. Previously configured by a Jito CLI parameter.
+- Block Rewards Collector: The account used to collect commissioned block
+rewards for validators. Previously collected by default into the validator
+identity account.
 
 - Inflation Rewards Collector: The account used to collect commissioned
 inflation rewards for validators. Previously collected by default into the vote
 account.
 
-- Block Fees Commission: The commission rate that determines how much of block
-base fee and priority fee revenue is collected by the validator before
-distributing remaining funds to stake delegators. Previously 100% of block fees
-were distributed to the validator identity account.
-
-- Block Tips Commission: The commission rate that determines how much of block
-tip revenue is collected by the validator before distributing remaining funds to
-stake delegators. Previously configured by a Jito CLI parameter.
+- Block Rewards Commission: The commission rate that determines how much of
+block base fee and priority fee revenue is collected by the validator before
+distributing remaining funds to stake delegators. Previously 100% of block
+rewards were distributed to the validator identity account.
 
 - Inflation Rewards Commission: The commission rate that determines how much of 
 stake inflation rewards are collected by the validator before distributing the
@@ -105,9 +98,9 @@ pub enum VoteStateVersions {
 ```
 
 This new version of vote state will include new fields for setting the
-commission and collector account for each of the three sources of validator
-income: inflation rewards, block fees, and block tips. It will also remove
-the `prior_voters` field.
+commission and collector account for each of the sources of validator income:
+inflation rewards and block rewards. It will also remove the `prior_voters`
+field.
 
 ```rust
 pub struct VoteStateV4 {
@@ -116,16 +109,14 @@ pub struct VoteStateV4 {
 
     /// NEW: the collector accounts for validator income
     pub inflation_rewards_collector: Pubkey,
-    pub block_fees_collector: Pubkey,
-    pub block_tips_collector: Pubkey,
+    pub block_rewards_collector: Pubkey,
 
-    /// NEW: percentages (0-100) that represent how much of each income source
-    /// should be given to this VoteAccount
-    pub inflation_rewards_commission: u8,
-    pub block_fees_commission: u8,
-    pub block_tips_commission: u8,
+    /// NEW: basis points (0-10,000) that represent how much of each income
+    /// source should be given to this VoteAccount
+    pub inflation_rewards_commission_bps: u16,
+    pub block_rewards_commission_bps: u16,
 
-    /// NEW: bump seed for deriving this vote accounts stake rewards pool address
+    /// NEW: bump seed for deriving this vote account's stake rewards pool address
     pub stake_rewards_pool_bump_seed: u8,
 
     /// REMOVED
@@ -148,11 +139,9 @@ VoteStateV4 {
     // ..
 
     inflation_rewards_collector: vote_state_v3.node_pubkey,
-    block_fees_collector: vote_state_v3.node_pubkey,
-    block_tips_collector: vote_state_v3.node_pubkey,
-    inflation_rewards_commission: vote_state_v3.commission,
-    block_fees_commission: 100u8,
-    block_tips_commission: 100u8,
+    block_rewards_collector: vote_state_v3.node_pubkey,
+    inflation_rewards_commission_bps: 100u16 * (vote_state_v3.commission as u16),
+    block_rewards_commission_bps: 10_000u16,
     stake_rewards_pool_bump_seed: find_stake_rewards_pool_bump_seed(vote_pubkey),
 
     // ..
@@ -177,7 +166,7 @@ pub enum VoteInstruction {
     UpdateCommission {..} // 5u32
     // ..
     UpdateCommissionWithKind { // 16u32
-        commission: u8,
+        commission_bps: u16,
         kind: CollectorKind,
     },
     UpdateCollectorAccount { // 17u32
@@ -189,8 +178,7 @@ pub enum VoteInstruction {
 #[repr(u8)]
 pub enum CollectorKind {
     InflationRewards = 0,
-    BlockFees,
-    BlockTips,
+    BlockRewards,
 }
 ```
 
