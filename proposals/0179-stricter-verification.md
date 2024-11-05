@@ -6,7 +6,7 @@ authors:
   - Lucas Steuernagel
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2024-10-03
 ---
 
@@ -57,9 +57,9 @@ to arbitrary locations hinders a precise program verification.
 
 `call imm` (opcode `0x85`) must only be allowed to jump to a program counter 
 previously registered as the start of a function. Otherwise 
-`VerifierError::InvalidFunction` must be thrown. Functions must be registered 
-if they are present in the symbol table. The entrypoint to the program must 
-also define a valid function.
+`VerifierError::InvalidFunction` must be thrown. Functions are registered by 
+presence in the symbol table. The entrypoint to the program must also define a 
+valid function.
 
 ### Runtime check for callx
 
