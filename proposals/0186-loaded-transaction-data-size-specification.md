@@ -75,16 +75,15 @@ programdata account.
 
 The proposed algorithm is as follows:
 
-1. Given a transaction, take the unique set of account keys which are used as:
-    * An instruction account.
-    * A program ID for an instruction.
-    * The fee-payer.
-2. Each account's size is determined solely by the byte length of its data prior
-to transaction execution, irrespective of how it is used on the transaction.
-3. For any loaded account identified as a `LoaderV3` program account, add the
-size of the programdata account it references to its own size, irrespective of
-how the program account is used in the transaction.
-4. The total transaction loaded account data size is the sum of these sizes.
+1. The set of accounts that determine loaded transaction data size is defined as
+the unique intersection of:
+    * The set of account keys explicitly specified on the transaction,
+irrespective of how they are used.
+    * The set of programdata accounts referenced by the LoaderV3 program
+accounts specified on the transaction.
+2. Each account's size is defined as the byte length of its data prior to
+transaction execution plus 64 bytes to account for metadata.
+3. The total transaction loaded account data size is the sum of these sizes.
 
 Transactions may include a
 `ComputeBudgetInstruction::SetLoadedAccountsDataSizeLimit` instruction to define
