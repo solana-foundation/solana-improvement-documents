@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2024-11-06
-feature: PaymEPK2oqwT9TXAVfadjztH2H6KfLEB9Hhd5Q5frvP
+feature: PaymEPK2oqwT9TXAVfadjztH2H6KfLEB9Hhd5Q5frvP (https://github.com/anza-xyz/agave/issues/3244)
 supersedes:
 superseded-by:
 extends:
