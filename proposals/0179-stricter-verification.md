@@ -69,6 +69,16 @@ All jump instructions, except for `call` (opcode `0x85`) and `callx` (opcode
 to arbitrary locations hinders a precise program verification. 
 `VerifierError::JumpOutOfCode` must be thrown for offending this rule.
 
+Such a check can be broken down in the following steps:
+
+1. The verifier keeps track of which function it is currently analyzing and 
+scans all instructions.
+2. When it finds a jump instruction, it checks if the jump destination is 
+within the current function's range.
+3. When it reaches the final address of the function, it advances to the next 
+symbol in the symbol table, which contains the next function's start address 
+and range.
+
 `call imm` (opcode `0x85`) must only be allowed to jump to a program counter 
 previously registered as the start of a function. Otherwise 
 `VerifierError::InvalidFunction` must be thrown. Functions are registered by 
