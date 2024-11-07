@@ -44,11 +44,25 @@ Functions must only end with the `ja` (opcode `0x05`) or the exit (opcode
 `0x9D` since SIMD-0178) instruction. Allowing calls to be the last instruction 
 of functions was inconvenient, because when the call returns, and there is no 
 other instruction to redirect the control flow, we will execute the very next 
-program counter, resulting in a fallthrough into another function’s code. 
+program counter, resulting in a fallthrough into another function's code. 
 Offending this new validation condition must throw an 
 `VerifierError::InvalidFunction` error.
 
-### Restrict jump instruction destination
+### Jump restrictions
+
+This SIMD introduces in the two following subsections restrictions for jump 
+destinations to be verified both during runtime and during verification time. 
+They depend on knowing beforehand which program counter addresses represent a 
+valid function and the address range of each function.
+
+For that, we must rely on the ELF symbol table as the only source of truth, 
+as specified in SIMD-178. The ELF symbol table must include function symbols 
+and specify their start address and their range. We must register such symbols 
+as valid functions for verification and runtime checks. Additionally, the 
+contract's entrypoint function must also be registered as a valid function 
+according to the aforementioned rules.
+
+#### Restrict jump instruction destination
 
 All jump instructions, except for `call` (opcode `0x85`) and `callx` (opcode 
 `0x8D`), must now jump to a code location inside their own function. Jumping 
@@ -58,10 +72,9 @@ to arbitrary locations hinders a precise program verification.
 `call imm` (opcode `0x85`) must only be allowed to jump to a program counter 
 previously registered as the start of a function. Otherwise 
 `VerifierError::InvalidFunction` must be thrown. Functions are registered by 
-presence in the symbol table. The entrypoint to the program must also define a 
-valid function.
+presence in the symbol table, according to the previous sention's explanation.
 
-### Runtime check for callx
+#### Runtime check for callx
 
 The jump destination of `callx` (opcode `0x8D`) must be checked during 
 execution time to match the initial address of a registered function. If this 
@@ -70,7 +83,7 @@ measure is supposed to improve security of programs, disallowing the malicious
 use of callx.
 
 A function is registered according to the rules mentioned in the previous 
-section: be present in the symbol table or be the entrypoint.
+section.
 
 ### Limit where a function can start
 
