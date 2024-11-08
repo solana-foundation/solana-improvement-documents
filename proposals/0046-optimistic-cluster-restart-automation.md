@@ -79,7 +79,7 @@ set up their own monitoring accordingly.
 
 However, there are many ways an automatic restart can go wrong, mostly due to
 unforseen situations or software bugs. To make things really safe, we apply
-multiple checks durinng the restart, if any check fails, the automatic restart
+multiple checks during the restart, if any check fails, the automatic restart
 is halted and debugging info printed, waiting for human intervention. Therefore
 we say this is an optimistic cluster restart procedure.
 
