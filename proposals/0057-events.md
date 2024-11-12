@@ -127,10 +127,13 @@ Limit per 48M CU: 200MB
 
 ### RPC-Client
 
-Clients should be able subscribe to events emitted with various filters:
+Clients should be able subscribe to events emitted with various filters, but
+the restriction to a single program id is always required to prevent spoofing
+of events:
 
 ```
 rpc.onEvents(
+    programId: PublicKey,
     callback: EventCallback,
     commitment?: Commitment,
     filters?: EventsFilter[]);
@@ -181,7 +184,6 @@ EventsFilter: (DataSizeFilter|MemcmpFilter|AccountMetaFilter|SignatureFilter)
 DataSizeFilter: {
     dataSize: number;
 }
-
 MemcmpFilter: {
     memcmp: {
         bytes: string;
@@ -191,8 +193,6 @@ MemcmpFilter: {
 AccountMetaFilter : {
     pubkey: Pubkey,
     writeable?: bool,
-    signer?: bool,
-    program? bool,
 }
 SignatureFilter : {
     signature: TransactionSignature
@@ -334,7 +334,7 @@ to Solana quicker and 3rd party indexing providers to provide better data
 services due to a standard way to parse application events. Examples would be
 wallets that can easily parse and display incoming token transfers.
 Once sufficiently adopted, events should superseed all spl-token program
-related custom rpc features, like token balance changes etc.
+related custom RPC features, like token balance changes etc.
 
 ## Security Considerations
 
