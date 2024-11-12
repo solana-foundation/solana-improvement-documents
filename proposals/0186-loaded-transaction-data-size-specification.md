@@ -83,7 +83,10 @@ irrespective of how they are used.
 accounts specified on the transaction.
 2. Each account's size is defined as the byte length of its data prior to
 transaction execution plus 64 bytes to account for metadata.
-3. The total transaction loaded account data size is the sum of these sizes.
+3. There is an additional flat 8248 byte cost for transactions that use an
+address lookup table, accounting for the 8192 bytes for the maximum size of such
+a table plus 56 bytes for metadata.
+4. The total transaction loaded account data size is the sum of these sizes.
 
 Transactions may include a
 `ComputeBudgetInstruction::SetLoadedAccountsDataSizeLimit` instruction to define
