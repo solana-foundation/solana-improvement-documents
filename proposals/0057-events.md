@@ -138,6 +138,7 @@ rpc.onEvents(
 
 Each event emitted calls the callback, the context of the instruction that
 emitted the event is referenced through:
+
 - signature is the transaction's first signature
 - suid is a sequence that follows the natural order of events as emitted
 during the execution of a single transaction starting from 0
@@ -145,6 +146,7 @@ during the execution of a single transaction starting from 0
 which emitted the event
 
 This ensures that clients can easily perform the following workflows:
+
 1. deduplicate events received from multiple validators by the compound unique
 index formed through (slot, signature, suid)
 2. fetch the remaining details like account keys and instruction data
