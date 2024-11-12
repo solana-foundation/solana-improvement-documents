@@ -171,16 +171,11 @@ EventCallback: ((
 ```
 
 DataSizeFilter and MemcmpFilter can be used to filter for specific event types
-using their discriminator. AccountMetaFilter allows to restrict on events
-emitted from transactions reading or writing from/to specific Accounts.
-Similarly it allows to restricted based on specific signers as well on
-executing certain programs. The program filter is important to prevent spoofing
-of events.
-SignatureFilter allows to restrict to events emitted by an individual
-transaction, while waiting for it's confirmation.
+using their discriminator.  SignatureFilter allows to restrict to events
+emitted by an individual transaction, while waiting for it's confirmation.
 
 ```
-EventsFilter: (DataSizeFilter|MemcmpFilter|AccountMetaFilter|SignatureFilter)
+EventsFilter: (DataSizeFilter|MemcmpFilter|SignatureFilter)
 DataSizeFilter: {
     dataSize: number;
 }
@@ -189,10 +184,6 @@ MemcmpFilter: {
         bytes: string;
         offset: number;
     };
-}
-AccountMetaFilter : {
-    pubkey: Pubkey,
-    writeable?: bool,
 }
 SignatureFilter : {
     signature: TransactionSignature
@@ -214,7 +205,7 @@ in entries and then in a block and more specifically sorted descending by the
 compound key: slot, block_entry, transaction_index_in_entry, suid.
 
 ```
-EventLookupFilter: (DataSizeFilter|MemcmpFilter|AccountMetaFilter)
+EventLookupFilter: (DataSizeFilter|MemcmpFilter)
 
 rpc.getSignaturesForEvent(
     programId: PublicKey,
