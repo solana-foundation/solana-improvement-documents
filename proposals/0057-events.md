@@ -137,16 +137,25 @@ rpc.onEvents(
 ```
 
 Each event emitted calls the callback, the context of the instruction that
-emitted the event is referenced through Transaction signature and indexes that
-uniquely identify the instruction. `getTransaction` can be used to fetch the
-remaining details like account keys and instruction data efficiently in case
-they are needed for indexing.
+emitted the event is referenced through:
+- signature is the transaction's first signature
+- suid is a sequence that follows the natural order of events as emitted
+during the execution of a single transaction starting from 0
+- outerInstructionIndex & innerInstructionIndex identify the instruction
+which emitted the event
+
+This ensures that clients can easily perform the following workflows:
+1. deduplicate events received from multiple validators by the compound unique
+index formed through (slot, signature, suid)
+2. fetch the remaining details like account keys and instruction data
+efficiently using `getTransaction`
 
 ```
 EventCallback: ((
-    message: Buffer,
+    data: Buffer,
     instructionContext: {
         signature: TransactionSignature,
+        suid: number,
         outerInstructionIndex: number,
         innerInstructionIndex?: number,
     }
@@ -160,7 +169,8 @@ DataSizeFilter and MemcmpFilter can be used to filter for specific event types
 using their discriminator. AccountMetaFilter allows to restrict on events
 emitted from transactions reading or writing from/to specific Accounts.
 Similarly it allows to restricted based on specific signers as well on
-executing certain programs.
+executing certain programs. The program filter is important to prevent spoofing
+of events.
 SignatureFilter allows to restrict to events emitted by an individual
 transaction, while waiting for it's confirmation.
 
@@ -191,7 +201,15 @@ Clients should be able to query signatures that emitted events with various
 filters. Any query must be constrained to a single programId to allow for
 efficient indexing. Options must allow to paginate the result so that response
 size and latency for programs with a lot of confirmed transactions can be
-controlled.
+controlled. Either before or after can be used. The signature and suid are
+definining respecetively the beginning or end of the sequence which does not
+include the corresponding event. When both before and after are used the
+before option has priority, meaning the sequence starts one event before
+the specified one and ends either when reaching the limit or with the event
+after the specified one. The order of the returned event sequence is
+always in inverse chronological order, regarding how transactions are placed
+in entries and then in a block and more specifically sorted descending by the
+compound key: slot, block_entry, transaction_index_in_entry, suid.
 
 ```
 EventLookupFilter: (DataSizeFilter|MemcmpFilter|AccountMetaFilter)
@@ -203,21 +221,23 @@ rpc.getSignaturesForEvent(
         commitment?: Commitment,
         minContextSlot?: number,
         limit?: number,
-        before?: TransactionSignature,
-        until?: TransactionSignature
+        before?: {
+            signature: TransactionSignature,
+            suid: number,
+        },
+        after?: {
+            signature: TransactionSignature,
+            suid: number,
+        },
     }
 ): Promise<TransactionSignature[]>
 ```
 
 In addition clients should be able to query events directly and index them
-reliably, for that purpose the response is sorted by the order defined by
-how transactions are placed in entries and then in a block, but can change
-due to block re-orgs. A sequence number is returned, that can be incremented
-to populate the offset field for follow-up requests. The last finalized events'
-sequence number should be incremented by 1 for this use-case to force
-re-indexing of events that could potentially change order. Alternatively the
-commitment level of the response can be restricted to finalized which avoids
-this issue completely.
+reliably, without having to resolve signatures independently. Due to block
+re-orgs it is recommened to populate the after option with the signature and
+suid of the last known finalized event. Alternatively, the commitment level of
+the whole response can be restricted to finalized.
 
 ```
 rpc.getEvents(
@@ -225,25 +245,46 @@ rpc.getEvents(
     filters?: EventLookupFilter[],
     options?: {
         commitment?: Commitment,
-        encoding: 'base64' | 'base64+zstd',
+        encoding: 'base64',
+        minContextSlot?: number,
         limit?: number,
-        offset?: number,
+        before?: {
+            signature: TransactionSignature,
+            suid: number,
+        },
+        after?: {
+            signature: TransactionSignature,
+            suid: number,
+        },
     }
 ): Promise<EventResponse[]>
 
 
 EventResponse: {
-    message: Buffer,
+    data: Buffer,
     instructionContext: {
         signature: TransactionSignature,
+        suid: number,
         outerInstructionIndex: number,
         innerInstructionIndex?: number,
     }
     context: {
-        sequence: number,
         slot: number,
         confirmationStatus: "processed" | "confirmed" | "finalized"
     }
+}
+```
+
+For previewing transactions before signing clients should be able to receive
+events when calling `simulateTransaction`. The response should be extended
+to include an array of EventResults under the key "events".
+
+```
+EventResult: {
+    data: [string, "base64" | "base64+zstd"],
+    programId: string,
+    outerInstructionIndex:  number,
+    innerInstructionIndex?: number,
 }
 ```
 
@@ -257,9 +298,9 @@ notification:
 #[derive(Clone, Debug, PartialEq)]
 pub struct Event {
     pub message: Vec<u8>;
-    pub outerInstructionIndex: usize,
-    pub innerInstructionIndex: Option<usize>,
-    pub eventIndexInBlock: usize,
+    pub suid: u32,
+    pub outerInstructionIndex: u16,
+    pub innerInstructionIndex: Option<u16>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -280,9 +321,8 @@ pub struct TransactionStatusMeta {
 }
 ```
 
-Once the current spl-token program has been migrated to emit events, the
-transaction status meta should no longer contain the pre and post token
-balances.
+Once the current token programs have been migrated to emit events like ERC20
+the pre_ / post_token_balances in TransactionStatusMeta could be deprecated.
 
 ## Impact
 
@@ -290,7 +330,7 @@ This will greatly simplify indexing and tooling for most of the complex
 programs on solana. It will help new developers with EVM experience to onboard
 to Solana quicker and 3rd party indexing providers to provide better data
 services due to a standard way to parse application events. Examples would be
-wallets that can easily parse and display user transaction history.
+wallets that can easily parse and display incoming token transfers.
 Once sufficiently adopted, events should superseed all spl-token program
 related custom rpc features, like token balance changes etc.
 
