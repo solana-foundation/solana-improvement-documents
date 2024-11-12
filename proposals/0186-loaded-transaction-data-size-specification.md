@@ -104,12 +104,6 @@ them.
 Read-only and writable accounts are treated the same. In the future, when direct
 mapping is enabled, this SIMD may be amended to count them differently.
 
-As a consequence of 1 and 3, for LoaderV3 programs, programdata is counted twice
-if a transaction explicitly references the program account and its programdata
-account. This is done partly for simplicity, and partly to account for the cost
-of maintaining the compiled program in addition to the actual bytes of
-the programdata account.
-
 We include programdata size in account size for LoaderV3 programs because using
 the program account on a transaction forces an unconditional load of programdata
 to compile the program for execution. We always count it, even when the program
@@ -137,9 +131,11 @@ for no real benefit.
 programs in particular, for instance only counting programs that are valid for
 execution in the current slot. However, this would implicitly couple transaction
 data size with the results of ELF validation, which is highly undesirable.
-* We considered loading and counting sizes for accounts on the transaction
-account list which are not used for any purpose. This is the current behavior,
-but there is no reason to load such accounts at all.
+* We considered skipping loading of accounts included in the transaction
+accounts list but not used as an instruction account, program ID, or fee-payer.
+However, [SIMD-0163](
+https://github.com/solana-foundation/solana-improvement-documents/pull/163)
+intends to leverage these accounts to make CPI more CU-efficient.
 
 ## Impact
 
