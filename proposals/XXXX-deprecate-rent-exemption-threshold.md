@@ -76,7 +76,7 @@ moving forwards, replacing it with simple `u64` math, ie:
 ```rs
 /// Minimum balance due for rent-exemption of a given account data size.
 pub fn minimum_balance(&self, data_len: usize) -> u64 {
-    (ACCOUNT_STORAGE_OVERHEAD + data_len as u64) * self.lamports_per_byte_year
+    (ACCOUNT_STORAGE_OVERHEAD + data_len as u64) * self.lamports_per_byte
 }
 ```
 
@@ -103,7 +103,7 @@ math themselves.
 This change will significantly improve the compute unit (CU) consumption of
 new onchain programs using updated SDKs programs that calculate the minimum 
 lamports balance required for rent exemption. Currently, the calculation of the 
-minimum balance for rent exemption  (`Rent::minimum_balance`) consumes
+minimum balance for rent exemption (`Rent::minimum_balance`) consumes
 approximately `256` CUs; with the proposed change, this will be reduced to
 just `8` CUs. Existing programs will not be impacted.
 
@@ -117,7 +117,7 @@ None.
 
 ## Backwards Compatibility
 
-This feature is backwards compatible. It does  not change the absolute value 
-required for an account to be rent exempt and the  current way of calculating 
+This feature is backwards compatible. It does not change the absolute value 
+required for an account to be rent exempt and the current way of calculating 
 the threshold will continue evaluate to the same value. Any deployed program 
 will be unaffected.
