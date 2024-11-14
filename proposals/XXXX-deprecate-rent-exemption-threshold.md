@@ -119,5 +119,5 @@ None.
 
 This feature is backwards compatible. It does not change the absolute value 
 required for an account to be rent exempt and the current way of calculating 
-the threshold will continue evaluate to the same value. Any deployed program 
+the threshold will continue to evaluate to the same value. Any deployed program 
 will be unaffected.
