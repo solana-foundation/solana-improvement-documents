@@ -42,6 +42,9 @@ customize and build our own rate limiting mechanism based on the UDP directly,
 this is non-trivial and cannot solve the security problem without also rely on
 some sort of crypto handshaking. 
 
+## New Terminology
+
+None
 
 ## Detailed Design
 
