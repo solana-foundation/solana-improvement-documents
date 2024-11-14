@@ -400,6 +400,24 @@ guarantees that whichever slot we select for HeaviestFork, we have enough
 validators in the restart. Note that the epoch containing local root should
 always be considered, because root should have > 33% stake.
 
+Now we prove this is safe, whenever there is a slot being optimistically
+confirmed in the new epoch, we will only exit the aggregating of
+`RestartLastVotedForkSlots` stage if > 80% in the new epoch joined.
+
+1. Assume slot `X` is optimistically confirmed in the new epoch, it has
+>67% stake in the new epoch.
+
+2. Our stake warmup/cooldown limit is at 9% currently, so at least
+67% - 9% = 58% of the stake were from the old epoch.
+
+3. We always have >80% stake of the old epoch, so at least
+58% - 20% = 38% of the stake were in restart. Excluding non-conforming
+stake, at least 38% - 5% = 33% should be in the restart and they
+should at least report they voted for `X` which is in the new epoch.
+
+4. According to the above rule we will require >80% stake in the new
+epoch as well.
+
 ## Backwards Compatibility
 
 This change is backward compatible with previous versions, because validators
