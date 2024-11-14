@@ -67,6 +67,8 @@ pub fn minimum_balance(&self, data_len: usize) -> u64 {
 
 - Don't change `exemption_threshold` and instead ossify it at `2.0f64`
 
+- Bundle changes to rent values with existing rent change proposals to avoid multiple SIMDs
+
 ## Impact
 
 New onchain programs using updated SDKs will use far fewer CUs when calculating rent exemption. Calculating rent exemption itself will become simpler and more reliable. Existing programs will not be impacted.
