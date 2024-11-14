@@ -14,7 +14,7 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-Rename `lamports_per_byte_year` to `lamports_per_byte`, change default value from 3480 to 6960, change `exemption_threshold` to `1.0f64` and deprecate it from the protocol, enabling us to remove `f64` math from all Rent-related SDKs in onchain programs moving forward.
+Rename `lamports_per_byte_year` to `lamports_per_byte`, change default value from 3480 to 6960, change `exemption_threshold` to `1.0f64` and deprecate it from the protocol, enabling us to remove `f64` math from rent calculation and all rent-related SDKs in onchain programs moving forward.
 
 ## Motivation
 
