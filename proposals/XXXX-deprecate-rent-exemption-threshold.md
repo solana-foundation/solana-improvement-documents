@@ -65,7 +65,7 @@ pub fn minimum_balance(&self, data_len: usize) -> u64 {
 
 ## Impact
 
-New onchain programs using updated SDKs will use far fewer CUs when caluclating rent exemption. Calculating rent exemption itself will become easier and more reliable. Existing programs will not be impacted.
+New onchain programs using updated SDKs will use far fewer CUs when calculating rent exemption. Calculating rent exemption itself will become simpler and more reliable. Existing programs will not be impacted.
 
 ## Security Considerations
 
