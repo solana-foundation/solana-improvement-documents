@@ -67,6 +67,30 @@ constraints may be included in a block, so long as it is otherwise valid.
 The transaction must pay transaction fees, and if present, the nonce must be
 advanced.
 
+Constraints must be checked before committing transactions and voting.
+It is reccomended that the constraints are checked before transaction
+execution, in order to avoid unnecessary computation.
+
+The `TransactionError` variants do not need to change from their current
+values. This proposal only changes how the validator handles these errors.
+For completeness, the following error variants are affected:
+
+- `MaxLoadedAccountDataSizeExceeded` - breaking constraint 1:
+  - Loaded acount data exceeds the specified or default limit.
+  - There are proposed changes to the evaluation of this constraint:
+    [SIMD-0186](https://github.com/solana-foundation/solana-improvement-documents/pull/186)
+- `ProgramAccountNotFound`, `InvalidProgramForExecution` - breaking constraint 2.
+  Currently checks are performed in this order:
+  - (`ProgramAccountNotFound`) Transaction-level instruction invokes an
+    account that does not exist
+  - (`InvalidProgramForExecution`) Transaction-level instruction invokes an
+    account that is not executable
+  - (`InvalidProgramForExecution`) Transaction-level instruction invokes an
+    account which is not owned by an account which is owned by the native
+    loader (only relevant after [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162))
+  - (``ProgramAccountNotFound`) Transaction-level instruction invokes an
+    account whose owner does not exist (only relevant after [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162))
+
 ## Alternatives Considered
 
 - Do nothing
