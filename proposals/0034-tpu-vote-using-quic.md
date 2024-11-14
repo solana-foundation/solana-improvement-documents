@@ -28,9 +28,9 @@ effectiveness. The concurrent UDP based TPU vote does not have any flow control
 mechanism.
 
 We propose to apply the pattern taken for TPU transaction processing to TPU vote
-processing -- by utlizing the flow control mechanism which were developed including
-built-in QUIC protocol level flow control, and application-level rate limiting on
-connections and packets.
+processing -- by utlizing the flow control mechanism which were developed
+including built-in QUIC protocol level flow control, and application-level rate
+limiting on connections and packets.
 
 ## Alternatives Considered
 
@@ -60,8 +60,8 @@ Once a QUIC connection is established, the client can send vote transaction
 using QUIC UNI streams. In this design, a stream is used to send one single Vote
 transaction. After that the stream is closed.
 
-The server only supports connections from the nodes which has stakes who can vote.
-Connections from unstaked nodes are rejected with `disallowed` code.
+The server only supports connections from the nodes which has stakes who can
+vote. Connections from unstaked nodes are rejected with `disallowed` code.
 
 The following QOS mechanisms are employed:
 
@@ -73,35 +73,37 @@ The following QOS mechanisms are employed:
 of the validator's stake over the total stakes of the network.
 * Maximum of vote transactions per unit time which is also stake weighted
 
-When the server processes a stream and its chunk, it may timeout and close the stream
-if it does not receive the data in configured timeout window (2s).
+When the server processes a stream and its chunk, it may timeout and close the
+stream if it does not receive the data in configured timeout window (2s).
 
-The validator also uses gossip to pull votes from other validator. This proposed change
-does not change the transport for that which will remain to be UDP based. As the gossip
-based votes are pulled by the validator, the concern with increased votes traffic is
-lessened.
+The validator also uses gossip to pull votes from other validator. This proposed
+change does not change the transport for that which will remain to be UDP based.
+As the gossip based votes are pulled by the validator, the concern with
+increased votes traffic is lessened.
 
 ## Impact
 
- QUIC compared with UDP is connection based. There is an extra overhead to establish
- the connections when sending a vote. To minimize this, the client side can employ
- connection caching and pre-cache warmer mechanism based on the leader schedule.
+ QUIC compared with UDP is connection based. There is an extra overhead to
+ establish the connections when sending a vote. To minimize this, the client
+ side can employ connection caching and pre-cache warmer mechanism based on the
+ leader schedule.
 
 ## Security Considerations
 
-The are no net new security vulnerability as QUIC TPU transaction has already been in-place.
-Similar DoS attack can be targeted against the new QUIC port used by TPU vote. The connection
-rate limiting is one tool to fend off such attacks.
+The are no net new security vulnerability as QUIC TPU transaction has already
+been in-place. Similar DoS attack can be targeted against the new QUIC port used
+by TPU vote. The connection rate limiting is one tool to fend off such attacks.
 
 ## Backwards Compatibility
 
-Care need to taken to ensure a smooth transition into using QUIC for TPU votes from UDP.
+Care need to taken to ensure a smooth transition into using QUIC for TPU votes
+from UDP.
 
-Phase 1. The server side will support both UDP and QUIC for TPU votes. No clients send
-TPU votes via QUIC. 
+Phase 1. The server side will support both UDP and QUIC for TPU votes. No
+clients send TPU votes via QUIC. 
 
-Phase 2. After all staked nodes are upgraded with support of receiving TPU votes via QUIC,
-restart the validators with configuration to send TPU votes via QUIC. 
+Phase 2. After all staked nodes are upgraded with support of receiving TPU votes
+via QUIC, restart the validators with configuration to send TPU votes via QUIC. 
 
-Phase 3. Turn off UDP based TPU votes listener on the server side once all staked nodes
-complete phase 2.
+Phase 3. Turn off UDP based TPU votes listener on the server side once all
+staked nodes complete phase 2.
