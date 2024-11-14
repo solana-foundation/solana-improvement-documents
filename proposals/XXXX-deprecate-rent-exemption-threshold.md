@@ -4,7 +4,7 @@ title: Deprecate Rent Exemption Threshold
 authors:
   - Dean Little (@deanmlittle)
   - Leonardo Donatacci (@L0STE)
-  - Febo (@0x_febo)
+  - Febo (@0febo)
 category: Standard/Meta
 type: Core
 status: Draft
