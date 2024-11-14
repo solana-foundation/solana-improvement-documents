@@ -14,11 +14,11 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-Rename `lamports_per_byte_year` to `lamports_per_byte`, change default value from 3480 to 6960, change `exemption_threshold` to `1.0f64` and deprecate all `f64` math in all Rent-related SDKs and onchain programs moving forward.
+Rename `lamports_per_byte_year` to `lamports_per_byte`, change default value from 3480 to 6960, change `exemption_threshold` to `1.0f64` and deprecate it from the protocol, enabling us to remove `f64` math from all Rent-related SDKs in onchain programs moving forward.
 
 ## Motivation
 
-Emulating floating point math is expensive inside of SVM due to the lack of native floating point number support. This makes calculating the rent exempt threshold cost >100 more CUs than it would if we were to simply use a u64. This is due to the `exemption_threshold`, which is currently set to `2.0` years. Since rent exemption is no longer time-based, we have the opportunity to make this commonly used calculation much more performant and simplify our tooling without affecting the existing API. It also simplifies any further changes we may want to make to Rent down the line.
+Emulating floating point math is expensive inside of SVM due to the lack of native floating point number support. This makes calculating the rent exempt threshold cost ~248 more CUs than it would if we were to simply use a u64. This is due to the `exemption_threshold`, which is currently set to `2.0` years. Since rent exemption is no longer time-based, we have the opportunity to make this commonly used calculation much more performant and simplify our tooling without affecting the existing API. It also simplifies any further changes we may want to make to Rent down the line.
 
 ## New Terminology
 
@@ -75,6 +75,6 @@ None.
 
 None.
 
-## Backwards Compatibility *(Optional)*
+## Backwards Compatibility
 
 This feature is backwards compatible.
