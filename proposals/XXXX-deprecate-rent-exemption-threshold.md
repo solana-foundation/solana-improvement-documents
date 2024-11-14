@@ -18,7 +18,7 @@ Rename `lamports_per_byte_year` to `lamports_per_byte`, change default value fro
 
 ## Motivation
 
-Emulating floating point math is expensive inside of SVM due to the lack of native floating point number support. This makes calculating the rent exempt threshold cost ~248 more CUs than it would if we were to simply use a u64. This is due to the `exemption_threshold`, which is currently set to `2.0` years. Since rent exemption is no longer time-based, we have the opportunity to make this commonly used calculation much more performant and simplify our tooling without affecting the existing API. It also simplifies any further changes we may want to make to Rent down the line.
+Emulating floating point math is expensive inside of SVM due to the lack of native floating point number support. This makes calculating the rent exempt threshold cost ~248 more CUs than it would if we were to simply use a u64. This is due to the `exemption_threshold`, which is currently set to `2.0` years. Since rent exemption is no longer time-based, we have the opportunity to make this commonly used calculation much more performant and simplify our tooling without affecting the existing API. It also simplifies any further changes we may want to make to rent down the line.
 
 ## New Terminology
 
@@ -38,7 +38,7 @@ Set `DEFAULT_LAMPORTS_PER_BYTE` from its current value of `3480` (the u64 value 
 pub const DEFAULT_LAMPORTS_PER_BYTE: u64 = 6960;
 ```
 
-Rename `lamports_per_byte_year` in the Rent account to `lamports_per_byte` to reflect that Rent is no longer time-based.
+Rename `lamports_per_byte_year` in `Rent` to `lamports_per_byte` to reflect that rent is no longer time-based.
 
 ```rs
 pub struct Rent {
@@ -48,7 +48,7 @@ pub struct Rent {
 }
 ```
 
-Officially deprecate `exemption_threshold` and remove all f64 math from Rent calculations in all SDKs and onchain programs moving forwards, replacing it with simple u64 math, ie:
+Officially deprecate `exemption_threshold` and remove all f64 math from rent calculations in all SDKs and onchain programs moving forwards, replacing it with simple u64 math, ie:
 
 ```rs
 /// Minimum balance due for rent-exemption of a given account data size.
