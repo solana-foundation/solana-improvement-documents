@@ -53,7 +53,7 @@ Officially deprecate `exemption_threshold` and remove all f64 math from Rent cal
 ```rs
 /// Minimum balance due for rent-exemption of a given account data size.
 pub fn minimum_balance(&self, data_len: usize) -> u64 {
-    (ACCOUNT_STORAGE_OVERHEAD + data_len as u64) * self.lamports_per_byte_year
+    (ACCOUNT_STORAGE_OVERHEAD + data_len as u64) * self.lamports_per_byte
 }
 ```
 
@@ -61,7 +61,11 @@ pub fn minimum_balance(&self, data_len: usize) -> u64 {
 
 - Leave things as they are.
 
-- Allow users to make the assumption that `2.0` will remain stable and do u64 math themselves at risk of the protocol changing on them.
+- Allow users to make the assumption that `2.0` will remain stable and do u64 math themselves at risk of the protocol changing.
+
+- Don't rename `lamports_per_byte_year`
+
+- Don't change `exemption_threshold` and instead ossify it at `2.0f64`
 
 ## Impact
 
