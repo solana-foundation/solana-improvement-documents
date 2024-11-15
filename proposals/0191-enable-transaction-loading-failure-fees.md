@@ -73,23 +73,36 @@ constraints MUST be checked BEFORE committing transaction changes.
 
 The `TransactionError` variants do not need to change from their current
 values. This proposal only changes how the validator handles these errors.
-For completeness, the following error variants are affected:
 
-- `MaxLoadedAccountDataSizeExceeded` - breaking constraint 1:
-  - Loaded acount data exceeds the specified or default limit.
-  - There are proposed changes to the evaluation of this constraint:
-    [SIMD-0186](https://github.com/solana-foundation/solana-improvement-documents/pull/186)
-- `ProgramAccountNotFound`, `InvalidProgramForExecution` - breaking constraint 2.
-  Currently checks are performed in this order:
-  - (`ProgramAccountNotFound`) Transaction-level instruction invokes an
-    account that does not exist
-  - (`InvalidProgramForExecution`) Transaction-level instruction invokes an
-    account that is not executable
-  - (`InvalidProgramForExecution`) Transaction-level instruction invokes an
-    account which is not owned by an account which is owned by the native
-    loader (only relevant after [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162))
-  - (``ProgramAccountNotFound`) Transaction-level instruction invokes an
-    account whose owner does not exist (only relevant after [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162))
+For each `Pubkey` included in the transaction message, or loaded from an
+address lookup table, the following checks MUST be performed, and SHOULD be
+performed in this order for error-consistency:
+
+- Check if the account exists. If not, assume default account state (empty).
+- Accumulate account's `data` field `len`. If the total exceeds the
+  `requested_loaded_accounts_data_size_limit` (or default if unspecified),
+  return `MaxLoadedAccountDataSizeExceeded`.
+
+For each transction-level instruction in the transaction the following
+checks MUST be performed, and SHOULD be performed in this order for
+error-consistency:
+
+- If the program account is `native_loader`, continue to next
+  instruction.
+- If the program account does not exist, return `ProgramAccountNotFound`
+- If the program account is not executable, return ``InvalidProgramForExecution`
+  - This only applies until [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162) is activated
+- If the program account's owner is the native_loader, continue to next
+  instruction.
+- If the program account's owner does not exist, return `ProgramAccountNotFound`
+- If the program account's owner is not the native_loader, return ``InvalidProgramForExecution`
+- If the program account's owner is not executable, return ``InvalidProgramForExecution`
+  - This only applies until [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162) is activated
+- Accumulate the owner account's `data` field `len` and check if the total
+  exceeds the `requested_loaded_accounts_data_size_limit` (or default if
+  unspecified), return `MaxLoadedAccountDataSizeExceeded`.
+  - The owner's data size MUST only be accumulated on the first instruction that uses the
+    program account.
 
 ## Alternatives Considered
 
