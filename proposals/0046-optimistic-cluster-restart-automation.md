@@ -404,9 +404,8 @@ Now we prove this is safe, whenever there is a slot being optimistically
 confirmed in the new epoch, we will only exit the aggregating of
 `RestartLastVotedForkSlots` stage if > 80% in the new epoch joined:
 
-
-1. Assume slot `X` is optimistically confirmed in the new epoch, it has
->67% stake in the new epoch.
+1. Assume slot `X` is optimistically confirmed in the new epoch, it has >67%
+stake in the new epoch.
 
 2. Our stake warmup/cooldown limit is at 9% currently, so at least
 67% - 9% = 58% of the stake were from the old epoch.
