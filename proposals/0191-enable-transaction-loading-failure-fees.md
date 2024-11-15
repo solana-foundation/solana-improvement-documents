@@ -74,6 +74,9 @@ constraints MUST be checked BEFORE committing transaction changes.
 The `TransactionError` variants do not need to change from their current
 values. This proposal only changes how the validator handles these errors.
 
+`agave` currently performs the relevant checks in the following order.
+This order is not necessary for consensus, and is only provided for clarity.
+
 For each `Pubkey` included in the transaction message, or loaded from an
 address lookup table, the following checks MUST be performed, and SHOULD be
 performed in this order for error-consistency:
