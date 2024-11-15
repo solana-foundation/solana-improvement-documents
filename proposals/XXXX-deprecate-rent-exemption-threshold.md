@@ -86,15 +86,15 @@ implementation will be unaffected.
 
 ## Alternatives Considered
 
-* Leave things as they are.
+- Leave things as they are.
   - Calculating rent exemption on a program remains an 
 expensive operation.
 
-* Allow users to make the assumption that `2.0` will remain stable and do `u64` 
+- Allow users to make the assumption that `2.0` will remain stable and do `u64` 
 math themselves.
   - Risk of the protocol changing on them.
 
-* Perform the "conversion" ouside the VM and change the type of 
+- Perform the "conversion" ouside the VM and change the type of 
 `exemption_threshold` to a `u64` using a new `RentV2` struct.
   - Requires a new syscall and sysvar.
 
