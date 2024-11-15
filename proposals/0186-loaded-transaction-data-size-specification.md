@@ -38,10 +38,6 @@ contain valid programs for execution may or may not be counted against the
 transaction data size total depending on how they are used on the transaction.
 This includes, but is not limited to, LoaderV3 buffer accounts, and accounts
 which fail ELF validation.
-* Accounts can be included on a transaction account list without being an
-instruction account, fee-payer, or program ID. These accounts are presently
-loaded and counted against transaction data size, although they can never be
-used for any purpose by the transaction.
 
 All validator clients must arrive at precisely the same transaction data size
 for all transactions because a difference of one byte can determine whether a
@@ -62,7 +58,7 @@ array, which allows the program to view the actual bytes contained in the
 account. CPI can only happen through programs provided as instruction accounts.
 * Transaction accounts list: all accounts for the transaction, which includes
 instruction accounts, the fee-payer, program IDs, and any extra accounts added
-to the list but not used for any purpose.
+to the list but not explicitly available to programs.
 * LoaderV3 program account: an account owned by
 `BPFLoaderUpgradeab1e11111111111111111111111` which contains in its account data
 the first four bytes `02 00 00 00` followed by a pubkey which points to an
@@ -100,17 +96,13 @@ Adding required loaders to transaction data size is abolished. They are treated
 the same as any other account: counted if used in a manner described by 1, not
 counted otherwise.
 
-No account that falls outside of the three categories listed by 1 is counted
-against transaction data size. Validator clients are free to decline to load
-them.
-
 Read-only and writable accounts are treated the same. In the future, when direct
 mapping is enabled, this SIMD may be amended to count them differently.
 
-We include programdata size in account size for LoaderV3 programs because using
-the program account on a transaction forces an unconditional load of programdata
-to compile the program for execution. We always count it, even when the program
-is an instruction account, because the program must be available for CPI.
+We include programdata size for LoaderV3 programs because using the program
+account on a transaction forces an unconditional load of programdata to compile
+the program for execution. We always count it, even when the program account is
+not a transaction program ID, because the program must be available for CPI.
 
 There is no special handling for any account owned by the native loader,
 LoaderV1, or LoaderV2.
