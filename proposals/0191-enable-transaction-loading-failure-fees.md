@@ -67,9 +67,9 @@ constraints may be included in a block, so long as it is otherwise valid.
 The transaction must pay transaction fees, and if present, the nonce must be
 advanced.
 
-Constraints must be checked before committing transactions and voting.
-It is reccomended that the constraints are checked before transaction
-execution, in order to avoid unnecessary computation.
+Constraints SHOULD be checked for each transaction before execution to avoid
+unnecessary computation. If a constraint violating transaction is executed, the
+constraints MUST be checked BEFORE committing transaction changes.
 
 The `TransactionError` variants do not need to change from their current
 values. This proposal only changes how the validator handles these errors.
