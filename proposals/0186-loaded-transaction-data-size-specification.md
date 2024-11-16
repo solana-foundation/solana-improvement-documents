@@ -89,8 +89,11 @@ Transactions may include a
 a lower data size limit for the transaction. Otherwise, the default limit is
 64MiB (`64 * 1024 * 1024` bytes).
 
-If a transaction exceeds its data size limit, the transaction is failed. Fees
-will be charged once `enable_transaction_loading_failure_fees` is enabled.
+If a transaction exceeds its data size limit, a loading failure occurs. This
+SIMD does not change any aspect of how such a failure is handled. At time of
+writing, such a transaction would be excluded from the ledger. When
+`enable_transaction_loading_failure_fees` is enabled, it will be written to the
+ledger and charged fees as a processed, failed transaction.
 
 Adding required loaders to transaction data size is abolished. They are treated
 the same as any other account: counted if used in a manner described by 1, not
