@@ -1,5 +1,5 @@
 ---
-simd: '0XXX'
+simd: '0194'
 title: Deprecate Rent Exemption Threshold
 authors:
   - Dean Little (@deanmlittle)
