@@ -94,18 +94,22 @@ error-consistency:
   instruction.
 - If the program account does not exist, return `ProgramAccountNotFound`
 - If the program account is not executable, return ``InvalidProgramForExecution`
-  - This only applies until [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162) is activated
+  - This only applies until
+    [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162)
+    is activated
 - If the program account's owner is the native_loader, continue to next
   instruction.
 - If the program account's owner does not exist, return `ProgramAccountNotFound`
 - If the program account's owner is not the native_loader, return ``InvalidProgramForExecution`
 - If the program account's owner is not executable, return ``InvalidProgramForExecution`
-  - This only applies until [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162) is activated
+  - This only applies until
+    [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162)
+    is activated
 - Accumulate the owner account's `data` field `len` and check if the total
   exceeds the `requested_loaded_accounts_data_size_limit` (or default if
   unspecified), return `MaxLoadedAccountDataSizeExceeded`.
-  - The owner's data size MUST only be accumulated on the first instruction that uses the
-    program account.
+  - The owner's data size MUST only be accumulated on the first instruction
+    that uses the program account.
 
 ## Alternatives Considered
 
