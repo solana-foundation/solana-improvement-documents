@@ -5,7 +5,7 @@ authors:
   - Alexander Meißner
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2024-08-15
 feature: TBD
 ---
@@ -45,9 +45,13 @@ None.
 
 ## Detailed Design
 
-`LoaderV411111111111111111111111111111111111` program management and execution
-must be enabled with the associated feature gate, which simultaneously disables
-new deployments on loader-v3 (`BPFLoaderUpgradeab1e11111111111111111111111`),
+The associated feature gate must:
+
+- add loader-v4 to the write lock demotion exceptions
+- enable loader-v4 `LoaderV411111111111111111111111111111111111` program
+management and execution
+- simultaneously disable new deployments on loader-v3
+(`BPFLoaderUpgradeab1e11111111111111111111111`),
 throwing `InvalidIstructionData` if `DeployWithMaxDataLen` is called.
 
 ### Owned Program Accounts
@@ -86,18 +90,19 @@ otherwise throw `Immutable`
 
 Invoking programs owned by loader-v4 checks in the following order that:
 
-- the owner of the program account is loader-v4,
-otherwise throw `UnsupportedProgramId`
-- the program account is at least as long enough for the header,
-otherwise throw `AccountDataTooSmall`
-- the status stored in the program account is not retracted,
-otherwise throw `UnsupportedProgramId`
-- the program account was not deployed within the current slot
-(delay visibility), otherwise throw `UnsupportedProgramId`
+- the owner of the program account is loader-v4
+- the program account is at least as long enough for the header
+- the status stored in the program account is not retracted
+- the program account was not deployed within the current slot (delay
+visibility)
 - the executable file stored in the program account passes executable
-verification, otherwise throw `UnsupportedProgramId`
+verification
+
+failing any of the above checks must throw `UnsupportedProgramId`.
 
 ### Program Management Instructions
+
+All program management instructions must cost 2000 CUs.
 
 #### Write
 
@@ -187,8 +192,10 @@ verification, otherwise throw `UnsupportedProgramId`
     otherwise throw `InvalidArgument`
     - Check that the executable file stored in the source program account
     passes executable verification
-    - The feature set that the executable file is verified against is not
-necessarily the current one, but the one of the epoch of the next slot
+      - The feature set that the executable file is verified against is not
+      necessarily the current one, but the one of the epoch of the next slot
+      - Also, during deployment certain deprecated syscalls are disabled,
+      this stays the same as in the older loaders
     - Copy the entire source program account into the program account
     - Set the length of the source program account to zero
     - Transfer all funds of the  source program account to the program
