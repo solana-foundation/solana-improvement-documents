@@ -55,12 +55,10 @@ None
 
 ## Detailed Design
 
-1. Define Compute Units (CUs) on a per-instruction basis: Each builtin
-   instruction is assigned a predetermined, static CU consumption value, denoted
-as DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS, rather than a program-wide
-allocation. When the virtual machine (VM) invokes a builtin instruction, the
-specified DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS is consistently deducted
-from the CU Meter.
+1. Retain the existing DEFAULT_COMPUTE_UNITS for builtin programs.
+   When the virtual machine (VM) invokes a builtin instruction, the
+statically defined DEFAULT_COMPUTE_UNITS is consistently deducted from the CU
+Meter.
 
 2. Establish a static maximum CU allocation: Define a global compute unit limit
    of 3,000 CUs, denoted as MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT, to
@@ -80,7 +78,7 @@ among current built-ins. The proposed 3,000 CU limit slightly exceeds this
 requirement, allowing for controlled flexibility without an excessive margin.
 
 3. Handling invalid CU requests: Transactions will fail if they request:
-   - More than MAX_COMPUTE_UNIT_LIMIT
+   - More than MAX_COMPUTE_UNIT_LIMIT per transaction, or
    - Less than the sum of all included builtin instructions'
      MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT
 
