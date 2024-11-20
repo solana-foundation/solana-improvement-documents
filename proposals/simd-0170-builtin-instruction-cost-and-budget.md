@@ -1,6 +1,6 @@
 ---
 simd: '0170'
-title: Reserve sufficient CUs for builtin instructions
+title: Reserve minimal CUs for builtins
 authors:
   - Tao Zhu (Anza)
 category: Standard
