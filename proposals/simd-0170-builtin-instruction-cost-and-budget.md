@@ -51,8 +51,9 @@ program instruction and is used to configure both CU meter allocations and block
 producer CU limits reservation for all builtin instructions.
 
 The static list of builtin program id's that will have 3,000 compute units
-allocated are listed below, note that the builtins must be owned by the native
-loader.
+allocated are listed below, note that when builtins are migrated to sBPF
+programs, they MUST be removed from this list and have the default 200k
+compute units allocated instead.
 
 - Stake11111111111111111111111111111111111111
 - Config1111111111111111111111111111111111111
