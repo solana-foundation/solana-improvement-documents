@@ -20,32 +20,19 @@ program instruction allocate 3,000 compute units rather than 200,000.
 
 ## Motivation
 
-This proposal addresses two key issues related to CU allocation and consumption
+This proposal addresses an issue related to CU allocation and consumption
 for builtin programs while aiming to avoid adding unnecessary complexity.
 
-1. Accurate CU tracking without post-execution adjust-up: Currently,
-   builtin instructions deduct a fixed amount of CUs (DEFAULT_COMPUTE_UNITS)
-from both the CU meter and block limits after execution. However, the CU meter
-allocates a much larger value (DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT) to each
-builtin instruction. This discrepancy creates imprecise CU tracking and may
-require block producers to account for additional CUs after a transaction's
-execution, potentially causing block limits to be exceeded.
-
-   Furthermore, builtins can conditionally CPI into other programs, introducing
-variability in CU consumption. This unpredictability makes it difficult to
-allocate CUs upfront solely based on CUs builtin consumes during execution, also
-adds complexity to the tracking process.
-
-2. Preventing over-allocation of CUs: Over-allocating CUs for builtins
+- Preventing over-allocation of CUs: Over-allocating CUs for builtins
    reduces block density, lowers network throughput, and can degrade block
 producer performance by causing repeated transaction retries. Avoiding excessive
 CU allocation is critical for maximizing block efficiency and minimizing network
 delays.
 
-To resolve these issues, we propose statically defining the CU cost of builtin
-instructions based on worst-case scenarios, including potential CPI calls. A
-unified MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT will standardize CU allocation
-for both block producers and the CU meter.
+To resolve this issue, we propose statically defining the CU reservation of
+builtin instructions based on worst-case scenarios, including potential CPI
+calls. A unified MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT will standardize CU
+allocation for both block producers and the CU meter.
 
 ## New Terminology
 
