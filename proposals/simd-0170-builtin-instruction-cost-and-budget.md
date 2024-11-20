@@ -40,10 +40,10 @@ None
 
 ## Detailed Design
 
-Establish a static maximum CU allocation: Define a global compute unit limit
-of 3,000 CUs, denoted as MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT, to
-accommodate worst-case execution scenarios, including potential Cross-Program
-Invocations (CPIs). This uniform limit is applied to each builtin program
+Establish a static maximum allocation of 3,000 CU's for builtin programs denoted as
+`MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT`, which is larger than all actual
+compute unit costs of builtin programs as well as the potential Cross-Program
+Invocations (CPIs) they do. This uniform limit is applied to each builtin program
 instruction and is used to configure both CU meter allocations and block
 producer CU limits reservation for all builtin instructions.
 
