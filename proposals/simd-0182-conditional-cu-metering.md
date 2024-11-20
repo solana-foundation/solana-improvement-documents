@@ -17,7 +17,7 @@ extends:
 
 Adjusting how CU consumption is measured based on the conditions of transaction
 execution: successful completion will consume actual CUs, but certain irregular
-failures will result in the transaction automatically consuming all requested
+failures in the sBPF VM will result in the transaction automatically consuming all requested
 CUs.
 
 ## Motivation
