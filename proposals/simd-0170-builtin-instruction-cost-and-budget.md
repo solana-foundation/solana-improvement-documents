@@ -1,6 +1,6 @@
 ---
 simd: '0170'
-title: Specifying CU Definitions for Builtins
+title: Reserve sufficient CUs for builtin instructions
 authors:
   - Tao Zhu (Anza)
 category: Standard
@@ -15,10 +15,8 @@ extends:
 
 ## Summary
 
-1. Builtin programs should consume a predefined number of CUs for each
-   instruction.
-2. Since builtins can invoke other programs (CPI), they should allocate enough
-   but granular CUs to ensure successful execution without over-allocation.
+If a transaction doesn't request a compute budget limit, then for each builtin
+program instruction allocate 3,000 compute units rather than 200,000.
 
 ## Motivation
 
@@ -55,13 +53,8 @@ None
 
 ## Detailed Design
 
-1. Retain the existing DEFAULT_COMPUTE_UNITS for builtin programs.
-   When the virtual machine (VM) invokes a builtin instruction, the
-statically defined DEFAULT_COMPUTE_UNITS is consistently deducted from the CU
-Meter.
-
-2. Establish a static maximum CU allocation: Define a global compute unit limit
-   of 3,000 CUs, denoted as MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT, to
+Establish a static maximum CU allocation: Define a global compute unit limit
+of 3,000 CUs, denoted as MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT, to
 accommodate worst-case execution scenarios, including potential Cross-Program
 Invocations (CPIs). This uniform limit is applied to each builtin program
 instruction and is used to configure both CU meter allocations and block
@@ -77,32 +70,20 @@ CU demand of 1,200 CUs (750 + 3 × 150). Similarly, `UpgradeableLoader`’s
 among current built-ins. The proposed 3,000 CU limit slightly exceeds this
 requirement, allowing for controlled flexibility without an excessive margin.
 
-3. Handling invalid CU requests: Transactions will fail if they request:
-   - More than MAX_COMPUTE_UNIT_LIMIT per transaction, or
-   - Less than the sum of all included builtin instructions'
-     MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT
-
 If a transaction consists only of builtins, no explicit CU request should be
 required. If a CU request is made, the requested limit will override the max
 allocation in #2.
 
 ## Alternatives Considered
 
-1. Maintain current CU allocation with additional tracking logic: One option
-   is to keep the current DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT for builtins
-and add/modify tracking logic to the cost tracker. This would address the
-discrepancy between CU allocation and consumption but increase system
-complexity. The added logic could introduce corner cases and potential bugs,
-raising the risk of issues in the transaction pipeline.
-
-2. Treat builtins like regular instructions: Another approach would be to
+1. Treat builtins like regular instructions: Another approach would be to
    allocate DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT for builtins as for other
 instructions. However, this fails to address over-allocation. Unlike regular
 instructions, the execution of builtins is more predictable and usually
 requires significantly fewer CUs than BPF instructions. This approach would
 allocate more CUs than necessary, undermining the goal of efficient CU usage.
 
-3. Declare both max and default CU values for builtins: A more precise
+2. Declare both max and default CU values for builtins: A more precise
    approach would be to require builtins to declare both a maximum CU
 allocation (MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT) and a default CU value
 for each instruction (DEFAULT_BUILTIN_INSTRUCTION_COMPUTE_UNITS). This would
@@ -118,6 +99,11 @@ explicitly setting compute-unit limits, to allocate budget for their
 transactions may experience an increase in transaction failures. To avoid this,
 users are encouraged to use set_compute_unit_limit to explicitly request the
 necessary budget for their transactions.
+
+If those impacted users have issues fitting in the set compute unit limit
+instruction into their transactions due to tx data size limits, they can also
+migrate to using address lookup tables to fit in the compute budget instruction
+call.
 
 ## Security Considerations
 
