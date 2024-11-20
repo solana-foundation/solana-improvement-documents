@@ -1,6 +1,6 @@
 ---
 simd: '0182'
-title: Conditional CU metering
+title: Consume reuested CUs for sBPF failures
 authors:
   - Tao Zhu (Anza)
 category: Standard
@@ -105,10 +105,4 @@ None
 
 ## Security Considerations
 
-One potential issue with using requested CUs in the case of failed transactions
-is the risk of transactions with grossly large CU requests consuming an
-excessive portion of the block's CU limit. This could effectively cause a
-denial-of-service effect by preventing legitimate transactions from being
-included in the block. To mitigate this risk, it is recommended that this
-proposal be implemented after SIMD-172 is deployed, which removes the
-possibility of accidentally requesting an excessively large number of CUs.
+None
