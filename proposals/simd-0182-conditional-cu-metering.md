@@ -1,6 +1,6 @@
 ---
 simd: '0182'
-title: Consume reuested CUs for sBPF failures
+title: Consume requested CUs for sBPF failures
 authors:
   - Tao Zhu (Anza)
 category: Standard
