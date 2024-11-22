@@ -5,9 +5,9 @@ authors:
   - Alexander Meißner
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2024-09-06
-feature: TBD
+feature: F6UVKh1ujTEFK3en2SyAL3cdVnqko1FVEXWhmdLRu6WP
 extends: SIMD-0161
 ---
 
@@ -49,7 +49,7 @@ None.
 ## Detailed Design
 
 The following must go into effect if and only if a program indicates the
-SBPF-version (TBD) or higher in its program header (see SIMD-0161).
+SBPF-version (v2) or higher in its program header (see SIMD-0161).
 
 ### Changes to the Bytecode Verifier
 
