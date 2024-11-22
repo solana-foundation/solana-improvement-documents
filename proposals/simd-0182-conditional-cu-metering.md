@@ -35,7 +35,7 @@ single entry and exit point, and no loops or branches. Basic Blocks allow for
 efficient execution by reducing the overhead associated with tracking CU
 consumption for each individual sBPF instruction.
 
-Other than in rare, exceptional situations discussed below, the total CU
+Other than in less common situations discussed below, the total CU
 consumption for a Basic Block is deterministic and CU accounting can be
 done once per basic block instead of at each instruction. A transaction
 completing successfully or with most errors implies that execution exited each
@@ -54,7 +54,7 @@ While this approach is effective, it introduces additional work and complexity.
 These mechanisms are often implementation-specific, and requiring all clients to
 track the exact number of executed sBPF instructions for consensus is costly and
 unnecessary. Such precision is not essential for protocol-level consensus,
-especially since these cases are rare.
+especially since these cases are infrequent.
 
 Instead of mandating implementation-specific work to handle exceptions, we
 propose the following clarification in the protocol:
