@@ -1,0 +1,25 @@
+name: PR Notification
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            New Pull Request Created!
+            
+            Title: ${{ github.event.pull_request.title }}
+            Author: ${{ github.event.pull_request.user.login }}
+            Repository: ${{ github.repository }}
+            
+            Description:
+            ${{ github.event.pull_request.body }}
+            
+            Link: ${{ github.event.pull_request.html_url }}
