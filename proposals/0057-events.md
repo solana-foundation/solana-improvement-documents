@@ -287,11 +287,14 @@ notification:
 
 ```
 #[derive(Clone, Debug, PartialEq)]
+#[repr(C)]
 pub struct Event {
-    pub message: Vec<u8>;
+    pub data: *const u8;
+    pub data_len: u32,
     pub suid: u32,
     pub outerInstructionIndex: u16,
-    pub innerInstructionIndex: Option<u16>,
+    pub innerInstructionIndex: u16,
+    pub innerInstructionIndexIsValid: u8,
 }
 
 #[derive(Clone, Debug, PartialEq)]
