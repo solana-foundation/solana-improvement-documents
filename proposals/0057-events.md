@@ -96,8 +96,8 @@ for the sake of efficient parsing.
 ### Runtime 
 
 In order to log an event, the SVM runtime must implement a new syscall
-`sol_emit_`. The runtime must charge 100 + 0.25 * len CU per invocation to
-account for the potential cost of including a blake3 hash of all log messages
+`sol_emit_`. The runtime must charge 100 + 0.5 * len CU per invocation to
+account for the potential cost of including a sha256 hash of all log messages
 in consensus.
 
 ```
@@ -117,13 +117,11 @@ hash of all events in consensus. So future light-clients can verify the
 authenticity of events received from third party rpc providers.
 
 Bank deltas are currently hashed via sha256, the sha256 syscall charges
-85 + 0.5 CU / byte. blake3 a roughly 2x faster to compute hash, would be
-sufficient as well, hence 100 + 0.25 * len CU would be a good approximation
-in this case. CPI for event logging would be only "cheaper" when using >4k
-event payloads but most events are <512b in length. This cost enforces
-theoretical limits to the amount of logs per transaction & block:
-Limit per 200k CU: 800kB
-Limit per 48M CU: 200MB
+85 + 0.5 CU / byte. CPI for event logging would be only "cheaper" when
+using >2k event payloads but most events are <512b in length. This cost
+enforces theoretical limits to the amount of logs per transaction & block:
+Limit per 200k CU: 400kB
+Limit per 48M CU: 100MB
 
 ### RPC-Client
 
