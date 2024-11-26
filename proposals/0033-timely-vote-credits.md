@@ -5,7 +5,7 @@ authors:
   - Bryan Ischo <bryan@ischo.com>
 category: Standard
 type: Core
-status: Implemented
+status: Activated
 created: 2023-01-30
 feature: tvcF6b1TRz353zKuhBjinZkKzjmihXmBAHJdjNYw1sQ(https://github.com/solana-labs/solana/issues/32857)
 development: 
