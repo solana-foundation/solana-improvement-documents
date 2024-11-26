@@ -44,7 +44,9 @@ some sort of crypto handshaking.
 
 ## New Terminology
 
-None
+In this document we define the following,
+Server -- the validator receiving the TPU votes
+Client -- the validator sending the TPU votes.
 
 ## Detailed Design
 
@@ -53,8 +55,8 @@ corresponding port will be published to the network in the ContactInfo via
 Gossip. The client side will use the TPU vote QUIC port published by the server
 to connect to the server.
 
-The TPU vote will be using the same QUIC implementation used by regular
-transaction transportation. The client and server both uses their validator's
+The TPU vote can use the same QUIC implementation used by regular transaction
+transportation. The client and server both uses their validator's
 identity key to sign the certificate which is used to validate the validator's
 identity especially on the server side for the purpose of provding QOS based on
 the client's stakes by checking the client's Pubkey -- stake weighted QOS.
@@ -66,18 +68,18 @@ transaction. After that the stream is closed.
 The server only supports connections from the nodes which has stakes who can
 vote. Connections from unstaked nodes are rejected with `disallowed` code.
 
-The following QOS mechanisms are employed:
+The following QOS mechanisms can be employed by the server:
 
 * Connection Rate Limiting from all clients
 * Connection Rate Limiting from a particular IpAddress
-* Total concurrent connections from all clients -- this is set to 2500
-* Max concurrent connections from a client Pubkey -- this is set to 1 for votes.
+* Total concurrent connections from all clients
+* Max concurrent connections from a client Pubkey.
 * Max concurrent streams per connection -- this is allocated based on the ratio
 of the validator's stake over the total stakes of the network.
-* Maximum of vote transactions per unit time which is also stake weighted
+* Maximum of vote transactions per unit time which is also stake weighted.
 
 When the server processes a stream and its chunk, it may timeout and close the
-stream if it does not receive the data in configured timeout window (2s).
+stream if it does not receive the data in configurable timeout window.
 
 The validator also uses gossip to pull votes from other validator. This proposed
 change does not change the transport for that which will remain to be UDP based.
@@ -89,13 +91,15 @@ increased votes traffic is lessened.
  QUIC compared with UDP is connection based. There is an extra overhead to
  establish the connections when sending a vote. To minimize this, the client
  side can employ connection caching and pre-cache warmer mechanism based on the
- leader schedule.
+ leader schedule. Similarly the server side should maintain a sufficiently
+ large enough conneciton cache for actively used connections to reduce
+ connection churning and overall overhead.
 
 ## Security Considerations
 
 The are no net new security vulnerability as QUIC TPU transaction has already
 been in-place. Similar DoS attack can be targeted against the new QUIC port used
-by TPU vote. The connection rate limiting is one tool to fend off such attacks.
+by TPU vote. The connection rate limiting can be used to fend off such attacks.
 
 ## Backwards Compatibility
 
