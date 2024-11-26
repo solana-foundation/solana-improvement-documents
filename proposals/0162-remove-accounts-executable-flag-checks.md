@@ -5,7 +5,7 @@ authors:
   - Alexander Meißner
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-07-16
 feature: TBD
 extends: 0093
