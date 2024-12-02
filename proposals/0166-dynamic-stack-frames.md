@@ -19,7 +19,7 @@ extends: null
 
 The SVM currently allocates a fixed amount of stack space to each function 
 frame. We propose allowing programs to dynamically manage their stack space 
-through the introduction of an explicit stack pointer register. 
+through the introduction of an explicit stack pointer.
 
 ## Motivation
 
@@ -29,9 +29,9 @@ each function frame. This is simultaneously limiting for functions that
 require more space, and wasteful for functions that require less space.
 
 For well optimized programs that don’t allocate large amounts of stack, the 
-virtual machine currently still reserves 4096 bytes of stack for each 
-function call, leading to suboptimal memory usage, which may cause 
-unnecessary page faults.
+virtual machine currently still reserves 4096 bytes of stack for each function 
+call, leading to suboptimal memory usage, which may cause unnecessary page 
+faults.
 
 On the other hand, some programs are known to create large function frames - 
 this seems common with programs that serialize a lot of data - and they have 
@@ -39,8 +39,8 @@ to jump through hoops to avoid overflowing the stack. The virtual machine
 detects when a stack overflow occurs, and it does so by implementing a stack 
 frame gaps system whereby it inserts a virtual sentinel frame following a 
 valid function frame. If the sentinel frame is accessed, the executing program 
-is aborted. This system is fragile and is incompatible with direct mapping - 
-a feature we expect to enable soon. 
+is aborted. This system is fragile and is incompatible with direct mapping - a 
+feature we expect to enable soon.
 
 The changes proposed in this document would allow us to optimize stack memory 
 usage and remove the fragile stack frame gaps system. Note that we do not 
@@ -51,11 +51,10 @@ unchanged, what changes is how it is partitioned internally.
 
 To cope with the SBF limitation of 4096 bytes for the frame size, we could 
 have increased such a number. Even though this would solve the original 
-problem, it would supply an unnecessary amount of memory to functions even 
-when they do not need them. In addition, such a solution would increase 
-pressure on the total memory available for the call stack. Either we would 
-need to increase the total allocation for the virtual machine or decrease the 
-maximum call depth.
+problem, it would supply functions with an unnecessary amount of memory. In 
+addition, such a solution would increase pressure on the total memory 
+available for the call stack. Either we would need to increase the total 
+allocation for the virtual machine or decrease the maximum call depth.
 
 ## New Terminology
 
@@ -67,72 +66,67 @@ Bringing dynamic stack frames to the Solana Bytecode Format and its
 corresponding virtual machine entails changes in several aspects of the 
 execution environment.
 
-### SBF architecture modifications
-
-
-We will introduce a new register R11 in the virtual machine, which is going 
-to hold the stack pointer. The program must only write to such a register and 
-modify it through the `add64 reg, imm` (op code `0x07`) instruction. The 
-verifier must enforce these constraints on deployed programs. For further 
-information about the  changes in the ISA, refer to the 
-[SPF spec document](https://github.com/solana-labs/rbpf/blob/main/doc/bytecode.md).
-
-The R11 register must work in tandem with the R10 (frame pointer) register. 
-The former is write-only to the program, and the latter is read-only to the 
-program, forming a common design pattern in hardware engineering. More 
-details of this usage are in the following section.
-
 ### Changes in the execution environment
 
-The R10 register must continue to hold the frame pointer, but we will manage 
-it differently. With fixed frames, when there is a function call we add 4096 
-to R10 and subtract it when the function returns. In the new scheme, we must 
-assign the value of R11 to R10 at function calls, and save R10’s former value 
-so that we can restore it when the function returns.
+We will repurpose the existing R10 register from a frame pointer to a stack 
+pointer. In other words, it must stop representing the highest address 
+accessible in a frame, and must now point to the lowest address in a frame.
 
-The introduction of dynamic stack frames will change the direction of stack 
-growth. Presently, we stack frames on top of each other, but the memory usage 
-in them grows downward. In the new frame setting, both the placement of new 
-frames and the memory usage inside frames must be downward.
+Such a change entails a change in the direction of stack growth. Presently, we 
+stack frames on top of each other, but the memory usage within them grows 
+downward. In the new frame setting, both the placement of new frames and the 
+memory usage inside frames must be downward.
+
+Functions in SBF must alter the stack pointer using the `add64 reg, imm` 
+(opcode `0x07`) instruction only, allowing them to request any desirable 
+amount of stack space, provided that it meets the required alignment (refer to 
+the following section).
 
 The stack frame gaps feature, which creates a memory layout where frames are 
 interleaved with equally sized gaps, are not compatible with dynamic stack 
 frames and must be deactivated.
 
+### Stack alignment
+
+We want to enforce that the stack pointer remains aligned, therefore R10 must 
+only be incremented or decremented by a multiple of 64. Large alignments might 
+seem wasteful, but enforcing a sufficiently big alignment will spark 
+innovation in interpreters and JITs, ultimately leading to much better 
+performance and thus lower costs.
+
+Based on the current AVX-512 instructions available on Intel and AMD 
+processors, the stack alignment must be 64 bytes. Even if current interpreters 
+do not take advantage of these vectorized instructions, we believe that future 
+generation interpreters might be able to vectorize SBF programs to speed up 
+common operations, such as copying or comparing public keys and signatures. 
+An unaligned stack prohibits such innovations.
+
+### Changes in the verifier
+
+The verifier must now allow R10 to be the destination register of the 
+`add64 reg, imm` (opcode `0x07`) instruction.
+
+The verifier must throw `VerifierError::UnalignedImmediate` when the immediate 
+value of `add64 reg, imm` (opcode `0x07`) is not a multiple of 64 and the 
+destination register is R10. The error must only be raised when both 
+conditions happen simultaneously.
+
 ### Changes in code generation
 
 In the compiler side, dynamic stack frames allow for some optimizations. 
 First, when a function does not need any stack allocated variable, code 
-generation must not create any instruction to modify R11. In addition, we 
-can stop using R5 as a stack spill register when a function call receives 
-more than five arguments. With dynamic stack frames, the compiler must use 
+generation must not create any instruction to modify R10. In addition, we can 
+stop using R5 as a stack spill register when a function call receives more 
+than five arguments. With dynamic stack frames, the compiler must use 
 registers R1 to R5 for the first five arguments and place remainder arguments 
-in the callee frame, instead of placing them in the caller’s frame. This new 
-call convention obviates the need to use R5 for retrieving the caller’s frame 
-pointer address to access those parameters.
-
-### Changes in the verifier
-
-The additional constraints for the verifier only encompass new rules for the 
-introduction of the R11 register. It can only appear coupled with a `add64` 
-(opcode `0x07`) instruction. If that is not the case, the verifier must throw 
-a `VerifierError::InvalidSourceRegister` when it is the source register of an 
-instruction and `VerifierError::InvalidDestinationRegister` when it is the 
-destination register of an instruction. Additionally, it must not be the 
-target register for the `callx` (opcode 0x9D) instructions, otherwise a 
-`VerifierError::InvalidRegister` must be raised. 
-
-The verification rules for the R10 register must remain unchanged. It must not 
-be the target register for the `callx` (opcode 0x9D) instructions, otherwise a 
-`VerifierError::InvalidRegister` must be raised. It must also not be the 
-destination register of non-store instructions, otherwise a 
-`VerifierError::CannotWriteToR10` must be thrown.
-
+in the caller frame, easily retrieving them in the callee as an offset from 
+the stack pointer. This new call convention obviates the need to use R5 for 
+retrieving the caller’s frame pointer address to access those parameters.
 
 ### Identification of programs
 
 As per the description in SIMD-0161, programs compiled with dynamic stack 
-frames must contain the XX flag on their ELF header `e_flags` field.
+frames must contain the `0x02` flag on their ELF header `e_flags` field.
 
 ## Impact
 
@@ -147,10 +141,9 @@ one, often reaching the 4096 bytes limit. Refer to issues
 [#1158](https://github.com/anza-xyz/agave/issues/1158).
 
 We also expect some improvements in program execution. For functions with no 
-stack usage, we will not emit the additional instruction that modifies R11, 
-saving some execution time. Furthermore, for function calls that handle more 
-than five arguments, there will be one less store and one less load operation 
-due to the new call convention.
+stack usage, we will not emit the additional instruction that modifies R10. 
+Furthermore, for function calls that handle more than five arguments, there 
+will be one less store and one less load operation due to the new call convention.
 
 ## Security Considerations
 
@@ -162,12 +155,12 @@ allow functions to read and modify the memory inside the frame of other
 functions, so removing the stack gaps should not bring any security 
 implications.
 
-Although one can change R11 to any value that fits in a 64-bit integer, every 
-memory access is verified, so there is no risk of invalid accesses from a 
-corrupt register.
+Although one can change R10 to almost any value that fits in a 64-bit integer 
+with `add64 reg, imm`, every memory access is verified, so there is no risk of 
+invalid accesses from a corrupt register.
 
 ## Drawbacks
 
-Programs will consume more compute units, as most functions will include two 
-extra instructions: one to increment the stack pointer and another one to 
-decrement it.
+Programs will consume negligibly more compute units, as most functions will 
+include two extra instructions: one to increment the stack pointer and another 
+one to decrement it.
