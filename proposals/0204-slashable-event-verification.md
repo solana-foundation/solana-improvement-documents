@@ -262,6 +262,10 @@ We abort if:
   the `Clock` sysvar. We want to ensure that these accounts do not get closed before
   they are observed by indexers and dashboards.
 
+The three epoch window is somewhat arbitrary, we only need the `report_account` to
+last at least one epoch in order to for it to be observed by the runtime as part
+of a future SIMD.
+
 Otherwise we set the owner of `report_account` to the system program, rellocate
 the account to 0 bytes, and credit the `lamports` to `report_account.reporter`
 
