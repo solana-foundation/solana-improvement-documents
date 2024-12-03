@@ -109,14 +109,14 @@ program such as the Record program.
 - The resulting shreds specify different shred versions.
 
 After deserialization the slashing program will attempt to verify the proof, by
-checking that `shred1` and `shred2` constitute a valid duplicate proof for
+checking that `shred1` and `shred2` constitute a valid duplicate block proof for
 `slot` and are correctly signed by `node_pubkey`. This is similar to logic used
-in Solana's gossip protocol to verify duplicate proofs for use in fork choice.
+in Solana's gossip protocol to verify duplicate block proofs for use in fork choice.
 
 #### Proof verification
 
-`shred1` and `shred2` constitute a valid duplicate proof if any of the following
-conditions are met:
+`shred1` and `shred2` constitute a valid duplicate block proof if any of the
+following conditions are met:
 
 - Both shreds specify the same index and shred type, however their payloads
   differ
