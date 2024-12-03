@@ -245,35 +245,25 @@ scope, but after this period has passed,  the initial fee payer may wish to clos
 their `ProofReport` account to reclaim the lamports.
 
 They can accomplish this via the `CloseProofReport` instruction which requires
-2 accounts:
+one account:
 
 0. `report_account`: The PDA account storing the report: Writable, owned by the
   slashing program
-1. `destination`: Writable account to reclaim the lamports
 
-`CloseProofReport` has an instruction data of 42 bytes, containing:
+`CloseProofReport` has an instruction data of one byte, containing:
 
 - `0x01`, a fixed-value byte acting as the instruction discriminator
-- `violation_type`, a one byte value acting as the violation type discriminator
-- `slot`, an unaligned eight-byte little-endian unsigned integer indicating the
-  slot which was reported
-- `pubkey`, an unaligned 32 byte array representing the public key of the node
-  which was reported
 
 We abort if:
 
-- `violation_type` is not `0x00` (corresponds to `DuplicateBlock` violation)
-- Deriving the pda using `pubkey`, `slot`, and `ViolationType::DuplicateBlock`
-  as outlined above does not result in the adddress of `report_account`
 - `report_account` is not owned by the slashing program
 - `report_account` does not deserialize cleanly to `ProofReport`
-- `report_account.reporter` is not a signer
 - `report_account.epoch + 3` is greater than the current epoch reported from
   the `Clock` sysvar. We want to ensure that these accounts do not get closed before
   they are observed by indexers and dashboards.
 
 Otherwise we set the owner of `report_account` to the system program, rellocate
-the account to 0 bytes, and credit the `lamports` to `destination`
+the account to 0 bytes, and credit the `lamports` to `report_account.reporter`
 
 ---
 
