@@ -56,12 +56,18 @@ epoch:
 3. Copy the contents of `8sT74BE7sanh4iT84EyVUL8b77cVruLHXGjvTyJ4GwCe` into
   `S1ashing11111111111111111111111111111111111`
 
-This program (hereafter referred to as the slashing program) supports 2
-instructions `DuplicateBlockProof`, and `CloseProofReport`.
+This is the only protocol change that clients need to implement. The remaining
+proposal describes the function of this program, hereafter referred to as the
+slashing program.
 
-`DuplicateBlockProof` requires 1 account:
+### Slashing Program
 
-0. `proof_account`, expected to be previously intiialized with the proof data.
+This slashing program supports two instructions `DuplicateBlockProof`, and
+`CloseProofReport`.
+
+`DuplicateBlockProof` requires 1 account and the `Instructions` sysvar:
+
+0. `proof_account`, expected to be previously initialized with the proof data.
 
 `DuplicateBlockProof` has an instruction data of 48 bytes, containing:
 
@@ -74,18 +80,21 @@ instructions `DuplicateBlockProof`, and `CloseProofReport`.
   node which committed the violation
 
 We expect the contents of the `proof_account` when read from `offset` to
-deserialize to a struct of two byte arrays representing the duplicate shreds.
+deserialize to two byte arrays representing the duplicate shreds.
 The first 4 bytes correspond to the length of the first shred, and the 4 bytes
 after that shred correspond to the length of the second shred.
 
 ```rust
 struct DuplicateBlockProofData {
-  shred1_length: u32,
-  shred1: &[u8],
-  shred2_length: u32,
-  shred2: &[u8]
+  shred1_length: u32      // Unaligned four-byte little-endian unsigned integer,
+  shred1: &[u8]           // `shred1_length` bytes representing a shred,
+  shred2_length: u32      // Unaligned four-byte little-endian unsigned integer,
+  shred2: &[u8]           // `shred2_length` bytes representing a shred,
 }
 ```
+
+Users are expected to populate the `proof_account` themselves, using an onchain
+program such as the Record program.
 
 `DuplicateBlockProof` aborts if:
 
@@ -104,7 +113,7 @@ checking that `shred1` and `shred2` constitute a valid duplicate proof for
 `slot` and are correctly signed by `node_pubkey`. This is similar to logic used
 in Solana's gossip protocol to verify duplicate proofs for use in fork choice.
 
-### Proof verification
+#### Proof verification
 
 `shred1` and `shred2` constitute a valid duplicate proof if any of the following
 conditions are met:
@@ -125,10 +134,10 @@ eligible for slashing.
 
 ---
 
-### Signature verification
+#### Signature verification
 
 In order to verify that `shred1` and `shred2` were correctly signed by
-`node_pubkey` we use instruction retrospection.
+`node_pubkey` we use instruction introspection.
 
 Using the `Instructions` sysvar we verify that the previous two instructions of
 this transaction are for the program ID
@@ -170,7 +179,7 @@ If both proof and signer verification succeed, we continue on to store the incid
 
 ---
 
-### Incident reporting
+#### Incident reporting
 
 After verifying a successful proof we store the results in a program derived
 address for future use. The PDA is derived using the `node_pubkey`, `slot`, and
@@ -178,9 +187,9 @@ the violation type:
 
 ```rust
 let (pda, _) = find_program_address(&[
-  node_pubkey.to_bytes(),
-  slot.to_le_bytes(),
-  ViolationType::DuplicateBlock.to_u8(),
+  node_pubkey.to_bytes(),        // 32 byte array representing the public key
+  slot.to_le_bytes(),            // Unsigned little-endian eight-byte integer
+  0u8,                           // Byte representing the violation type
 ])
 ```
 
@@ -193,13 +202,23 @@ as the owner. In this account we store the following:
 
 ```rust
 struct ProofReport {
-  reporter: Pubkey,              // Fee payer, to allow the account to be closed
-  epoch: Epoch,                  // Epoch in which this report was created
-  pubkey: Pubkey,                // The pubkey of the node that committed the violation
-  slot: Slot,                    // Slot in which the violation occured
-  violation_type: u8,            // The violation type
-  proof: Vec<u8>                 // The serialized proof
-  proof_account: Option<Pubkey>, // Optional account where proof is stored instead
+  reporter: Pubkey,                // 32 byte array representing the pubkey of the
+                                      Fee payer, to allow the account to be closed
+  epoch: Epoch,                    // Unaligned unsigned eight-byte little endian
+                                      integer representing the epoch in which this
+                                      report was created
+  pubkey: Pubkey,                  // 32 byte array representing the pubkey of the
+                                      node that committed the violation
+  slot: Slot,                      // Unaligned unsigned eight-byte little endian
+                                      integer representing the slot in which the
+                                      violation occured
+  violation_type: u8,              // Byte representing the violation type
+  proof_account: Pubkey,           // 32 byte array representing the account where
+                                      the proof is stored
+  proof_size: u32,                 // Unaligned unsigned four-byte little endian
+                                      integer representing the size of the serialized
+                                      proof
+  proof: &[u8],                    // Byte array of the serialized proof
 }
 ```
 
@@ -219,10 +238,11 @@ to the PDA using the `proof_account` field.
 
 ---
 
-### Closing the incident report
+#### Closing the incident report
 
-After the slashing violation has been processed by the runtime, the initial fee
-payer may wish to close their `ProofReport` account to reclaim the lamports.
+In a future SIMD the reports will be used for runtime processing. This is out of
+scope, but after this period has passed,  the initial fee payer may wish to close
+their `ProofReport` account to reclaim the lamports.
 
 They can accomplish this via the `CloseProofReport` instruction which requires
 2 accounts:
@@ -245,14 +265,15 @@ We abort if:
 - `violation_type` is not `0x00` (corresponds to `DuplicateBlock` violation)
 - Deriving the pda using `pubkey`, `slot`, and `ViolationType::DuplicateBlock`
   as outlined above does not result in the adddress of `report_account`
-- `report_account` is not writeable
+- `report_account` is not owned by the slashing program
 - `report_account` does not deserialize cleanly to `ProofReport`
 - `report_account.reporter` is not a signer
 - `report_account.epoch + 3` is greater than the current epoch reported from
   the `Clock` sysvar. We want to ensure that these accounts do not get closed before
   they are observed by indexers and dashboards.
 
-Otherwise we close the `report_account` and credit the `lamports` to `destination`
+Otherwise we set the owner of `report_account` to the system program, rellocate
+the account to 0 bytes, and credit the `lamports` to `destination`
 
 ---
 
