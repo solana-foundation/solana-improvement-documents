@@ -196,9 +196,9 @@ let (pda, _) = find_program_address(&[
 At the moment `DuplicateBlock` is the only violation type but future work will
 add additional slashing types.
 
-If the `pda` account has non-zero lamports, then we abort as the violation has
-already been reported. Otherwise we create the account, with the slashing program
-as the owner. In this account we store the following:
+If the `pda` account has any data and is owned by the slashing program, then we
+abort as the violation has already been reported. Otherwise we create the account,
+with the slashing program as the owner. In this account we store the following:
 
 ```rust
 struct ProofReport {
