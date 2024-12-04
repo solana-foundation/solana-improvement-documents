@@ -68,6 +68,7 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
 `DuplicateBlockProof` requires 1 account and the `Instructions` sysvar:
 
 0. `proof_account`, expected to be previously initialized with the proof data.
+1. `instructions`, Instructions sysvar
 
 `DuplicateBlockProof` has an instruction data of 48 bytes, containing:
 
