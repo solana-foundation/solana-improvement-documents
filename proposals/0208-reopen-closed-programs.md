@@ -1,5 +1,5 @@
 ---
-simd: "XXXX"
+simd: "0208"
 title: Allow Closed Programs to be Recreated
 authors:
   - keith@metaplex.foundation
@@ -13,9 +13,7 @@ feature:
 
 ## Summary
 
-This proposal is the migration of the discussion found at https://github.com/solana-labs/solana/pull/27460, regarding closed program accounts not being recoverable.
-
-This SIMD proposes adding in the ability to reopen a closed program through the same mechanism as standard program deploys.
+This proposal is the migration of the discussion found at https://github.com/solana-labs/solana/pull/27460, regarding closed program accounts not being recoverable. This SIMD proposes adding in the ability to reopen a closed program through the same mechanism as standard program deploys.
 
 ## Motivation
 
