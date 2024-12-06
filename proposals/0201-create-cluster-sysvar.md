@@ -72,4 +72,6 @@ irreplicable PDAs or derivations, or variable features across different blockcha
 
 ## Security Considerations
 
-Certain named fields could be invalidated due to changes to the underlying SVM runtime. Program developers should be sure to validate and fail gracefully if unexpected changes occur.
+Certain named fields could be invalidated due to changes to the underlying SVM
+runtime. Program developers should be sure to validate and fail gracefully if
+unexpected changes occur.
