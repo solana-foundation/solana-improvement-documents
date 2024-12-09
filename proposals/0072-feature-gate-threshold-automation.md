@@ -98,9 +98,9 @@ In the future, this authority could be replaced by validator governance.
 
 The multi-signature authority stages a feature for activation by invoking a new
 Feature Gate program instruction: `StageFeatureForActivation`. This instruction
-expects the Staged Features PDA (defined below) to either exist or be funded
-with enough rent-exempt lamports to initialize state. The processor will
-allocate, assign, and initialize the account if it does not exist.
+expects the Staged Features PDA (defined below) to either exist or be allocated
+with sufficient space and owned by the Feature Gate program, in order to
+initialize state. 
 
 The `StageFeatureForActivation` instruction is structured as follows:
 
@@ -109,7 +109,6 @@ The `StageFeatureForActivation` instruction is structured as follows:
   - Feature account
   - Staged Features PDA: writable
   - Multi-signature authority: signer
-  - System program (required only for initializing)
 
 Note that features can only be staged in the epoch prior to the target
 activation epoch. This means a feature staged by invoking
@@ -176,8 +175,8 @@ supported by their software.
 A node signals its support for staged features by invoking another new Feature
 Gate program instruction: `SignalSupportForStagedFeatures`. This instruction
 expects the Validator Support Signal PDA (defined below) to either exist or be
-funded with enough rent-exempt lamports to initialize state. The processor will
-allocate, assign, and initialize the account if it does not exist.
+allocated with sufficient space and owned by the Feature Gate program, in order
+to initialize state.
 
 The `SignalSupportForStagedFeatures` instruction is structured as follows:
 
@@ -187,7 +186,6 @@ The `SignalSupportForStagedFeatures` instruction is structured as follows:
   - Validator Support Signal PDA: writable
   - Vote account
   - Authorized voter: signer
-  - System program (required only for initializing)
 
 The authorized voter signer must match the authorized voter stored in the vote
 account's state.
