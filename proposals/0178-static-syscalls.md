@@ -92,8 +92,8 @@ syscalls must strictly follow the numbering below.
 |   sol_memmove_                           |    4     |
 |   sol_memset_                            |    5     |
 |   sol_memcmp_                            |    6     |
-|   sol_log                                |    7     |
-|   sol_log_64                             |    8     |
+|   sol_log_                               |    7     |
+|   sol_log_64_                            |    8     |
 |   sol_log_pubkey                         |    9     |
 |   sol_log_compute_units_                 |    10    |
 |   sol_alloc_free_                        |    11    |
