@@ -109,7 +109,7 @@ serialized vote state) in the order given.
 3. Calculate vote only hash by hashing:
 
 * vote only hash of the parent bank
-* vote account hash calculated aboveß
+* vote account hash calculated above
 * block-id of the current bank
 
 This step is optimistic in the sense that validators do not check the fee
@@ -154,7 +154,7 @@ epoch.
 
 There is no protocol enforced order of block replay for various validator
 implemenations, new vote transactions could be sent when the vote only hash
-or final hash changes.
+or replay tip hash changes.
 
 Once a validator has determined the fork it will vote on, it can prioritize
 replaying blocks on the selected fork. The replay process is the same as today,
@@ -180,10 +180,6 @@ If a staked validator does not have vote fee covered for specific votes, we
 will not accept the vote today, while in the future we accept the vote in fork
 selection, but does not actually give vote credits because the transaction
 failed.
-
-A side benefit of this design is that the sysvars have all been calculated and
-determined in the vote only execution, also the fork of blocks are known, so it
-may be possible to release more parallelism during full executions.
 
 ### Enable Async Vote Executions
 
