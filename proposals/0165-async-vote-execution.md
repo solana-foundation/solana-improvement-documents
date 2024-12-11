@@ -28,12 +28,12 @@ will have fewer forks that are caused by slow transaction execution.
 ## Motivation
 
 Currently the vote transactions and non-vote transactions are mixed together in
-a block, the vote transactions are only processed in consensus when the whole
-block has been frozen and all transactions in the block have been verified and
-executed. This is a problem because slow running non-vote transactions may
-affect how fast the votes are processed and then affect the ability of
-consensus to pick the correct fork. It may also mean that the leader will more
-often build on a minority fork so the blocks it packed will be discarded later.
+a block, a block is considered in consensus only after the whole block has been
+frozen and all transactions in the block have been verified and executed. This
+is a problem because slow running non-vote transactions may affect affect the
+ability of consensus to pick the correct fork. It may also mean that the leader
+will more often build on a minority fork so the blocks it packed will be
+discarded later.
 
 With different hardware and running environment, there will always be some
 difference on speed of transaction execution between validators. Generally
@@ -100,8 +100,8 @@ Two new fields will be added to `TowerSync` vote transaction:
 The `hash` and `slot` in the `TowerSync` transaction will be updated to
 the vote only hash. The vote only hash is calculated as follows:
 
-1. Sort all vote accounts with non-zero stake in the current epoch by
-vote account pubkey.
+1. Sort all vote accounts with non-zero stake in the current or previous
+epoch by vote account pubkey.
 
 2. Calculate vote account hash by hashing (vote account pubkey,
 serialized vote state) in the order given.
