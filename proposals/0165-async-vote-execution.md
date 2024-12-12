@@ -203,6 +203,34 @@ the confirmed `Vote only bankhash` (currently proposed at 1/2 of the Epoch)
 the same. This is potentially an event worthy of cluster restart. If more than
 1/3 of the validators claim a different `Replay tip bankhash`, halt and exit.
 
+### User visible changes
+
+Because we confirm or finalize blocks based on `Vote only bankhash`, the
+following changes will be visible to users:
+
+1. New RPC Commitmment Levels:
+
+Right now we have 3 commitmment levels users can specify in RPC:
+Processed/Confirmed/Finalized. These commitmment will be calculated based on
+`Vote only bankhash`. There will be two additional commitmment levels:
+
+* ReplayTipConfirmed: The highest slot where supermajority of the cluster
+voted on with the same `Replay Tip Bankhash`. Votes with invalid fee payers
+still count toward this confirmation level.
+* ReplayTipFinalized: The highest slot where the block is Finalized and
+ReplayTipConfirmed, recognized by a supermajority of the cluster.
+
+2. Feature activation:
+
+Feature activations where the vote program isn't affected still work as
+before. Feature activations where vote program is affected will require
+two epochs to activate. When a feature affecting vote program is activated
+across block boundary, we can be sure the feature is activated only when
+the first block in the epoch is fully replayed and confirmed. Because the
+`Replay tip` block is never more than one Epoch away from `Vote only tip`,
+it's safe to assume vote program related feature is activated after one
+full epoch.
+
 ## Impact
 
 Since we will eliminate the impact of non-vote transaction execution speed,
