@@ -131,10 +131,9 @@ dead later. Currently a block can be dead for the following reasons:
 
 1. Unable to load data from blockstore
 2. Invalid block (wrong number of ticks, duplicate block, bad last fec, etc)
-3. Error while performing set root on the new root
-4. Invalid transaction
+3. Invalid transaction
 
-For the first three, the same check can be performed computing vote only
+For the first two, the same check can be performed computing vote only
 hash. We will add a new check that the new root must be vote only replayed
 and fully replayed, this may mean the tower has more than 32 slots
 occasionally.
