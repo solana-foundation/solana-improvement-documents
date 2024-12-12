@@ -193,8 +193,9 @@ applied in consensus to select a fork. Then votes are sent out for the
 selected fork with the `Vote only bankhash` for the tip of the fork and the
 most recent `Replay tip bankhash`. Note that the fork selection will only
 be picked based on most recent `Vote only bankhash` and associated slot.
-`Replay tip bankhash` is used mostly for commitmment aggregation and security
-checks described below.
+The EpochSlots will also be updated when the banks have completed vote
+only replay. `Replay tip bankhash` is used mostly for commitmment aggregation
+and security checks described below.
 3. The blocks on the selected forks are scheduled to be replayed. When
 a block is replayed, all transactions are executed with fee payers checked.
 This is the same as the replay we use today.
