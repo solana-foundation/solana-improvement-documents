@@ -103,10 +103,11 @@ the vote only hash. The vote only hash is calculated as follows:
 1. Sort all vote accounts with non-zero stake in the current or previous
 epoch by vote account pubkey.
 
-2. Calculate vote account hash by hashing (vote account pubkey,
-serialized vote state) in the order given.
+2. Calculate vote account hash by calculating sha256 hash of (vote account
+pubkey, serialized vote state) in the order given.
 
-3. Calculate vote only hash by hashing:
+3. Calculate vote only hash by calculating sha256 hash of the following in
+the given order:
 
 * vote only hash of the parent bank
 * vote account hash calculated above
