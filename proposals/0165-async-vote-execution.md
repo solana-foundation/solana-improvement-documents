@@ -131,12 +131,13 @@ dead later. Currently a block can be dead for the following reasons:
 
 1. Unable to load data from blockstore
 2. Invalid block (wrong number of ticks, duplicate block, bad last fec, etc)
-3. Error while set root
+3. Error while performing set root on the new root
 4. Invalid transaction
 
-For the first two, the same check can be performed computing ephemeral hash.
-We will set root on a bank only when it has full hash computed later, so the
-behavior will be the same as now.
+For the first three, the same check can be performed computing vote only
+hash. We will add a new check that the new root must be vote only replayed
+and fully replayed, this may mean the tower has more than 32 slots
+occasionally.
 
 The only operation we can't check is invalid transaction, since we will skip
 all non-vote transaction execution, there is no way we can check for validity
