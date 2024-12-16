@@ -126,7 +126,7 @@ retrieving the caller’s frame pointer address to access those parameters.
 ### Identification of programs
 
 As per the description in SIMD-0161, programs compiled with dynamic stack 
-frames must contain the `0x02` flag on their ELF header `e_flags` field.
+frames must contain the `0x01` flag on their ELF header `e_flags` field.
 
 ## Impact
 
