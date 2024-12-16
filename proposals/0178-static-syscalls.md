@@ -37,7 +37,7 @@ None.
 ## Detailed Design
 
 The following must go into effect if and only if a program indicates the SBPF 
-version XX or higher in its ELF header e_flags field, according to the 
+version `0x03` or higher in its ELF header e_flags field, according to the 
 specification of SIMD-0161.
 
 ### New syscall instruction
@@ -124,7 +124,7 @@ syscalls must strictly follow the numbering below.
 |   sol_get_clock_sysvar                   |    36    |
 |   sol_get_epoch_schedule_sysvar          |    37    |
 |   sol_get_last_restart_slot              |    38    |
-|   sol_get_epoch_rewards_slot             |    39    |
+|   sol_get_epoch_rewards_sysvar           |    39    |
 |   sol_get_fees_sysvar                    |    40    |
 |   sol_get_rent_sysvar                    |    41    |
 |------------------------------------------|----------|
