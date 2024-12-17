@@ -46,8 +46,8 @@ activated the following behavior will be executed in the first block for the new
 epoch:
 
 1. Create a new program account at `S1ashing11111111111111111111111111111111111`
-  with an upgrade authority set to the system program
-  `11111111111111111111111111111111`
+  owned by the default upgradeable loader with an upgrade authority set to the
+  system program `11111111111111111111111111111111`
 
 2. Verify that the program account
   `8sT74BE7sanh4iT84EyVUL8b77cVruLHXGjvTyJ4GwCe` has a verified build hash of
@@ -55,6 +55,9 @@ epoch:
 
 3. Copy the contents of `8sT74BE7sanh4iT84EyVUL8b77cVruLHXGjvTyJ4GwCe` into
   `S1ashing11111111111111111111111111111111111`
+
+4. Additionally copy the program-data account from `8sT74BE7sanh4iT84EyVUL8b77cVruLHXGjvTyJ4GwCe`
+  to the PDA for `S1ashing11111111111111111111111111111111111`
 
 This is the only protocol change that clients need to implement. The remaining
 proposal describes the function of this program, hereafter referred to as the
