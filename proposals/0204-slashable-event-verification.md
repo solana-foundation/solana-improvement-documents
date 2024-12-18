@@ -73,7 +73,7 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
 0. `proof_account`, expected to be previously initialized with the proof data.
 1. `instructions`, Instructions sysvar
 
-`DuplicateBlockProof` has an instruction data of 48 bytes, containing:
+`DuplicateBlockProof` has an instruction data of 81 bytes, containing:
 
 - `0x00`, a fixed-value byte acting as the instruction discriminator
 - `offset`, an unaligned eight-byte little-endian unsigned integer indicating
@@ -82,6 +82,9 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
   slot in which the violation occured
 - `node_pubkey`, an unaligned 32 byte array representing the public key of the
   node which committed the violation
+- `destination`, an unaligned 32 byte array representing the account to reclaim
+  the lamports if a successful slashing report account is created and then later
+  closed.
 
 We expect the contents of the `proof_account` when read from `offset` to
 deserialize to two byte arrays representing the duplicate shreds.
@@ -207,7 +210,10 @@ with the slashing program as the owner. In this account we store the following:
 ```rust
 struct ProofReport {
   reporter: Pubkey,                // 32 byte array representing the pubkey of the
-                                      Fee payer, to allow the account to be closed
+                                      Fee payer, who reported this violation
+  destination: Pubkey,             // 32 byte array representing the account to
+                                      credit the lamports when this proof report
+                                      is closed.
   epoch: Epoch,                    // Unaligned unsigned eight-byte little endian
                                       integer representing the epoch in which this
                                       report was created
@@ -271,7 +277,7 @@ last at least one epoch in order to for it to be observed by the runtime as part
 of a future SIMD.
 
 Otherwise we set the owner of `report_account` to the system program, rellocate
-the account to 0 bytes, and credit the `lamports` to `report_account.reporter`
+the account to 0 bytes, and credit the `lamports` to `report_account.destination`
 
 ---
 
