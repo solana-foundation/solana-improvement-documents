@@ -130,8 +130,10 @@ following conditions are met:
 - Both shreds specify the same FEC set, however their merkle roots differ
 - Both shreds specify the same FEC set and are coding shreds, however their
   erasure configs conflict
-  The shreds specify different FEC sets, the lower index shred is a coding shred,
-  and its erasure meta indicates an FEC set overlap.
+- The shreds specify different FEC sets, the lower index shred is a coding shred,
+  and its erasure meta indicates an FEC set overlap
+- The shreds specify different FEC sets, the lower index shred has a merkle root
+  that is not equal to the chained merkle root of the higher index shred
 - The shreds are data shreds with different indices and the shred with the lower
   index has the `LAST_SHRED_IN_SLOT` flag set
 
