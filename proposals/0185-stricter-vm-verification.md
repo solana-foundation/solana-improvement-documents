@@ -50,14 +50,14 @@ None.
 
 ### CPI verification
 
-- The special treatment during CPI of instruction accounts with the
-`is_executable` flag set is removed
 - The following pointers must be on the stack or heap,
 meaning their virtual address is inside `0x200000000..0x400000000`,
 otherwise `SyscallError::InvalidPointer` must be thrown:
   - The pointer in the array of `&[AccountInfo]` / `SolAccountInfo*`
   - The `AccountInfo::data` field,
   which is a `RefCell<&[u8]>` in `sol_invoke_signed_rust`
+  - The `AccountInfo::lamports` field,
+  which is a `RefCell<&u64>` in `sol_invoke_signed_rust`
 - The following pointers must point to what was originally serialized in the
 input regions by the program runtime,
 otherwise `SyscallError::InvalidPointer` must be thrown:
@@ -93,10 +93,10 @@ Thus, changing and later restoring data in unowned accounts is prohibited.
 
 When a range in virtual address space which:
 
-- crosses a 4 GiB aligned boundary
-- starts in any accounts payload (including its resize padding) and leaves it
+- starts in any account data (including its resize padding) and leaves it
+- starts outside account data and enters it
 
-is passed to any syscall (such as `memcpy`) it must throw
+is passed to a syscall `memcpy`, `memmove`, `memset`, and `memcmp`, it must throw
 `SyscallError::InvalidLength`.
 
 ## Impact
