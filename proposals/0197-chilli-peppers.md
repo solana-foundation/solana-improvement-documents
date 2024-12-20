@@ -18,6 +18,7 @@ usage similar to the way that Compute Units seek to govern CPU usage.
 Tiered memory bandwidth will become a performance bottleneck as transaction 
 throughput and total state size increase. This proposal serves to outline 
 changes to the Solana protocol that would enable:
+
 - Deterministic, easily computable and cluster-wide separation of state into 
 hot and cold tiers.
 - A new transaction level resource requesting the transfer of state from cold 
@@ -116,7 +117,8 @@ increasing record of state consumption.
 Computing the block Chili Pepper clock:
  
 ```python
-block_chili_pepper_clock = prev_block_chili_pepper_clock + sum(txn.requested_chili_peppers for txn in block.txns)
+block_chili_pepper_clock = prev_block_chili_pepper_clock + 
+  sum(txn.requested_chili_peppers for txn in block.txns)
 ```
  
 Implemented as a 64-bit unsigned integer (uint64), this clock is updated at the
@@ -124,7 +126,8 @@ beginning of every block to reflect the total Chili Peppers requested since the
 chain's genesis. This monotonically increasing value is stored in a dedicated 
 system variable (sysvar), ensuring that it remains accessible and immutable 
 throughout the blockchain's operation.
-The new sysvar will have identifier: `SysvarB1ockChiliPepperC1ock111111111111111111`
+The new sysvar will have identifier: 
+`SysvarB1ockChiliPepperC1ock111111111111111111`
  
 ```rust
 struct SysvarBlockChiliPepperClock {
