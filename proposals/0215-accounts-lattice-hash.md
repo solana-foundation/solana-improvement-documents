@@ -12,7 +12,7 @@ created: 2024-12-20
 feature: LtHaSHHsUge7EWTPVrmpuexKz6uVHZXZL6cgJa7W7Zn
 development:
   - Agave: Implemented (v2.2.0)
-  - Firedancer: Unknown
+  - Firedancer: Implemented (v0.2)
 ---
 
 ## Summary
