@@ -1,42 +1,40 @@
 ---
-simd: '0185'
+simd: '0219'
 title: Stricter VM verification constraints
 authors:
   - Sean Young
   - Alexander Meißner
 category: Standard
 type: Core
-status: Idea
-created: 2024-10-16
-feature: TBD
+status: Review
+created: 2025-01-06
+feature: GJVDwRkUPNdk9QaK4VsU4g1N41QNxhy1hevjf8kz45Mq
 ---
 
 ## Summary
 
-Removing pitfalls and foot-guns from the virtual machine.
+Removing pitfalls and foot-guns from the virtual machine and syscalls.
 
 ## Motivation
 
 There are a couple of interactions between dApps and the virtual machine which
-are currently allowed but make no sense and are even dangerous for dApps to
-go unnoticed.
-
-TODO:
+are currently allowed but make no sense and are even dangerous for dApps:
 
 - CPI verification
   - Allows accidentally using `AccountInfo` structures which the program
   runtime never serialized
   - `AccountInfo` structures can be overwritten by CPI during CPI, causing
   complex side effects
-- VM stack gaps
+- Gaps in between VM stack frames
   - Complicates virtual address calculations
-  - False sense of security,
-  dApps which overrun their stack go unnoticed anyway
+  - False sense of security, dApps which overrun their stack can go unnoticed
+  anyway if they overrun it by an entire frame
   - Unaligned accesses near the edge of a stack frame can bleed into the next
 - VM write access
-  - Bad write accesses go unnoticed if another error corrects them
-- Syscall virtual address ranges
-  - Bad read and write accesses go unnoticed
+  - Bad write accesses to account payload go unnoticed as long as the original
+  value is restored
+- Syscall slice parameters
+  - Bad read and write accesses which span nonsensical ranges go unnoticed
 
 ## Alternatives Considered
 
@@ -66,7 +64,7 @@ otherwise `SyscallError::InvalidPointer` must be thrown:
   - `AccountInfo::lamports` / `SolAccountInfo::lamports`
   - `AccountInfo::data::ptr` / `SolAccountInfo::data`
 
-### VM stack
+### Gaps in between VM stack frames
 
 The virtual address space of the stack frames must become consecutive:
 
@@ -89,15 +87,29 @@ otherwise `InstructionError::ExternalAccountDataModified` must be thrown
 
 Thus, changing and later restoring data in unowned accounts is prohibited.
 
-### Syscall virtual address ranges
+### Syscall slice parameters
 
 When a range in virtual address space which:
 
 - starts in any account data (including its resize padding) and leaves it
 - starts outside account data and enters it
 
-is passed to a syscall `memcpy`, `memmove`, `memset`, and `memcmp`, it must throw
+is passed to `memcpy`, `memmove`, `memset`, or `memcmp`, it must throw
 `SyscallError::InvalidLength`.
+
+Except for CPI, all other syscalls which
+act on ranges in the virtual address space are confined to a single
+memory region for now. Meaning they have to stay within one of:
+
+- Readonly data
+- Stack
+- Heap
+- Account meta data
+- Account data without resize padding
+- Account resize padding
+
+And can not cross into any other region. This restriction is planned to
+be lifted in another SIMD.
 
 ## Impact
 
