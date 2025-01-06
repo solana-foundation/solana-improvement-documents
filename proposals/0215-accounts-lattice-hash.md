@@ -5,6 +5,7 @@ authors:
   - Brooks Prumo
   - Emanuele Cesena
   - Josh Siegel
+  - Sam Kim
 category: Standard
 type: Core
 status: Accepted
