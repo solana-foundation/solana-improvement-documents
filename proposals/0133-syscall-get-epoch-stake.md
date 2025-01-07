@@ -28,8 +28,8 @@ many use cases, such as validator governance and secondary consensus mechanisms,
 that were previously not possible on Solana.
 
 Additionally, this would enable the Feature Gate program defined in
-[SIMD 0089](./0089-programify-feature-gate-program.md) to tally vote account stake in
-support for a pending feature gate.
+[SIMD 0089](./0089-programify-feature-gate-program.md) 
+to tally vote account stake in support for a pending feature gate.
 
 ## Alternatives Considered
 
