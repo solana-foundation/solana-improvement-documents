@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Accepted
 created: 2024-03-13
-feature: C97eKZygrkU4JxJsZdjgbUY7iQR7rKTr4NyDWo2E5pRm (https://github.com/anza-xyz/agave/issues/1651)
+feature: C97eKZygrkU4JxJsZdjgbUY7iQR7rKTr4NyDWo2E5pRm
 ---
 
 ## Summary
