@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Accepted
 created: 2024-10-04
-feature: https://github.com/solana-labs/solana/issues/26599
+feature: CGB2jM8pwZkeeiXQ66kBMyBR6Np61mggL7XUsmLjVcrw https://github.com/solana-labs/solana/issues/26599
 ---
 
 ## Summary
