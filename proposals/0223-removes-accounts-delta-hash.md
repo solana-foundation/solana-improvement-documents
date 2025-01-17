@@ -8,8 +8,6 @@ type: Core
 status: Review
 created: 2025-01-13
 feature: LTdLt9Ycbyoipz5fLysCi1NnDnASsZfmJLJXts5ZxZz
-development:
-  - Agave: In development
 ---
 
 ## Summary
