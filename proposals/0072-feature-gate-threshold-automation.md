@@ -43,267 +43,176 @@ beneficial.
 
 ## New Terminology
 
-- **Feature Gate program:** The Core BPF program introduced in
-  [SIMD 0089](./0089-programify-feature-gate-program.md)
-  that will own all feature accounts.
-- **Staged Features PDA:** A PDA under the Feature Gate program used to track
-  features submitted for activation per epoch.
-- **Validator Support Signal PDA:** A PDA under the Feature Gate program used to
-  track a validator's support signal bitmask, which signals which features they
-  support.
-- **Get Epoch Stake Syscall:** The new syscall introduced in
-  [SIMD 0133](./0133-syscall-get-epoch-stake.md)
-  that returns the current epoch stake for a given vote account address.
+- **Staging authority**: The authority who must sign to stage a given feature
+  for activation, or unstage that feature.
+- **Signal account (PDA)**: A PDA under the Feature Gate program used to
+  prevent double-signaling.
 
 ## Detailed Design
 
-This proposal outlines a new feature activation process. The new process
-includes changes to the runtime's feature activation process as well as the
-Core BPF Feature Gate program proposed in
-[SIMD 0089](./0089-programify-feature-gate-program.md).
+A new feature activation process, comprised of the following steps:
 
-The new process will utilize the Feature Gate program to enable the runtime to
-activate staged features that meet the necessary stake support while preventing
-the activation of those that do not.
+1. Contributor creates a feature account and configures the feature's staging
+   authority.
+2. In some epoch `N-1`, the staging authority stages the feature for activation.
+3. During the next epoch `N`, validators signal which of the staged features
+   they support.
+4. At the end of epoch `N`, the runtime activates the features with enough stake
+   support.
 
-Two new instructions and one new type of PDA will be added to the Feature Gate
-program. They are detailed in this proposal.
+### New Feature Account State
 
-The new process is comprised of the following steps:
+A new version of feature account state will track feature status, staging
+authority, and stake support. Since the current feature state is a Rust
+`Option<u64>`, we will use a `2` for the first byte to denote feature state v2.
 
-1. **Feature Creation:** Contributors create feature accounts as they do now.
-2. **Staging Features for Activation:** In some epoch `N-1`, a multi-signature
-   authority stages for activation some or all of the features created in step
-   1, to be activated at the end of the *next epoch* (epoch `N`).
-3. **Signaling Support for Staged Features:** During the next epoch (epoch `N`),
-   validators signal which of the staged feature-gates they support in their
-   software.
-4. **Feature Activation:** At the end of epoch `N`, the runtime activates the
-   feature-gates that have the required stake support.
+```rust
+enum FeatureV2Status {
+    Inactive {
+        staging_authority: Pubkey,
+    },
+    Staged { 
+        staging_authority: Pubkey,
+        stake_support: u64,
+    },
+    Active,
+}
 
-### Step 1: Feature Creation
+/* Feature account state v2 */
+struct FeatureV2 {
+    /* value = 2 */
+    discriminator: u8,
+    state: FeatureV2State,
+}
+```
 
-The first step is creation of a feature account, done by submitting a
-transaction containing System instructions to fund, allocate, and assign the
-feature account to `Feature111111111111111111111111111111111111`.
+A runtime feature-gate will direct the runtime to ignore any v1 feature state
+and only recognize feature state v2. Migration of feature state v1 to v2 will be
+supported by the Feature Gate program, but only for inactive features.
 
-This step is unchanged from its original procedure.
+During step 1, contributors will still fund, allocate, and assign new feature
+accounts to `Feature111111111111111111111111111111111111` as they do now, but an
+additional step to initialize feature state v2 will be required. This is done
+via the new Feature Gate program instruction `InitializeFeature`.
 
-### Step 2: Staging Features for Activation
-
-A multi-signature authority, comprised of key-holders from Anza and
-possibly other validator client teams in the future, will have the authority to
-stage created features for activation.
-In the future, this authority could be replaced by validator governance.
-
-The multi-signature authority stages a feature for activation by invoking a new
-Feature Gate program instruction: `StageFeatureForActivation`. This instruction
-expects the Staged Features PDA (defined below) to either exist or be allocated
-with sufficient space and owned by the Feature Gate program, in order to
-initialize state. 
-
-The `StageFeatureForActivation` instruction is structured as follows:
-
-- Data: None
+```
+Instruction: InitializeFeature
+- Data:
+    - 1 byte: Instruction discriminator 
+    - 32 bytes: Address of the staging authority
 - Accounts:
-  - Feature account
-  - Staged Features PDA: writable
-  - Multi-signature authority: signer
-
-Note that features can only be staged in the epoch prior to the target
-activation epoch. This means a feature staged by invoking
-`StageFeatureForActivation` in epoch `N-1` is scheduled for activation (through
-the process below) at the end of epoch `N`. This is checked by the `Clock`
-sysvar.
-
-When a feature is staged for activation, initial stake support is zero.
-
-#### Staged Features PDA State
-
-A Staged Features PDA will be created for each epoch in which features are
-staged to be activated. If no features are staged for a given epoch, that
-epoch's corresponding Staged Features PDA will never be initialized and thus
-will not exist.
-
-These PDAs will not be garbage collected and can be referenced for historical
-purposes.
-
-The address of the Staged Features PDA for a given epoch is derived as follows,
-where `epoch` is a `u64` serialized to eight little-endian bytes:
-
-```
-"staged_features" + <epoch>
+    - [s, w]: Feature account
 ```
 
-The data for the Staged Features PDA will be structured as follows:
+Another instruction will be available to update the staging authority:
+`UpdateStagingAuthority`.
 
-```c
-#define FEATURE_ID_SIZE 32
-#define MAX_FEATURES 8
-
-/**
- * A Feature ID and its corresponding stake support, as signalled by validators.
- */
-typedef struct {
-    /** Feature identifier (32 bytes for public key). */
-    uint8_t feature_id[FEATURE_ID_SIZE];
-    /** Stake support (u64 serialized to little-endian). */
-    uint8_t stake_support[8];
-} FeatureStake;
-
-/**
- * Staged features for activation. 
- */
-typedef struct {
-    /**
-     * Features staged for activation at the end of the current epoch, with
-     * their corresponding signalled stake support.
-     */
-    FeatureStake features[MAX_FEATURES];
-} StagedFeatures;
 ```
-
-As depicted in the above layout, a maximum of 8 features can be staged for a
-given epoch.
-
-### Step 3: Signaling Support for Staged Features
-
-With an on-chain reference point to determine the features staged for activation
-for a particular epoch, nodes will signal their support for the staged features
-supported by their software.
-
-A node signals its support for staged features by invoking another new Feature
-Gate program instruction: `SignalSupportForStagedFeatures`. This instruction
-expects the Validator Support Signal PDA (defined below) to either exist or be
-allocated with sufficient space and owned by the Feature Gate program, in order
-to initialize state.
-
-The `SignalSupportForStagedFeatures` instruction is structured as follows:
-
-- Data: A `u8` bit mask of the staged features.
+Instruction: UpdateStagingAuthority
+- Data:
+    - 1 byte: Instruction discriminator
+    - 32 bytes: Address of the new staging authority
 - Accounts:
-  - Staged Features PDA: writable
-  - Validator Support Signal PDA: writable
-  - Vote account
-  - Authorized voter: signer
+    - [s]: Current staging authority
+    - [w]: Feature account 
+```
+
+Step 2 begins whenever the staging authority invokes the Feature Gate program
+instruction `StageFeature`, which simply sets the feature's status to
+`FeatureV2State::Staged` with initial stake support of zero.
+
+```
+Instruction: StageFeature
+- Data:
+    - 1 byte: Instruction discriminator
+- Accounts:
+    - [s]: Staging authority
+    - [w]: Feature account
+```
+
+This operation can be reversed anytime, as long as the feature still has
+`Staged` status, via the `UnstageFeature` instruction.
+
+```
+Instruction: UnstageFeature
+- Data:
+    - 1 byte: Instruction discriminator
+- Accounts:
+    - [s]: Staging authority
+    - [w]: Feature account
+```
+
+### Signaling Support
+
+Each epoch, all nodes must load all feature accounts with feature state v2 and
+signal support for any staged features they wish to see activated. Staged
+features they do not wish to activate can be intentionally omitted.
+
+Support is signaled through one or more transactions, depending on the number of
+staged features in a given epoch, which contain multiple Feature Gate program
+`SignalSupportForStagedFeature` instructions.
+
+```
+Instruction: SignalSupportForStagedFeature
+- Data:
+    - 1 byte: Instruction discriminator
+- Accounts:
+    - [s]: Authorized voter
+    - [ ]: Validator vote account
+    - [w]: Signal account
+    - [w]: Feature account
+```
 
 The authorized voter signer must match the authorized voter stored in the vote
 account's state.
 
-The `SignalSupportForStagedFeatures` instruction processor will provide the
-vote account's address to the `GetEpochStake` syscall to retrieve the stake
-delegated to that vote account for the epoch. Then, using the `1` values
-provided in the bitmask (defined below), the processor will add this stake value
-to each corresponding feature ID's stake support in the Staged Features PDA.
+The program processor will use the `SolGetEpochStake` syscall to retrive the
+corresponding epoch stake for the provided vote account, and add it to the
+feature's stake support.
 
-A node's stake support for features is always accounted for using their most
-recently sent bitmask. Each time a node sends a bitmask, if a previous bitmask
-was already sent for that node, their previous bitmask is first used to deduct
-stake support before adding stake support for the features signalled by the new
-bitmask.
-
-Similar to the `StageFeatureForActivation` instruction, the Clock sysvar will be
-used to ensure the Staged Features PDA corresponding to the *current* epoch `N` was
-provided.
-
-If a node does not send this instruction successfully during the current epoch,
-their stake is not tallied. This is analogous to a node signalling support for
-zero features.
-
-#### Signal Bitmask
-
-A bit mask is used as a compressed ordered list of indices. This has two main
-benefits:
-
-- Minimizes transaction size for nodes, requiring only one byte to describe
-  256 bytes (8 * 32) of data. The alternative would be sending `n` number of
-  32-byte addresses in each instruction.
-- Reduce compute required to search the list of staged features for a matching
-  address. The bitmask's format provides the Feature Gate program with the
-  indices it needs to store supported stake without searching through the staged
-  features for a match.
-
-A `1` bit represents support for a feature. For example, for staged features
-`[A, B, C, D, E, F, G, H]`, if a node wishes to signal support for all features
-except `E` and `H`, their `u8` value would be 246, or `11110110`.
-
-#### Validator Support Signal PDA State
-
-A Validator Support Signal PDA will be created for each vote account. It will
-store the node's submitted bitmasks.
-
-As mentioned previously, a node's most recently submitted bitmask is considered
-their signal for the epoch. Validator Support Signal state allows one bitmask
-per epoch, but can store multiple epochs of historical bitmasks. This is useful
-for querying stake support post-epoch. When a new bitmask is submitted for an
-epoch with an existing entry in the account state, it is overwritten.
-
-These accounts are never garbage collected since they are reused every epoch.
-This means nodes are only required to pay for rent-exemption once.
-
-The address of the Validator Support Signal PDA (for a given epoch?) is derived
-as follows, where `vote_address` is the 32 bytes of the validator's vote address.
+The signal account is a PDA derived from the epoch, feature ID and vote address
+to prevent double-signaling.
 
 ```
-"support_signal" <vote_address>
+epoch_le_bytes + feature_id + vote_address
 ```
 
-The data for the Validator Support Signal PDA will be structured as follows:
+It contains just 8 bytes for the little-endian `u64` stake amount. These signal
+accounts can serve as historical records for which nodes signaled support for
+which features. They also serve as a source of truth for withdrawing support via
+the `WithdrawSupportForStagedFeature` instruction, which will deduct the stored
+stake value in the signal account from the feature's stake support and clear the
+signal account.
 
-```c
-#define MAX_SIGNALS 4
-
-/**
- * A validator's support signal bitmask along with the epoch the signal
- * corresponds to.
- */
-typedef struct {
-    /**
-     * The epoch the support signal corresponds to (u64 serialized to
-     * little-endian).
-    */
-    uint8_t epoch[8];
-    /** The support signal bitmask. */
-    u8 signal;
-    /** Padding for 8-byte alignment. */
-    uint8_t _padding[7];
-} SupportSignalWithEpoch;
-
-/**
- * A validator's support signal bitmasks with their corresponding epochs.
- */
-typedef struct {
-    /**
-     * The support signal bitmasks with their corresponding epochs.
-     */
-    SupportSignalWithEpoch signals[MAX_SIGNALS];
-} ValidatorSupportSignal;
+```
+Instruction: WithdrawSupportForStagedFeature
+- Data:
+    - 1 byte: Instruction discriminator
+- Accounts:
+    - [s]: Authorized voter
+    - [ ]: Validator vote account
+    - [w]: Signal account
+    - [w]: Feature account
 ```
 
-As depicted in the above layout, a validator's signal can be stored (and
-queried) for up to 4 epochs.
+Although there is no requirement for features to be staged in the previous
+epoch, staging might occur late in an epoch, after most support signals have
+already been cast. This would result in not enough stake support until the next
+epoch arrives and new signals are cast.
 
-### Step 4: Feature Activation
+### Activation
 
-At the end of the epoch, the runtime loads the Staged Features PDA for the
-current epoch and calculates the stake - as a percentage of the total epoch
-stake - in support of each feature to determine which staged features to
-activate.
+At the end of the epoch, the runtime loads all staged feature accounts and
+calculates their stake support as a percentage of the cluster-wide stake. Only
+features whose account state has status `Staged` at the epoch rollover will be
+evaluated. 
 
-Every feature whose stake support meets the required threshold must be
+Every feature whose stake support meets the required threshold will be
 activated. This threshold will be hard-coded in the runtime to 95% initially,
 but future iterations on the process could make this threshold configurable.
 
-Features can be revoked at any point up until this step (staged or unstaged). If
-a feature is revoked, nodes may still have signalled support for it, but the
-runtime will not activate the feature since the account will not exist on-chain.
-For more information, see the
-[Feature Gate Program's](https://github.com/solana-program/feature-gate)
-`RevokePendingActivation` instruction, as proposed in
-[SIMD 0089](./0089-programify-feature-gate-program.md).
-
-If a feature is not activated, it must be resubmitted according to Step 2. If it
-is revoked, it must be resubmitted according to Step 1.
+Features without the required stake support will remain `Staged` until they
+acquire enough stake support or are manually unstaged.
 
 ## Alternatives Considered
 
@@ -321,6 +230,10 @@ Validators will be responsible for signaling their vote using a transaction
 which they've previously not included in their process. They also will have a
 more significant impact on feature activations if they neglect to upgrade their
 software version.
+
+Note that revoking pending features, as enabled by
+[SIMD 0089](./0089-programify-feature-gate-program.md) is unchanged by this
+proposal, and also applies to `Staged` features.
 
 ## Security Considerations
 
