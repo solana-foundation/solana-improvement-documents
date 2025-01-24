@@ -73,7 +73,7 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
 0. `proof_account`, expected to be previously initialized with the proof data.
 1. `instructions`, Instructions sysvar
 
-`DuplicateBlockProof` has an instruction data of 81 bytes, containing:
+`DuplicateBlockProof` has an instruction data of 273 bytes, containing:
 
 - `0x00`, a fixed-value byte acting as the instruction discriminator
 - `offset`, an unaligned eight-byte little-endian unsigned integer indicating
@@ -85,6 +85,14 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
 - `destination`, an unaligned 32 byte array representing the account to reclaim
   the lamports if a successful slashing report account is created and then later
   closed.
+- `shred_1_merkle_root`, an unaligned 32 byte array representing the merkle root
+  of the first shred in the `proof_account`
+- `shred_1_signature`, an unaligned 64 byte array representing the signature
+  of `node_pubkey` on the first shred in the `proof_account`
+- `shred_2_merkle_root`, an unaligned 32 byte array representing the merkle root
+  of the second shred in the `proof_account`
+- `shred_2_signature`, an unaligned 64 byte array representing the signature
+  of `node_pubkey` on the second shred in the `proof_account`
 
 We expect the contents of the `proof_account` when read from `offset` to
 deserialize to two byte arrays representing the duplicate shreds.
@@ -148,17 +156,17 @@ eligible for slashing.
 In order to verify that `shred1` and `shred2` were correctly signed by
 `node_pubkey` we use instruction introspection.
 
-Using the `Instructions` sysvar we verify that the previous two instructions of
+Using the `Instructions` sysvar we verify that the previous instruction of
 this transaction are for the program ID
 `Ed25519SigVerify111111111111111111111111111`
 
-For each of these instructions, verify the instruction data:
+For this instruction, verify the instruction data:
 
-- The first byte is `0x01`
+- The first byte is `0x02`
 - The second byte (padding) is `0x00`
 
-And then deserialize the remaining instruction data as 2 byte little-endian
-unsigned integers:
+Verify that the remaining instruction data represents two signature offsets
+which is specified as 2 byte little-endian unsigned integers:
 
 ```rust
 struct Ed25519SignatureOffsets {
@@ -183,6 +191,9 @@ verify(pubkey = node_pubkey, message = shred2.merkle_root, signature = shred2.si
 We use the deserialized offsets to calculate [\[3\]](#notes) the `pubkey`,
 `message`, and `signature` of each instruction and verify that they correspond
 to the `node_pubkey`, `merkle_root`, and `signature` specified by the shred payload.
+
+The instruction indices must point to the `DuplicateBlockProof` instruction and
+the offsets into the instruction data where these values are stored.
 
 If both proof and signer verification succeed, we continue on to store the incident.
 
