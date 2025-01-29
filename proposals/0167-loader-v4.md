@@ -306,6 +306,58 @@ All program management instructions must cost 2000 CUs.
   the previous versions program account
   - Change the status stored in the program account to finalized
 
+### Loader-v3 Instruction: Migrate
+
+- Instruction accounts:
+  - `[writable]` The program data account.
+  - `[writable]` The program account.
+  - `[signer]` The migration authority.
+- Instruction data:
+  - Enum variant `8u32`
+- Behavior:
+  - Check that there are at least three instruction accounts,
+  otherwise throw `NotEnoughAccountKeys`
+  - Check that the program data account is writable,
+  otherwise throw `InvalidArgument`
+  - Check that the program data was last modified before the current slot
+  if the program data has the state `ProgramData`,
+  otherwise throw `InvalidArgument`
+  - Check that the provided authority is either:
+    - the migration authority
+    (pubkey is `3Scf35jMNk2xXBD6areNjgMtXgp5ZspDhms8vdcbzC42`)
+    - or the upgrade authority stored in the program data account
+    - or the program signer if the program is finalized, closed or
+    uninitialized
+  otherwise throw `IncorrectAuthority`
+  - Check that the provided authority is a signer,
+  otherwise throw `MissingRequiredSignature`
+  - Check that the program account is writable,
+  otherwise throw `InvalidArgument`
+  - Check that the program account is owned by loader-v3,
+  otherwise throw `IncorrectProgramId`
+  - Check that the program account has the state `Program`,
+  otherwise throw `InvalidAccountData`
+  - Check that the program account points to the program data account,
+  otherwise throw `InvalidArgument`
+  - Clear the program account (setting its size to zero)
+  - Transfer all funds from the program data account to the program account
+  - If the program data account was closed / empty or uninitialized:
+    - Assign ownership of the program account to the system program
+  - otherwise, if the program data account contains actual program data:
+    - Assign ownership of the program account to loader-v4
+    - CPI loader-v4 `SetProgramLength` the program account to the size of the
+    program data account minus the loader-v3 header size and use the migration
+    authority.
+    - CPI loader-v4 `Copy` the program data account into the program account
+    - CPI loader-v4 `Deploy` the program account
+    - If the program data account was finalized (upgrade authority is `None`):
+      - CPI loader-v4 `Finalize` without a next version forwarding
+    - otherwise, if the program data account was not finalized and the
+    migration authority (as opposed to the upgrade authority) was provided:
+      - CPI loader-v4 `TransferAuthority` to the upgrade authority
+  - Clear the program data account (setting its size to zero)
+  - Assign ownership of the program data account to the system program
+
 ## Impact
 
 This proposal:
