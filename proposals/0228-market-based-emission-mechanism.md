@@ -36,7 +36,7 @@ emission mechanism and evolve it from a fixed-schedule mechanism to a
 programmatic, market-driven mechanism.
 
 The purpose of token emissions in Proof of Stake (PoS) networks is to attract
-stakers and validators to secure the network. But issuance should never by higher than needed because  Therefore, the most efficient
+stakers and validators to secure the network. But issuance should never be higher than needed because  Therefore, the most efficient
 amount of token issuance is the lowest rate possible necessary to secure the
 network.
 
@@ -51,7 +51,7 @@ There are two major implications of Smart Emissions:
 
 Smart Emissions dynamically incentivizes participation when stake drops to
 secure the network.
-Smart Emissions minimize SOL issuance  to the Minimum Necessary Amount (MNA) to
+Smart Emissions minimize SOL issuance to the Minimum Necessary Amount (MNA) to
 secure the network.
 
 This is good for the Solana network and network stakers for four reasons:
@@ -153,21 +153,6 @@ impact on the overall health of the Solana economy.
 
 ## Security Considerations
 
-Targeting a staking participation rate of 50% ensures sufficient stake for
-consensus safety while maintaining the network's security and decentralization.
+The biggest concern for this proposal is that it could reduce the amount of SOL staked more than desired. We can assure ourselves that at least with current market conditions the resulting equilibrium staked amount would be more than 30% with the following reasoning:
 
-Below 33%, we potentially risk network safety because a supermajority of all SOL
-has explicitly not voted on any given block and this opens the edge case
-possibility of long range attacks. It is important to note that these long range
-attacks are entirely theoretical and we have not seen one in practice. There are
-other mechanisms in Solana to protect against long range attacks.
-
-This proposal is the first in a series of steps to make Solana's consensus more
-secure and economics more market driven. The successor to this proposal is
-another SIMD that introduces the concept of long-term staking, which seeks to
-improve network security. The option to unstake SOL on a relatively short notice
-(i.e., a short cool down period) poses a potential risk to networks' stability
-and safety, particularly in extreme circumstances where a significant amount of
-SOL is unstaked within a brief timeframe. The combination of these two SIMDs
-address these concerns while improving network security and economic activity.
-
+Currently the issuance rate is 4.5% and the staked amount is 65% which comes out to around 6.25% validator rewards for performant stakers (not including MEV). If the issuance rate were instead governed by this proposal, we should expect the staked amount to be more than 30% because $v(30\%) \approx 6.25\%$. We know that $D(6.25\%)$ = 65% and therefore the staked amount under the new issuance rate would be more than 30% if demand stays the same. 
