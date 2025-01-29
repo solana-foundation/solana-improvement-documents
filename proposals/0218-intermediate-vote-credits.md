@@ -17,7 +17,7 @@ This feature aims to build upon the effort of timely vote credits in order
 to improve the vote credit algorithm.
 
 Credits are awarded for a block voted on by a validator that ultimately gets
-finalized. For consensus purposes a vote for a block is implicitely a vote for
+finalized. For consensus purposes a vote for a block is implicitly a vote for
 all its ancestor blocks as well. We propose a mechanism in which all intermediate
 blocks between the previous root and the new root on a fork are awarded credits.
 
@@ -29,7 +29,7 @@ gaps whereby validators can gained increased credits through modifications that
 do not have any consensus benefits. Running unaudited code poses a risk to the network.
 
 Since there is no consensus benefits to these modifications, by aligning the credit
-algorithm to more accurately reflect consensus contriubtion, we hope to reduce the
+algorithm to more accurately reflect consensus contribution, we hope to reduce the
 potential danger of these modifications.
 
 Similarly, honest validators are not fully rewarded for all of their contributions.
@@ -59,7 +59,7 @@ latency 2 votes:
 
 Assuming this top fork gets finalized, the validator will receive 3 * 16 = 48 credits.
 Although the validator did not vote on 103 or 104, its timely vote on 105 conveyed
-its vote on these intermediate blocks implicitely. Thus we propose that the
+its vote on these intermediate blocks implicitly. Thus we propose that the
 intermediate blocks should be considered as having been voted on in the block in
 which the vote for 105 landed for the purpose of accounting:
 
