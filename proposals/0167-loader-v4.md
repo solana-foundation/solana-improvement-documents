@@ -125,6 +125,41 @@ All program management instructions must cost 2000 CUs.
   - Copy the chunk into the program account at the offset shifted by the
   header size
 
+#### Copy
+
+- Instruction accounts:
+  - `[writable]` The program account to copy to.
+  - `[signer]` The authority of the program.
+  - `[]` The program(data) account to copy from.
+- Instruction data:
+  - Enum variant `1u32`
+  - `u32` Byte offset at which to write
+  - `u32` Byte offset at which to read
+  - `u32` Length of the chunk to copy in bytes
+- Behavior:
+  - Check there are at least three instruction accounts,
+  otherwise throw `NotEnoughAccountKeys`
+  - Check that program account and source account do not alias,
+  otherwise throw `AccountBorrowFailed`
+  - Verify the program account
+  - Check the status stored in the program account is retracted,
+  otherwise throw `InvalidArgument`
+  - Check that the source account is owned by loader v1, v2, v3 or v4,
+  otherwise throw `InvalidArgument`
+  - and look-up the source header size:
+    - loader-v1: 0 bytes
+    - loader-v2: 0 bytes
+    - loader-v3: 45 bytes
+    - loader-v4: 48 bytes
+  - Check that the source end offset (sum of source offset and length) does
+  not exceed the maximum (source account length minus the source header size),
+  otherwise throw `AccountDataTooSmall`
+  - Check that the destination end offset (sum of destination offset and
+  length) does not exceed the maximum (program account length minus the loader-v4
+  header size), otherwise throw `AccountDataTooSmall`
+  - Copy the chunk between the program accounts at the offsets, each shifted by
+  the header size of their loader (account owner) respectively
+
 #### SetProgramLength
 
 - Instruction accounts:
@@ -132,7 +167,7 @@ All program management instructions must cost 2000 CUs.
   - `[signer]` The authority of the program.
   - `[writable]` Optional, the recipient account.
 - Instruction data:
-  - Enum variant `1u32`
+  - Enum variant `2u32`
   - `u32` The new size after the operation.
 - Behavior:
   - Check there are at least two instruction accounts,
@@ -177,7 +212,7 @@ All program management instructions must cost 2000 CUs.
   - `[writable]` Optional, an undeployed source program account to take data
   and lamports from.
 - Instruction data:
-  - Enum variant `2u32`
+  - Enum variant `3u32`
 - Behavior:
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
@@ -212,7 +247,7 @@ All program management instructions must cost 2000 CUs.
   - `[writable]` The program account to retract.
   - `[signer]` The authority of the program.
 - Instruction data:
-  - Enum variant `3u32`
+  - Enum variant `4u32`
 - Behavior:
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
@@ -232,7 +267,7 @@ All program management instructions must cost 2000 CUs.
   - `[signer]` The current authority of the program.
   - `[signer]` The new authority of the program.
 - Instruction data:
-  - Enum variant `4u32`
+  - Enum variant `5u32`
 - Behavior:
   - Check there are at least three instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
@@ -250,7 +285,7 @@ All program management instructions must cost 2000 CUs.
   - `[signer]` The current authority of the program.
   - `[]` Optional, the reserved address for the next version of the program.
 - Instruction data:
-  - Enum variant `5u32`
+  - Enum variant `6u32`
 - Behavior:
   - Check there are at least three instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
