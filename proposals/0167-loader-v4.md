@@ -7,7 +7,9 @@ category: Standard
 type: Core
 status: Review
 created: 2024-08-15
-feature: TBD
+feature:
+  - 8Cb77yHjPWe9wuWUfXeh6iszFGCDGNCoFk3tprViYHNm
+  - EmhbpdVtZ2hWRGFWBDjn2i3SJD8Z36z4mpMcZJEnebnP
 ---
 
 ## Summary
@@ -45,13 +47,15 @@ None.
 
 ## Detailed Design
 
-The associated feature gate must:
+The feature gate `8Cb77yHjPWe9wuWUfXeh6iszFGCDGNCoFk3tprViYHNm` must:
 
-- add loader-v4 to the write lock demotion exceptions
 - enable loader-v4 `LoaderV411111111111111111111111111111111111` program
-management and execution
-- simultaneously disable new deployments on loader-v3
-(`BPFLoaderUpgradeab1e11111111111111111111111`),
+management and execution.
+- enable the loader-v3 `BPFLoaderUpgradeab1e11111111111111111111111`
+instruction `UpgradeableLoaderInstruction::Migrate`.
+
+An additional feature gate `EmhbpdVtZ2hWRGFWBDjn2i3SJD8Z36z4mpMcZJEnebnP`
+must disable new deployments on loader-v3,
 throwing `InvalidIstructionData` if `DeployWithMaxDataLen` is called.
 
 ### Owned Program Accounts
@@ -111,7 +115,7 @@ All program management instructions must cost 2000 CUs.
   - `[signer]` The authority of the program.
 - Instruction data:
   - Enum variant `0u32`
-  - `u32` Offset at which to write the given bytes
+  - `u32` Byte offset at which to write the given bytes
   - `[u8]` Chunk of the programs executable file
 - Behavior:
   - Check there are at least two instruction accounts,
@@ -221,7 +225,8 @@ All program management instructions must cost 2000 CUs.
   (deployment cooldown), otherwise throw `InvalidArgument`
   - Check that the status stored in the program account is retracted
     otherwise throw `InvalidArgument`
-  - In case a source program was provided (instruction account at index 2):
+  - In case a source program was provided (instruction account at index 2)
+  which is not the program account:
     - Verify the source program account
     - Check that the status stored in the source program account is retracted,
     otherwise throw `InvalidArgument`
@@ -235,7 +240,7 @@ All program management instructions must cost 2000 CUs.
     - Set the length of the source program account to zero
     - Transfer all funds of the  source program account to the program
     account
-  - In case no source program was provided:
+  - otherwise, if no source program was provided:
     - Check that the executable file stored in the program account passes
     executable verification
   - Change the slot in the program account to the current slot
@@ -360,31 +365,53 @@ All program management instructions must cost 2000 CUs.
 
 ## Impact
 
-This proposal:
+- This proposal covers all the use cases loader-v3 had but in a cleaner way and
+comes with a specification.
+- loader-v3 had a separate account type for buffers and extra commands for
+these buffer accounts, in loader-v4 program accounts can act as buffers, there
+is no more distinction.
+- loader-v3 deployments always needed a buffer, in loader-v4 it is optional,
+one can upload a redeployment into the program account directly.
+- loader-v3 had two accounts per program, loader-v4 goes back to having only
+one, thus needs less funds to reach rent exemption.
+- loader-v3 closing of programs did finalize them, in loader-v4 all the funds
+can be retireved and the program address repurposed.
+- loader-v3 programs could only grow, loader-v4 can shrink programs and also
+retireve the surplus of funds no longer required for rent exception.
+- loader-v3 programs were always "live" after the first deployment, with
+loader-v4 one can temporarily put a program into maintenance mode without a
+redeployment.
+- loader-v3 always required the entire program to be uploaded for a
+redeployment, loader-v4 supports partial uploads for patching chunks of the
+program.
+- loader-v3 ELFs were misaligned, loader-v4 properly alignes the executable
+file relative to the beginning of the account.
+- loader-v4 allows finalized programs to mark which other program supersedes
+them which can then be offered as an option in forntends. This provides a
+more secure alternative to redeployment / upgrading of programs at the same
+address.
+- An option to migrate programs from loader-v3 to loader-v4 without changing
+their program address will be available via a new loader-v3 instruction. This
+will count as a redeployment and thus render the program unavailable for the
+rest of the slot (delay visibility).
 
-- covers all the use cases loader-v3 had but in a cleaner way and comes with
-a specification.
-- allows finalized programs to mark which other program supersedes them which
-can then be offered as an option in forntends. This provides a more secure
-alternative to redeployment / upgrading of programs at the same address.
-- makes deployment slightly cheaper for dapp developers as they would no longer
-have to burn funds for the rent exception of the proxy account.
-- provides an alternative redeployment path which does not require a big
-deposit of funds for rent exception during the upload.
-- enables dapp developers to withdrawl the surplus of funds required for rent
-exception when shortening the length of program accounts or closing them.
-- shortens the workflow of temporarily closing a program to a single
-instruction, instead of having to build and redeploy an empty program.
-- properly alignes the executable file relative to the beginning of the
-account. In loader-v3 it is misaligned.
-- once all loader-v3 programs are migrated:
-  - allows transaction account loading to be simplifed, because every program
-  would load exactly one account, no need to load the proxy account to get to
-  the actual program data (which is not listed in the transaction accounts).
-  - allows the removal of the write lock demotion exception if loader-v3 is
-  present in a transaction.
-  - corrects the miscounting of the proxy account size towards the total
-  transaction account loading limit.
+Once new programs can not be deployed on loader-v3 anymore, the list of all
+loader-v3 programs becomes fixed and can be extracted from a snapshot. Using
+the added loader-v3 migration instruction and the global migration authority,
+the core protocol developers will then migrate all loader-v3 programs to
+loader-v4 programs, which once completed:
+
+- allows transaction account loading to be simplifed, because every program
+would load exactly one account, no need to load the proxy account to get to
+the actual program data (which is not listed in the transaction accounts).
+- allows the removal of the write lock demotion exception if loader-v3 is
+present in a transaction.
+- corrects the miscounting of the program data account size towards the total
+transaction account loading limit.
+- allows dApp devs to resuscitate closed loader-v3 programs if they still
+control the program authority. This allows redeployment at the same address
+or completely closing the program account in order to retrieve the locked
+funds.
 
 ## Security Considerations
 
@@ -392,20 +419,4 @@ None.
 
 ## Backwards Compatibility
 
-This proposal does not break any existing programs. However, dapp developers
-might want to profit from the new program mangement instructions without
-influencing their users work flows. To do so they would need a way to turn the
-program accounts of loader-v3 to program accounts of loader-v4, changing the
-account owner but keeping the program address. A potential issue is that the
-programdata header of loader-v3 is only 45 bytes long while loader-v4 takes 48
-bytes. An automatic mechanism in the program runtime (triggered by feature
-activation) could then perform the following steps per program:
-
-- loader-v3 clears the program proxy account (setting its size to zero)
-- loader-v3 transfers all funds from the programdata to the proxy account
-- loader-v3 gifts the program proxy account to loader-v4
-- loader-v4 initializes it via `Truncate`
-- loader-v4 copies the data from the programdata account via `Write`
-- loader-v4 deploys it via `Deploy`
-- Optinally, loader-v4 finalizes it without a next version forwarding
-- loader-v3 closes the programdata account (setting its size to zero)
+None.
