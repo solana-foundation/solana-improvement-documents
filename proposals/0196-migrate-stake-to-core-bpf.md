@@ -5,9 +5,9 @@ authors:
   - Hanako Mumei
 category: Standard
 type: Core
-status: Review
+status: Implemented
 created: 2024-11-14
-feature: (fill in with feature tracking issues once accepted)
+feature: 6M4oQ6eXneVhtLoiAr4yRYQY43eVLjrKbiDZDJc892yk (https://github.com/anza-xyz/feature-gate-tracker/issues/73)
 ---
 
 ## Summary
