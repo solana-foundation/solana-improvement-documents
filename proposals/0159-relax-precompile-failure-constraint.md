@@ -4,9 +4,9 @@ title: Relax Precompile Failure Constraint
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-07-25
-feature: (fill in with feature tracking issues once accepted)
+feature: 9ypxGLzkMxi89eDerRKXWDXe44UY2z4hBig4mDhNq5Dp (https://github.com/anza-xyz/agave/issues/3245)
 ---
 
 ## Summary
