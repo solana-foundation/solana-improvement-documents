@@ -7,9 +7,9 @@ export const enforceHeaderStructure = {
   tags: ["structure"],
   function: function rule(params: RuleParams, onError: RuleOnError) {
     const string = params.frontMatterLines
-    .join("\n")
-    .trim()
-    .replace(/^-*$/gm, "")
+      .join("\n")
+      .trim()
+      .replace(/^-*$/gm, "")
 
     const frontMatter: any = yaml.load(string)
     if (!frontMatter) return
@@ -30,7 +30,7 @@ export const enforceHeaderStructure = {
 
     let tempHeadings = expectedHeadings;
 
-    while (index < expectedHeadings.length) {
+    while (index < filtered.length) {
       let token = filtered[index]
       tempHeadings = tempHeadings.filter(item => item !== token.line)
 
