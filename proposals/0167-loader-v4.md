@@ -125,7 +125,7 @@ All program management instructions must cost 2000 CUs.
   - Copy the chunk into the program account at the offset shifted by the
   header size
 
-#### Truncate
+#### SetProgramLength
 
 - Instruction accounts:
   - `[(signer), writable]` The program account to change the size of.
@@ -142,8 +142,6 @@ All program management instructions must cost 2000 CUs.
     - the owner of the program account is loader-v4,
     otherwise throw `InvalidAccountOwner`
     - the program account is writable, otherwise throw `InvalidArgument`
-    - the program account (instruction account at index 0) signed,
-    otherwise throw `MissingRequiredSignature`
     - the provided authority (instruction account at index 1) signed,
     otherwise throw `MissingRequiredSignature`
   - If this is not an initialization:
@@ -157,7 +155,9 @@ All program management instructions must cost 2000 CUs.
     otherwise throw `NotEnoughAccountKeys`
     - Check that the recipient account (instruction account at index 2) is
     writable, otherwise throw `InvalidArgument`
-    - Transfer the surplus from the program account to the recipient account
+    - If a recipient account was provided that is not the program account:
+      - Transfer the surplus from the program account to the recipient account
+    - otherwise, if the requested new size is zero throw `InvalidArgument`
   - If the requested new size is zero:
     - Delete the entire program account, including the header
   - If the requested new size is greater than zero:
