@@ -36,8 +36,8 @@ emission mechanism and evolve it from a fixed-schedule mechanism to a
 programmatic, market-driven mechanism.
 
 The purpose of token emissions in Proof of Stake (PoS) networks is to attract
-stakers and validators to secure the network. But issuance should never be higher than needed because  Therefore, the most efficient
-amount of token issuance is the lowest rate possible necessary to secure the
+stakers and validators to secure the network. But excessive issuance is costly because it imposes frictions on the network and crowds out SOL usage in DeFi. Therefore, the most efficient
+amount of token issuance is the lowest rate necessary to secure the
 network.
 
 Solana's current emission mechanism is a fixed, time-based formula that was
@@ -110,13 +110,13 @@ emissions.
 
 The issuance rate formula is:
 
-$i(s) = r(1 - \sqrt{s})$
+$$i(s) = r(1 - \sqrt{s})$$
 
 ![Issuance Rate](../suporting_images/0228-market-based-emission-mechanism/issuance_rate.png)
 
 This yields a vote reward rate for validators with good performance of:
 
-$v(s) = \frac{i(s)}{s} = \frac{r(1 - \sqrt{s})}{s}$
+$$v(s) = \frac{i(s)}{s} = \frac{r(1 - \sqrt{s})}{s}$$
 
 ![Issuance Rate](../suporting_images/0228-market-based-emission-mechanism/validator_returns.png)
 
