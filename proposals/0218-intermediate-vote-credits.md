@@ -91,7 +91,8 @@ validator. If for example the same validator did not vote on the minor fork:
 
 It would earn 80 credits.
 
-More formally when the feature flag `enable_ivc` is activated the vote program must:
+More formally when the feature flag `enable_ivc: EivcMRDPBKcmkgfWZ7p317A6JPshcDBStgAGSogerDpq`
+is activated the vote program must:
 
 * Collect all ancestors `A` between the previous root and the new root as reported
   via the `SlotHashes` sysvar when rooting a lockout `r` with latency `l`
