@@ -4,8 +4,9 @@ title: Disable Partitioned Rent Updates
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Accepted
+status: Withdrawn
 created: 2024-09-25
+superseded-by: https://github.com/solana-foundation/solana-improvement-documents/pull/231
 feature: (fill in with feature tracking issues once accepted)
 ---
 
