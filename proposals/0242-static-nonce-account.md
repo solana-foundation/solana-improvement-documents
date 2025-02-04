@@ -37,18 +37,28 @@ Clarification of existing terminology is provided:
   - The account specified in the first account of the
     `SystemInstruction::AdvanceNonceAccount` instruction in a nonce
     transaction.
+- recent blockhashes sysvar account
+  - The account specified in the second account of the
+    `SystemInstruction::AdvanceNonceAccount` instruction in a nonce
+    transaction.
 - statically included account
   - An account that has its' `Pubkey` directly included in the transaction
     message.
 
 ## Detailed Design
 
-- Nonce transactions MUST have a nonce account index that is less than or equal
-  to the number of statically included accounts in the transaction.
+- Nonce transactions MUST have a nonce account index that is less than the
+  number of statically included accounts in the transaction.
+- Nonce transactions MUST have a recent blockhashes sysvar account index that
+  is less than the number of statically included accounts in the transaction.
 - Leader nodes MUST drop nonce transactions that do not meet this requirement
   without including them in a block.
 - Nonce transactions that do not meet this requirement are invalid and MUST
   result in the entire block being rejected by the validators.
+
+For advance nonce processing, all but the first two accounts in the
+`SystemInstruction::AdvanceNonceAccount` instruction are ignored, regardless
+of whether they are statically are dynamically resolved.
 
 ## Alternatives Considered
 
