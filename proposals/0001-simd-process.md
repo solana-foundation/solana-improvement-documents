@@ -137,7 +137,8 @@ is descriptive)
 present convincing motivation, demonstrate lack of understanding of the
 design's impact, or are disingenuous about the drawbacks or alternatives tend
 to be poorly received. Low quality proposals with limited engagement will be 
-closed by SIMD repository maintainers.
+closed by SIMD repository maintainers. Proposal titles should be concise and
+descriptive.
 - Submit a pull request.
 - Now that your proposal has an open pull request, use the issue number of the
 PR to update the `XXXX-` prefix to the number.
