@@ -46,6 +46,7 @@ leader schedule generation algorithm.
 
 For reference, valid vote accounts are defined as accounts with the following
 requirements:
+
 - non-zero lamport balance
 - owned by the vote program (`Vote111111111111111111111111111111111111111`)
 - either:
