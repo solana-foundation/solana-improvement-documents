@@ -1,6 +1,6 @@
 ---
 simd: '0180'
-title: Use Vote Account Address To Key Leader Schedule
+title: Vote Account Address Keyed Leader Schedule
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
