@@ -71,7 +71,12 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
 `DuplicateBlockProof` requires 1 account and the `Instructions` sysvar:
 
 0. `proof_account`, expected to be previously initialized with the proof data.
-1. `instructions`, Instructions sysvar
+1. `reporter`, the account which will pay to store the violation report. Must be
+    writable.
+2. `pda_account`, the PDA in which to store the violation report. See the below
+    section for details. Must be writable.
+3. `system_program_account`, required to create the violation report.
+4. `instructions`, Instructions sysvar
 
 `DuplicateBlockProof` has an instruction data of 273 bytes, containing:
 
@@ -209,7 +214,7 @@ the violation type:
 let (pda, _) = find_program_address(&[
   node_pubkey.to_bytes(),        // 32 byte array representing the public key
   slot.to_le_bytes(),            // Unsigned little-endian eight-byte integer
-  0u8,                           // Byte representing the violation type
+  1u8,                           // Byte representing the violation type
 ])
 ```
 
@@ -238,16 +243,14 @@ struct ProofReport {
   violation_type: u8,              // Byte representing the violation type
   proof_account: Pubkey,           // 32 byte array representing the account where
                                       the proof is stored
-  proof_size: u32,                 // Unaligned unsigned four-byte little endian
-                                      integer representing the size of the serialized
-                                      proof
-  proof: &[u8],                    // Byte array of the serialized proof
 }
 ```
 
-The `DuplicateBlockProofData` is serialized into the `proof` field. This provides
-an on chain trail of the reporting process, since the `proof_account` supplied in
-the `DuplicateBlockProof` account could later be modified.
+immediately followed by a `DuplicateBlockProofData`.
+
+This proof data provides an on chain trail of the reporting process, since the
+`proof_account` supplied in the `DuplicateBlockProof` instruction could later
+be modified.
 
 The `pubkey` is populated with the `node_pubkey`. For future violation types that
 involve votes, this will instead be populated with the vote account's pubkey.
