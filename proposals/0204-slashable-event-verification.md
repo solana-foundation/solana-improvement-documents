@@ -75,8 +75,8 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
     writable.
 2. `pda_account`, the PDA in which to store the violation report. See the below
     section for details. Must be writable.
-3. `system_program_account`, required to create the violation report.
-4. `instructions`, Instructions sysvar
+3. `instructions`, Instructions sysvar
+4. `system_program_account`, required to create the violation report.
 
 `DuplicateBlockProof` has an instruction data of 273 bytes, containing:
 
