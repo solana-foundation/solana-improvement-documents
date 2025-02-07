@@ -71,14 +71,12 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
 `DuplicateBlockProof` requires 1 account and the `Instructions` sysvar:
 
 0. `proof_account`, expected to be previously initialized with the proof data.
-1. `reporter`, the account which will pay to store the violation report. Must be
-    writable.
-2. `pda_account`, the PDA in which to store the violation report. See the below
+1. `pda_account`, the PDA in which to store the violation report. See the below
     section for details. Must be writable.
-3. `instructions`, Instructions sysvar
-4. `system_program_account`, required to create the violation report.
+2. `instructions`, Instructions sysvar
+3. `system_program_account`, required to create the violation report.
 
-`DuplicateBlockProof` has an instruction data of 273 bytes, containing:
+`DuplicateBlockProof` has an instruction data of 305 bytes, containing:
 
 - `0x00`, a fixed-value byte acting as the instruction discriminator
 - `offset`, an unaligned eight-byte little-endian unsigned integer indicating
@@ -87,6 +85,9 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
   slot in which the violation occured
 - `node_pubkey`, an unaligned 32 byte array representing the public key of the
   node which committed the violation
+- `reporter`, an unaligned 32 byte array representing the account to credit
+  as the first reporter of this violation if a successful slashing report is
+  written.
 - `destination`, an unaligned 32 byte array representing the account to reclaim
   the lamports if a successful slashing report account is created and then later
   closed.
@@ -221,12 +222,18 @@ let (pda, _) = find_program_address(&[
 At the moment `DuplicateBlock` is the only violation type but future work will
 add additional slashing types.
 
-If the `pda` account has any data and is owned by the slashing program, then we
-abort as the violation has already been reported. Otherwise we create the account,
-with the slashing program as the owner. In this account we store the following:
+We expect the `pda` account to be prefund-ed by the user to contain enough lamports
+to store a `ProofReport`.
+
+If the `pda` account has any data, is owned by the slashing program, and the version
+number is non zero then we abort as the violation has already been reported.
+Otherwise we allocate space in the account, and assign the slashing program as
+the owner. In this account we store the following:
 
 ```rust
 struct ProofReport {
+  version: u8,                     // 1 byte specifying the version number,
+                                      currently 1
   reporter: Pubkey,                // 32 byte array representing the pubkey of the
                                       Fee payer, who reported this violation
   destination: Pubkey,             // 32 byte array representing the account to
