@@ -1,6 +1,6 @@
 ---
 simd: 'XXXX'
-title: Title of SIMD
+title: Title of SIMD. This should be concise and descriptive.
 authors:
   - (fill in with names of authors)
 category: Standard/Meta
