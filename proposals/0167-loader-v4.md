@@ -22,7 +22,7 @@ Loader-v3, which is currently the only deployable loader, requires two accounts
 per program. This was a workaround to circumvent the finality of the
 `is_executable` flag, which is removed in SIMD-0162. Consequentially, this
 setup of the program account being a proxy account, containing the address of
-the actual programdata account, is no longer necessary and should be removed.
+the actual program data account, is no longer necessary and should be removed.
 
 Another issue with loader-v3 is that the executable file stored in the
 programdata account is misaligned relative to the beginning of the account.
@@ -214,7 +214,7 @@ All program management instructions must cost 2000 CUs.
   - `[writable]` The program account to deploy.
   - `[signer]` The authority of the program.
   - `[writable]` Optional, an undeployed source program account to take data
-  and lamports from.
+  and funds from.
 - Instruction data:
   - Enum variant `3u32`
 - Behavior:
@@ -223,6 +223,8 @@ All program management instructions must cost 2000 CUs.
   - Verify the program account
   - Check that the slot stored in the program account is not the current
   (deployment cooldown), otherwise throw `InvalidArgument`
+  - Note: The cooldown enforces that each pair of an address and a slot can
+  uniquely identify a deployment of a program, which simplifies caching logic.
   - Check that the status stored in the program account is retracted
     otherwise throw `InvalidArgument`
   - In case a source program was provided (instruction account at index 2)
@@ -238,8 +240,12 @@ All program management instructions must cost 2000 CUs.
       this stays the same as in the older loaders
     - Copy the entire source program account into the program account
     - Set the length of the source program account to zero
-    - Transfer all funds of the  source program account to the program
-    account
+    - Swap the funds of the source program account and the program account.
+    Note: This ensures correct amount for rent exemption (as it was calculated
+    for the source program account) remains with the program account and the
+    rest is deposited into the source program account to be retrieved. It works
+    with programs growing, staying the same size or shrinking.
+    - Assign ownership of the source program account to the system program
   - otherwise, if no source program was provided:
     - Check that the executable file stored in the program account passes
     executable verification
@@ -262,7 +268,8 @@ All program management instructions must cost 2000 CUs.
   - Check that the status stored in the program account is deployed,
     otherwise throw `InvalidArgument`
   - Note: The slot is **not** set to the current slot to allow a
-  retract-modify-redeploy-sequence within the same slot
+  retract-modify-redeploy-sequence within the same slot or even within the
+  same transaction.
   - Change the status stored in the program account to retracted
 
 #### TransferAuthority
@@ -375,21 +382,22 @@ one can upload a redeployment into the program account directly.
 - loader-v3 had two accounts per program, loader-v4 goes back to having only
 one, thus needs less funds to reach rent exemption.
 - loader-v3 closing of programs did finalize them, in loader-v4 all the funds
-can be retireved and the program address repurposed.
+can be retrieved and the program address repurposed.
 - loader-v3 programs could only grow, loader-v4 can shrink programs and also
-retireve the surplus of funds no longer required for rent exception.
+retrieve the surplus of funds no longer required for rent exception.
 - loader-v3 programs were always "live" after the first deployment, with
 loader-v4 one can temporarily put a program into maintenance mode without a
 redeployment.
 - loader-v3 always required the entire program to be uploaded for a
 redeployment, loader-v4 supports partial uploads for patching chunks of the
 program.
-- loader-v3 ELFs were misaligned, loader-v4 properly alignes the executable
+- loader-v3 ELFs were misaligned, loader-v4 properly aligns the executable
 file relative to the beginning of the account.
 - loader-v4 allows finalized programs to mark which other program supersedes
-them which can then be offered as an option in forntends. This provides a
+them which can then be offered as an option in frontends. This provides a
 more secure alternative to redeployment / upgrading of programs at the same
-address.
+address. The keypair for the next version linked during finalization should be
+generated beforehand.
 - An option to migrate programs from loader-v3 to loader-v4 without changing
 their program address will be available via a new loader-v3 instruction. This
 will count as a redeployment and thus render the program unavailable for the
@@ -401,7 +409,7 @@ the added loader-v3 migration instruction and the global migration authority,
 the core protocol developers will then migrate all loader-v3 programs to
 loader-v4 programs, which once completed:
 
-- allows transaction account loading to be simplifed, because every program
+- allows transaction account loading to be simplified, because every program
 would load exactly one account, no need to load the proxy account to get to
 the actual program data (which is not listed in the transaction accounts).
 - allows the removal of the write lock demotion exception if loader-v3 is
