@@ -6,13 +6,13 @@ authors:
   - Alessandro Decina
 category: Standard
 type: Core
-status: Idea
+status: Review
 created: 2024-07-15
 ---
 
 ## Summary
 
-An explicit versioning system for SBPF programs, that allows enabling or
+An explicit versioning system for SBPF programs, which allows enabling or
 disabling features on a per-program basis.
 
 ## Motivation
@@ -21,12 +21,13 @@ SBPF has evolved over the years and will continue to evolve. Changes are
 necessary among other reasons to improve performance, address security concerns
 and provide new, better features to dapp developers.
 
-Today, the only way to introduce changes to the program runtime is via feature
-gates [link that explains what feature gates are]. For example we have used
-feature gates in the past to restrict new deployments of programs owned by
-deprecated loaders. Feature gates alone are not sufficient to evolve SBPF
-though - we are missing a mechanism to enable (or disable) specific features on
-a per-program basis.
+Today, the only way to introduce changes to the program runtime is via [feature
+gates](
+https://github.com/solana-foundation/solana-improvement-documents/issues/76).
+For example we have used feature gates in the past to restrict new deployments
+of programs owned by deprecated loaders. Feature gates alone are not sufficient
+to evolve SBPF though - we are missing a mechanism to enable (or disable)
+specific features on a per-program basis.
 
 As an example, over two years ago we decided to change the way the stack works
 for SBPF programs - from allocating a fixed 4kB per function frame, to letting
@@ -70,7 +71,8 @@ Currently the protocol deems every value of `e_flags` which is not `0x0020` as
 being SBPF v0 and thus valid. This clearly does not scale for multiple versions
 and must therefore be changed. With the activation of the first feature gate
 which enables the deployment and execution of the first new SBPF version the
-discriminator must switch to directly interpret `e_flags` as SBPF version.
+discriminator must switch to directly interpret `e_flags` as the SBPF version.
+Meaning a value of `0x0000` is SBPFv0, `0x0001` is SBPFv1, etc.
 
 ### Example
 
@@ -129,7 +131,7 @@ Less active dapp developers who do not redeploy their programs will be nagged
 by their users to redeploy their programs once the deprecation CU cost ramps
 up.
 
-Finalized programs which simply can not be redeployed will instead have their
+Finalized programs that simply can not be redeployed will instead have their
 user base slowly migrate their funds to alternative programs.
 
 Validator implementations will have to support multiple code paths in the time
