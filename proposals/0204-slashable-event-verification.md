@@ -66,9 +66,10 @@ slashing program.
 ### Slashing Program
 
 This slashing program supports two instructions `DuplicateBlockProof`, and
-`CloseProofReport`.
+`CloseViolationReport`.
 
-`DuplicateBlockProof` requires 1 account and the `Instructions` sysvar:
+`DuplicateBlockProof` requires 2 accounts, the `Instructions` sysvar, and the
+system program :
 
 0. `proof_account`, expected to be previously initialized with the proof data.
 1. `pda_account`, the PDA in which to store the violation report. See the below
@@ -78,7 +79,7 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
 
 `DuplicateBlockProof` has an instruction data of 305 bytes, containing:
 
-- `0x00`, a fixed-value byte acting as the instruction discriminator
+- `0x01`, a fixed-value byte acting as the instruction discriminator
 - `offset`, an unaligned eight-byte little-endian unsigned integer indicating
   the offset from which to read the proof
 - `slot`, an unaligned eight-byte little-endian unsigned integer indicating the
@@ -277,20 +278,23 @@ In a future SIMD the reports will be used for runtime processing. This is out of
 scope, but after this period has passed,  the initial fee payer may wish to close
 their `ProofReport` account to reclaim the lamports.
 
-They can accomplish this via the `CloseProofReport` instruction which requires
-one account:
+They can accomplish this via the `CloseViolationReport` instruction which requires
+one account and the system program:
 
 0. `report_account`: The PDA account storing the report: Writable, owned by the
   slashing program
+1. `destination_account`: The destination account to receive the lamports: Writable
+2. `system_program_account`
 
-`CloseProofReport` has an instruction data of one byte, containing:
+`CloseViolationReport` has an instruction data of one byte, containing:
 
-- `0x01`, a fixed-value byte acting as the instruction discriminator
+- `0x00`, a fixed-value byte acting as the instruction discriminator
 
 We abort if:
 
 - `report_account` is not owned by the slashing program
 - `report_account` does not deserialize cleanly to `ProofReport`
+- `report_account.destination` does not match `destination_account`
 - `report_account.epoch + 3` is greater than the current epoch reported from
   the `Clock` sysvar. We want to ensure that these accounts do not get closed before
   they are observed by indexers and dashboards.
@@ -300,7 +304,7 @@ last at least one epoch in order to for it to be observed by the runtime as part
 of a future SIMD.
 
 Otherwise we set the owner of `report_account` to the system program, rellocate
-the account to 0 bytes, and credit the `lamports` to `report_account.destination`
+the account to 0 bytes, and credit the `lamports` to `destination_account`
 
 ---
 
