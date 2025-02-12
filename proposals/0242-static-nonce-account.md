@@ -22,8 +22,10 @@ advance a statically included account.
 - There is a separate proposal to relax the constraints on transaction account
   resolution. That proposal would allow transactions with invalid lookups or
   duplicate accounts to be included in a block, pay fees, but not processed.
-- However, that relaxation cannot happen if the nonce account is advanced in a
-  looked up account.
+- However, that relaxation cannot happen without specifying the interaction
+  with nonce accounts. Rather than complicating the protocol and specifying the
+  interactions between lookups and nonces, this proposal aims to simplify by
+  restricting nonce accounts to statically declared accounts.
 
 ## New Terminology
 
