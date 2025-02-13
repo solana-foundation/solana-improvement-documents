@@ -5,7 +5,7 @@ authors:
   - Tao Zhu
 category: Standard
 type: Core
-status: Implemented
+status: Activated
 created: 2023-12-18
 feature: 3opE3EzAKnUftUDURkzMgwpNgimBAypW1mNDYH4x4Zg7 (https://github.com/solana-labs/solana/issues/34731)
 development:
