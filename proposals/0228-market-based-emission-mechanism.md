@@ -121,7 +121,7 @@ $$i(s) = r(1 - \sqrt{s})$$
 ![Issuance Rate](../suporting_images/0228-market-based-emission-mechanism/issuance_rate.png)
 
 This yields a vote reward rate for validators with good performance of:
-
+![alt text](../../../rewards_graphics/issuance_rate.png)
 $$v(s) = \frac{i(s)}{s} = \frac{r(1 - \sqrt{s})}{s}$$
 
 ![Issuance Rate](../suporting_images/0228-market-based-emission-mechanism/staking_returns.png)
@@ -141,6 +141,16 @@ $$\alpha = \max \left(
 
 ![transition](../suporting_images/0228-market-based-emission-mechanism/transition.png)
 
+### Gradual Transition
+
+To avoid whiplash on staking rewards, we propose a gradual transition to the new formula. The trasition will take place over 10 epochs. More concretely, when the proposal is actived issuance rate will be:
+
+$$i(s) = r(1 - \alpha\sqrt{s})$$
+
+where,
+$$\alpha = \max \left( \frac{\text{number of epochs since proposal activation}}{10}, 1 \right)$$
+
+![transition](../suporting_images/0228-market-based-emission-mechanism/transition.png)
 ## Alternatives Considered
 
 ### Alternative Design 1: Pick another fixed rate
