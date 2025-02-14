@@ -45,8 +45,8 @@ Clarification of existing terminology is provided:
 
 ## Detailed Design
 
-- Nonce transactions MUST have a nonce account index that is less than or equal
-  to the number of statically included accounts in the transaction.
+- Nonce transactions MUST have a nonce account index that is less the number of
+  statically included accounts in the transaction.
 - Leader nodes MUST drop nonce transactions that do not meet this requirement
   without including them in a block.
 - Nonce transactions that do not meet this requirement are invalid and MUST
