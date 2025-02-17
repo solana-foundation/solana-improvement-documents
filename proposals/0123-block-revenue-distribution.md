@@ -58,6 +58,11 @@ collecting all block revenue into the validator identity account, the protocol
 will check if the validator's vote account has specified a commission rate and
 collector addresses in the new vote account version described in
 [SIMD-0185](https://github.com/solana-foundation/solana-improvement-documents/pull/185).
+In order to eliminate the overhead of tracking the latest fee collector address
+and commission of each vote account, the vote account state at the beginning of
+the previous epoch MUST be used. This is the same vote account state used to
+build the leader schedule for the current epoch.
+
 If the commission rate and collector account aren't set, all revenue will be
 collected into the validator's identity account as before. If the commission
 rate and collector account *are* specified, the calculated commission MUST be
