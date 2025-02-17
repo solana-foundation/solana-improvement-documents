@@ -128,22 +128,6 @@ $$v(s) = \frac{i(s)}{s} = \frac{r(1 - \sqrt{s})}{s}$$
 
 ### Gradual Transition
 
-To avoid whiplash on staking rewards, we propose a gradual transition to the
-new formula. The transition will take place over 10 epochs. More concretely,
-when the proposal is activated issuance rate will be:
-
-$$i(s) = r(1 - \alpha\sqrt{s})$$
-
-where,
-
-$$\alpha = \max \left( 
-\frac{\text{number of epochs since proposal activation}}
-{10}, 1 \right)$$
-
-![transition](../suporting_images/0228-market-based-emission-mechanism/transition.png)
-
-### Gradual Transition
-
 To avoid whiplash on staking rewards, we propose a gradual transition to the new
 formula. The trasition will take place over 10 epochs. More concretely, when th
 proposal is actived issuance rate will be:
@@ -155,6 +139,7 @@ $$\alpha = \max \left( \frac{\text{number of epochs since proposal activation}}{
 , 1 \right)$$
 
 ![transition](../suporting_images/0228-market-based-emission-mechanism/transition.png)
+
 ## Alternatives Considered
 
 ### Alternative Design 1: Pick another fixed rate
