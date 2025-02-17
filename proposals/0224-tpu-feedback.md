@@ -1,5 +1,5 @@
 ---
-simd: '0195'
+simd: '0224'
 title: TPU Feedback
 authors:
   - Lijun Wang <lijun@anza.xyz>
@@ -80,7 +80,9 @@ struct TpuFeedback {
   priority_fee_info: PriorityFeeInfo
 }
 
-The version is a 32 bit unsinged integer, it is set to 1 for first version.
+The version is a 32 bit unsinged integer, it is set to 1 for first version. It
+is designed to allow the protocol to extend for future extension.
+
 The timestamp is the 32 bit unsigned integer representing the number of seconds
 since midnight 01/01/1970.
 
@@ -111,16 +113,64 @@ value. Client should disregard the value if it does not understand its meaning.
 The proirity fee information is defined as the following,
 
 struct PriorityFeeInfo {
-  entries_count: u8
-  priority_fee_stats: 
+  priority_fee_stats: {
+    min_priority_fee/compute unit ratio
+    median_priority_fee/compute unit ratio
+    max_priority_fee/compute unit ratio
+  }
 }
+
+These ratio are represented as f64 numbers using 8 bytes.
 
 ## Impact
 
+There will be higher cost for the server to send the feedback to all connected
+clients in term of network bandwidth and compute resources. With expected
+2500 connections, and the nax 1232 bytes per, and assuming packets are sent
+per 100ms the network cost is:
+
+2500*1232*10 bytes /s ~= 30 MB/s
+
+For sending only priority info to idle connections, the size of the feedback
+datagram is smaller -- 33 bytes.
+
+The cost is:
+
+2500*21*10 bytes /s = 0.8 MB
+
+As not all connections are actively sending transactions, optimization can be
+done to reduce the cost to send feedback to clients only having sent
+transactions in the last report period.
+
 ## Security Considerations
+
+As described above the server and clients open new communication channel to
+receive datagrams. This opens another interface for attacks. They can safegaurd
+against attacks from malicious counterparts by checking the rate of datagrams
+received. For example, if it received more than 3 times of expected number of
+datagrams, the endpoint can deem it is under attack and decide to terminate
+the connection.
 
 ## Backwards Compatibility
 
+Introducing the capability of sending feedback and receive feedback on server
+and client respectively should not cause any regression on existing
+communication mechanism.
+
+There are following possible configurations of mismatched versions on the
+server and client:
+
+* New Server with send capability <--> Old Client without receive capability.
+* Old Server without send capability <--> New Client with receive capability.
+
+In the first, the server should ignore any datagram send failures, if it can
+detect send failures, it can optimize to stop sending future datagrams in the
+connection.
+
+In the second, the client should ignore any failures of missing receiving the
+feedback. The feedback datagrams is best effort by the server and there is
+no guarantee of its delivery even when both server and client are at the updated
+version.
 
 ## References
 
