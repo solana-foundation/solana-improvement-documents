@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-02-14
-development: 
+development:
   - Anza - WIP
   - Firedancer - Not started
 ---
@@ -62,7 +62,7 @@ datagrams to clients which are not interested in receiving feedback or clients
 which are not upgraded to have such capabilities.
 
 The client and server must enable the support of datagrams QUIC frame types
-via transport parameter `max_datagram_frame_size`. 
+via transport parameter `max_datagram_frame_size`.
 
 The server sends the feedback datagrams to interested clients periodically.
 The frequency is decided by the server and consideration should be given to
