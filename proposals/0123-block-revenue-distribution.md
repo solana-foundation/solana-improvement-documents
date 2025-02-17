@@ -72,6 +72,7 @@ The commission amount MUST be calculated by first multiplying the rate by the
 amount of revenue and then using integer division to divide by `10,000`. If the
 commission amount is non-zero, the fee collector account MUST be loaded and
 checked for the following conditions:
+
 1. account is system program owned AND
 2. account is rent-exempt after depositing the commission.
 
@@ -99,6 +100,7 @@ let delegator_rewards_pool_address = Pubkey::create_program_address(
 
 Then the delegator rewards pool account MUST be loaded and checked for the
 following conditions:
+
 1. account is stake program owned AND
 2. account is initialized as `StakeState::DelegatorRewardsPool` AND
 3. account is rent-exempt after depositing the reward.
