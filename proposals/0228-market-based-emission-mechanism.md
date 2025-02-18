@@ -135,7 +135,7 @@ proposal is actived issuance rate will be:
 $$i(s) = r(1 - \alpha\sqrt{s})$$
 
 where,
-$$\alpha = \max \left( \frac{\text{number of epochs since proposal activation}}{10}
+$$\alpha = \min \left( \frac{\text{number of epochs since proposal activation}}{10}
 , 1 \right)$$
 
 ![transition](../suporting_images/0228-market-based-emission-mechanism/transition.png)
