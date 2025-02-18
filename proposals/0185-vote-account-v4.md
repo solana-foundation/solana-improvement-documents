@@ -116,8 +116,9 @@ pub struct VoteStateV4 {
     pub inflation_rewards_commission_bps: u16,
     pub block_rewards_commission_bps: u16,
 
-    /// NEW: bump seed for deriving this vote account's stake rewards pool address
-    pub stake_rewards_pool_bump_seed: u8,
+    /// NEW: Rewards that will be distributed to stake delegators at the end of
+    /// the epoch. These pending rewards are held in the DelegatorRewardsSysvar.
+    pub pending_delegator_rewards: u64,
 
     /// REMOVED
     /// prior_voters: CircBuf<(Pubkey, Epoch, Epoch)>,
@@ -130,31 +131,22 @@ pub struct VoteStateV4 {
 }
 ```
 
-Whenever a vote account is modified by the vote program in a transaction AND
-hasn't been updated to v4 yet, the account state MUST be saved in the new format
-with the following default values for the new fields described above:
+Whenever a vote account is initialized OR modified by the vote program in a
+transaction AND hasn't been updated to v4 yet, the account state MUST be saved
+in the new format with the following default values for the new fields described
+above:
 
 ```rust
 VoteStateV4 {
     // ..
 
-    inflation_rewards_collector: vote_state_v3.node_pubkey,
+    inflation_rewards_collector: vote_account_pubkey,
     block_rewards_collector: vote_state_v3.node_pubkey,
     inflation_rewards_commission_bps: 100u16 * (vote_state_v3.commission as u16),
     block_rewards_commission_bps: 10_000u16,
-    stake_rewards_pool_bump_seed: find_stake_rewards_pool_bump_seed(vote_pubkey),
+    pending_delegator_rewards: 0u64,
 
     // ..
-}
-
-fn find_stake_rewards_pool_bump_seed(vote_pubkey: &Pubkey) -> u8 {
-    Pubkey::find_program_address(
-        [
-            b"stake_rewards_pool",
-            vote_pubkey.as_ref(),
-        ],
-        &stake_program::id(),
-    ).1
 }
 ```
 
@@ -185,8 +177,8 @@ pub enum CollectorKind {
 #### `UpdateCommission`
 
 The existing `UpdateCommission` instruction (with enum discriminant `5u32`) will
-continue to exist but will continue to only update the inflation rewards
-commission.
+continue to be enabled but will continue to only update the inflation rewards
+commission in integer percentage values.
 
 #### `UpdateCommissionWithKind`
 
