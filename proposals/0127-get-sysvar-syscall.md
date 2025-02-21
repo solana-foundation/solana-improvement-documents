@@ -164,10 +164,13 @@ appear below.
 
 The syscall returns the following graceful codes:
 
-- `2` if the sysvar data is not present in the Sysvar Cache.
-- `1` if `offset + length` is greater than the length of the sysvar data.
-- `0` if the process completed successfully and the requested sysvar data was
-  written to the virtual memory at `var_addr`.
+1. Proxy Contract / Address: 
+
+2. Implementation Contract / Address: 
+
+3. Storage Slot of Implementation Address: (if known, e.g. 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc) 
+
+4. Network: (e.g. Mainnet/Rinkeby/Ropsten/Kovan/Goerli/Sepolia/or multiple networks) 
 
 ### Compute Unit Usage
 
