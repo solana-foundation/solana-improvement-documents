@@ -114,32 +114,47 @@ stops changing.
 
 ### New Emission Rate Formula
 
-The issuance rate formula is:
+## Expressions
 
-$$i(s) = r(1 - \sqrt{s})$$
+The issuance rate formula is:
+$$i(s) = r(1-\sqrt{s} + c \cdot \max(1-\sqrt{2s},0)) $$
+
+where:
+$$ c = \frac{\sqrt{\frac{1}{3}}}{1- \sqrt{\frac{2}{3}}}
+\approx 3.14626436994
+\approx \pi $$
+
+When $s>.5$ the curve corresponds to $r(1-\sqrt{s})$, the curve in the previous
+version of this proposal.
+Based on feedback about the previous version of this proposal, we have added the
+$c \cdot \max(1-\sqrt{2s},0))$ term to make the curve more aggressive
+when a smaller fraction of the network is staked. $c$ is chosen such that the
+curve starts becoming more agressive at $s =.5$,
+when half of the supply is staked, and surpasses the current static emission
+schedule of $r$ when $s = 1/3$.
+
+The derivation of $c$ is provided in the appendix.
 
 ![Issuance Rate](../suporting_images/0228-market-based-emission-mechanism/issuance_rate.png)
 
+
 This yields a vote reward rate for validators with good performance of:
-![alt text](../../../rewards_graphics/issuance_rate.png)
-$$v(s) = \frac{i(s)}{s} = \frac{r(1 - \sqrt{s})}{s}$$
+
+$$v(s) = \frac{i(s)}{s} = \frac{r(1-\sqrt{s} + c \cdot \max(1-\sqrt{2s},0))}{s}$$
 
 ![Issuance Rate](../suporting_images/0228-market-based-emission-mechanism/staking_returns.png)
 
-### Gradual Transition
+To ensure that the transition from the old static issuance schedule to this new
+schedule is smooth, we will interpolate between the old issuance rate and the
+new issuance rate over 10 epochs using the formula:
 
-To avoid whiplash on staking rewards, we propose a gradual transition to the new
-formula. The trasition will take place over 10 epochs. More concretely, when th
-proposal is actived issuance rate will be:
 
-$$i(s) = r(1 - \alpha\sqrt{s})$$
+$$i(s) = r(1-\alpha\sqrt{s} + \alpha c \cdot \max(1-\sqrt{2s},0))$$
 
-where,
-$$\alpha = \min \left( \frac{\text{number of epochs since proposal activation}}{10}
-, 1 \right)$$
-
-![transition](../suporting_images/0228-market-based-emission-mechanism/transition.png)
-
+where $\alpha$ is a parameter that controls the speed of the transition, taking
+the values $\frac{1}{10},\frac{2}{10},\dots,\frac{9}{10}, 1$.
+over the first 10 epochs before settling to the
+new issuance rate at $\alpha = 1$.
 ## Alternatives Considered
 
 ### Alternative Design 1: Pick another fixed rate
@@ -200,3 +215,21 @@ If the issuance rate were instead governed by this proposal, we should expect
 the staked amount to be more than 30% because $v(30\%) \approx 6.25\%$.
 We know that $D(6.25\%)$ = 65% and therefore the staked amount under the new
 issuance rate would be more than 30% if demand stays the same.
+
+## Appendix
+
+### Derivation of $c$
+
+We the goal is to find $c$ such that $r = i(1/3)$.
+
+$$ r = r (1- \sqrt{1/3} + c \cdot \max(1 - \sqrt{2/3}, 0)$$
+
+Since $1-\sqrt{2/3} > 0$ we can remove the $\max$ function.
+
+$$ r = r (1- \sqrt{1/3}+ c  (1 - \sqrt{2/3}))$$
+
+$$ 1 = 1 - \sqrt{1/3}+ c  (1 - \sqrt{2/3})$$
+
+$$ \sqrt{1/3} = c  (1 - \sqrt{2/3})$$
+
+$$ c = \frac{\sqrt{1/3}}{1 - \sqrt{2/3}} $$
