@@ -207,15 +207,15 @@ impact on the overall health of the Solana economy.
 
 The biggest concern for this proposal is that it could reduce the amount of SOL
 staked more than desired. We can assure ourselves that at least with current
-market conditions the resulting equilibrium staked amount would be more than 30%
+market conditions the resulting equilibrium staked amount would be more than 40%
 with the following reasoning:
 
 Currently the issuance rate is 4.5% and the staked amount is 65% which comes out
 to around 6.25% validator rewards for performant stakers (not including MEV).
 If the issuance rate were instead governed by this proposal, we should expect
-the staked amount to be more than 30% because $v(30\%) \approx 6.25\%$.
+the staked amount to be more than 40% because $v(41\%) \approx 6.25\%$.
 We know that $D(6.25\%)$ = 65% and therefore the staked amount under the new
-issuance rate would be more than 30% if demand stays the same.
+issuance rate would be more than 40% if demand stays the same.
 
 ## Appendix
 
