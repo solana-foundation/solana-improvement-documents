@@ -107,19 +107,19 @@ emissions.
 - Issuance Rate $i$
 - Validator returns $v(s) = \frac{i}{s} + MEV$
 - r is the current inflation rate which is a constant (currently 4.5%) that
-automatically goes down by 15% every year until it reaches 1.5% where it 
+automatically goes down by 15% every year until it reaches 1.5% where it
 stops changing.
 
 ## Detailed Design
 
 ### New Emission Rate Formula
 
-## Expressions
-
 The issuance rate formula is:
+
 $$i(s) = r(1-\sqrt{s} + c \cdot \max(1-\sqrt{2s},0)) $$
 
 where:
+
 $$ c = \frac{\sqrt{\frac{1}{3}}}{1- \sqrt{\frac{2}{3}}}
 \approx 3.14626436994
 \approx \pi $$
