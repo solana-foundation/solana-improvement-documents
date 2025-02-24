@@ -149,8 +149,9 @@ capitalization consistent.
 
 ### Vote Program Changes
 
-Since delegator rewards will be stored in the validator's vote account until distribution at
-the next epoch boundary, those funds will be unable to be withdrawn.
+Since delegator rewards will be stored in the validator's vote account until
+distribution at the next epoch boundary, those funds will be unable to be
+withdrawn.
 
 The `Withdraw` instruction will need to be modified so that if the balance
 indicated by the `pending_delegator_rewards` field is non-zero, the vote account
