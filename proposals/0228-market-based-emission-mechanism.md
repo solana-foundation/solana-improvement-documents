@@ -155,6 +155,7 @@ where $\alpha$ is a parameter that controls the speed of the transition, taking
 the values $\frac{1}{10},\frac{2}{10},\dots,\frac{9}{10}, 1$.
 over the first 10 epochs before settling to the
 new issuance rate at $\alpha = 1$.
+
 ## Alternatives Considered
 
 ### Alternative Design 1: Pick another fixed rate
