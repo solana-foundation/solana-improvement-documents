@@ -68,7 +68,7 @@ The server sends the feedback datagrams to interested clients periodically.
 The frequency is decided by the server and consideration should be given to
 coalesce feedback on more transactions to reduce datagram counts and short
 enough feedback latency. For example 100ms can be considered. If there are
-more transactions to be acknowldged than the one in one datagram, more datagrams
+more transactions to be acknowledged in one datagram, more datagrams
 can be sent without waiting for the feedback interval.
 
 ### The format of the TPU feedback
