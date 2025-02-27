@@ -32,7 +32,7 @@ transactions and help reduce congestion condition in the network.
 ## Alternatives Considered
 
 There are different transport mechanism to send the feedback such as
-bidrectional streams, reverse unistream from the server to the client and
+bidirectional streams, reverse unistream from the server to the client and
 QUIC datagrams. We choose datagrams due to its simplicity. One reason we have
 used stream over datagrams is the expectation that transaction size can be
 increased in the future which can not be carried in one datagram. Sending
