@@ -6,7 +6,7 @@ category: Standard
 type: Core
 status: Accepted
 created: 2024-09-25
-feature: (fill in with feature tracking issues once accepted)
+feature: https://github.com/anza-xyz/agave/issues/4562
 ---
 
 ## Summary
@@ -30,30 +30,9 @@ NA
 
 ## Detailed Design
 
-The reason that partitioned rent collection was not entirely disabled by earlier
-features is because it was desired that any pre-existing rent-paying account
-that becomes rent-exempt should have its rent epoch field set to the marker
-value of `u64::MAX`. This desired outcome can be achieved in a much more
-efficient manner without the need for loading every account once per epoch in
-partitioned rent collection.
-
 Disabling partitioned rent collection is very straightforward. Partitioned rent
 collection is initiated during bank freezing and can simply be not performed if
 a feature gate is activated.
-
-Retaining the behavior of updating the rent epoch field for newly rent exempt
-accounts can be done by adjusting the behavior of existing transaction rent
-checks. Currently, at the end of transaction processing, each writable account
-is checked for rent exemption to ensure that no accounts can be created as
-rent-paying. Those checks MUST be modified to additionally set the rent epoch
-to the marker value of `u64::MAX` if a pre-existing rent-paying account becomes
-rent exempt (note that this can only happen if an account is writable).
-
-Currently, new sysvars, builtins, and precompiles are all created with an
-initial rent epoch of `0` rather than the marker value of `u64::MAX`. So this
-proposal REQUIRES all new sysvars, builtins, and precompiles to be created with
-an initial rent epoch of `u64::MAX` to ensure that they are correctly marked as
-rent exempt.
 
 ## Alternatives Considered
 
