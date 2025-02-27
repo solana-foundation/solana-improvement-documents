@@ -1,5 +1,5 @@
 ---
-simd: '0224'
+simd: '0248'
 title: TPU Feedback
 authors:
   - Lijun Wang <lijun@anza.xyz>
@@ -27,7 +27,14 @@ are too many transactions with higher paying fees than this transaction, the
 transaction is not included in the block. Providing further information on the
 transaction state will help the client to make more informed decision on
 handling transaction failures and reduce the incentive to blindly resubmitting
-transactions and help reduce congestion condition in the network.
+transactions and help reduce congestion condition in the network. The QUIC
+client library can be enhanced to use this information to not send transactions
+with fees too low.
+
+In addition, on the server side, the TPU server could use the feedback
+information to more accurately perform QOS. For example, if a peer is
+persistently submitting high percentage pf transactions which are rejected,
+its permitted throughput might be reduced.
 
 ## Alternatives Considered
 
@@ -74,16 +81,16 @@ can be sent without waiting for the feedback interval.
 ### The format of the TPU feedback
 
 struct TpuFeedback {
-  version: u32,
-  timestamp: u32,
+  version: u8,
+  timestamp: u64,
   transaction_state: TransactionState,
   priority_fee_info: PriorityFeeInfo
 }
 
-The version is a 32 bit unsinged integer, it is set to 1 for first version. It
+The version is a 8 bit unsinged integer, it is set to 1 for first version. It
 is designed to allow the protocol to extend for future extension.
 
-The timestamp is the 32 bit unsigned integer representing the number of seconds
+The timestamp is the 64 bit unsigned integer representing the number of seconds
 since midnight 01/01/1970.
 
 TransactionState is defined as the following:
@@ -105,6 +112,7 @@ enum TransactionStateValue {
   Packed = 0,
   FeeTooLow = 1,
   FeePayerBalanceTooLow = 2,
+  NotPackedDueToUnspecifiedReason = 2^32 -1,
 }
 
 Newer state value can be defined as needed in the future with its own unique
