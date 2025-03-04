@@ -142,19 +142,21 @@ This yields a vote reward rate for validators with good performance of:
 
 $$v(s) = \frac{i(s)}{s} = \frac{r(1-\sqrt{s} + c \cdot \max(1-\sqrt{2s},0))}{s}$$
 
-![Issuance Rate](../suporting_images/0228-market-based-emission-mechanism/staking_returns.png)
+![Staking Returns](../suporting_images/0228-market-based-emission-mechanism/staking_returns.png)
 
 To ensure that the transition from the old static issuance schedule to this new
 schedule is smooth, we will interpolate between the old issuance rate and the
-new issuance rate over 10 epochs using the formula:
+new issuance rate over 50 epochs using the formula:
 
 
 $$i(s) = r(1-\alpha\sqrt{s} + \alpha c \cdot \max(1-\sqrt{2s},0))$$
 
 where $\alpha$ is a parameter that controls the speed of the transition, taking
-the values $\frac{1}{10},\frac{2}{10},\dots,\frac{9}{10}, 1$.
-over the first 10 epochs before settling to the
+the values $\frac{1}{50},\frac{2}{50},\dots,\frac{49}{50}, 1$.
+over the first 50 epochs before settling to the
 new issuance rate at $\alpha = 1$.
+
+![Rollout](../suporting_images/0228-market-based-emission-mechanism/rollout.png)
 
 ## Alternatives Considered
 
