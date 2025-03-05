@@ -293,7 +293,7 @@ fn get_data_slice(all_tx_data, instruction_index, offset, length) {
 }    
 ```
 
-Additonally the precompile's core `verify` function must be constructed in
+Additionally the precompile's core `verify` function must be constructed in
 accordance with the structure outlined in [sdk/src/precompiles.rs](https://github.com/solana-labs/solana/blob/9ffbe2afd8ab5b972c4ad87d758866a3e1bb87fb/sdk/src/precompiles.rs).
 
 ### Compute Cost / Efficiency
