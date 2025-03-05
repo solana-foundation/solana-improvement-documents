@@ -50,13 +50,13 @@ epoch:
   system program `11111111111111111111111111111111`
 
 2. Verify that the program account
-  `8sT74BE7sanh4iT84EyVUL8b77cVruLHXGjvTyJ4GwCe` has a verified build hash of
+  `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv` has a verified build hash of
   `<FILL IN AFTER IMPLEMENTATION>` [\[1\]](#notes)
 
 3. Copy the contents of `8sT74BE7sanh4iT84EyVUL8b77cVruLHXGjvTyJ4GwCe` into
   `S1ashing11111111111111111111111111111111111`
 
-4. Additionally copy the program-data account from `8sT74BE7sanh4iT84EyVUL8b77cVruLHXGjvTyJ4GwCe`
+4. Additionally copy the program-data account from `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv`
   to the PDA for `S1ashing11111111111111111111111111111111111`
 
 This is the only protocol change that clients need to implement. The remaining
@@ -122,6 +122,7 @@ program such as the Record program.
 
 - The difference between the current slot and `slot` is greater than 1 epoch's
   worth of slots as reported by the `Clock` sysvar
+- The `destination` is equal to the address of `pda_account`
 - `offset` is larger than the length of `proof_account`
 - `proof_account[offset..]` does not deserialize cleanly to a
   `DuplicateBlockProofData`.
@@ -220,6 +221,8 @@ let (pda, _) = find_program_address(&[
 ])
 ```
 
+If the `pda` is not equal to the addres of the `pda_account` then we abort.
+
 At the moment `DuplicateBlock` is the only violation type but future work will
 add additional slashing types.
 
@@ -249,8 +252,6 @@ struct ProofReport {
                                       integer representing the slot in which the
                                       violation occured
   violation_type: u8,              // Byte representing the violation type
-  proof_account: Pubkey,           // 32 byte array representing the account where
-                                      the proof is stored
 }
 ```
 
@@ -265,11 +266,6 @@ involve votes, this will instead be populated with the vote account's pubkey.
 The work in SIMD-0180 will allow the `node_pubkey` to be translated to a vote account
 if needed.
 
-Note that PDA's can only be created with a 10kb initial size.
-Although not a problem for `DuplicateBlockProofData`, if future proof types require
-more space, we allow the proof to be stored in a separate account, and linked back
-to the PDA using the `proof_account` field.
-
 ---
 
 #### Closing the incident report
@@ -279,12 +275,11 @@ scope, but after this period has passed,  the initial fee payer may wish to clos
 their `ProofReport` account to reclaim the lamports.
 
 They can accomplish this via the `CloseViolationReport` instruction which requires
-one account and the system program:
+two accounts
 
 0. `report_account`: The PDA account storing the report: Writable, owned by the
   slashing program
 1. `destination_account`: The destination account to receive the lamports: Writable
-2. `system_program_account`
 
 `CloseViolationReport` has an instruction data of one byte, containing:
 
