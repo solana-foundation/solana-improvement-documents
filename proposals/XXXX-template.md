@@ -13,33 +13,99 @@ feature: VinfVbnL5Qh4fvfp1zwifZLAWfacbLgxpH6yaCdYydw
 
 ## Summary
 
-This proposal adjusts the derivation that determines the inflation rewards a validator
-receives as a function of their stake and vote credits. The current function incentivizes
-validators to undermine the credits of their colleagues in order to earn more inflation
-rewards for themselves.
+This proposal removes base fees for voting and replaces them with a system of vote inclusion credits paid for by inflation emissions.
 
-Under the new system a validator will have a fixed portion of the total inflation
-rewards that they are eligble to earn. They strive to earn the maximal vote credits
-in order to earn as much of this fixed portion as possible, with the remaining being
-burned.
+The proposal has six parts:
 
-In addition, the new system will introduce credits for timely vote inclusion. These timely inclusion 
-credits will be awarded to validators that include timely votes in their blocks, offsetting the incentive to artificially delay inclusion votes from other validators.
+1. Base fees for voting will be removed entirely.
+
+2. 25% of the issuance currently dedicated to vote credits will be dedicated to vote inclusion credits for leaders. This is enough to align incentives for leaders to include votes that they receive in a timely manner even if they are a large portion of the cluster.
+
+3. Validators will earn rewards based on their own absolute performance instead of their relative performance when compared with other validators.
+
+4. Vote transactions will no longer count towards the global CU limit in the block, they will have their own CU limit.
+
+5. To prevent excessive growth in the size of the cluster, the cluster will be capped at 2000 active validators. These validators will be the top 2000 validators by stake, rotating every epoch.
+
+6. To prevent a mod where validators delay votes until the next leader to redirect inclusion credit rewards, the timely vote credit window will be set to 1 for the third slot in each validator's sequence of blocks. It remains unchanged for the other slots.
 
 ## Motivation
 
-The current rewards calculation distributes inflation rewards based on the
-relative distribution of vote credits and stake across the cluster. This results
-in a validator earning higher rewards if other validators produce lower vote credits.
+At >2 SOL/epoch, Voting costs are by far the largest barrier to participating in Solana consensus. But even with these large vote fees, leaders aren't properly incentivized to include votes in a timely manner, particularly if the votes are from large validators due to the mechanics of timely vote credits.
 
-Although not immediately obvious if such activity is happening on mainnet, this
-creates an incentive for validators to engage in malicious activity such as censoring
-votes, slowing down the dissemnitation of shreds, not participating in repair, etc.
-These malicious activites are not part of the forensic support (one cannot prove that they have occurred) therefore they cannot be slashed.
+Unfortunately, the current system of vote fees is critical to the security of the network. In particular, it is the only limiting factor on the number of validators that can participate and more importantly, on the number of votes that can be included in a block. There are a number of ways in which spinning up many small validators with negligible stake can harm the performance of the cluster including increasing the number of votes that must be processed, increasing the number of validators in the turbine tree generation, and others. Reducing the vote fees to 0 therefore requires a careful review of the security of the network and modifications to the protocol to ensure that the network remains strong after the change.
 
-The goal of this proposal is to remove the incentive for validators to engage in these malicious activities by changingthe way timely vote credits are applied introducing a new issuance based reward for timely vote inclusion.
+Since vote fees are currently the only limiting factor on the number of validators that can participate in Solana consensus, removing vote fees must be coupled with the addition of a different mechanism to limit the number of validators that can participate. There are two options for this:
+
+1. A limit on the total number of validators that can participate in the cluster.
+2. A minimum stake requirement for validators.
+
+We have opted for the second option because the minimum stake requirement required to ensure security would be high and could potentially limit the entry of newer validators more than the first option.
+
+Vote fees also serve as an incentive for validators to include votes in a timely manner, but today, vote fees are not based on stake size so due to the mechanics of timely vote credits today there is a potential modification to the client that would allow validators to profitably delay votes, particularly from large validators to undermine vote credits of other validators and increase their own rewards. To prevent this, the size of vote inclusion credits must be based on the stake of validator that the vote transaction belongs to.
+
+## Formal Desiderata
+
+Formally, these are the properties we are looking for in the vote credit/vote fee system:
+
+1. Validator out of pocket operating cost should be minimized.
+
+2. Validators with $ < f \approx \frac{1}{3}$ of the stake should be incentivized to broadcast their votes to the cluster as soon as they replay a valid block.
+
+3. Leaders with $< f \approx \frac{1}{3}$ should be incentivized to include votes that they receive in the next block.
+
+4. Validator rewards should be linear in stake.
+
+5. The total change in active stake cannot change by more than 18% from one epoch to the next.
+
+6. The number of votes that can be included must be limited to prevent DOS attacks on the network.
+
+7. The number of validators that can participate in consensus must be limited to protect Turbine operation.
+
+In addition to these formal properties, we would also prefer a system that is simple to understand and implement. The simpler the system is to understand, the easier it is to verify mathematically that these properties are satisfied. And of course simpler systems are easier to deploy and have fewer moving parts which reduces the surface area for bugs.
+
+Let's run through why each of these properties is important. First, we want to minimize validator out of pocket operating cost so that more validators can participate and so that smaller validators can compete with larger validators more easily. Second, validators should broadcast their votes according to the protocol in a timely manner so that the cluster can reach consensus as fast as possible. Third Leaders should include votes that they receive as soon as possible for the same reason. Fourth, validator rewards should be linear in stake so that validators don't have an incentive to combine or split up to increase their rewards. Fifth, the total change in active stake cannot exceed 18% from epoch to epoch because this could result in a reversal of fast confirmations. Sixth, the votes must be limited to cap the size of the block and prevent DOS attacks on the network. Finally, the number of validators that can participate in consensus must be limited to protect Turbine operation.
+
+## Overview of proposed changes
+
+### Vote base fees
+
+Vote base fees will be removed entirely.
+
+### Absolute Vote Credits
+
+Instead of distributing rewards based on relative performance as we do today, each validator in the active validator set will have a maximum number of vote credits $M$ that they can earn in an epoch.
+
+$$M = 16 \times 432000 = 6912000$$
+
+Their rewards in each epoch will be based on the credits $c_{i}$ they earn multiplied by their portion of the stake $s_i$ multiplied by the total inflation rewards available in the epoch $I$.
+
+$$ R_i = I s_i \frac{c_i}{M} $$
+
+Any unearned sol rewards will be burned.
+
+This represents a very slight reduction in total rewards available to validators:
+
+![rewards table](rewardstbl.png)
+
+### Vote Inclusion Credits
+
+25% of issuance will be redirected from vote credits to vote inclusion credits. These credits will be awarded to validators based on the number of votes they include in a timely manner. Each vote inclusion credit is awarded to the leader and is worth 1/3 of the vote credits awarded to the validator that the vote belongs to.
+
+### Vote transaction CU accounting
+
+Vote transactions will no longer count towards the global CU limit in the block, they will have their own limit of one vote per validator per block.
+
+### Validator set size
+
+To prevent excessive growth in the size of the cluster, the cluster will be capped at 2000 active validators. These validators will be the top 2000 validators by stake, rotating every epoch. A maximum of 18% of the total cluster stake can change from one epoch to the next. This capacity limit is divided into 9% for active stake entry and 9% for active stake exit. Priority will be given to changes in stake on validators that are already within the top 2000 validators by stake before adjustments from inactive validators becoming active or active validators becoming inactive.
+
+### TVC window
+
+On the 3rd slot in each validator's sequence of 4 blocks, the full timely vote credit window will only last 1 block. Rewards for landing this vote in the second slot will be reduced by 3/8.
 
 ## New Terminology
+
 1. $V$ is the set of all validators
 2. $v \in V$ is a validator
 3. $s_v \in [0,1]$ is the stake fraction of validator $v$
@@ -47,85 +113,71 @@ The goal of this proposal is to remove the incentive for validators to engage in
 5. $S = \sum\limits_{v \in V} s_v$ is the total cluster stake
 6. $C = \sum\limits_{v \in V} c_v$ is the total cluster vote credits
 7. $I$ is the total inflation rewards issued in an epoch
-8. $\text{VIC}_{i,j}$ are the proposed vote inclusion credits per credit earned by validator $j$
+8. $T$ represents the total supply of SOL normalized to staked supply of sol $S =1$ so if half of the SOL is staked then $T= 2$
+9. $u_v$ are vote inclusion credits for each validator
 
-## Detailed Design
+## Proofs that the proposed system satisfies the desiderata:
 
-### Current economics
+It's clear that maximum validator set size satisfies properties 6 and 7 by definition. And that capping entry and exit to 18% satisfies 5, also by definition. 1. is satisfied by the removal of vote costs and is the point of the proposal. Properties 2,3, and 4 are incentive compatibility properties where we must spend our time.
 
-This formula incentivizes validators to undermine the vote credits of their colleagues in order to earn more rewards for themselves. Each individual validator's rewards are given by:
-
+First we should verify that, upon receiving a vote, the leader should include it in the next block. Each leader $i$ has reward function.
 $$
-R_i(s_1,\dots,s_n,c_1,\dots,c_n) = I \frac{s_ic_i}{\sum\limits_{v \in V} s_v c_v}
-$$
-
-If a validator $i$ has stake fraction $s_i$ and vote credits $c_i$ then the cost to him of a marginal increase in vote credits for a validator $j$ with stake fraction $s_j$ and vote credits $c_j$ is:
-
-$$
-\frac{\partial R_i}{\partial c_j} = I \frac{s_ic_is_j}{\left(\sum\limits_{v \in V} s_v c_v\right)^2}
+R_i(s_1,\dots,s_n,c_1,\dots,c_n, u_1,\dots,u_n) = I s_i \frac{c_i}{M} + Iu_i - [\sum_{j=1}^n I s_j \frac{c_j}{M} +  u_i]\cdot \frac{s_i}{T}
 $$
 
-This tells us that if we want incentive alignment we need to give the leader at least  $\frac{\partial R_i}{\partial c_j}$ in rewards for every vote credit validator $j$ gains. But if we use this formula exactly, we would end up with validator rewards proportional to squared stake. This is because inclusion rewards earned would be proportional to the number of leader slots a validator has which is proportional to their stake and there is a $s_i$ term in the numerator of the formula. This is not desirable as it would incentivize validators to accumulate more stake or merge with other small validators. To mitigate this we propose replacing the $s_i$ term in the numerator with $.33$ thereby insuring that inclusion rewards are not proportional to stake but are still high enough to incentivise inclusion for any validator with less than $f/3f+1$ of the stake.
+
+The leader, having received a vote from validator $j$ has two choices: include the vote and receive a vote inclusion credit of
+$$ \frac{1}{3}I s_j \frac{c_j}{M} $$
+
+Or delay the vote and prevent the validator from earning vote credits. If he delays the vote he receives, due to the reduction in inflation:
+$$ \frac{s_i}{T} I s_j \frac{c_j}{M} $$
+
+as long as the leader $i$ has $< f \approx \frac{1}{3}$ of the stake, we have :
+$$ \frac{s_i}{T} I s_j \frac{c_j}{M}  <   \frac{1/3}{T} I s_j \frac{c_j}{M} < \frac{1}{3} I s_j \frac{c_j}{M} $$
+
+So the leader will include the vote $\blacksquare$
+
+Next we must verify that the sender of the vote is incentivized to broadcast their vote as soon as possible. There is a separate issue here of vote lagging where validators may delay votes to make sure they don't get locked off of the correct fork. This is a separate issue with tower and is not addressed by this proposal. But we can verify that the sender of the vote is not incentivized to delay their vote to give the vote inclusion credit to their own validator when they are the next leader.
+
+With a timely vote credit window of 2 blocks, the only slot that has a TVC window with 2 different leaders in it is the 3rd slot. If the voter is voting on slot 3 of leader $j$ and is the next leader in the rotation then the risk is that this leader might want to delay their vote to give the vote inclusion credit to themselves. This is the reason we need to adjust the TVC window for second to last slot in each leader's sequence of 4 blocks. It may seem that reducing the vote credit on leader rotation by 25% would be enough, after all the rewards for the delayed vote in addition to the vote inclusion credit is equal to the rewards for the vote in the first slot. But there is a small inflation term to account for. By delaying the vote, the leader reduces the induced inflation by $25\%$ so it is still profitable to delay the vote. To solve for what the reduction must be we need to solve the following equation:
 
 $$
-\text{VIC}_{i,j} = I \frac{.33s_j}{\left(\sum\limits_{v \in V} s_v c_v\right)^2}
+\frac{3}{4}\ =\alpha\ +\ \frac{\left(1-\alpha\right)}{3}
 $$
 
-with this formula, leader rewards for a slot $k$ are proportional to
+$$\frac{3}{4\ }-\frac{1}{3}\ =\ \alpha\ -\ \frac{\alpha}{3}$$
+
+$$\frac{3}{4}-\frac{1}{3}\ =\ \frac{2\alpha}{3}$$
+
+$$ \alpha = \frac{5}{8} $$
+
+Then even with 100% of the network staked and a leader with 1/3 of the stake would still be indifferent between voting right away in the 4th slot of leader $j$ and delaying their vote 1 slot to give the vote inclusion credit to themselves. $\blacksquare$
+
+Finally now that we have verified that leaders and voters are incentivized to send and include votes in a timely manner, we need to verify that the total rewards are linear in stake. That is, we want to show that:
 
 $$
-\text{LeaderRewards}_k = \sum\limits_{j \in V} \text{VIC}_{i,j} = I \frac{.33}{\left(\sum\limits_{v \in V} s_v c_v\right)^2} \sum\limits_{j \in V} s_j
+R_i(s_1,\dots,s_n,c_1,\dots,c_n, u_1,\dots,u_n) = a s_i + b
 $$
 
-If everyone is performing well i.e. $c_v \approx 1, \forall v \in v$ then this comes out to vote inclusion rewards per block being equal to 1/3 of vote credi rewards per block. So we should split our total inflation budget into 4 quarters and allocate 1 quarter to vote inclusion credits and the other 3 quarters to timely vote credits.
+for some $a$. Since we have already argued that votes will be sent and included in a timely manner, regardless of the stakes of the voters and the leaders, it is enough to show that each term is linear in stake.
 
-
-### Proposed economics
-
-When the feature flag `vote_credit_inflation_calculation` is active we will instead: 
-
-- Calculate the maximum vote credits $M$ that are possible to be earned in an epoch
-  with 0 blocks skipped.
-  As of writing this proposal $M = 16 \times 432000 = 6912000$
-
-- For each validator determine the portion of inflation rewards they are entitled
-  to as a function of their stake to the total cluster stake:
-
-  $$P(v) = I \times \dfrac{S(v)}{\sum\limits_{u\in V}S(u)}$$
-
-- Award rewards based on the ratio between each validators credits and $M$:
-
-  $$R(v) = P(v) \times \dfrac{C(v)}{M}$$
-
-- Burn any rewards not earned $B$
-
-  $$B = \sum\limits_{v\in V}\left(P(v) \times \dfrac{M - C(v)}{M}\right)$$
+The first term $I s_i \frac{c_i}{M}$ and the last term $- [\sum_{j=1}^n I s_j \frac{c_j}{M} +  u_i]\cdot \frac{s_i}{T}$ are linear by inspection. For the $Iu_i$ term we must argue that vote inclusion credits are linear in stake. Since votes are sent and included in a timely manner, each block earns vote credits proportional to the total stake $S$, but the number of blocks that each validator earns is proportional to the stake due to the way we calculate leader rotations so $u_i$ is linear in stake. $\blacksquare$
 
 ## Alternatives Considered
 
-What alternative designs were considered and what pros/cons does this feature
-have relative to them?
+This proposal was derived from the desiderata directly. Many of these details are the unique way to achieve incentive compatibility with the minimum changes necessary. We did consider minimum stake requirements as an alternative to maximum validator set size but this would have limited entry of new validators more than what we are proposing. 
 
 ## Impact
 
-// TODO(max): Explain how there is still incentive based on $B$, but that it is
-// much lower now
-
-// TODO(max): Share some numbers about how we expect the rewards distribution to
-// change as well as the estimated inflation rate based on skip rate.
-
-A future change will explore awarding the leader credits based on how many timely
-votes they can pack into a block. This could further align incentives and remove
-any censorship motivation that still exists based on the burned rewards.
+This proposal reduces vote costs, benefiting small validators and lowering operating expenses for the entire validator set. It also introduces separate accounting for vote transactions so there is no risk that a validator might not include votes in order to stuff the block with other transactions. It invalidates a number of pernicious vote mods which are currently profitable but threaten the security of the network and the correctness of consensus.
 
 ## Security Considerations
 
-Rewards calculation changes should be rigorously reviewed and audited as bugs
-here could result in widespread economic impact.
+This represents a major change to the way rewards are distributed and should be carefully reviewed. There are a number of potential DOS attacks that are currently impossible due to fixed vote fees that should all be re-evaluated under this new proposal.
 
 ## Drawbacks *(Optional)*
 
-Why should we not do this?
+This proposal would remove vote fees which are a regressive policy where small validators transfer fees to large validators. This change would obviously slightly disadvantage large validators. It would also increase net inflation because the half of vote fees which are now burned would no longer be burned.
 
 ## Backwards Compatibility
 
