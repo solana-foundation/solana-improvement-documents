@@ -57,7 +57,11 @@ push to increase the capacity for individual accounts at this time.
 Keeping `Max Writeable Account Units` unchanged while raising the
 `Max Block Units` , allows for additional parallel capacity.
 
-The intention is for this to follow SIMD-0207 (as opposed to replacing). SIMD-0207 is a much more modest increase in block space, but will be valuable in discovering any unforeseen problems with changing the longstanding 48M CU cap and verifying assumptions. This proposal aims to increase block space more aggressively.
+The intention is for this to follow SIMD-0207 (as opposed to replacing).
+SIMD-0207 is a much more modest increase in block space, but will be valuable in
+discovering any unforeseen problems with changing the longstanding 48M CU cap
+and verifying assumptions. This proposal aims to increase block space more
+aggressively.
 
 ## Alternatives Considered
 
