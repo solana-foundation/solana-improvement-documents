@@ -88,7 +88,10 @@ struct TpuFeedback {
 }
 
 The version is a 8 bit unsinged integer, it is set to 1 for first version. It
-is designed to allow the protocol to extend for future extension.
+is designed to allow the protocol to support for future extension. This should
+have enough space for the versions in the relatively long future. It could also
+be wrapped around in the future to differentiate as we do not expect to support
+many current different versions.
 
 The timestamp is the 64 bit unsigned integer representing the number of seconds
 since midnight 01/01/1970.
@@ -128,7 +131,7 @@ struct PriorityFeeInfo {
   }
 }
 
-These ratio are represented as f64 numbers using 8 bytes.
+These ratio are represented as u64 numbers using 8 bytes.
 
 ## Impact
 
