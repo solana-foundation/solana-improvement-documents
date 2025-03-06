@@ -143,16 +143,22 @@ Vote base fees will be removed entirely.
 ### Absolute Vote Credits
 
 Instead of distributing rewards based on relative performance as we do today,
-each validator in the active validator set will have a maximum number of vote
-credits $M$ that they can earn in an epoch.
+each validator in the active validator set will have a maximum number of inflationary
+rewards that they are eligble for. To determine this we first define the maximum
+stake weighted vote credits $M$ that they can earn in an epoch where they produce
+$L$ leader slots. Here $s_i$ is the validator's stake, and $S$ is the total stake.
 
-$$M = 16 \times 432000 = 6912000$$
+$$M = 12 s_i \times 432000 + 4 L S$$
 
-Their rewards in each epoch will be based on the credits $c_{i}$ they earn
-multiplied by their portion of the stake $s_i$ multiplied by the total inflation
-rewards available in the epoch $I$.
+The first term represents the maximum voting credits $3/4$ of the TVC credits
+(16), and the second term is the maximum leader inclusion credits covered in the
+following section.
 
-$$ R_i = I s_i \frac{c_i}{M} $$
+Their rewards in each epoch will be based on the fraction of the stake weighted
+credits $c_{i}$ they actually earn relative to this maximum $M$ multiplied by the
+total inflation rewards available in the epoch $I$.
+
+$$ R_i = I \frac{c_i}{S M} $$
 
 Any unearned sol rewards will be burned.
 
@@ -168,13 +174,28 @@ include in a timely manner. Each vote inclusion credit is awarded to the leader
 and is worth 1/3 of the vote credits awarded to the validator that the vote belongs
 to.
 
-As an example if a vote from a validator would earn 16 credits, 12 of those credits
-go to the voter and 4 go to the leader.
+For example assume that a latency 1 vote comes in from voter $v$ to be included
+in leader $l$'s block. $v$ will earn 12 credits based on their stake weight, and
+$l$ will earn 4 credits based on $v$'s stake weight:
+
+$c_v := c_v + 12 s_v$
+
+$c_l := c_l + 4 s_v$
+
+Note that this accounting matches the $M$ derived above, if $v$ votes perfectly
+and includes everyones votes (including their own):
+
+$$c_v = 12 s_v \times 432000 + 4 L \sum_{i\in V} s_i = M$$
+
+In order to implement this change, the vote program will track credits $c_v$ as
+stake weighted totals.
 
 ### Vote transaction CU accounting
 
 Vote transactions will no longer count towards the global CU limit in the block,
-they will have their own limit of one vote per validator per block.
+they will have their own limit of one vote per validator per block. With SIMD-0218
+IVC, there is no longer any benefit to including multiple old votes within a single
+block, instead only the latest vote will be used.
 
 ### Validator set size
 
@@ -200,14 +221,18 @@ On the 3rd slot in each validator's sequence of 4 blocks, the timely vote credit
 grace period will only last 1 block. Rewards for landing this vote in the second
 slot will be reduced by 3/8 and follow the normal TVC accounting afterwards.
 
+The reasoning behind this change to avoid scenarios where upcoming leaders bribe
+the voter to delay this vote by 1 block in order for the leader to earn more inclusion
+credits.
+
 ## New Terminology
 
 1. $V$ is the set of all validators
 2. $v \in V$ is a validator
 3. $s_v \in [0,1]$ is the stake fraction of validator $v$
-4. $c_v \in [0,1]$ is the vote credits of validator $v$
+4. $c_v \in [0,1]$ is the stake weighted vote credits of validator $v$
 5. $S = \sum\limits_{v \in V} s_v$ is the total cluster stake
-6. $C = \sum\limits_{v \in V} c_v$ is the total cluster vote credits
+6. $C = \sum\limits_{v \in V} c_v$ is the total cluster stake weighted vote credits
 7. $I$ is the total inflation rewards issued in an epoch
 8. $T$ represents the total supply of SOL normalized to staked supply of sol
    $S =1$ so if half of the SOL is staked then $T= 2$
