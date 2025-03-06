@@ -1,6 +1,6 @@
 ---
-simd: 'XXXX'
-title: Vote cost reduction
+simd: '0257'
+title: Eliminate vote fees
 authors:
   - Max Resnick
   - Ashwin Sekar
@@ -164,7 +164,7 @@ Any unearned sol rewards will be burned.
 
 This represents a very slight reduction in total rewards available to validators:
 
-![rewards table](../assets/0254-rewardstbl.png)
+![rewards table](../assets/0257-rewardstbl.png)
 
 ### Vote Inclusion Credits
 
@@ -248,21 +248,23 @@ must spend our time.
 
 First we should verify that, upon receiving a vote, the leader should include it
 in the next block. Each leader $i$ has reward function.
-$$
-R_i(s_1,\dots,s_n,c_1,\dots,c_n, u_1,\dots,u_n) = I s_i \frac{c_i}{M} + Iu_i -
-  [\sum_{j=1}^n I s_j \frac{c_j}{M} +  u_i]\cdot \frac{s_i}{T}
-$$
+
+$$ R_i(s_1,\dots,s_n,c_1,\dots,c_n, u_1,\dots,u_n) = I s_i \frac{c_i}{M} + Iu_i -
+  [\sum_{j=1}^n I s_j \frac{c_j}{M} +  u_i]\cdot \frac{s_i}{T} $$
 
 
 The leader, having received a vote from validator $j$ has two choices: include
 the vote and receive a vote inclusion credit of
+
 $$ \frac{1}{3}I s_j \frac{c_j}{M} $$
 
 Or delay the vote and prevent the validator from earning vote credits. If he
 delays the vote he receives, due to the reduction in inflation:
+
 $$ \frac{s_i}{T} I s_j \frac{c_j}{M} $$
 
 as long as the leader $i$ has $< f \approx \frac{1}{3}$ of the stake, we have :
+
 $$ \frac{s_i}{T} I s_j \frac{c_j}{M}
   < \frac{1/3}{T} I s_j \frac{c_j}{M}
   < \frac{1}{3} I s_j \frac{c_j}{M} $$
