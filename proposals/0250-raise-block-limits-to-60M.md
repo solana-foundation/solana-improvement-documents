@@ -1,5 +1,5 @@
 ---
-simd: '0250'
+simd: '0256'
 title: Increase Block Limits to 60M CUs
 authors:
   - Brennan Watt (Anza)
