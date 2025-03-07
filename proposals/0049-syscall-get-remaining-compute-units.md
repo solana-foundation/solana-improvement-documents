@@ -5,7 +5,7 @@ authors:
   - Christian Kamm
 category: Standard
 type: Core
-status: Implemented
+status: Withdrawn
 created: 2023-05-17
 feature: 5TuppMutoyzhUSfuYdhgzD47F92GL1g89KpCZQKqedxP (https://github.com/solana-labs/solana/issues/33325)
 development: 
