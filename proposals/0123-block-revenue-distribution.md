@@ -83,18 +83,17 @@ build the leader schedule for the current epoch.
 
 If the commission rate and collector account aren't set, all revenue will be
 collected into the validator's identity account as before. If the commission
-rate and collector account *are* specified, the calculated commission MUST be
-deposited in the collector account and the remaining rewards MUST be deposited
-into the validator's vote account for later distribution to stakers.
+rate and collector account *are* specified, the rewards MUST be distributed
+according to the commission and delegator rewards collection sections below.
 
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
 
 #### Commission Collection
 
-The commission amount MUST be calculated by first multiplying the rate by the
-amount of revenue and then using integer division to divide by `10,000`. If the
-commission amount is non-zero, the fee collector account MUST be loaded and
-checked for the following conditions:
+The commission amount MUST be calculated by first multiplying the commission
+rate by the amount of revenue and then using integer division to divide by
+`10,000`. If the commission amount is non-zero, the fee collector account MUST
+be loaded and checked for the following conditions:
 
 1. account is system program owned AND
 2. account is rent-exempt after depositing the commission.
@@ -107,27 +106,35 @@ amount MUST be burned.
 
 The delegator rewards amount MUST be calculated by subtracting the calculated
 commission from the block fee revenue. If the delegator rewards amount is
-non-zero, it must be added to the vote state field `pending_delegator_rewards`
-and added to the balance of vote account.
+non-zero, the vote account must be loaded and checked for the following
+conditions:
+
+1. account is vote program owned AND
+2. account is initialized with vote state v4 or later
+
+If the conditions are met, the delegator rewards amount MUST be added to the
+vote state field `pending_delegator_rewards` and added to the balance of vote
+account. If either of these conditions is violated, the delegator rewards amount
+MUST be burned.
 
 ### Delegator Rewards Distribution
 
 At the beginning of an epoch, for each unique vote account in the previous
-epoch's leader schedule, the protocol REQUIRES checking if the
-`pending_delegator_rewards` vote state field is non-zero, let's call this value
-`P`. If non-zero, record this value to calculate individual delegator rewards
-and then reset the field to `0`.
+epoch's leader schedule, the protocol REQUIRES checking if the account exists,
+is initialized with vote state v4 or later, AND the `pending_delegator_rewards`
+vote state field is non-zero, let's call this value `P`. If non-zero, record
+this value to calculate individual delegator rewards as described below.
 
 The amount of lamports distributed to an individual stake account can be
 calculated by first summing all of the lamports that were actively staked during
 the previous epoch for a given vote account, let's call this value `A`. Then,
-the reward for an individual stake account can be calculated by multiplying the
-active stake for an individual stake account by `P` and then integer dividing by
-`A`. Fractional lamports will be discarded so not all `P` lamports for a given
+the reward for an individual stake account can be calculated by multiplying its
+active stake from the previous epoch by `P` and then integer dividing by `A`.
+Fractional lamports will be discarded so not all `P` lamports for a given
 delegator rewards pool will be distributed. After calculating all individual
 stake rewards, sum them and call this value `D`. Then subtract (`P - D`) from
-the vote account balance and subtract this value from the cluster
-capitalization.
+the vote account balance and the `pending_delegator_rewards` field and subtract
+this value from the cluster capitalization.
 
 After updating the vote account's `pending_delegator_rewards` field and
 deducting any lamports that won't get distributed to stake delegators from the
@@ -142,8 +149,8 @@ partitioned and distributed according to [SIMD-0118].
 
 When reward entries are used to distribute rewards pool funds during partitioned
 rewards distribution, the delegated vote account for each rewarded stake account
-must have its balance deducted with the amount of rewards distributed to keep
-capitalization consistent.
+must have its `pending_delegator_rewards` field and its balance deducted with
+the amount of rewards distributed to keep capitalization consistent.
 
 [SIMD-0118]: https://github.com/solana-foundation/solana-improvement-documents/pull/118
 
