@@ -119,11 +119,12 @@ MUST be burned.
 
 ### Delegator Rewards Distribution
 
-At the beginning of an epoch, for each unique vote account in the previous
-epoch's leader schedule, the protocol REQUIRES checking if the account exists,
-is initialized with vote state v4 or later, AND the `pending_delegator_rewards`
-vote state field is non-zero, let's call this value `P`. If non-zero, record
-this value to calculate individual delegator rewards as described below.
+After each epoch boundary (or after restart while epoch rewards are still
+active), create a list of all vote accounts that existed and were initialized at
+the beginning of the epoch. For each vote account, its state at the beginning of
+the current epoch MUST be checked for its `pending_delegator_rewards` vote state
+field, let's call this value `P`. If `P` is non-zero, record this value to
+calculate individual delegator rewards as described below.
 
 The amount of lamports distributed to an individual stake account can be
 calculated by first summing all of the lamports that were actively staked during
