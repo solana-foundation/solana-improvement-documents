@@ -1,5 +1,5 @@
 ---
-simd: '253'
+simd: '0253'
 title: Restrict Transaction Fee Market Bid Space
 authors:
  - Ajayi-Peters Oluwafikunmi (Eclipse)
@@ -96,16 +96,18 @@ Unfortunately, as is the case with FPAs, the correct fee for the desired outcome
 is undefined and unknown to users. The most useful tools that currently exist
 are the `getRecentPrioritizationFees` RPC method and other proprietary
 modifications to it that all do roughly the same thing:
+
 - take a list of accounts locked by a transaction
 
 - return the priority fee paid by a transaction that locked all accounts in
   the list in the last 150 blocks.
 
 These tools, while helpful, are subpar because:
-1.  they do not (correctly) price blockspace; they make recommendations based on
+
+1. they do not (correctly) price blockspace; they make recommendations based on
     (previous) uninformed bids.
 
-2.  they waste RPC resources (150 blocks of data is far too much and can even be
+2. they waste RPC resources (150 blocks of data is far too much and can even be
     detrimental).
 
 Furthermore, because different providers have different implementations, there
@@ -126,10 +128,11 @@ validators will be unaware of this system and continue processing transactions
 as they do today.
 
 The defining benefits of this approach compared to a protocol-enforced base fee
-are: 
-1.  blocks can be maximally packed at all times and
+are:
 
-2.  there is no additional overhead from tracking a base fee on the protocol;
+1. blocks can be maximally packed at all times and
+
+2. there is no additional overhead from tracking a base fee on the protocol;
     only RPC nodes (already responsible for responding to these requests) must
     maintain the "cache."
 
@@ -138,6 +141,7 @@ are:
 ### RPC Processing Requests
 
 When an RPC node receives a `getPriorityFee` request, it:
+
 - checks the cache for all the accounts in the accounts list attached.
 - if none of the accounts in the list are in the cache, it returns the
   recommended global priority fee.
@@ -160,6 +164,7 @@ Cache<Pubkey, AccountData>
 ```
 
 The `AccountData` struct contains:
+
 - the exponential moving average (EMA) of CU utilization of the associated
   account in the five most recent blocks,
 - the recommended fee for block n (the most recent block seen by the node),
@@ -233,7 +238,6 @@ $\ \ \ \ f^g_o = f^g_n * exp(\theta, \ (\frac{\mu^g_{\lambda}}{\mu^g_{\tau}} -1)
 if $\mu^g_{\tau} < \mu^g_{\lambda}$,\
 $\ \ \ \ f^g_o = f^g_n * (1 - exp(\theta, \ (\frac{\mu^g_{\lambda}}{\mu^g_{\tau}} -1)))$  
 
-
 The recommended global fee for block $o$ is a bit more involved because it must
 also consider global fees but it is determined by the following equations:
 
@@ -254,7 +258,8 @@ $\ \ \ \ f^{\alpha}\_o = max \ \{f^{\alpha}\_n * (1 - exp(\theta, \ (\frac{\mu^{
 
 As is observable from the above, the controller is exponential. An exponential
 controller was chosen for two reasons:
-1.  There is no desire to impose additional costs on users unless they bid for
+
+1. There is no desire to impose additional costs on users unless they bid for
     congested accounts. Because of this, the slack (difference between target
     and maximum utilization) must be as small as possible. Given the small
     slack, aggressive responses are crucial even if they cause some loss in
@@ -262,7 +267,7 @@ controller was chosen for two reasons:
     as there is sufficient block space, users with a lower willingness to pay
     can still be included.
 
-2.  Research shows that transaction arrival can be modeled by a Poisson's
+2. Research shows that transaction arrival can be modeled by a Poisson's
     process, and exponential controllers are effective for this class of
     problems, given the additional desiderata.
 
@@ -275,19 +280,20 @@ relations above. Also, the entries with the least congestion are evicted, and
 the most congested accounts not already in the cache are inserted.
 
 To allow effective tracking of congested accounts, we propose tracking up to
-$5 * max \ lockable \ accounts \ per \ transaction * ceil(\frac{max \ block \ CU \ utilization}{target \ per \ account \ CU \ utilization})$
+$5 *max \ lockable \ accounts \ per \ transaction* ceil(\frac{max \ block \ CU \ utilization}{target \ per \ account \ CU \ utilization})$
 accounts with utilization greater than 60% of the target utilization.
 
 This is based on the fact that:
-1.  the EMA is tracked over 5 blocks
 
-2.  the maximum number of accounts that can satisfy the criteria of being
+1. the EMA is tracked over 5 blocks
+
+2. the maximum number of accounts that can satisfy the criteria of being
     congested is given by $ceil(\frac{max \ block \ CU \ utilization}{target \ per \ account \ CU \ utilization}) * max \ lockable \ accounts \ per \ transaction$.
 
 This is a simple but effective way to set an upper bound on the cache size. It
 is also small enough that there is no meaningful overhead from keeping a cache
 of that size--under the current conditions ($48$ M CUs per block, 64 lockable
-accounts per transaction and $0.85 * 12$ M per CUs per account), the cache 
+accounts per transaction and $0.85 * 12$ M per CUs per account), the cache
 will have a capacity of 1600.
 
 Finally, we propose a (maximum) churn rate of 5 entries per slot for the same
@@ -297,35 +303,35 @@ That is a complete overview of all the components of the design.
 
 ## Alternatives Considered
 
-1.  EIP-1559-like system with a protocol-enforced base fee.
+1. EIP-1559-like system with a protocol-enforced base fee.
 
     The primary alternative consideration is a per-account EIP-1559
     implementation with parameters and a controller similar to the ones
     discussed here. But for reasons already discussed in the body of this text,
     we believe exploring the proposed implementation (and other similar variants)
     are better first steps than a (modified) per-account EIP-1559.
-    
-2.  Using a different controller.
-    
+
+2. Using a different controller.
+
     While the core mechanism and parameters are set, the controller is still
     open to tuning. The current design was chosen because it is the simplest
     that would satisfy the desiderata.
     A PID controller remains a viable alternative.
 
-3.  Doing Nothing.
-    
+3. Doing Nothing.
+
     Users will continue to overbid (best case), and the UX will continue being
     subpar.
 
 ## Impact
 
--   validators: unaffected
--   core contributors: unaffected.
--   RPC Nodes improve users' transaction landing probability and potentially
+- validators: unaffected
+- core contributors: unaffected.
+- RPC Nodes improve users' transaction landing probability and potentially
     reduce spam since transaction fees are more efficacious.
--   users: Users can make better-informed bids and enjoy a significantly better
+- users: Users can make better-informed bids and enjoy a significantly better
     experience. They should also pay less for uncongested accounts.
--   dapp developers: will have to rewrite applications and switch to the new
+- dapp developers: will have to rewrite applications and switch to the new
     method.
 
 ## Security Considerations
