@@ -55,35 +55,34 @@ bid space without any of the externalities discussed above is highly desirable.
 
 ## New Terminology
 
--   target Compute Unit utilization: This is a soft cap on how many Compute
-    Units can fit in a valid block (per block and per account). It is a
-    "protocol-aware" value.
+- target Compute Unit utilization: This is a soft cap on how many Compute
+  Units can fit in a valid block (per block and per account). It is a
+  "protocol-aware" value.
 
--   maximum Compute Unit utilization: This is a protocol-defined value that hard
-    caps the number of Compute Units that can be packed into a valid block.
+- maximum Compute Unit utilization: This is a protocol-defined value that hard
+  caps the number of Compute Units that can be packed into a valid block.
 
--   slack is the ratio of target Compute Unit utilization to maximum Compute
-    Unit utilization (per account and per block).
+- slack is the ratio of target Compute Unit utilization to maximum Compute
+  Unit utilization (per account and per block).
 
--   fee: fee is used loosely throughout this document to refer to Compute Unit
-    cost (lamports/CU).
+- fee: fee is used loosely throughout this document to refer to Compute Unit
+  cost (lamports/CU).
 
--   recommended priority fee: This is the fee that the mechanism "recommends"
-    that a transaction pay. It is similar to but distinct from a per-account
-    EIP-1559 base fee.
+- recommended priority fee: This is the fee that the mechanism "recommends"
+  that a transaction pay. It is similar to but distinct from a per-account
+  EIP-1559 base fee.
 
--   cache: An in-memory data structure maintained by RPC nodes that tracks:
+- cache: An in-memory data structure maintained by RPC nodes that tracks:
+  - the most congested accounts,
+  - the Exponential Moving Average (EMA) of the Compute Unit utilization for
+    the accounts and,
+  - the recommended priority fees for the corresponding accounts.
 
-    -   the most congested accounts,
-    -   the Exponential Moving Average (EMA) of the Compute Unit utilization for
-        the accounts and,
-    -   the recommended priority fees for the corresponding accounts.
-
--   `getPriorityFee`: A JSON RPC method to replace the
-    `getRecentPrioritizationFees` and `getFeeForMessage` methods. The
-    `getPriorityFee` request takes a mandatory list of transactions and returns
-    the recommended fee to land a transaction, locking all the accounts in the
-    list.
+- `getPriorityFee`: A JSON RPC method to replace the
+  `getRecentPrioritizationFees` and `getFeeForMessage` methods. The
+  `getPriorityFee` request takes a mandatory list of transactions and returns
+  the recommended fee to land a transaction, locking all the accounts in the
+  list.
 
 ## Overview
 
@@ -97,10 +96,10 @@ Unfortunately, as is the case with FPAs, the correct fee for the desired outcome
 is undefined and unknown to users. The most useful tools that currently exist
 are the `getRecentPrioritizationFees` RPC method and other proprietary
 modifications to it that all do roughly the same thing:
--   take a list of accounts locked by a transaction
+- take a list of accounts locked by a transaction
 
--   return the priority fee paid by a transaction that locked all accounts in
-    the list in the last 150 blocks.
+- return the priority fee paid by a transaction that locked all accounts in
+  the list in the last 150 blocks.
 
 These tools, while helpful, are subpar because:
 1.  they do not (correctly) price blockspace; they make recommendations based on
@@ -139,12 +138,12 @@ are:
 ### RPC Processing Requests
 
 When an RPC node receives a `getPriorityFee` request, it:
--  checks the cache for all the accounts in the accounts list attached.
--  if none of the accounts in the list are in the cache, it returns the
-   recommended global priority fee.
--  if one or more of the accounts in the list are in the cache, it returns the
-   recommended fee for the most expensive account (should also be the most
-   congested).
+- checks the cache for all the accounts in the accounts list attached.
+- if none of the accounts in the list are in the cache, it returns the
+  recommended global priority fee.
+- if one or more of the accounts in the list are in the cache, it returns the
+  recommended fee for the most expensive account (should also be the most
+  congested).
 
 ### The cache
 
@@ -161,11 +160,11 @@ Cache<Pubkey, AccountData>
 ```
 
 The `AccountData` struct contains:
--  the exponential moving average (EMA) of CU utilization of the associated
-   account in the five most recent blocks,
--  the recommended fee for block n (the most recent block seen by the node),
--  the recommended fee that transactions that want to access the account in the
-   next block (n + 1) should pay.
+- the exponential moving average (EMA) of CU utilization of the associated
+  account in the five most recent blocks,
+- the recommended fee for block n (the most recent block seen by the node),
+- the recommended fee that transactions that want to access the account in the
+  next block (n + 1) should pay.
 
 ``` rust
 struct AccountData {
@@ -257,15 +256,15 @@ As is observable from the above, the controller is exponential. An exponential
 controller was chosen for two reasons:
 1.  There is no desire to impose additional costs on users unless they bid for
     congested accounts. Because of this, the slack (difference between target
-	and maximum utilization) must be as small as possible. Given the small
-	slack, aggressive responses are crucial even if they cause some loss in
-	efficiency. However, because the TFM does not enforce the base fee, as long
-	as there is sufficient block space, users with a lower willingness to pay
-	can still be included.
+    and maximum utilization) must be as small as possible. Given the small
+    slack, aggressive responses are crucial even if they cause some loss in
+    efficiency. However, because the TFM does not enforce the base fee, as long
+    as there is sufficient block space, users with a lower willingness to pay
+    can still be included.
 
 2.  Research shows that transaction arrival can be modeled by a Poisson's
     process, and exponential controllers are effective for this class of
-	problems, given the additional desiderata.
+    problems, given the additional desiderata.
 
 ### Cache updates and eviction
 
@@ -276,19 +275,20 @@ relations above. Also, the entries with the least congestion are evicted, and
 the most congested accounts not already in the cache are inserted.
 
 To allow effective tracking of congested accounts, we propose tracking up to
-$5 * ceil(\frac{max \ block \ CU \ utilization}{target \ per \ account \ CU \ utilization})$
-accounts with utilization greater than 50% of the target utilization.
+$5 * max \ lockable \ accounts \ per \ transaction * ceil(\frac{max \ block \ CU \ utilization}{target \ per \ account \ CU \ utilization})$
+accounts with utilization greater than 60% of the target utilization.
 
 This is based on the fact that:
 1.  the EMA is tracked over 5 blocks
 
 2.  the maximum number of accounts that can satisfy the criteria of being
-    congested is given by $ceil(\frac{max \ block \ CU \ utilization}{target \ per \ account \ CU \ utilization})$.
+    congested is given by $ceil(\frac{max \ block \ CU \ utilization}{target \ per \ account \ CU \ utilization}) * max \ lockable \ accounts \ per \ transaction$.
 
 This is a simple but effective way to set an upper bound on the cache size. It
 is also small enough that there is no meaningful overhead from keeping a cache
-of that size--under the current conditions ($48$ M CUs per block and $0.85 * 12$
-M per CUs per account), the cache will have a capacity of just 25.
+of that size--under the current conditions ($48$ M CUs per block, 64 lockable
+accounts per transaction and $0.85 * 12$ M per CUs per account), the cache 
+will have a capacity of 1600.
 
 Finally, we propose a (maximum) churn rate of 5 entries per slot for the same
 reason as above.
