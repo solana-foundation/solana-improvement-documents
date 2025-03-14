@@ -46,7 +46,7 @@ A helper function to extract the signatures can be used:
 ```rust
 fn load_signatures(
         signatures_sysvar_account_info: &AccountInfo
-    ) -> Result<Vec<Signature>>;
+    ) -> Result<&[Signature]>;
 ```
 
 ## Alternatives Considered
