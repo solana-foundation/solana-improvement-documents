@@ -38,7 +38,7 @@ Currently, no alternative exists to introspect a transaction's signature from wi
 
 ## Impact
 
-The impact pf this will allow for unique and bespoke protocols to emerge on Solana enabling a new subset of sequence-based and hybrid (on/off-chain) applications to exist.
+The impact of this will allow for unique and bespoke protocols to emerge on Solana enabling a new subset of sequence-based and hybrid (on/off-chain) applications to exist.
 
 ## Security Considerations
 
