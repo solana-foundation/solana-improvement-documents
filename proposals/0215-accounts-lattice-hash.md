@@ -10,9 +10,9 @@ category: Standard
 type: Core
 status: Accepted
 created: 2024-12-20
-feature: LtHaSHHsUge7EWTPVrmpuexKz6uVHZXZL6cgJa7W7Zn
+feature: LTHasHQX6661DaDD4S6A2TFi6QBuiwXKv66fB1obfHq
 development:
-  - Agave: Implemented (v2.2.0)
+  - Agave: Implemented (v2.2)
   - Firedancer: Implemented (v0.2)
 ---
 
