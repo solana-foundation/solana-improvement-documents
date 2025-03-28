@@ -48,9 +48,9 @@ None.
 The `rent_epoch` field in an account can be deprecated.  This allows reclaiming
 and reusing these bytes for other purposes in the future.
 
-For developers, programs may have seen newly-created or non-existent accounts
-with a `rent_epoch` of `0`.  Now programs will see *all* accounts with a
-`rent_epoch` of `u64::MAX`.
+In certain rare cases the serialized `rent_epoch` of an account may previously
+have been `0` and will now be `u64::MAX`.
+
 
 ## Security Considerations
 
