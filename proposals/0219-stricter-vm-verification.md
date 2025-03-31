@@ -86,6 +86,11 @@ otherwise `InstructionError::ExternalAccountDataModified` must be thrown
 
 Thus, changing and later restoring data in unowned accounts is prohibited.
 
+Furthermore, writes to the payload of an account which is aliasing other
+instruction accounts must immediately become visible in their memory regions
+as well. This is distinct from the previous behavior which only updated
+aliasing instruction account payloads at CPI or the end of the instruction.
+
 ### Syscall slice parameters
 
 When a range in virtual address space which:
