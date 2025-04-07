@@ -51,9 +51,9 @@ epoch:
 
 2. Verify that the program account
   `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv` has a verified build hash of
-  `<FILL IN AFTER IMPLEMENTATION>` [\[1\]](#notes)
+  `192ed727334abe822d5accba8b886e25f88b03c76973c2e7290cfb55b9e1115f` [\[1\]](#notes)
 
-3. Copy the contents of `8sT74BE7sanh4iT84EyVUL8b77cVruLHXGjvTyJ4GwCe` into
+3. Copy the contents of `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv` into
   `S1ashing11111111111111111111111111111111111`
 
 4. Additionally copy the program-data account from `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv`
@@ -62,6 +62,10 @@ epoch:
 This is the only protocol change that clients need to implement. The remaining
 proposal describes the function of this program, hereafter referred to as the
 slashing program.
+
+The buffer account `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv` will hold the
+v1.0.0 release of the slashing program 
+https://github.com/solana-program/slashing/releases/tag/v1.0.0
 
 ### Slashing Program
 
