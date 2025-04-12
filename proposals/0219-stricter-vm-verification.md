@@ -91,6 +91,18 @@ instruction accounts must immediately become visible in their memory regions
 as well. This is distinct from the previous behavior which only updated
 aliasing instruction account payloads at CPI or the end of the instruction.
 
+### Zeroing of account realloc padding after account truncation in CPI
+
+Only programs of loader-v1 do not have any realloc padding behind each account
+in their serialization format. Programs of all other loaders have 10 KiB
+padding behind each account. Currently, after a CPI in which the callee
+truncates an account, this realloc padding is only zeroed in the range between
+what the caller had used and what the callee had truncated it down to. The
+range from what the caller had used up to the end of the realloc padding stays
+untouched throughout CPI. With the activation of this feature the entire rest
+of the account from its new truncated length up to the end of the realloc
+padding must be zeroed.
+
 ### Syscall slice parameters
 
 When a range in virtual address space which:
