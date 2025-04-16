@@ -172,8 +172,8 @@ unchanged despite freeing up space with the removal of the prior voters field.
 Keeping the same size requirement simplifies this proposal and leaves extra
 space for future fields.
 
-When checking if a deserialized v4 vote state is uninitialized, use the same
-empty authorized voters check that is used for other vote state versions.
+Note that a v4 vote account is ALWAYS considered initialized, because unlike
+other vote state versions, it's never stored with uninitialized state.
 
 #### `UpdateCommission`
 
