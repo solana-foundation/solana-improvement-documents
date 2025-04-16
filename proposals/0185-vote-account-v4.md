@@ -177,14 +177,13 @@ other vote state versions, it's never stored with uninitialized state.
 
 #### `UpdateCommission`
 
-The existing `UpdateCommission` instruction (with enum discriminant `5u32`) will
-will continue to only update the inflation rewards commission in integer
-percentage values.
+The existing `UpdateCommission` instruction will will continue to only update
+the inflation rewards commission in integer percentage values.
 
 When updating vote state v4 accounts, the new `inflation_rewards_commission_bps`
 field should be used instead of the old generic `commission` field.
 Additionally, the new commission value MUST be multiplied by `100` before being
-stored.
+checked for commission or increases and before being stored in account data.
 
 #### `Authorize`, `AuthorizeChecked`, `AuthorizeWithSeed`, `AuthorizeCheckedWithSeed`
 
