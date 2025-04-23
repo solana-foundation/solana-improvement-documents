@@ -46,25 +46,28 @@ activated the following behavior will be executed in the first block for the new
 epoch:
 
 1. Create a new program account at `S1ashing11111111111111111111111111111111111`
-  owned by the default upgradeable loader with an upgrade authority set to the
-  system program `11111111111111111111111111111111`
+  owned by the default upgradeable loader with an upgrade authority set to `None`,
+  and create the associated program data account.
 
-2. Verify that the program account
+2. Verify that the buffer account
   `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv` has a verified build hash of
   `192ed727334abe822d5accba8b886e25f88b03c76973c2e7290cfb55b9e1115f` [\[1\]](#notes)
 
-3. Copy the contents of `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv` into
-  `S1ashing11111111111111111111111111111111111`
+3. Serialize the contents of `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv` into
+  the program data account for `S1ashing11111111111111111111111111111111111`
 
-4. Additionally copy the program-data account from `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv`
-  to the PDA for `S1ashing11111111111111111111111111111111111`
+4. Invoke the loader to deploy the new program account and program data account.
+  This step also updates the program cache.
+
+4. Zero out the buffer account `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv`, and
+  update the changes to capitalization and account data lengths accordingly.
 
 This is the only protocol change that clients need to implement. The remaining
 proposal describes the function of this program, hereafter referred to as the
 slashing program.
 
 The buffer account `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv` will hold the
-v1.0.0 release of the slashing program 
+v1.0.0 release of the slashing program
 https://github.com/solana-program/slashing/releases/tag/v1.0.0
 
 ### Slashing Program
