@@ -7,9 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2024-08-15
-feature:
-  - 8Cb77yHjPWe9wuWUfXeh6iszFGCDGNCoFk3tprViYHNm
-  - EmhbpdVtZ2hWRGFWBDjn2i3SJD8Z36z4mpMcZJEnebnP
+feature: G8yMNsNUd4p3VB22ycrPEB1qRgepCFeFpAqD2Lr66s36
 ---
 
 ## Summary
@@ -47,16 +45,12 @@ None.
 
 ## Detailed Design
 
-The feature gate `8Cb77yHjPWe9wuWUfXeh6iszFGCDGNCoFk3tprViYHNm` must:
+The feature gate must:
 
 - enable loader-v4 `LoaderV411111111111111111111111111111111111` program
 management and execution.
 - enable the loader-v3 `BPFLoaderUpgradeab1e11111111111111111111111`
 instruction `UpgradeableLoaderInstruction::Migrate`.
-
-An additional feature gate `EmhbpdVtZ2hWRGFWBDjn2i3SJD8Z36z4mpMcZJEnebnP`
-must disable new deployments on loader-v3,
-throwing `InvalidIstructionData` if `DeployWithMaxDataLen` is called.
 
 ### Owned Program Accounts
 
@@ -213,8 +207,6 @@ All program management instructions must cost 2000 CUs.
 - Instruction accounts:
   - `[writable]` The program account to deploy.
   - `[signer]` The authority of the program.
-  - `[writable]` Optional, an undeployed source program account to take data
-  and funds from.
 - Instruction data:
   - Enum variant `3u32`
 - Behavior:
@@ -227,28 +219,8 @@ All program management instructions must cost 2000 CUs.
   uniquely identify a deployment of a program, which simplifies caching logic.
   - Check that the status stored in the program account is retracted
     otherwise throw `InvalidArgument`
-  - In case a source program was provided (instruction account at index 2)
-  which is not the program account:
-    - Verify the source program account
-    - Check that the status stored in the source program account is retracted,
-    otherwise throw `InvalidArgument`
-    - Check that the executable file stored in the source program account
-    passes executable verification
-      - The feature set that the executable file is verified against is not
-      necessarily the current one, but the one of the epoch of the next slot
-      - Also, during deployment certain deprecated syscalls are disabled,
-      this stays the same as in the older loaders
-    - Copy the entire source program account into the program account
-    - Set the length of the source program account to zero
-    - Swap the funds of the source program account and the program account.
-    Note: This ensures correct amount for rent exemption (as it was calculated
-    for the source program account) remains with the program account and the
-    rest is deposited into the source program account to be retrieved. It works
-    with programs growing, staying the same size or shrinking.
-    - Assign ownership of the source program account to the system program
-  - otherwise, if no source program was provided:
-    - Check that the executable file stored in the program account passes
-    executable verification
+  - Check that the executable file stored in the program account passes
+  executable verification
   - Change the slot in the program account to the current slot
   - Change the status stored in the program account to deployed
 
