@@ -8,7 +8,7 @@ authors:
   - Sam Kim
 category: Standard
 type: Core
-status: Accepted
+status: Implemented
 created: 2024-12-20
 feature: LTHasHQX6661DaDD4S6A2TFi6QBuiwXKv66fB1obfHq
 development:
