@@ -79,7 +79,7 @@ This slashing program supports two instructions `DuplicateBlockProof`, and
 system program :
 
 0. `proof_account`, expected to be previously initialized with the proof data.
-1. `pda_account`, the PDA in which to store the violation report. See the below
+1. `report_account`, the PDA in which to store the violation report. See the below
     section for details. Must be writable.
 2. `instructions`, Instructions sysvar
 3. `system_program_account`, required to create the violation report.
@@ -253,7 +253,7 @@ struct ProofReport {
   epoch: Epoch,                    // Unaligned unsigned eight-byte little endian
                                       integer representing the epoch in which this
                                       report was created
-  pubkey: Pubkey,                  // 32 byte array representing the pubkey of the
+  violator: Pubkey,                // 32 byte array representing the pubkey of the
                                       node that committed the violation
   slot: Slot,                      // Unaligned unsigned eight-byte little endian
                                       integer representing the slot in which the
