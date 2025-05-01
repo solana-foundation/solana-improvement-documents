@@ -79,9 +79,9 @@ irrespective of how they are used.
 accounts specified on the transaction.
 2. Each account's size is defined as the byte length of its data prior to
 transaction execution plus 64 bytes to account for metadata.
-3. There is an additional flat 8248 byte cost for transactions that use an
-address lookup table, accounting for the 8192 bytes for the maximum size of such
-a table plus 56 bytes for metadata.
+3. There is an additional flat 8248 byte cost for each address lookup table used
+by a transaction, accounting for the 8192 bytes for the maximum size of such a
+table plus 56 bytes for metadata.
 4. The total transaction loaded account data size is the sum of these sizes.
 
 Transactions may include a
@@ -105,14 +105,12 @@ mapping is enabled, this SIMD may be amended to count them differently.
 We include programdata size for LoaderV3 programs because using the program
 account on a transaction forces an unconditional load of programdata to compile
 the program for execution. We always count it, even when the program account is
-not a transaction program ID, because the program must be available for CPI.
+not a transaction program ID, because the program must be available for CPI. If
+the programdata account does not exist, then its size is 0, and transaction
+loading continues as normal.
 
 There is no special handling for any account owned by the native loader,
-LoaderV1, or LoaderV2.
-
-Account size for programs owned by LoaderV4 is left undefined. This SIMD should
-be amended to define the required semantics before LoaderV4 is enabled on any
-network.
+LoaderV1, LoaderV2, or LoaderV4.
 
 ## Alternatives Considered
 
