@@ -25,9 +25,9 @@ future.
 
 - Over 40% of vote state size is reserved for tracking a history of 32 prior
 authorized voters for the vote account in the `prior_voters` field. Having such
-a long history of prior voters is arguably not very useful, tracking the most
-recent previous epoch's voter is probably sufficient and can be stored in the
-`authorized_voters` field instead.
+a long history of prior voters is not useful, tracking the most recent previous
+epoch's voter is sufficient for features like slashing and authorized voter
+migration and can be stored in the `authorized_voters` field instead.
 
 - The `authorized_voters` field doesn't store the voter for the previous epoch
 so it's impossible to have a transition epoch where both the previous and newly
@@ -124,6 +124,9 @@ pub struct VoteStateV4 {
 
     pub votes: VecDeque<LandedVote>,
     pub root_slot: Option<Slot>,
+
+    /// UPDATED: serialization structure of the AuthorizedVoters map is
+    /// unchanged but will now contain entries for the previous epoch.
     pub authorized_voters: AuthorizedVoters,
 
     /// REMOVED
@@ -157,12 +160,13 @@ VoteStateV4 {
 }
 ```
 
-If a modified vote account's size is smaller than `3762` bytes, first resize the
-account to `3762` bytes before updating the account data. The vote program does
-not need to check if the resulting account is rent exempt, the runtime will
-enforce that check. This differs from the prior vote program implementation which
-falls back to store vote state as v2 if the account size cannot be resized while
-keeping the account rent exempt.
+If a modified vote account's size is smaller than `3762` bytes (only possible
+for vote state versions v2 and earlier), first resize the account to `3762`
+bytes before updating the account data. The vote program does not need to check
+if the resulting account is rent exempt, the runtime will enforce that check.
+This differs from the prior vote program implementation which falls back to
+store vote state as v2 if the account size cannot be resized while keeping the
+account rent exempt.
 
 
 ### `InitializeAccount`
