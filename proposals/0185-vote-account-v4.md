@@ -162,12 +162,11 @@ VoteStateV4 {
 
 If a modified vote account's size is smaller than `3762` bytes (only possible
 for vote state versions v2 and earlier), first resize the account to `3762`
-bytes before updating the account data. The vote program does not need to check
-if the resulting account is rent exempt, the runtime will enforce that check.
-This differs from the prior vote program implementation which falls back to
-store vote state as v2 if the account size cannot be resized while keeping the
-account rent exempt.
-
+bytes before updating the account data. Then check whether the resulting account
+is rent exempt or not and return an `AccountNotRentExempt` instruction error if
+not rent exempt after the resize. This differs from the prior vote program
+implementation which falls back to store vote state as v2 if the account would
+not be rent exempt after its data length was increased.
 
 ### `InitializeAccount`
 
