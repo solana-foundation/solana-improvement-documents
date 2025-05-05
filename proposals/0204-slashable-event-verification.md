@@ -244,20 +244,26 @@ the owner. In this account we store the following:
 ```rust
 struct ProofReport {
   version: u8,                     // 1 byte specifying the version number,
-                                      currently 1
+                                   // currently 1
+
   reporter: Pubkey,                // 32 byte array representing the pubkey of the
-                                      Fee payer, who reported this violation
+                                   // Fee payer, who reported this violation
+
   destination: Pubkey,             // 32 byte array representing the account to
-                                      credit the lamports when this proof report
-                                      is closed.
+                                   // credit the lamports when this proof report
+                                   // is closed.
+
   epoch: Epoch,                    // Unaligned unsigned eight-byte little endian
-                                      integer representing the epoch in which this
-                                      report was created
+                                   // integer representing the epoch in which this
+                                   // report was created
+
   violator: Pubkey,                // 32 byte array representing the pubkey of the
-                                      node that committed the violation
+                                   // node that committed the violation
+
   slot: Slot,                      // Unaligned unsigned eight-byte little endian
-                                      integer representing the slot in which the
-                                      violation occured
+                                   // integer representing the slot in which the
+                                   // violation occured
+
   violation_type: u8,              // Byte representing the violation type
 }
 ```
