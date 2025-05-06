@@ -151,9 +151,9 @@ VoteStateV4 {
     // ..
 
     inflation_rewards_collector: Pubkey::default(),
-    block_rewards_collector: Pubkey::default(),
+    block_revenue_collector: Pubkey::default(),
     inflation_rewards_commission_bps: 100u16 * (old_vote_state.commission as u16),
-    block_rewards_commission_bps: 10_000u16,
+    block_revenue_commission_bps: 10_000u16,
     pending_delegator_rewards: 0u64,
 
     // ..
@@ -227,7 +227,7 @@ vote state as vote state v2.
 
 ## Impact
 
-This is a prerequisite for implementing other SIMD's like block reward
+This is a prerequisite for implementing other SIMD's like block revenue
 distribution in [SIMD-0123] which give validators more flexibility in how
 inflation rewards and block revenue is collected and distributed.
 
