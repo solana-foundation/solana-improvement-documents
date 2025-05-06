@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2024-08-15
-feature: G8yMNsNUd4p3VB22ycrPEB1qRgepCFeFpAqD2Lr66s36
+feature: 2aQJYqER2aKyb3cZw22v4SL2xMX7vwXBRWfvS4pTrtED
 ---
 
 ## Summary
@@ -171,7 +171,7 @@ All program management instructions must cost 2000 CUs.
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
   - If this is an initialization (program account length is too short to
-  contain the header and the requested new size is greater 0):
+  contain the header):
     - the owner of the program account is loader-v4,
     otherwise throw `InvalidAccountOwner`
     - the program account is writable, otherwise throw `InvalidArgument`
@@ -325,10 +325,8 @@ All program management instructions must cost 2000 CUs.
   otherwise throw `InvalidArgument`
   - Clear the program account (setting its size to zero)
   - Transfer all funds from the program data account to the program account
-  - If the program data account was closed / empty or uninitialized:
-    - Assign ownership of the program account to the system program
-  - otherwise, if the program data account contains actual program data:
-    - Assign ownership of the program account to loader-v4
+  - Assign ownership of the program account to loader-v4
+  - If the program data account was not closed / empty or uninitialized:
     - CPI loader-v4 `SetProgramLength` the program account to the size of the
     program data account minus the loader-v3 header size and use the migration
     authority.
