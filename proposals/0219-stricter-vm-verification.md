@@ -1,0 +1,127 @@
+---
+simd: '0219'
+title: Stricter VM verification constraints
+authors:
+  - Sean Young
+  - Alexander Meißner
+category: Standard
+type: Core
+status: Review
+created: 2025-01-06
+feature: C37iaPi6VE4CZDueU1vL8y6pGp5i8amAbEsF31xzz723
+---
+
+## Summary
+
+Removing pitfalls and foot-guns from the virtual machine and syscalls.
+
+## Motivation
+
+There are a couple of interactions between dApps and the virtual machine which
+are currently allowed but make no sense and are even dangerous for dApps:
+
+- CPI verification
+  - Allows accidentally using `AccountInfo` structures which the program
+  runtime never serialized
+  - `AccountInfo` structures can be overwritten by CPI during CPI, causing
+  complex side effects
+- Gaps in between VM stack frames
+  - Complicates virtual address calculations
+  - False sense of security, dApps which overrun their stack can go unnoticed
+  anyway if they overrun it by an entire frame
+  - Unaligned accesses near the edge of a stack frame can bleed into the next
+- VM write access
+  - Bad write accesses goes unnoticed as long as the original value is restored
+- Syscall slice parameters
+  - Bad read and write accesses which span nonsensical ranges go unnoticed
+
+## Alternatives Considered
+
+None.
+
+## New Terminology
+
+None.
+
+## Detailed Design
+
+### CPI verification
+
+- The following pointers must be on the stack or heap,
+meaning their virtual address is inside `0x200000000..0x400000000`,
+otherwise `SyscallError::InvalidPointer` must be thrown:
+  - The pointer in the array of `&[AccountInfo]` / `SolAccountInfo*`
+  - The `AccountInfo::data` field,
+  which is a `RefCell<&[u8]>` in `sol_invoke_signed_rust`
+  - The `AccountInfo::lamports` field,
+  which is a `RefCell<&u64>` in `sol_invoke_signed_rust`
+- The following pointers must point to what was originally serialized in the
+input regions by the program runtime,
+otherwise `SyscallError::InvalidPointer` must be thrown:
+  - `AccountInfo::key` / `SolAccountInfo::key`
+  - `AccountInfo::owner` / `SolAccountInfo::owner`
+  - `AccountInfo::lamports` / `SolAccountInfo::lamports`
+  - `AccountInfo::data::ptr` / `SolAccountInfo::data`
+
+### Gaps in between VM stack frames
+
+The virtual address space of the stack frames must become consecutive:
+
+- From: `0x200000000..0x200001000`, `0x200002000..0x200003000`, ...
+- To: `0x200000000..0x200001000`, `0x200001000..0x200002000`, ...
+
+This goes for all programs globally and is not opt-in.
+Thus, this change is independent of SIMD-0166.
+
+### VM memory access
+
+The payload address space of an account is the range in the serialized input
+region (`0x400000000..0x500000000`) which covers the payload and optionally the
+10 KiB resize padding (if not a loader-v1 program), but not the accounts
+metadata.
+
+For loads / read accesses to an accounts payload address space check that:
+
+- The access is completely within the current length of the account,
+otherwise `InstructionError::AccountDataTooSmall` must be thrown.
+
+For stores / write accesses to an accounts payload address space check that:
+
+- The account is flagged as writable,
+otherwise `InstructionError::ReadonlyDataModified` must be thrown
+- The account is owned by the currently executed program,
+otherwise `InstructionError::ExternalAccountDataModified` must be thrown.
+- The access is completely within the current length of the account,
+otherwise grow the account length and fill it with zeros up to the end of the
+access or the end of the payload address space, which ever is lower.
+
+### Syscall slice parameters
+
+Except for CPI, all other syscalls which
+act on ranges in the virtual address space are confined to a single
+memory region. Meaning they have to stay within one of:
+
+- Readonly data (`0x100000000..0x200000000`)
+- Stack (`0x200000000..0x300000000`)
+- Heap (`0x300000000..0x400000000`)
+- Instruction meta data
+- Account meta data
+- Account payload address space
+- Instruction payload
+
+And can not cross into any other region.
+
+## Impact
+
+Changing and later restoring data in unowned accounts is now prohibited.
+The same goes for growing an unowned account and later truncating it to its
+original length. Or reading from the uninitialized memory beyond the current
+length of any account.
+
+These restrictions have been extensively tested by replay against MNB.
+Most of the dApps devs whose dApps would fail have been contacted and had
+their dApps fixed already.
+
+## Security Considerations
+
+None.
