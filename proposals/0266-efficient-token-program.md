@@ -53,10 +53,15 @@ additional instructions to the program:
 1. [`withdraw_excess_lamports`](https://github.com/solana-program/token/blob/main/p-token/src/processor/withdraw_excess_lamports.rs)
     (instruction discriminator `38`): allow recovering "bricked" SOL from mint
     (e.g., USDC mint as `~323` SOL in excess) and multisig accounts. The logic of
-    this instruction is the same as the current SPL Token-2022 instruction. There
-    could be economic consequences depending on the amount of "unbricked" SOL
-    &mdash; the total amount of SOL that could be freed up this way has not been
-    calculated.
+    this instruction is similar to the current SPL Token-2022 instruction: the mint
+    authority must be a signer (for mint accounts) or the multisig (for multisig
+    accounts) to authorize the withdraw. Additionally, for mint accounts that do
+    not have a mint authority set, it is possible to authorize the withdraw using
+    the mint account as the signing authority &mdash; the instruction will need to
+    be signed using the mint private key. Note that economic consequences may occur
+    depending on the quantity of "unbricked" SOL; the total amount of SOL that could
+    be freed up in this manner has yet to be calculated.
+
 2. [`batch`](https://github.com/solana-program/token/blob/main/p-token/src/processor/batch.rs)
     (instruction discriminator `255`): enable efficient CPI interaction with the
     Token program. This is a new instruction that can execute a variable number on
@@ -104,6 +109,16 @@ Logging the instruction name consumes around `103` compute units, which in some
 cases reprensents almost the same amount required to execute the instruction,
 although removing the logs can be too disruptive to anyone relying on them.
 
+Sample CU consumption for `p-token` without logs:
+| Instruction          | `p-token` *- logs* (CU) | `p-token` (CU) |
+|----------------------|-----------------------|----------------------|
+| `InitializeMint`     | 118                   | 221                  |
+| `InitializeAccount`  | 170                   | 273                  |
+| `Transfer`           | 146                   | 249                  |
+| `MintTo`             | 144                   | 247                  |
+| `Burn`               | 202                   | 316                  |
+| `CloseAccount`       | 152                   | 255                  |
+
 ## Impact
 
 The main impact is freeing up block CUs, allowing more transactions to be packed
@@ -115,20 +130,20 @@ current SPL Token program. In bracket is the percentage of CUs used in relation
 to the current SPL Token consumption &mdash; the lower the percentage, the
 better the gains in CUs consumption.
 
-| Instruction | CU (`p-token`) | CU (`p-token`) + logging |CU (`spl-token`) |
-|-------------|----------------|--------------------------|-----------------| 
-| `InitializeMint`           | 118 (4%)  | 221 (7%)    | 2967             |
-| `InitializeAccount`        | 170 (4%)  | 273 (6%)    | 4527             |
-| `InitializeMultisig`       | 239 (8%)  | 348 (12%)   | 2973             |
-| `Transfer`                 | 146 (3%)  | 249 (5%)    | 4645             |
-| `Approve`                  | 150 (5%)  | 268 (9%)    | 2904             |
-| `Revoke`                   | 124 (5%)  | 237 (9%)    | 2677             |
-| `SetAuthority`             | 159 (5%)  | 261 (8%)    | 3167             |
-| `MintTo`                   | 144 (3%)  | 247 (5%)    | 4538             |
-| `Burn`                     | 202 (4%)  | 316 (7%)    | 4753             |
-| `CloseAccount`             | 152 (5%)  | 255 (9%)    | 2916             |
-| `FreezeAccount`            | 170 (4%)  | 287 (7%)    | 4265             |
-| `ThawAccount`              | 169 (4%)  | 283 (7%)    | 4267             |
+| Instruction          | `p-token` (CU) | `spl-token` (CU) |
+|----------------------|----------------|------------------| 
+| `InitializeMint`     | 221 (7%)       | 2967             |
+| `InitializeAccount`  | 273 (6%)       | 4527             |
+| `InitializeMultisig` | 348 (12%)      | 2973             |
+| `Transfer`           | 249 (5%)       | 4645             |
+| `Approve`            | 268 (9%)       | 2904             |
+| `Revoke`             | 237 (9%)       | 2677             |
+| `SetAuthority`       | 261 (8%)       | 3167             |
+| `MintTo`             | 247 (5%)       | 4538             |
+| `Burn`               | 316 (7%)       | 4753             |
+| `CloseAccount`       | 255 (9%)       | 2916             |
+| `FreezeAccount`      | 287 (7%)       | 4265             |
+| `ThawAccount`        | 283 (7%)       | 4267             |
 
 ## Security Considerations
 
@@ -136,10 +151,22 @@ better the gains in CUs consumption.
 layout, as well as have the same behaviour than the current Token
 implementation.
 
-Any potential risk will be mitigated by extensive fixture testing (_status_:
-[completed](https://github.com/solana-program/token/blob/main/.github/workflows/main.yml#L284-L313)),
-formal verification (_status_: started) and audits (_status_: scheduled). Since
-there are potentially huge economic consequences of this change, the feature
+Any potential risk will be mitigated by extensive testing and auditing:
+
+- ✅ **[COMPLETED]** Existing SPL Token test [fixtures](https://github.com/solana-program/token/blob/main/.github/workflows/main.yml#L284-L313)
+
+- ✅ **[COMPLETED]** Fuzzing using Firedancer tooling
+([solfuzz_agave](https://github.com/firedancer-io/solfuzz-agave)): this
+includes executing past mainnet instructions &mdash; with or without random
+modifications amounting to millions of individual instructions &mdash; and
+verifying that the complete program output (i.e., both the program result
+and accounts' state) matches.
+
+- ⏳ *[IN PROGRESS]* Formal Verification
+
+- ⏳ *[IN PROGRESS]* Audits
+
+Since there are potentially huge economic consequences of this change, the feature
 will be put to a validator vote.
 
 The replacement of the program requires breaking consensus on a non-native
