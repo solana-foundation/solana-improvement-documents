@@ -62,13 +62,16 @@ from the state of the vote account at the beginning of the previous epoch. This
 is the same vote account state used to build the leader schedule for the current
 epoch.
 
-Note that the fee collector constraints defined in SIMD-0085 still hold. The
-designated commission collector must be a system program owned account that is
-rent-exempt after receiving collected block fee rewards. Additionally, the
-designated commission collector must not be a reserved account (note that
-currently the only system program owned reserved accounts are the native loader
-and the sysvar owner id). If any of these constraints are violated, the fees
-collected for that block will be burned. 
+The designated commission collector must either be equal to the vote account's
+address OR satisfy the following constraints:
+
+1. Must be a system program owned account
+2. Must be rent-exempt after receiving collected block fee rewards
+3. Must not be a reserved account (note that currently the only system program
+owned reserved accounts are the native loader and the sysvar owner id).
+
+If any of these constraints are violated, the fees collected for that block will
+be burned.
 
 #### Inflation Rewards Commission Collection
 
@@ -76,21 +79,26 @@ The inflation rewards collector address should be fetched from the state
 of the vote account at the beginning of the previous epoch. This is the same
 vote account state used to build the leader schedule for the current epoch.
 
-The designated commission collector must either be a system or vote program
-owned account that is rent-exempt after receiving collected block fee rewards.
-Additionally, the designated commission collector must not be a reserved account
-(note that currently the only system program owned reserved accounts are the
-native loader and the sysvar owner id). If any of these constraints are
-violated, the inflation rewards commission collected for that epoch will be
-burned.
+The designated commission collector must either be equal to the vote account's
+address OR satisfy the following constraints:
+
+1. Must be a system program owned account
+2. Must be rent-exempt after receiving collected block fee rewards
+3. Must not be a reserved account (note that currently the only system program
+owned reserved accounts are the native loader and the sysvar owner id).
+
+If any of these constraints are violated, the inflation rewards commission
+collected for that epoch will be burned.
 
 ### Vote Program
 
 ```rust
 pub enum VoteInstruction {
-    // ..
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to be updated with the new collector public key
+    ///   1. `[WRITE]` New collector account
+    ///   2. `[SIGNER]` Withdraw authority
     UpdateCommissionCollector { // 16u32
-        pubkey: Pubkey,
         kind: CommissionKind,
     },
 }
@@ -107,6 +115,28 @@ pub enum CommissionKind {
 A new instruction for setting collector accounts will be added to the vote
 program with the enum discriminant value of `16u32` little endian encoded in the
 first 4 bytes.
+
+Perform the following checks:
+
+- If the number of account inputs is less than 2, return
+`InstructionError::NotEnoughAccountKeys`
+- If the vote account (index `0`) fails to deserialize, return
+`InstructionError::InvalidAccountData`
+- If the vote account's authorized withdrawer is not an account input for the
+instruction or is not a signer, return
+`InstructionError::MissingRequiredSignature`
+- If the new collector account (index `1`) is not the same as the vote account
+and not system program owned, return `InstructionError::InvalidAccountOwner` 
+- If the new collector account is not rent-exempt, return
+`InstructionError::InsufficientFunds`
+- If the new collector account is not writable, return
+`InstructionError::InvalidArgument`. Note that this check is performed to ensure
+that the new collector account is not a reserved account.
+
+Update the corresponding field for the specified commission kind:
+
+- `CommissionKind::InflationRewards`: update the `inflation_rewards_collector` field
+- `CommissionKind::BlockRevenue`: update the `block_revenue_collector` field
 
 ## Impact
 
