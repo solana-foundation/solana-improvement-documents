@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0284'
 title: Alt-BN128 Little Endian compatibility
 authors:
   - Dean Little - Blueshift
