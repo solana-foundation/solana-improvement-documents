@@ -84,13 +84,16 @@ enum FeatureV2 {
     /// The feature is staged for activation, and will be included in the
     /// support signals for this feature's `effective_epoch`.
     Staged {
-        /// The epoch this feature became staged for signaling support.
+        /// The most recent epoch stake support was tallied for this feature.
         ///
-        /// If a feature is staged in epoch N-1, this is epoch N. Since a
-        /// feature may go several epochs before finally being activated, this
-        /// field represents the first epoch the feature became eligible for
-        /// support signaling.
-        effective_epoch: u64,
+        /// When a feature is staged in epoch N-1, this is set to epoch N.
+        /// No support signal can be cast for an `signal_epoch` less than the
+        /// epoch on the Clock sysvar.
+        ///
+        /// Each time a support signal arrives, this value is checked against
+        /// the epoch on the Clock sysvar, and updated if the Clock epoch is
+        /// greater.
+        signal_epoch: u64,
         /// The authority who can mark this feature as inactive (same as the
         /// original `staging_authority`).
         staging_authority: Pubkey,
@@ -140,8 +143,12 @@ Instruction: UpdateStagingAuthority
 ```
 
 Step 2 begins whenever the staging authority invokes the Feature Gate program
-instruction `StageFeature`, which simply sets the feature's status to
-`Staged` with initial stake support of zero.
+instruction `StageFeature`, which does the following:
+
+- Sets the feature's status to `Staged`.
+- Initializes the `signal_epoch` to the current epoch + 1.
+- Initializes the `stake_support` to zero.
+- Copies the `staging_authority` from the feature's previous `Inactive` status.
 
 ```
 Instruction: StageFeature
@@ -188,9 +195,11 @@ Instruction: SignalSupportForStagedFeature
 The authorized voter signer must match the authorized voter stored in the vote
 account's state.
 
-The program processor will use the `SolGetEpochStake` syscall to retrive the
+The program processor will use the `SolGetEpochStake` syscall to retrieve the
 corresponding epoch stake for the provided vote account, and add it to the
-feature's stake support.
+feature's stake support. Whenever the Clock epoch has advanced beyond the
+feature account's `signal_epoch`, that value is first updated to the Clock
+epoch and stake support is reset to zero before tallying the current signal.
 
 The signal account is a PDA derived from the epoch, feature ID and vote address
 to prevent double-signaling.
@@ -216,11 +225,6 @@ Instruction: WithdrawSupportForStagedFeature
     - [w]: Signal account
     - [w]: Feature account
 ```
-
-Although there is no requirement for features to be staged in the previous
-epoch, staging might occur late in an epoch, after most support signals have
-already been cast. This would result in not enough stake support until the next
-epoch arrives and new signals are cast.
 
 ### Activation
 
