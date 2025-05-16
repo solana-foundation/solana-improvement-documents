@@ -65,24 +65,43 @@ A new feature activation process, comprised of the following steps:
 A new version of feature account state will track feature status, staging
 authority, and stake support. Since the current feature state is a Rust
 `Option<u64>`, we will use a `2` for the first byte to denote feature state v2.
+The new state - `FeatureV2` will use a constant account data length of 49
+bytes, corresponding to the length of the longest variant.
+
+```
+[0, ...]: v1 None (total len 9)
+[1, ...]: v1 Some (total len 9)
+[2, ...]: v2 (total len 49)
+```
 
 ```rust
-enum FeatureV2Status {
+enum FeatureV2 {
+    /// Feature is inactive and will not be included in any support signals.
     Inactive {
+        /// The authority who can mark this feature as staged for activation.
         staging_authority: Pubkey,
     },
-    Staged { 
+    /// The feature is staged for activation, and will be included in the
+    /// support signals for this feature's `effective_epoch`.
+    Staged {
+        /// The epoch this feature became staged for signaling support.
+        ///
+        /// If a feature is staged in epoch N-1, this is epoch N. Since a
+        /// feature may go several epochs before finally being activated, this
+        /// field represents the first epoch the feature became eligible for
+        /// support signaling.
+        effective_epoch: u64,
+        /// The authority who can mark this feature as inactive (same as the
+        /// original `staging_authority`).
         staging_authority: Pubkey,
+        /// How much stake support has been signaled for this feature.
         stake_support: u64,
     },
-    Active,
-}
-
-/* Feature account state v2 */
-struct FeatureV2 {
-    /* value = 2 */
-    discriminator: u8,
-    state: FeatureV2State,
+    /// The feature is active.
+    Active {
+        /// The epoch in which this feature was activated.
+        activation_epoch: u64,
+    }
 }
 ```
 
@@ -95,10 +114,13 @@ accounts to `Feature111111111111111111111111111111111111` as they do now, but an
 additional step to initialize feature state v2 will be required. This is done
 via the new Feature Gate program instruction `InitializeFeature`.
 
+Note that the feature account must be allocated and rent-exempt for 49 bytes,
+otherwise the initializing instruction will fail.
+
 ```
 Instruction: InitializeFeature
 - Data:
-    - 1 byte: Instruction discriminator 
+    - 1 byte: Instruction discriminator (`0`)
     - 32 bytes: Address of the staging authority
 - Accounts:
     - [s, w]: Feature account
@@ -110,21 +132,21 @@ Another instruction will be available to update the staging authority:
 ```
 Instruction: UpdateStagingAuthority
 - Data:
-    - 1 byte: Instruction discriminator
+    - 1 byte: Instruction discriminator (`1`)
     - 32 bytes: Address of the new staging authority
 - Accounts:
     - [s]: Current staging authority
-    - [w]: Feature account 
+    - [w]: Feature account
 ```
 
 Step 2 begins whenever the staging authority invokes the Feature Gate program
 instruction `StageFeature`, which simply sets the feature's status to
-`FeatureV2State::Staged` with initial stake support of zero.
+`Staged` with initial stake support of zero.
 
 ```
 Instruction: StageFeature
 - Data:
-    - 1 byte: Instruction discriminator
+    - 1 byte: Instruction discriminator (`2`)
 - Accounts:
     - [s]: Staging authority
     - [w]: Feature account
@@ -136,7 +158,7 @@ This operation can be reversed anytime, as long as the feature still has
 ```
 Instruction: UnstageFeature
 - Data:
-    - 1 byte: Instruction discriminator
+    - 1 byte: Instruction discriminator (`3`)
 - Accounts:
     - [s]: Staging authority
     - [w]: Feature account
@@ -155,7 +177,7 @@ staged features in a given epoch, which contain multiple Feature Gate program
 ```
 Instruction: SignalSupportForStagedFeature
 - Data:
-    - 1 byte: Instruction discriminator
+    - 1 byte: Instruction discriminator (`4`)
 - Accounts:
     - [s]: Authorized voter
     - [ ]: Validator vote account
@@ -187,7 +209,7 @@ signal account.
 ```
 Instruction: WithdrawSupportForStagedFeature
 - Data:
-    - 1 byte: Instruction discriminator
+    - 1 byte: Instruction discriminator (`5`)
 - Accounts:
     - [s]: Authorized voter
     - [ ]: Validator vote account
