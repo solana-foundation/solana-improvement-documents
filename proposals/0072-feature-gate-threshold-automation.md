@@ -228,17 +228,37 @@ of signaling.
 
 ### Activation
 
-At the end of the epoch, the runtime loads all staged feature accounts and
-calculates their stake support as a percentage of the cluster-wide stake. Only
-features whose account state has status `Staged` at the epoch rollover will be
-evaluated. 
+At the beginning of the next epoch, the runtime loads all staged feature
+accounts and calculates their stake support as a percentage of the cluster-wide
+stake from the *previous* epoch. This ensures stake support tallied by the
+Feature Gate program in epoch `N` is weighed against the total stake for epoch
+`N`.
 
-Every feature whose stake support meets the required threshold will be
-activated. This threshold will be hard-coded in the runtime to 95% initially,
-but future iterations on the process could make this threshold configurable.
+Only features whose account state has status `Staged` with a `signal_epoch`
+equal to the previous epoch (epoch `N`) at the beginning of epoch `N+1` will be
+evaluated. Every feature whose stake support meets the required threshold will
+be activated. Features without the required stake support will remain `Staged`
+until they acquire enough stake support or are manually unstaged.
 
-Features without the required stake support will remain `Staged` until they
-acquire enough stake support or are manually unstaged.
+The calculation for stake support in favor of a feature against the previous
+epoch's total stake is defined below. Note the scaling factor of 100 to account
+for percentage points.
+
+```
+ratio_of_stake_in_favor = (total_stake_in_favor * 100) / total_cluster_stake
+should_activate = ratio_of_stake_in_favor >= threshold_value
+```
+
+The minimum required stake support (threshold) value should be stored as a
+whole number in terms of percentage points, from `0` (0%) to `100` (100%).
+
+The minimum required stake support (threshold) to activate a feature will be
+hard-coded in the runtime to 95% initially, but future iterations on the
+process could make this threshold configurable.
+
+When a v2 feature is activated by the runtime, its account data is cleared,
+then set to `Activated` status, with the `activation_epoch` set to the current
+epoch (`N+1`).
 
 ## Alternatives Considered
 
