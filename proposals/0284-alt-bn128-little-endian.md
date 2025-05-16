@@ -22,7 +22,7 @@ agave. The original implementor designed the syscalls to mimic the
 functionality of Ethereum which encodes uint256 values in Big Endian. 
 
 This creates an unnecessarily complicated API for anyone trying to build zero
-knowledge proofs on Solana leading to many waste hours of debugging endianness
+knowledge proofs on Solana leading to many wasted hours of debugging endianness
 and encoding issues. As it's relatively easy to fix, we should do something
 about it.
 
