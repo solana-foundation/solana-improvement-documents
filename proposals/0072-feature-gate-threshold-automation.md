@@ -75,6 +75,9 @@ bytes, corresponding to the length of the longest variant.
 ```
 
 ```rust
+/// Feature state v2.
+///
+/// All `u64` integers are represented in little-endian.
 enum FeatureV2 {
     /// Feature is inactive and will not be included in any support signals.
     Inactive {
@@ -177,19 +180,20 @@ Each epoch, all nodes must load all feature accounts with feature state v2 and
 signal support for any staged features they wish to see activated. Staged
 features they do not wish to activate can be intentionally omitted.
 
-Support is signaled through one or more transactions, depending on the number of
-staged features in a given epoch, which contain multiple Feature Gate program
-`SignalSupportForStagedFeature` instructions.
+Support must be signaled through a single transaction. Depending on the number
+of staged features in a given epoch, lookup tables can also be used. The
+`SignalSupportForStagedFeatures` instruction requires nodes to include multiple
+feature accounts after the first three required accounts.
 
 ```
-Instruction: SignalSupportForStagedFeature
+Instruction: SignalSupportForStagedFeatures
 - Data:
     - 1 byte: Instruction discriminator (`4`)
 - Accounts:
     - [s]: Authorized voter
+    - [w]: Validator support signal account
     - [ ]: Validator vote account
-    - [w]: Signal account
-    - [w]: Feature account
+    - ..n [w]: `n` Feature accounts
 ```
 
 The authorized voter signer must match the authorized voter stored in the vote
@@ -201,30 +205,26 @@ feature's stake support. Whenever the Clock epoch has advanced beyond the
 feature account's `signal_epoch`, that value is first updated to the Clock
 epoch and stake support is reset to zero before tallying the current signal.
 
-The signal account is a PDA derived from the epoch, feature ID and vote address
+The signal account is a PDA derived from the validator vote account address
 to prevent double-signaling.
 
 ```
-epoch_le_bytes + feature_id + vote_address
+"support_signal" + vote_address
 ```
 
-It contains just 8 bytes for the little-endian `u64` stake amount. These signal
-accounts can serve as historical records for which nodes signaled support for
-which features. They also serve as a source of truth for withdrawing support via
-the `WithdrawSupportForStagedFeature` instruction, which will deduct the stored
-stake value in the signal account from the feature's stake support and clear the
-signal account.
+```rust
+/// Feature support signal state.
+///
+/// All `u64` integers are represented in little-endian.
+struct SupportSignal {
+    /// The epoch this node last submitted a support signal.
+    epoch: u64,
+}
+```
 
-```
-Instruction: WithdrawSupportForStagedFeature
-- Data:
-    - 1 byte: Instruction discriminator (`5`)
-- Accounts:
-    - [s]: Authorized voter
-    - [ ]: Validator vote account
-    - [w]: Signal account
-    - [w]: Feature account
-```
+The `epoch` value serves as a reference point for preventing double-signaling
+by ensuring the `epoch` value is less than the current Clock epoch at the time
+of signaling.
 
 ### Activation
 
