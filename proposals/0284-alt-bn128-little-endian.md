@@ -32,11 +32,11 @@ N/A
 
 ## Detailed Design
 
-The are two Alt-BN128 syscalls: 
+There are two Alt-BN128 syscalls: 
 
 `sol_alt_bn128_group_op` and `sol_alt_bn128_compression`. 
 
-Each take in an argument to determine which operation they are performing as
+Each takes in an argument to determine which operation they are performing as
 their first parameter.
 
 In the case of `sol_alt_bn128_group_op`:
@@ -57,7 +57,7 @@ pub const ALT_BN128_G2_COMPRESS: u64 = 2;
 pub const ALT_BN128_G2_DECOMPRESS: u64 = 3;
 ```
 
-This SIMD proposes we incldue four new values for each of these syscalls with a
+This SIMD proposes we include four new values for each of these syscalls with a
 bitmask of `0x80` to signal their little endian equivalents:
 
 ```rust
