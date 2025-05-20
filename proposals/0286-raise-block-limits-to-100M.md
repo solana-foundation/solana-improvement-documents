@@ -46,11 +46,11 @@ The following table shows the current block limits and the proposed block
 limits:
 
 | Type | Current Block Limit | SIMD-0250 Limit | Proposed Block Limit |
-|------|---------------------|-----------------|----------------------|
-| Max Block Units | 50M                 | 60M             | 100M                 |
-| Max Writable Account Units | 12M                 | 12M             | 12M                  |
-| Max Vote Units | 36M                 | 36M             | 36M                  |
-| Max Block Accounts Data Size Delta | 100MB               | 100MB           | 100MB                |
+|------|-----|---------------|---------------------|
+| Max Block Units | 50M | 60M | 100M |
+| Max Writable Account Units | 12M | 12M  | 12M |
+| Max Vote Units | 36M | 36M  | 36M  |
+| Max Block Accounts Data Size Delta | 100MB | 100MB | 100MB |
 
 This proposal only changes the `Max Block Units` limit.
 The purpose is to increase capacity for non-vote transactions.
