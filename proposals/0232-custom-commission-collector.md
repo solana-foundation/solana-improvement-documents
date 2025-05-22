@@ -73,6 +73,10 @@ owned reserved accounts are the native loader and the sysvar owner id).
 If any of these constraints are violated, the fees collected for that block will
 be burned.
 
+Note that it's technically allowed to set the collector account to the
+incinerator address. Incinerator funds are burned after block revenue collection
+at the end of the block.
+
 #### Inflation Rewards Commission Collection
 
 The inflation rewards collector address should be fetched from the state
@@ -83,12 +87,15 @@ The designated commission collector must either be equal to the vote account's
 address OR satisfy the following constraints:
 
 1. Must be a system program owned account
-2. Must be rent-exempt after receiving collected block fee rewards
+2. Must be rent-exempt after depositing inflation rewards commission
 3. Must not be a reserved account (note that currently the only system program
 owned reserved accounts are the native loader and the sysvar owner id).
 
 If any of these constraints are violated, the inflation rewards commission
 collected for that epoch will be burned.
+
+Note that it's technically allowed to set the collector account to the
+incinerator address. Incinerator funds are burned at the end of the block.
 
 ### Vote Program
 
