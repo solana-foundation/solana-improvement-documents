@@ -63,10 +63,10 @@ is the same vote account state used to build the leader schedule for the current
 epoch.
 
 The designated commission collector must either be equal to the vote account's
-address OR satisfy the following constraints:
+address OR satisfy ALL of the following constraints:
 
 1. Must be a system program owned account
-2. Must be rent-exempt after receiving collected block fee rewards
+2. Must be rent-exempt after depositing block revenue commission
 3. Must not be a reserved account (note that currently the only system program
 owned reserved accounts are the native loader and the sysvar owner id).
 
@@ -84,7 +84,7 @@ of the vote account at the beginning of the previous epoch. This is the same
 vote account state used to build the leader schedule for the current epoch.
 
 The designated commission collector must either be equal to the vote account's
-address OR satisfy the following constraints:
+address OR satisfy ALL of the following constraints:
 
 1. Must be a system program owned account
 2. Must be rent-exempt after depositing inflation rewards commission
