@@ -14,7 +14,8 @@ feature: (fill in with feature tracking issues once accepted)
 A new mechanism is proposed to allow validators to share part of their block
 revenue with their delegators. Commission rates from validator vote accounts
 will be used by the protocol to calculate post-commission rewards that will be
-automatically distributed to delegated stake accounts at the end of each epoch.
+automatically distributed to delegated stake accounts after an epoch is
+completed.
 
 ## Motivation
 
@@ -22,18 +23,18 @@ Delegated stake directly increases the number of blocks that a validator is
 allocated in an epoch leader schedule but the core protocol doesn't support
 diverting any of that extra revenue to stake delegators.
 
+## Dependencies
+
+This proposal depends on the following previously accepted proposals:
+
+- **[SIMD-0185]: Vote Account v4**
+
+    Introduces version 4 of the vote account state, updating the commission
+    field to use basis points for greater precision.
+
+[SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
+
 ## Alternatives Considered
-
-### Custom Fee Collector Account
-
-In [SIMD-0232], an alternative approach was proposed to simply allow validators
-to set a custom fee collector account. Any desired commission calculations could
-be done in an onchain program which controls the received fee rewards held in
-the custom fee collector account. The downside of this approach is that this
-onchain program would need to be "cranked" periodically to move funds into the
-validator's fee payer account.
-
-[SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
 
 ### Distribute Rewards as Activated Stake
 
@@ -70,7 +71,7 @@ NA
 
 ## Detailed Design
 
-### Block Revenue Collection
+### Runtime: Block Revenue Collection
 
 After all transactions are processed in a block for a given leader, rather than
 collecting all block revenue into the validator identity account, the protocol
@@ -90,17 +91,18 @@ according to the commission and delegator rewards collection sections below.
 
 #### Commission Collection
 
-The commission amount MUST be calculated by first multiplying the commission
-rate by the amount of revenue and then using integer division to divide by
-`10,000`. If the commission amount is non-zero, the fee collector account MUST
-be loaded and checked for the following conditions:
+The commission amount MUST be calculated by first multiplying the amount of
+revenue by the lesser of the vote account's commission rate or the maximum of
+`10,000` basis points. Then use integer division to divide by `10,000` and
+discard the remainder. If the commission amount is non-zero, the fee collector
+account MUST be loaded and checked for the following conditions:
 
 1. account is system program owned AND
 2. account is rent-exempt after depositing the commission.
 
-If the conditions are met, the commission amount MUST be deposited into the fee
-collector account. If either of these conditions is violated, the commission
-amount MUST be burned.
+If the conditions are met, the commission amount MUST be deposited into the
+block revenue commission collector account. If either of these conditions is
+violated, the commission amount MUST be burned.
 
 #### Delegator Rewards Collection
 
@@ -117,30 +119,35 @@ vote state field `pending_delegator_rewards` and added to the balance of vote
 account. If either of these conditions is violated, the delegator rewards amount
 MUST be burned.
 
-### Delegator Rewards Distribution
+### Runtime: Delegator Rewards Distribution
 
-After each epoch boundary (or after restart while epoch rewards are still
-active), create a list of all vote accounts that existed and were initialized at
-the beginning of the epoch. For each vote account, its state at the beginning of
-the current epoch MUST be checked for its `pending_delegator_rewards` vote state
-field, let's call this value `P`. If `P` is non-zero, record this value to
-calculate individual delegator rewards as described below.
+When calculating stake delegation rewards for a particular reward epoch,
+construct a list of all vote accounts that were initialized at the beginning of
+the reward epoch and had an active non-zero stake delegation. For each vote
+account, retrieve its state at the end of the reward epoch and check the
+`pending_delegator_rewards` field in its vote state. Let this value be `P`.  If
+`P` is non-zero, record it to be used when calculating individual delegator
+rewards as described below.
 
-The amount of lamports distributed to an individual stake account can be
-calculated by first summing all of the lamports that were actively staked during
-the previous epoch for a given vote account, let's call this value `A`. Then,
-the reward for an individual stake account can be calculated by multiplying its
-active stake from the previous epoch by `P` and then integer dividing by `A`.
-Fractional lamports will be discarded so not all `P` lamports for a given
-delegator rewards pool will be distributed. After calculating all individual
-stake rewards, sum them and call this value `D`. Then subtract (`P - D`) from
-the vote account balance and the `pending_delegator_rewards` field and subtract
-this value from the cluster capitalization.
+To calculate the amount of lamports distributed to an individual stake account
+delegated to a given vote account:
 
-After updating the vote account's `pending_delegator_rewards` field and
-deducting any lamports that won't get distributed to stake delegators from the
-vote account balance, store the vote account in accounts db before processing
-any blocks in the new epoch.
+1. Sum the active stake across all delegators to the vote account during the
+reward epoch epoch. Let this total be `A`.
+
+2. For each individual stake account, multiply its active stake from the
+reward epoch by `P`, and divide the result by `A` using integer division.
+Discard any fractional lamports.
+
+Because of integer division, the full amount `P` may not be distributed. After
+calculating all individual stake rewards, sum them to obtain `D`, the total
+distribution amount. Compute the amount to be burned, `B`, as the difference
+between `P` and `D`.
+
+If no blocks in the epoch following the reward epoch have been processed yet,
+subtract `B` from both the vote account’s lamport balance and its
+`pending_delegator_rewards` field and store the updated vote account. This
+burned amount should also be deducted from the cluster capitalization.
 
 #### Individual Delegator Reward
 
@@ -155,22 +162,68 @@ the amount of rewards distributed to keep capitalization consistent.
 
 [SIMD-0118]: https://github.com/solana-foundation/solana-improvement-documents/pull/118
 
-### Vote Program Changes
+### Vote Program
 
-Since delegator rewards will be stored in the validator's vote account until
-distribution at the next epoch boundary, those funds will be unable to be
+```rust
+pub enum VoteInstruction {
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to be updated with the deposit
+    ///   1. `[SIGNER, WRITE]` Source account for deposit funds
+    DepositDelegatorRewards { // 18u32
+        deposit: u64,
+    },
+}
+```
+
+#### Withdraw
+
+Since pending delegator rewards will be stored in the validator's vote account
+until distribution at the next epoch boundary, those funds will be unable to be
 withdrawn.
 
-The `Withdraw` instruction will need to be modified so that if the balance
-indicated by the `pending_delegator_rewards` field is non-zero, the vote account
-will no longer be closeable by fully withdrawing funds. The withdrawable balance
-when `pending_delegator_rewards` is non-zero will be equal to the vote account's
+The `Withdraw` instruction must be modified so that if the balance indicated by
+the `pending_delegator_rewards` field is non-zero, the vote account will no
+longer be closeable by fully withdrawing funds. The withdrawable balance when
+`pending_delegator_rewards` is non-zero will be equal to the vote account's
 balance minus `pending_delegator_rewards` and the minimum rent exempt balance.
+
+#### UpdateCommissionBps
+
+The `UpdateCommissionBps` instruction must be updated to add support for updating
+the block revenue commission rate.
+
+When the specified commission kind is `CommissionKind::BlockRevenue`, update the
+`block_revenue_commission_bps` field instead of the previous behavior of
+returning an `InstructionError::InvalidInstructionData`.
+
+Note that the commission rate is allowed to be set and stored as any `u16` value
+but as detailed above, it will capped at 10,000 during the actual commission
+calculation.
+
+#### DepositDelegatorRewards
+
+A new instruction for distributing lamports to stake delegators will be added to
+the vote program with the enum discriminant value of `18u32` little endian
+encoded in the first 4 bytes.
+
+Perform the following checks:
+
+- If the number of account inputs is less than 2, return
+`InstructionError::NotEnoughAccountKeys`
+- If the vote account (index `0`) fails to deserialize, return
+`InstructionError::InvalidAccountData`
+- If the vote account is not initialized with state version 4, return
+`InstructionError::InvalidAccountData`
+
+Then the processor should perform a system transfer CPI of `deposit` lamports
+from the source account (index `1`) to the vote account. Lastly, increment the
+`pending_delegator_rewards` value by `deposit`.
 
 ## Impact
 
 Stake delegators will receive additional income when delegating to validators
-who adopt this new feature.
+who adopt this new feature by setting a block revenue commission rate less than
+the default of `100%`.
 
 ## Security Considerations
 
@@ -178,5 +231,5 @@ NA
 
 ## Backwards Compatibility
 
-A feature gate will be used to enable block reward collection and distribution
-at an epoch boundary.
+A feature gate will be used to enable block reward distribution at an epoch
+boundary.
