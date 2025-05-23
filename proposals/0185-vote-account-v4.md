@@ -11,7 +11,7 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-Add a new version of vote account state which clears unused state to make
+Add a new version of vote account state which removes unused state to make
 room for new state information.
 
 ## Motivation
@@ -168,7 +168,7 @@ not rent exempt after the resize. This differs from the prior vote program
 implementation which falls back to store vote state as v2 if the account would
 not be rent exempt after its data length was increased.
 
-### `InitializeAccount`
+#### `InitializeAccount`
 
 The required size for vote accounts previously set to `3762` bytes MUST remain
 unchanged despite freeing up space with the removal of the prior voters field.
@@ -217,10 +217,20 @@ The builtin stake program reads vote account state when creating, delegating,
 and deactivating stake accounts. The program MUST be updated to support v4 vote
 accounts.
 
-### Other
+### Runtime
 
-The runtime stakes cache and epoch stakes stored in snapshots MUST also be updated
-to support initialized v4 vote accounts.
+Commission rates will now be stored in basis points, but higher precision values
+cannot be set until [SIMD-0249] is adopted. From the runtime's perspective,
+commission rates will remain limited to multiples of 100 basis points,
+equivalent to integer percentages. Therefore, commission calculations
+should continue to use integer percentage values for now.
+
+The runtime stakes cache and epoch stakes stored in snapshots MUST also be
+updated to support initialized v4 vote accounts.
+
+[SIMD-0249]: https://github.com/solana-foundation/solana-improvement-documents/pull/249
+
+### Other
 
 The tower serialization format MUST remain unchanged and continue serializing tower
 vote state as vote state v2.
