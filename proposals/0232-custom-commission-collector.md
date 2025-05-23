@@ -23,6 +23,22 @@ wishing to distribute their revenue in custom ways. By allowing validators to
 specify a separate custom commission collector account, they can use onchain
 programs to customize how their block revenue is distributed.
 
+## Dependencies
+
+This proposal depends on the following previously accepted proposals:
+
+- **[SIMD-0180]: Use Vote Account Address To Key Leader Schedule**
+
+    Necessary for designating a specific vote account for a given leader slot
+
+- **[SIMD-0185]: Vote Account v4**
+
+    Adds necessary block revenue and inflation rewards commission collector
+    address fields to the vote account state
+
+[SIMD-0180]: https://github.com/solana-foundation/solana-improvement-documents/pull/180
+[SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
+
 ## Alternatives Considered
 
 NA
@@ -38,11 +54,6 @@ commissioned inflation rewards for validators. Previously collected by default
 into the vote account.
 
 ## Detailed Design
-
-This proposal requires the adoption of SIMD-0180 and SIMD-0185. SIMD-0180
-adjusts the leader schedule algorithm to make it possible to designate a
-specific vote account for a given leader slot. SIMD-0185 adds block revenue and
-inflation rewards commission collector address fields to the vote account state.
 
 ### Runtime
 
@@ -95,7 +106,8 @@ If any of these constraints are violated, the inflation rewards commission
 collected for that epoch will be burned.
 
 Note that it's technically allowed to set the collector account to the
-incinerator address. Incinerator funds are burned at the end of the block.
+incinerator address. Incinerator funds are burned at the end of the rewards
+distribution block.
 
 ### Vote Program
 
