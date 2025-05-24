@@ -27,12 +27,28 @@ diverting any of that extra revenue to stake delegators.
 
 This proposal depends on the following previously accepted proposals:
 
+- **[SIMD-0180]: Use Vote Account Address To Key Leader Schedule**
+
+    Necessary for looking up a block producer's vote account
+
 - **[SIMD-0185]: Vote Account v4**
 
-    Introduces version 4 of the vote account state, updating the commission
-    field to use basis points for greater precision.
+    Introduces version 4 of the vote account state, which adds new fields
+    for block revenue commission and pending delegation rewards
 
+- **[SIMD-0232]: Custom Commission Collector Account**
+
+    Necessary for looking up a block producer's commission collector account
+
+- **[SIMD-0249]: Modify Commission Update Rules**
+
+    Introduces a new instruction type for setting commission rates in basis
+    points
+
+[SIMD-0180]: https://github.com/solana-foundation/solana-improvement-documents/pull/180
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
+[SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
+[SIMD-0249]: https://github.com/solana-foundation/solana-improvement-documents/pull/249
 
 ## Alternatives Considered
 
@@ -75,27 +91,29 @@ NA
 
 After all transactions are processed in a block for a given leader, rather than
 collecting all block revenue into the validator identity account, the protocol
-will check if the validator's vote account has specified a commission rate and
-collector addresses in the new vote account version described in [SIMD-0185].
-In order to eliminate the overhead of tracking the latest fee collector address
-and commission of each vote account, the vote account state at the beginning of
-the previous epoch MUST be used. This is the same vote account state used to
-build the leader schedule for the current epoch.
+will look up the block producer's vote account as described in [SIMD-0180]. Then
+it MUST check if the validator's vote account has specified a block revenue
+commission rate and collector addresses in the new vote account version
+described in [SIMD-0185]. As described in [SIMD-0249] and [SIMD-0232], the
+latest block revenue commission rate and collector address MUST be loaded from
+the vote account state at the beginning of the previous epoch. This is the same
+vote account state used to build the leader schedule for the current epoch.
 
-If the commission rate and collector account aren't set, all revenue will be
-collected into the validator's identity account as before. If the commission
-rate and collector account *are* specified, the rewards MUST be distributed
-according to the commission and delegator rewards collection sections below.
-
-[SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
+If the block revenue commission rate and collector account aren't set (e.g., the
+vote account state version has not been updated to v4 yet), all revenue will be
+collected into the validator's identity account as before. If the block revenue
+commission rate and collector account *are* specified, the rewards MUST be
+distributed according to the commission and delegator rewards collection
+sections below.
 
 #### Commission Collection
 
 The commission amount MUST be calculated by first multiplying the amount of
-revenue by the lesser of the vote account's commission rate or the maximum of
-`10,000` basis points. Then use integer division to divide by `10,000` and
-discard the remainder. If the commission amount is non-zero, the fee collector
-account MUST be loaded and checked for the following conditions:
+revenue by the lesser of the vote account's block revenue commission rate or the
+maximum of `10,000` basis points. Then use integer division to divide by
+`10,000` and discard the remainder. If the commission amount is non-zero, the
+block revenue commission collector account MUST be loaded and checked for the
+following conditions:
 
 1. account is system program owned AND
 2. account is rent-exempt after depositing the commission.
@@ -121,33 +139,30 @@ MUST be burned.
 
 ### Runtime: Delegator Rewards Distribution
 
-When calculating stake delegation rewards for a particular reward epoch,
-construct a list of all vote accounts that were initialized at the beginning of
-the reward epoch and had an active non-zero stake delegation. For each vote
-account, retrieve its state at the end of the reward epoch and check the
-`pending_delegator_rewards` field in its vote state. Let this value be `P`.  If
-`P` is non-zero, record it to be used when calculating individual delegator
-rewards as described below.
+When calculating stake delegation rewards for a particular completed reward
+epoch, construct a list of all vote accounts that were initialized at the
+beginning of the reward epoch and had a non-zero active stake delegation. For
+each vote account, retrieve its state at the end of the reward epoch and check
+the `pending_delegator_rewards` field in its vote state. Let this value be `P`.
+If `P` is non-zero, use it to calculate rewards for each of the stake accounts
+delegated to the vote account as follows: 
 
-To calculate the amount of lamports distributed to an individual stake account
-delegated to a given vote account:
-
-1. Sum the active stake across all delegators to the vote account during the
-reward epoch epoch. Let this total be `A`.
+1. Sum all active stake delegated to the vote account during the reward epoch
+epoch. Let this total be `A`.
 
 2. For each individual stake account, multiply its active stake from the
 reward epoch by `P`, and divide the result by `A` using integer division.
 Discard any fractional lamports.
 
-Because of integer division, the full amount `P` may not be distributed. After
-calculating all individual stake rewards, sum them to obtain `D`, the total
-distribution amount. Compute the amount to be burned, `B`, as the difference
+After calculating all individual stake rewards, sum them to obtain `D`, the
+total distribution amount. Because of integer division, the full amount `P` may
+not be distributed so compute the amount to be burned, `B`, as the difference
 between `P` and `D`.
 
-If no blocks in the epoch following the reward epoch have been processed yet,
-subtract `B` from both the vote account’s lamport balance and its
-`pending_delegator_rewards` field and store the updated vote account. This
-burned amount should also be deducted from the cluster capitalization.
+If no blocks in the epoch following the completed reward epoch have been
+processed yet, subtract `B` from both the vote account’s lamport balance and its
+`pending_delegator_rewards` field and store the updated vote account. Finally,
+the burn amount `B` should also be deducted from the cluster capitalization.
 
 #### Individual Delegator Reward
 
@@ -164,17 +179,6 @@ the amount of rewards distributed to keep capitalization consistent.
 
 ### Vote Program
 
-```rust
-pub enum VoteInstruction {
-    /// # Account references
-    ///   0. `[WRITE]` Vote account to be updated with the deposit
-    ///   1. `[SIGNER, WRITE]` Source account for deposit funds
-    DepositDelegatorRewards { // 18u32
-        deposit: u64,
-    },
-}
-```
-
 #### Withdraw
 
 Since pending delegator rewards will be stored in the validator's vote account
@@ -189,8 +193,8 @@ balance minus `pending_delegator_rewards` and the minimum rent exempt balance.
 
 #### UpdateCommissionBps
 
-The `UpdateCommissionBps` instruction must be updated to add support for updating
-the block revenue commission rate.
+The `UpdateCommissionBps` instruction added in [SIMD-0249] must be updated to
+add support for updating the block revenue commission rate.
 
 When the specified commission kind is `CommissionKind::BlockRevenue`, update the
 `block_revenue_commission_bps` field instead of the previous behavior of
@@ -205,6 +209,17 @@ calculation.
 A new instruction for distributing lamports to stake delegators will be added to
 the vote program with the enum discriminant value of `18u32` little endian
 encoded in the first 4 bytes.
+
+```rust
+pub enum VoteInstruction {
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to be updated with the deposit
+    ///   1. `[SIGNER, WRITE]` Source account for deposit funds
+    DepositDelegatorRewards { // 18u32
+        deposit: u64,
+    },
+}
+```
 
 Perform the following checks:
 
