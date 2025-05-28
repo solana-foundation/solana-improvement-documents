@@ -1,10 +1,10 @@
 ---
-simd: '0288'
-title: Set default value of loaded_accounts_bytes to zero 
-Author: Tao Zhu (Anza)
+simd: '0289'
+title: Set default loaded_accounts_bytes to zero 
+authors: Tao Zhu (Anza)
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2025-05-27
 feature: 
 supersedes: 
@@ -21,14 +21,7 @@ This SIMD proposes setting the default value for loaded accounts data size to
 ## Motivation
 
 Currently, the Solana runtime allows transactions to implicitly load up to 64MB
-of account data:
-
-```rust
-/// The total accounts data a transaction can load is limited to 64MiB to not break
-/// anyone in Mainnet-beta today. It can be set by set_loaded_accounts_data_size_limit instruction
-pub const MAX_LOADED_ACCOUNTS_DATA_SIZE_BYTES: NonZeroU32 =
-    NonZeroU32::new(64 * 1024 * 1024).unwrap();
-```
+of account data, [code](https://github.com/anza-xyz/agave/blob/e9389a091f679c9e4595e4286091d1092f58f5dc/program-runtime/src/execution_budget.rs#L27-L30).
 
 This generous default was intended to avoid accidental transaction failures
 during development or early deployment phases. However, it introduces several
@@ -47,7 +40,7 @@ better-controlled execution environments.
 This aligns with broader Solana design goals to ensure deterministic resource
 consumption and to encourage clear contract behavior.
 
-## Alternative Considered
+## Alternatives Considered
 
 - Reduce the default to a arbitrary value (e.g., 8MB or 16MB) instead of 0.
 
@@ -58,7 +51,8 @@ None
 ## Detailed Design
 
 1. Introduce a New Default Constant:
-   Add a new constant:`pub const DEFAULT_LOADED_ACCOUNTS_DATA_SIZE_BYTES: usize = 0`
+   Add a new constant:
+   `pub const DEFAULT_LOADED_ACCOUNTS_DATA_SIZE_BYTES: usize = 0`
    Use this wherever a default loaded account data size is required.
 
 2. Preserve the Current Maximum:
@@ -72,7 +66,8 @@ epoch). This gives developers time to adapt.
 
 4. Final Enforcement:
    Once the target default of zero is reached, completely remove the default.
-All accounts data size limits must then be explicitly defined by the transaction or runtime.
+All accounts data size limits must then be explicitly defined by the
+transaction or runtime.
 
 ## Impact
 
