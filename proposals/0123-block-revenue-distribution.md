@@ -40,7 +40,7 @@ This proposal depends on the following previously accepted proposals:
 
     Necessary for looking up a block producer's commission collector account
 
-- **[SIMD-0249]: Commssion Rate in Basis Points**
+- **[SIMD-0291]: Commssion Rate in Basis Points**
 
     Introduces a new instruction type for setting commission rates in basis
     points
@@ -48,7 +48,7 @@ This proposal depends on the following previously accepted proposals:
 [SIMD-0180]: https://github.com/solana-foundation/solana-improvement-documents/pull/180
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
 [SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
-[SIMD-0249]: https://github.com/solana-foundation/solana-improvement-documents/pull/249
+[SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/pull/291
 
 ## Alternatives Considered
 
@@ -193,7 +193,7 @@ balance minus `pending_delegator_rewards` and the minimum rent exempt balance.
 
 #### UpdateCommissionBps
 
-The `UpdateCommissionBps` instruction added in [SIMD-0249] must be updated to
+The `UpdateCommissionBps` instruction added in [SIMD-0291] must be updated to
 add support for updating the block revenue commission rate.
 
 When the specified commission kind is `CommissionKind::BlockRevenue`, update the
