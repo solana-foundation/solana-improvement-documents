@@ -40,7 +40,7 @@ This proposal depends on the following previously accepted proposals:
 
     Necessary for looking up a block producer's commission collector account
 
-- **[SIMD-0249]: Modify Commission Update Rules**
+- **[SIMD-0249]: Commssion Rate in Basis Points**
 
     Introduces a new instruction type for setting commission rates in basis
     points
@@ -94,10 +94,10 @@ collecting all block revenue into the validator identity account, the protocol
 will look up the block producer's vote account as described in [SIMD-0180]. Then
 it MUST check if the validator's vote account has specified a block revenue
 commission rate and collector addresses in the new vote account version
-described in [SIMD-0185]. As described in [SIMD-0249] and [SIMD-0232], the
-latest block revenue commission rate and collector address MUST be loaded from
-the vote account state at the beginning of the previous epoch. This is the same
-vote account state used to build the leader schedule for the current epoch.
+described in [SIMD-0185]. As described in [SIMD-0232], the latest block revenue
+commission rate and collector address MUST be loaded from the vote account state
+at the beginning of the previous epoch. This is the same vote account state used
+to build the leader schedule for the current epoch.
 
 If the block revenue commission rate and collector account aren't set (e.g., the
 vote account state version has not been updated to v4 yet), all revenue will be
