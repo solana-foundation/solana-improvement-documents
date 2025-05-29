@@ -61,11 +61,11 @@ into the vote account.
 
 When collecting block fee revenue after processing all transactions in a block,
 the runtime must look up the validator's specified block revenue collector
-address. After adoption of SIMD-0180 and SIMD-0185, a given block's fee
+address. After adoption of [SIMD-0180] and [SIMD-0185], a given block's fee
 commission collector address can be looked up via the designated vote account
 for the leader schedule slot that the block was produced in. Note that by
 default, the commission rate for block fee revenue is 100% and support for other
-rates will be added in SIMD-0249.
+rates will be added in [SIMD-0123].
 
 In order to eliminate the overhead of tracking the latest commission collector
 address of each vote account, the commission collector address should be fetched
@@ -88,11 +88,19 @@ Note that it's technically allowed to set the collector account to the
 incinerator address. Incinerator funds are burned after block revenue collection
 at the end of the block.
 
+[SIMD-0123]: https://github.com/solana-foundation/solana-improvement-documents/pull/123
+
 #### Inflation Rewards Commission Collection
 
-The inflation rewards collector address should be fetched from the state
-of the vote account at the beginning of the previous epoch. This is the same
-vote account state used to build the leader schedule for the current epoch.
+For a given epoch `E`, the earned inflation rewards for each vote account are
+calculated at the beginning of the next epoch `E + 1`. This proposal doesn't
+change the commission calculation but it does define new rules for how the
+calculated commission rewards are collected into an account. Rather than
+collecting the inflation rewards commission into the vote accounts by default,
+the protocol must fetch the inflation rewards commission collector address from
+the vote account state at the beginning of epoch `E + 1`. This is the same
+vote account state used to get the commission rate and latest vote credits
+for inflation rewards calculation.
 
 The designated commission collector must either be equal to the vote account's
 address OR satisfy ALL of the following constraints:
