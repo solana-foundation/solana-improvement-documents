@@ -114,19 +114,23 @@ accounts which are of interest and only when necessary.
 
 ### Changes to syscalls
 
-The `AccountInfo` parameter of the CPI syscalls (`sol_invoke_signed_c` and
-`sol_invoke_signed_rust`) will be ignored if ABI v2 is in use. Instead the
-changes to account metadata will be communicated explicitly through separate
-syscalls `sol_set_account_owner`, `sol_set_account_lamports` and
-`sol_set_account_length`. Each of these must take a guest pointer to the
-structure of the transaction account (see per transaction serialization) to be
-updated and the new value as second parameter. In case of the pubkey parameter
-the guest pointer to a 32 byte slice is taken instead.
+The `AccountInfo` parameter of the CPI syscall `sol_invoke_signed_c` must be
+ignored and programs using `sol_invoke_signed_rust` must be rejected if ABI v2
+is in use. Instead the changes to account metadata will be communicated
+explicitly through separate syscalls:
+
+- `sol_resize_account`: Dst account, new length as `u64`
+- `sol_assign_owner`: Dst account, new owner as `&[u8; 32]`
+- `sol_transfer_lamports`: Dst account, src account, amount as `u64`
+
+The account parameters are guest pointers to the structure of the transaction
+accounts (see per transaction serialization).
 
 ### Changes to CU metering
 
 CPI will no longer charge CUs for the length of account payloads. Instead TBD
-CUs will be charged for every instruction account.
+CUs will be charged for every instruction account. Also TBD CUs will be charged
+for the three new account metadata updating syscalls.
 
 ## Impact
 
