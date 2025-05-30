@@ -77,7 +77,7 @@ the unique intersection of:
 irrespective of how they are used.
     * The set of programdata accounts referenced by the LoaderV3 program
 accounts specified on the transaction.
-2. Each account's size is defined as the byte length of its data prior to
+2. Each loaded account's size is defined as the byte length of its data prior to
 transaction execution plus 64 bytes to account for metadata.
 3. There is an additional flat 8248 byte cost for each address lookup table used
 by a transaction, accounting for the 8192 bytes for the maximum size of such a
@@ -101,6 +101,8 @@ counted otherwise.
 
 Read-only and writable accounts are treated the same. In the future, when direct
 mapping is enabled, this SIMD may be amended to count them differently.
+
+If an account does not exist, it has not been loaded, and thus its size is 0.
 
 We include programdata size for LoaderV3 programs because using the program
 account on a transaction forces an unconditional load of programdata to compile
