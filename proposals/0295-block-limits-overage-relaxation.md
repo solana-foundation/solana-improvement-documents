@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0295'
 title: Block limits overage relaxation
 authors: Tao Zhu (Anza)
 category: Standard
