@@ -2,8 +2,8 @@
 simd: 'XXXX'
 title: Increase Transaction Size
 authors:
-  - @jacobcreech
-  - @apfitzge
+  - jacobcreech
+  - apfitzge
 category: Standard
 type: Core
 status: Review
@@ -63,8 +63,7 @@ unfeasible.
 
 Increasing the transaction size limit above the current MTU max size is possible
 with the use of QUIC. QUIC's RFC 9000 specification does not have an explicit
-maximum packet size, allowing for larger transactions to be sent. Larger 
-transactions would be sent via QUIC streams to represent the transactions.
+maximum stream size, allowing for larger transactions to be sent.
 
 A new transaction format, `v1`, is proposed to enable larger transaction sizes.
 The `v1` transaction format would be:
@@ -105,7 +104,13 @@ accomodate the max accounts used in ALTs directly in the transaction, developers
 are able to migrate from `v0` transactions to `v1` transactions.
 
 A number of changes are required to be made to the validator to support the new
-transaction size limit. 
+transaction size limit. Consensus would need to be updated to support the larger
+transaction size, as larger transactions included in a block would be marked as
+invalid by the cluster today. The scheduler would also need to be modified to 
+support the larger transaction sizes. While this proposal does not introduce a
+new fee structure around bytes in a transaction, the scheduler should prioritize
+larger transactions differently, requiring developers to pay a higher priority
+fee to land their transaction.
 
 Testing for this new transaction size limit should be done extensively to ensure
 that performance on the cluster is not adversely affected. This testing should
