@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0296'
 title: Increase Transaction Size
 authors:
   - jacobcreech
