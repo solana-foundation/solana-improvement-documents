@@ -1,6 +1,6 @@
 ---
-simd: '029X'
-title: Relax Invalid Nonce Transactions Constraint
+simd: '0297'
+title: Relax Invalid Nonced Transactions Constraint
 authors: Tao Zhu (Anza)
 category: Standard
 type: Core
