@@ -1,6 +1,6 @@
 ---
 simd: '0295'
-title: Block limits overage relaxation
+title: Relax CU limit overage
 authors: Tao Zhu (Anza)
 category: Standard
 type: Core
