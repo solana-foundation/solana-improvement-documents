@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0298'
 title: Add Parent Bank Hash to Block Header
 authors:
   - Max Resnick
@@ -11,15 +11,15 @@ created: 2024-03-26
 
 ## Summary
 
-This proposal adds the parent bank hash to the block header and introduces validity constraints to ensure the parent bank hash matches the expected value. This change enhances the security and integrity of the blockchain by providing an additional verification layer for block validity.
+This proposal adds the parent bank hash to the block header and introduces validity constraints to ensure the parent bank hash matches the expected value. This change is part of the broader set of SIMDs neccesary for async execution.
 
 ## Motivation
 
-This proposal is neccesary for the initial rollout of asynchronous execution. Currently validators wait until they have finished executing the block before voting, causing delays on the critical path and getting in the way of longer term roadmap items like multiple concurrent proposers and shorter block times. Async execution requires voting before execution has finished which means that validators cannot include the `BankHash` in their votes and must therefore vote only on the blockID. If we remove `BankHash` from votes without any other changes then execution would not be a part of consensus at all, meaning if there is a bug in the runtime which causes a `BankHash` mismatch it could be difficult to identify quickly and resolve. This proposal moves consensus on the `BankHash` back one slot by adding the `BankHash` of the parent block to the first FEC set of each block so that we still have consensus on execution state eventually.
+This proposal is neccesary for the initial rollout of asynchronous execution. Currently validators wait until they have finished executing the block before voting, causing delays on the critical path and getting in the way of longer term roadmap items like multiple concurrent proposers and shorter block times. Async execution requires voting before execution has finished which means that validators cannot include the `BankHash` in their votes and must therefore vote only on the `blockID`. If we remove `BankHash` from votes without any other changes then execution would not be a part of consensus at all, meaning if there is a bug in the runtime which causes a `BankHash` mismatch it could be difficult to identify quickly and resolve. This proposal moves consensus on the `BankHash` back one slot by adding the `BankHash` of the parent block to the first FEC set of each block so that we still have consensus on execution state eventually.
 
 ## New Terminology
 
-Block Header: This is an umbrella term for information contained in the first FEC set of each block including blockID, parent blockID, parent Bank Hash etc...
+Block Header: This is an umbrella term for information contained in the first FEC set of each block including `blockID`, parent `blockID`, parent Bank Hash etc...
 
 ## Detailed Design
 
@@ -54,10 +54,9 @@ The feature can be activated at any time before or after the Alpenglow rollout.
 
 This change will be implemented behind a feature flag and activated through the feature activation program. The activation will require:
 
-1. Implementation of the new block header structure
-2. Updates to block validation logic
-3. Updates to block production logic
-4. Updates to block replay logic
+1. Implementation of the new block header structure in shreds and the BlockStore
+2. Updates to block production logic to include the additional information
+3. Updates to block replay logic to verify the BankHash correctly corresponds to the parent's bank state
 
 ## Alternatives Considered
 
@@ -85,4 +84,4 @@ This change is not backwards compatible and requires a feature flag for activati
 4. Update block production logic
 5. Add tests for new validation rules
 6. Deploy to testnet
-7. Activate feature on mainnet-beta 
+7. Activate feature on mainnet-beta
