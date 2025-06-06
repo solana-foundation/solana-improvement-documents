@@ -14,7 +14,8 @@ feature:
 This proposal relaxes the handling of invalid durable nonce transactions during
 block replay. Instead of rejecting the entire block when an invalid nonce is
 encountered, the transaction should be marked as failed, skipped for state
-modifications, but still committed to the block and charged a transaction fee.
+modifications, but still committed to the block without charging a transaction
+fee.
 
 ## Motivation
 
@@ -45,14 +46,15 @@ block to be rejected) if any of the following occurs:
 ### Proposed Change
 
 Update the replay logic to treat invalid nonce transactions as
-**non-state-modifying, fee-charging failures**, as follows:
+non-state-modifying, non-fee-charging failures, as follows:
 
-- The transaction is **not executed** (no instructions invoked).
-- The transaction is **charged compute and fees**.
-- The transaction is **recorded in the block** (marked as failed).
-- **No account state is modified**, including the nonce account (i.e., nonce is
+- The transaction is not executed.
+- The transaction is metered by CU limits.
+- The transaction is not charged with fee.
+- The transaction is recorded in the block (marked as failed).
+- No account state is modified, including the nonce account (i.e., nonce is
   not advanced).
-- **The block is not rejected** as long as all other transactions replay
+- The block is not rejected as long as all other transactions replay
   successfully.
 
 ## Alternatives Considered
