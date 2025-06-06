@@ -16,7 +16,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 Historically, messages transmitted over the network must not exceed the IPc6 MTU
 size to ensure a fast and reliable network delivery. Solana has used a 
 conservative MTU size of 1280 bytes, which after accounting for some of the
-overhead, leaves a maximum transaction size of 1032 bytes for data in the
+overhead, leaves a maximum transaction size of 1232 bytes for data in the
 payload.
 
 With QUIC, we can now use a larger transaction size than the original 1280
@@ -70,7 +70,7 @@ A new transaction format, `v1`, is proposed to enable larger transaction sizes.
 The `v1` transaction format would be:
 
 ```
-VersionByte (u8) - >127 to distinguish from legacy/v0 formats
+VersionByte (u8) - >129 to distinguish from legacy/v0 formats
 LegacyHeader (u8, u8, u8) -- Required signatures from the current
 `MessageHeader` type
 Payload Length (u16) -- Total size excluding signatures
@@ -78,9 +78,9 @@ NumInstructions (u16)
 ResourceRequestMask (u16) -- Bitmask of which resource requests are present.
  For example bit 0 may mean "requested_cus", bit 1 may mean "microlamports per
  cu"
-NumStaticKeys (u8)
 RecentBlockhash (hash)
-StaticKeys [[u8; 32]] -- Number matches NumStaticKeys
+NumAddresses (u8)
+Addresses [[u8; 32]] -- Number matches NumAddresses
 ResourceRequests [u64] -- Array of request values. (section size is popcount
  ResourceRequestMask * 8). each value is a u64.
 Ixs [(u16, u16, u16, u16)] -- Number matches NumInstructions. Values are
@@ -149,11 +149,6 @@ format to take advantage of the larger transaction size. Those developers that
 had previously been using address lookup tables would be required to update the
 new transactions with the full address list instead of the address lookup table
 and its indices.
-
-Over the long term, the new transaction format should require a migration to
-fully deprecate both `legacy` and `v0` transaction formats, and in deprecating
-`v0` transactions, the address lookup table feature would be removed from the
-protocol.
 
 ## Security Considerations
 
