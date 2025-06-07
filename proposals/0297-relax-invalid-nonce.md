@@ -64,7 +64,7 @@ non-state-modifying, non-fee-charging failures, as follows:
 
 ## Impact
 
-- Invalid nonced transactions will be included in blocks and will be charged
+- Invalid nonced transactions will be included in blocks but will not be charged
   fees.
 
 ## Security Considerations
