@@ -137,43 +137,45 @@ vote state field `pending_delegator_rewards` and added to the balance of vote
 account. If either of these conditions is violated, the delegator rewards amount
 MUST be burned.
 
-### Runtime: Delegator Rewards Distribution
+### Runtime: Block Revenue Distribution
 
-When calculating stake delegation rewards for a particular completed reward
-epoch, construct a list of all vote accounts that were initialized at the
-beginning of the reward epoch and had a non-zero active stake delegation. For
-each vote account, retrieve its state at the end of the reward epoch and check
-the `pending_delegator_rewards` field in its vote state. Let this value be `P`.
-If `P` is non-zero, use it to calculate rewards for each of the stake accounts
-delegated to the vote account as follows: 
+At the beginning of each epoch, pending delegator rewards will be collected from
+actively staked vote accounts into the epoch rewards sysvar account and then
+distributed to stake accounts utilizing the existing partitioned rewards
+distribution mechanism described in [SIMD-0118].
 
-1. Sum all active stake delegated to the vote account during the reward epoch
-epoch. Let this total be `A`.
+#### Delegator Rewards Calculation
 
-2. For each individual stake account, multiply its active stake from the
-reward epoch by `P`, and divide the result by `A` using integer division.
-Discard any fractional lamports.
+During the beginning of the first block of an epoch `N`, all pending delegator
+rewards from all vote accounts with a non-zero active stake delegation during
+the reward epoch `N - 1` MUST be transferred by the runtime to the epoch rewards
+sysvar account for distribution.
 
-After calculating all individual stake rewards, sum them to obtain `D`, the
-total distribution amount. Because of integer division, the full amount `P` may
-not be distributed so compute the amount to be burned, `B`, as the difference
-between `P` and `D`.
-
-If no blocks in the epoch following the completed reward epoch have been
-processed yet, subtract `B` from both the vote account’s lamport balance and its
-`pending_delegator_rewards` field and store the updated vote account. Finally,
-the burn amount `B` should also be deducted from the cluster capitalization.
+For each actively staked vote account, retrieve its state at the end of the
+reward epoch and check the `pending_delegator_rewards` field in its vote state.
+Let this value be `P`. If `P` is non-zero, set the `pending_delegator_rewards`
+field to `0` and deduct `P` from the vote account's lamport balance and credit
+it to the epoch rewards sysvar account's lamport balance.  Then if `P` is
+non-zero, sum all active stake delegated to the vote account during the reward
+epoch epoch `N - 1`. Let this total be `A`.
 
 #### Individual Delegator Reward
 
-The stake reward distribution amounts for each stake account calculated above
-can then be used to construct a list of stake reward entries which MUST be
-partitioned and distributed according to [SIMD-0118].
+For each individual stake account with an active non-zero delegation, multiply
+its active stake in reward epoch `N - 1` by `P`, and divide the result by
+`A` using integer division to get the individual stake account's block revenue
+reward distribution amount.
 
-When reward entries are used to distribute rewards pool funds during partitioned
-rewards distribution, the delegated vote account for each rewarded stake account
-must have its `pending_delegator_rewards` field and its balance deducted with
-the amount of rewards distributed to keep capitalization consistent.
+#### Delegator Rewards Distribution
+
+The reward distribution amounts for each stake account can then be used to
+construct a list of stake reward entries which MUST be partitioned and
+distributed according to [SIMD-0118].
+
+During partitioned reward distribution in a given slot, when reward entries are
+used to distribute block revenue rewards, the epoch rewards sysvar account's
+lamport balance MUST be debited by the block revenue reward distribution amount
+to keep capitalization consistent.
 
 [SIMD-0118]: https://github.com/solana-foundation/solana-improvement-documents/pull/118
 
@@ -246,5 +248,5 @@ NA
 
 ## Backwards Compatibility
 
-A feature gate will be used to enable block reward distribution at an epoch
-boundary.
+A feature gate will be used to enable block revenue reward distribution at an
+epoch boundary.
