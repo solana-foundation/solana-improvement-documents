@@ -28,7 +28,13 @@ This proposal depends on the following previously accepted proposals:
     Introduces version 4 of the vote account state, updating the commission
     field to use basis points for greater precision.
 
+- **[SIMD-0249]: Delay Commission Updates**
+
+    Simplifies commission update rules so that the `UpdateCommissionBps`
+    instruction will not need to restrict updates in any way.
+
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
+[SIMD-0249]: https://github.com/solana-foundation/solana-improvement-documents/pull/249
 
 ## New Terminology
 
