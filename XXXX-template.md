@@ -24,6 +24,16 @@ A brief summary of what the feature is.
 Why are we doing this? What use cases does it support? What is the expected
 outcome?
 
+## Dependencies *(Optional)*
+
+This proposal depends on the following previously accepted proposals:
+
+- **[SIMD-XXXX]: Title of SIMD**
+
+    A brief summary of the reason for the dependency
+
+[SIMD-XXXX]: https://github.com/solana-foundation/solana-improvement-documents/pull/XXXX
+
 ## New Terminology
 
 Is there any new terminology introduced with this proposal?
