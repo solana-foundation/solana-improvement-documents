@@ -76,10 +76,11 @@ The opcode `0x9D` must represent the return instruction, which supersedes the
 `exit` instruction. The opcode (opcode `0x95`), previously assigned to the 
 `exit` instruction, must now be interpreted as the new syscall instruction.
 
-The verifier must detect an SBPF V1 program containing the `0x9D` opcode and 
-throw a `VerifierError::UnknowOpCode`. Likewise, if, by any means, a V1 
-program reaches the execution stage containing the `0x9D` opcode, an 
-`EbpfError::UnsupportedInstruction` must be raised.
+The verifier must detect programs whose version is less than V3 containing
+the `0x9D` opcode and throw a `VerifierError::UnknowOpCode`. Likewise, if, by 
+any means, a V2 or earlier version program reaches the execution stage 
+containing the `0x9D` opcode, an `EbpfError::UnsupportedInstruction` must be 
+raised.
 
 ## Alternatives Considered
 
