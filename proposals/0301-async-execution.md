@@ -1,8 +1,5 @@
 ---
-# TODO: After opening the PR, update 'simd' field and filename to match the PR number (e.g., simd: '0123', proposals/0123-async-execution.md)
-# Status: Draft PR – for community and core contributor feedback
-
-simd: 'XXXX'
+simd: '0301'
 title: Asynchronous Execution
 authors:
   - Max Resnick (Anza)
@@ -15,10 +12,6 @@ supersedes: (optional - fill this in if the SIMD supersedes a previous SIMD)
 superseded-by: (optional - fill this in if the SIMD is superseded by a subsequent SIMD)
 extends: (optional - fill this in if the SIMD extends the design of a previous SIMD)
 ---
-
-<!--
-NOTE: After opening the PR, update the 'simd' field above and the filename to match the PR number assigned by GitHub.
--->
 
 ## Summary
 
