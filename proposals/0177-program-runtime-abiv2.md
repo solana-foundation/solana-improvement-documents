@@ -47,9 +47,8 @@ None.
 
 ## Detailed Design
 
-Programs signal their support through their SBPF version field being v4 or
-above while the program runtime signals which ABI is chosen through the
-serialized magic field.
+Programs signal that they expect ABIv2 through their SBPF version field being
+v4 or above.
 
 ### Per Transaction Serialization
 
@@ -57,12 +56,12 @@ At the beginning of a transaction the program runtime must prepare the
 following which is shared by all instructions running programs suporting the
 new ABI. This memory region starts at `0x400000000` and is readonly. It must be
 updated as instructions through out the transaction modify the account metadata
-or the scratchpad via `sol_set_return_data`.
+or the return-data via `sol_set_return_data`.
 
-- Key of the program which wrote to the scratchpad most recently: `[u8; 32]`
-- The scratchpad data: `&[u8]` which is composed of:
-  - Pointer to scratchpad data: `u64`
-  - Length of scratchpad data: `u64`
+- Key of the program which wrote to the return-data most recently: `[u8; 32]`
+- The return-data data: `&[u8]` which is composed of:
+  - Pointer to return-data data: `u64`
+  - Length of return-data data: `u64`
 - The number of transaction accounts: `u64`
 - For each transaction account:
   - Key: `[u8; 32]`
@@ -73,7 +72,7 @@ or the scratchpad via `sol_set_return_data`.
     - Account payload length: `u64`
 
 A readonly memory region starting at `0x500000000` must be mapped in for the
-scratchpad data. It must be updated when `sol_set_return_data` is called.
+return-data data. It must be updated when `sol_set_return_data` is called.
 
 ### Per Instruction Serialization
 
@@ -126,6 +125,8 @@ explicitly through separate syscalls:
 The account parameters are guest pointers to the structure of the transaction
 accounts (see per transaction serialization).
 
+Programs using `sol_get_return_data` must be rejected if ABI v2 is in use.
+
 ### Changes to CU metering
 
 CPI will no longer charge CUs for the length of account payloads. Instead TBD
@@ -150,11 +151,3 @@ Are there any implementation-specific guidance or pitfalls?
 This will require parallel code paths for serialization, deserialization, CPI
 call edges and CPI return edges. All of these will coexist with the exisiting
 ABI v0 and v1 for the forseeable future, until we decide to deprecate them.
-
-## Backwards Compatibility
-
-The magic field (`u32`) and version field (`u32`) of ABI v2 are placed at the
-beginning, where ABI v0 and v1 would otherwise indicate the number of
-instruction accounts as an `u64`. Because the older ABIs will never serialize
-more than a few hundred accounts, it is possible to differentiate the ABI
-that way without breaking the older layouts.
