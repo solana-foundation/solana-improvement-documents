@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0302'
 title: BN254 G2 Arithmetic Syscalls
 authors:
   - Blockiosaurus (Metaplex Foundation)
@@ -46,16 +46,22 @@ elements (each element is a pair of 32‑byte field coefficients).
 
 ```rust
 // Field and point sizes
-pub const ALT_BN128_FIELD_SIZE:       u64 = 32;              // bytes per Fq element
-pub const ALT_BN128_G2_POINT_SIZE:    u64 = ALT_BN128_FIELD_SIZE * 4; // x=(x0,x1), y=(y0,y1) each 32‑byte
+pub const ALT_BN128_FIELD_SIZE:       u64 = 32;
+    // bytes per Fq element
+pub const ALT_BN128_G2_POINT_SIZE:    u64 = ALT_BN128_FIELD_SIZE * 4;
+    // x=(x0,x1), y=(y0,y1) each 32‑byte
 
 // G2 addition/subtraction
-pub const ALT_BN128_G2_ADDITION_INPUT_LEN:   u64 = ALT_BN128_G2_POINT_SIZE * 2; // 256
-pub const ALT_BN128_G2_ADDITION_OUTPUT_LEN:  u64 = ALT_BN128_G2_POINT_SIZE;     // 128
+pub const ALT_BN128_G2_ADDITION_INPUT_LEN:   u64 = ALT_BN128_G2_POINT_SIZE * 2;
+    // 256
+pub const ALT_BN128_G2_ADDITION_OUTPUT_LEN:  u64 = ALT_BN128_G2_POINT_SIZE;
+    // 128
 
 // G2 scalar multiplication
-pub const ALT_BN128_G2_MULTIPLICATION_INPUT_LEN:  u64 = ALT_BN128_G2_POINT_SIZE + ALT_BN128_FIELD_SIZE; // 160
-pub const ALT_BN128_G2_MULTIPLICATION_OUTPUT_LEN: u64 = ALT_BN128_G2_POINT_SIZE;                       // 128
+pub const ALT_BN128_G2_MULTIPLICATION_INPUT_LEN:  u64 = ALT_BN128_G2_POINT_SIZE
+    + ALT_BN128_FIELD_SIZE; // 160
+pub const ALT_BN128_G2_MULTIPLICATION_OUTPUT_LEN: u64 = ALT_BN128_G2_POINT_SIZE;
+    // 128
 
 ### New Opcodes
 pub const ALT_BN128_G2_ADD: u64 = 4;
