@@ -5,9 +5,9 @@ authors:
   - Alexander Meißner
 category: Standard
 type: Core
-status: Review
+status: Accepted
 created: 2025-03-26
-feature: TBD
+feature: 6TkHkRmP7JZy1fdM6fg5uXn76wChQBWGokHBJzrLB3mj
 extends: SIMD-0219
 ---
 
@@ -27,7 +27,8 @@ None.
 ## Detailed Design
 
 Once the associated feature gate is activated the maximum nesting depth of CPI
-calls must be changed from 4 to 8.
+calls must be changed from 4 to 8. This feature should only be activated after
+SIMD-0219.
 
 ## Alternatives Considered
 
