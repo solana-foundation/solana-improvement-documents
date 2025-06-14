@@ -1,0 +1,153 @@
+---
+simd: '0177'
+title: Program Runtime ABI v2
+authors:
+  - Alexander Meißner
+category: Standard
+type: Core
+status: Idea
+created: 2025-02-23
+feature: TBD
+extends: SIMD-0219
+---
+
+## Summary
+
+Align the layout of the virtual address space to large pages in order to
+simplify the address translation logic and allow for easy direct mapping.
+
+## Motivation
+
+At the moment all validator implementations have to copy (and compare) data in
+and out of the virtual memory of the virtual machine. There are four possible
+account data copy paths:
+
+- Serialization: Copy from program runtime (host) to virtual machine (guest)
+- CPI call edge: Copy from virtual machine (guest) to program runtime (host)
+- CPI return edge: Copy from program runtime (host) to virtual machine (guest)
+- Deserialization: Copy from virtual machine (guest) to program runtime (host)
+
+To avoid this a feature named "direct mapping" was designed which uses the
+address translation logic of the virtual machine to emulate the serialization
+and deserialization without actually performing copies.
+
+Implementing direct mapping in the current ABI v0 and v1 is very complex
+because of unaligned virtual memory regions and memory accesses overlapping
+multiple virtual memory regions. Instead the layout of the virtual address
+space should be adjusted so that all virtual memory regions are aligned to
+4 GiB.
+
+## Alternatives Considered
+
+None.
+
+## New Terminology
+
+None.
+
+## Detailed Design
+
+Programs signal that they expect ABIv2 through their SBPF version field being
+v4 or above.
+
+### Per Transaction Serialization
+
+At the beginning of a transaction the program runtime must prepare the
+following which is shared by all instructions running programs suporting the
+new ABI. This memory region starts at `0x400000000` and is readonly. It must be
+updated as instructions through out the transaction modify the account metadata
+or the return-data via `sol_set_return_data`.
+
+- Key of the program which wrote to the return-data most recently: `[u8; 32]`
+- The return-data data: `&[u8]` which is composed of:
+  - Pointer to return-data data: `u64`
+  - Length of return-data data: `u64`
+- The number of transaction accounts: `u64`
+- For each transaction account:
+  - Key: `[u8; 32]`
+  - Owner: `[u8; 32]`
+  - Lamports: `u64`
+  - Account payload: `&[u8]` which is composed of:
+    - Pointer to account payload: `u64`
+    - Account payload length: `u64`
+
+A readonly memory region starting at `0x500000000` must be mapped in for the
+return-data data. It must be updated when `sol_set_return_data` is called.
+
+### Per Instruction Serialization
+
+For each instruction the program runtime must prepare the following.
+This memory region starts at `0x600000000` and is readonly. It does not require
+any updates once serialized.
+
+- The instruction data: `&[u8]` which is composed of:
+  - Pointer to instruction data: `u64`
+  - Length of instruction data: `u64`
+- Programm account index in transaction: `u16`
+- Number of instruction accounts: `u16`
+- For each instruction account:
+  - Index to transaction account: `u16`
+  - Flags bitfield: `u16` (bit 0 is signer, bit 1 is writable)
+
+### Per Instruction Mappings
+
+A readonly memory region starting at `0x700000000` must be mapped
+in for the instruction data. It too does not require any updates.
+
+For each unique (meaning deduplicated) instruction account the payload must
+be mapped in at `0x800000000` plus `0x100000000` times the index of the
+**transaction** account (not the index of the instruction account). Only if the
+instruction account has the writable flag set and is owned by the current
+program it is mapped in as a writable region. The writability of a region must
+be updated as programs through out the transaction modify the account metadata.
+
+### Lazy deserialization on the dApp side (inside the SDK)
+
+With this design a program SDK can (but no longer needs to) eagerly deserialize
+all account metadata at the entrypoint. Because this layout is strictly aligned
+and uses proper arrays, it is possible to directly calculate the offset of a
+single accounts metadata with only one indirect lookup and no need to scan all
+preceeding metadata. This allows a program SDK to offer a lazy interface which
+only interacts with the account metadata fields which are needed, only of the
+accounts which are of interest and only when necessary.
+
+### Changes to syscalls
+
+The `AccountInfo` parameter of the CPI syscall `sol_invoke_signed_c` must be
+ignored and programs using `sol_invoke_signed_rust` must be rejected if ABI v2
+is in use. Instead the changes to account metadata will be communicated
+explicitly through separate syscalls:
+
+- `sol_resize_account`: Dst account, new length as `u64`
+- `sol_assign_owner`: Dst account, new owner as `&[u8; 32]`
+- `sol_transfer_lamports`: Dst account, src account, amount as `u64`
+
+The account parameters are guest pointers to the structure of the transaction
+accounts (see per transaction serialization).
+
+Programs using `sol_get_return_data` must be rejected if ABI v2 is in use.
+
+### Changes to CU metering
+
+CPI will no longer charge CUs for the length of account payloads. Instead TBD
+CUs will be charged for every instruction account. Also TBD CUs will be charged
+for the three new account metadata updating syscalls.
+
+## Impact
+
+This change is expected to drastically reduce the CU costs as the cost will no
+longer depend on the length of the instruction account payloads or instruction
+data.
+
+From the dApp devs perspective almost all changes are hidden inside the SDK.
+
+## Security Considerations
+
+What security implications/considerations come with implementing this feature?
+Are there any implementation-specific guidance or pitfalls?
+
+## Drawbacks
+
+This will require parallel code paths for serialization, deserialization, CPI
+call edges and CPI return edges. All of these will coexist with the exisiting
+ABI v0 and v1 for the forseeable future, until we decide to deprecate them.
