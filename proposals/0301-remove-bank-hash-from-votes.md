@@ -1,5 +1,5 @@
 ---
-simd: '0301'
+simd: "0301"
 title: Remove BankHash from Votes
 authors:
   - Max Resnick (Anza)
@@ -45,16 +45,15 @@ This proposal contains a single change:
 
 ## Dependencies
 
-| SIMD Number | Description | Status |
-|-------------|-------------|---------|
-| [SIMD-0159](https://github.com/solana-foundation/solana-improvement-documents/pull/159) | Pre-compile Instruction Verification | Activated |
+| SIMD Number                                                                             | Description                                 | Status    |
+| --------------------------------------------------------------------------------------- | ------------------------------------------- | --------- |
+| [SIMD-0159](https://github.com/solana-foundation/solana-improvement-documents/pull/159) | Pre-compile Instruction Verification        | Activated |
 | [SIMD-0191](https://github.com/solana-foundation/solana-improvement-documents/pull/191) | Loaded Data Size and Program Account Checks | Activated |
-| [SIMD-0192](https://github.com/solana-foundation/solana-improvement-documents/pull/192) | Address Lookup Table Relaxation | Review |
-| [SIMD-0290](https://github.com/solana-foundation/solana-improvement-documents/pull/290) | Fee-payer Account Relaxation | Review |
-| [SIMD-0295](https://github.com/solana-foundation/solana-improvement-documents/pull/295) | Relax CU limit overage | Review |
-| [SIMD-0297](https://github.com/solana-foundation/solana-improvement-documents/pull/297) | Durable Nonce Relaxation | Review |
-| [SIMD-0298](https://github.com/solana-foundation/solana-improvement-documents/pull/298) | Add BankHash to Block Header | Review |
-
+| [SIMD-0192](https://github.com/solana-foundation/solana-improvement-documents/pull/192) | Address Lookup Table Relaxation             | Review    |
+| [SIMD-0290](https://github.com/solana-foundation/solana-improvement-documents/pull/290) | Fee-payer Account Relaxation                | Review    |
+| [SIMD-0295](https://github.com/solana-foundation/solana-improvement-documents/pull/295) | Relax CU limit overage                      | Review    |
+| [SIMD-0297](https://github.com/solana-foundation/solana-improvement-documents/pull/297) | Durable Nonce Relaxation                    | Review    |
+| [SIMD-0298](https://github.com/solana-foundation/solana-improvement-documents/pull/298) | Add BankHash to Block Header                | Review    |
 
 ## Impact
 
