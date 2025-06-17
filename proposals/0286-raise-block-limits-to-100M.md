@@ -20,12 +20,12 @@ Increase the block limit to 100M CUs.
 
 ## Motivation
 
-Current block limits are set to 50M CUs. SIMD-0250 will increase them to 60M.
+Current block limits are set to 50M CUs. SIMD-0256 will increase them to 60M.
 Block limits' primary purpose is to ensure the vast majority of network
 participants are able to keep up with the network, by restricting the amount of
 work a leader is allowed to pack into a block. However, current mainnet traffic
 is largely not constrained by large block execution times. This proposal aims a
-substantial increase in block limits to 60M CUs, in order to provide additional
+substantial increase in block limits to 100M CUs, in order to provide additional
 capacity to the network.
 
 ## New Terminology
@@ -45,12 +45,12 @@ No new terms, but the following definitions are given for clarity:
 The following table shows the current block limits and the proposed block
 limits:
 
-| Type | Current Block Limit | SIMD-0250 Limit | Proposed Block Limit |
-|------|-----|---------------|---------------------|
-| Max Block Units | 50M | 60M | 100M |
-| Max Writable Account Units | 12M | 12M  | 12M |
-| Max Vote Units | 36M | 36M  | 36M  |
-| Max Block Accounts Data Size Delta | 100MB | 100MB | 100MB |
+| Type | Current Block Limit | SIMD-0256 Limit | Proposed Block Limit |
+|------|-----|-----------------|---------------------|
+| Max Block Units | 50M | 60M             | 100M |
+| Max Writable Account Units | 12M | 12M             | 12M |
+| Max Vote Units | 36M | 36M             | 36M  |
+| Max Block Accounts Data Size Delta | 100MB | 100MB           | 100MB |
 
 This proposal only changes the `Max Block Units` limit.
 The purpose is to increase capacity for non-vote transactions.
@@ -59,8 +59,8 @@ push to increase the capacity for individual accounts at this time.
 Keeping `Max Writeable Account Units` unchanged while raising the
 `Max Block Units` , allows for additional parallel capacity.
 
-The intention is for this to follow SIMD-0250 (as opposed to replacing).
-SIMD-0250 is a much more modest increase in block space. This proposal 
+The intention is for this to follow SIMD-0256 (as opposed to replacing).
+SIMD-0256 is a much more modest increase in block space. This proposal 
 aims to increase block space more aggressively.
 
 ## Alternatives Considered
