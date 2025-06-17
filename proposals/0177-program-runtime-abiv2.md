@@ -93,7 +93,7 @@ The first one is a readonly region starting at `0x600000000`. It must be
 updated at each CPI call edge. The contents of this region are the following:
 
 - For each instruction in transaction:
-  - Program ID: `[u8; 32]`
+  - Index in transaction of program account to be executed: `u64`
   - Reference to a slice of instruction accounts `&[InstructionAccount]`, 
     consisting of:
     - Pointer to beginning of slice: `u64`
@@ -181,7 +181,6 @@ syscall `sol_invoke_signed_v2` must replace them. The parameters for
   containing, as previously mentioned:
   - Index to transaction account: `u16`
   - Flags bitfield: `u16` (bit 0 is signer, bit 1 is writable)
-- Signer seeds: `&[&[u8]]`
 
 Programs using `sol_get_return_data` and `sol_set_return_data` must be 
 rejected by the verfier if ABI v2 is in use.
@@ -205,15 +204,18 @@ data it holds.
 With ABIv2 and the new `sol_invoke_signed_v2` syscall, CPIs must be managed 
 differently. At each CPI call, the runtime must perform the following actions:
 
-1. Append the slice `&[InstructionAccount]` passed as a parameter to the 
+1. Verify that all account indexes received in the `InstructionAccount` array 
+   belong in the current executing instruction. Likewise, the prgram ID index 
+   that should be called must also undergo the same verification.
+2. Append the slice `&[InstructionAccount]` passed as a parameter to the 
    array kept at address `0x700000000`.
-2. Append a new instruction at the end of the serialization array kept at 
+3. Append a new instruction at the end of the serialization array kept at 
    `0x600000000`.
-3. Transform the caller CPI scratchpad into a readonly instruction payload 
+4. Transform the caller CPI scratchpad into a readonly instruction payload 
    region visible for the callee.
-4. Change the visibility and write permissions for the account payload 
+5. Change the visibility and write permissions for the account payload 
    regions, according to the CPI accounts and their flags.
-5. Update the address for the callee CPI scratchpad, the index of current 
+6. Update the address for the callee CPI scratchpad, the index of current 
    executing transaction, and the number of instructions in transaction at 
    address `0x400000000`.
 
