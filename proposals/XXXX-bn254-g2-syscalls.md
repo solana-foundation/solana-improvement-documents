@@ -69,6 +69,13 @@ pub const ALT_BN128_G2_SUB: u64 = 5;
 pub const ALT_BN128_G2_MUL: u64 = 6;
 ```
 
+### Endianness
+
+Additional G2 operation support for little endian formats should also be
+included use the little-endian encoding conventions as specified in
+[SIMD-0284](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0284-alt-bn128-little-endian.md),
+consistent with existing BN128 syscalls.
+
 ## Alternatives Considered
 
 - Separate G2‑only syscall entrypoint rather than extending sol_alt_bn128_group_op.
