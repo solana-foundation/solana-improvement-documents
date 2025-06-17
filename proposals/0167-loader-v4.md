@@ -161,7 +161,7 @@ All program management instructions must cost 2000 CUs.
 #### SetProgramLength
 
 - Instruction accounts:
-  - `[(signer), writable]` The program account to change the size of.
+  - `[writable]` The program account to change the size of.
   - `[signer]` The authority of the program.
   - `[writable]` Optional, the recipient account.
 - Instruction data:
