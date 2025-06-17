@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0306'
 title: Increase writeable account CU limit to 20M CUs.
 authors:
   - Brennan Watt (Anza)
