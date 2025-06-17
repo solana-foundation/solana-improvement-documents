@@ -9,17 +9,27 @@ status: Draft
 created: 2025-06-10
 feature: (fill in with feature key and github tracking issues once accepted)
 supersedes: (optional - fill this in if the SIMD supersedes a previous SIMD)
-superseded-by: (optional - fill this in if the SIMD is superseded by a subsequent SIMD)
-extends: (optional - fill this in if the SIMD extends the design of a previous SIMD)
+superseded-by:
+  (optional - fill this in if the SIMD is superseded by a subsequent SIMD)
+extends:
+  (optional - fill this in if the SIMD extends the design of a previous SIMD)
 ---
 
 ## Summary
 
-This proposal would remove BankHash from votes on Solana to allow voting before replay is complete. If all the prerequisites are satisfied before Alpenglow is ready to rollout then it can be activated with Alpenglow. Otherwise it must be a feature flag.
+This proposal would remove BankHash from votes on Solana to allow voting before
+replay is complete. If all the prerequisites are satisfied before Alpenglow is
+ready to rollout then it can be activated with Alpenglow. Otherwise it must be a
+feature flag.
+
+This is a very long line of text that should be wrapped by Prettier at eighty
+characters if proseWrap is set to always and printWidth is set to eighty.
 
 ## Motivation
 
-Currently, votes include the BankHash, which ties votes to a fully executed bank state. Removing BankHash from votes allows validators to vote before execution completes. This is also called Asynchronous Execution.
+Currently, votes include the BankHash, which ties votes to a fully executed bank
+state. Removing BankHash from votes allows validators to vote before execution
+completes. This is also called Asynchronous Execution.
 
 The synchronous confirmation flow after Alpenglow looks like this:
 
@@ -29,7 +39,8 @@ The synchronous confirmation flow after Alpenglow looks like this:
               |--------------- validator executes block -----------------|
 ```
 
-After this feature flag activates validators will be able to vote before they finish executing the block:
+After this feature flag activates validators will be able to vote before they
+finish executing the block:
 
 ```text
 | ----- leader broadcasts the block through rotor -------|
@@ -41,7 +52,8 @@ After this feature flag activates validators will be able to vote before they fi
 
 This proposal contains a single change:
 
-1. Remove BankHash from votes. Validators will no longer include the BankHash in their vote messages. The vote structure and any related consensus logic will be updated accordingly.
+1. Remove BankHash from votes. Validators will no longer include the BankHash in
+   their vote messages.
 
 ## Dependencies
 
@@ -57,16 +69,29 @@ This proposal contains a single change:
 
 ## Impact
 
-This change is not expected to have any direct impact on app developers. It is a consensus-breaking change and will require all validators to update their software to the new vote structure. Validators running older versions will be unable to participate in consensus once the feature flag is activated.
+This change is not expected to have any direct impact on app developers. It is a
+consensus-breaking change and will require all validators to update their
+software to the new vote structure. Validators running older versions will be
+unable to participate in consensus once the feature flag is activated.
 
 ## Security Considerations
 
-Removing BankHash from votes does not introduce new security risks by itself, but it is a foundational change for future protocol improvements. Care must be taken to ensure that consensus remains robust and that the transition is coordinated across the validator network.
+Removing BankHash from votes does not introduce new security risks by itself
+when coupled with SIMD-0298 which adds the BankHash of the parent to each block,
+because the BankHash is still part of consensus.
 
 ## Drawbacks
 
-This is a breaking change to the vote structure, requiring a coordinated upgrade across the network.
-
 ## Backwards Compatibility
 
-This proposal requires a breaking change to the vote structure. All validators must implement the new vote format. The change will be gated behind a feature flag and activated in a coordinated manner. Validators running older versions will be unable to participate in consensus once the feature flag is activated.
+Either the prerequisites are all satisfied by the time Alpenglow is ready, in
+which case we can just launch alpenglow votes without the BankHash in them, or
+we will need a feature flag.
+
+This proposal requires a breaking change to the vote structure. All validators
+must implement the new vote format. The change will be gated behind a feature
+flag and activated in a coordinated manner. Validators running older versions
+will be unable to participate in consensus once the feature flag is activated.
+
+This is a very long line of text that should be wrapped by Prettier at eighty
+characters if proseWrap is set to always and printWidth is set to eighty.
