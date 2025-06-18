@@ -69,22 +69,23 @@ differently, the serialized header will be prepended to the first serialized
 entry batch in the block.
 
 ```
-< --       64 bits        -->
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|      block_header_flag    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          version          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|       header_length       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_producer_time_nanos |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|     block_user_agent      |
-|                           |
-⋮                       +30 ⋮
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   ... future fields ...   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+           Block Header Layout
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_header_flag           (64 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| version                     (64 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| header_length               (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_producer_time_nanos   (64 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_user_agent_len         (8 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_user_agent        (0-255 bytes) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Note that header fields are packed together without any alignment requirements
+or padding.
 ```
 
 - `block_header_flag: u64` will always be zero. The first 8 bytes of an entry
@@ -97,22 +98,23 @@ to.
 - `version: u64` is a positive integer which changes anytime a change is made to
 the header. The initial version will be 1.
 
-- `header_length: u64` is the length of the rest of the header in bytes (i.e.
+- `header_length: u16` is the length of the rest of the header in bytes (i.e.
 not including the `block_header_flag`, `version`, and `header_length` fields).
 
 - `block_producer_time_nanos: u64` is a nanosecond UNIX timestamp representing
-the time when the block producer became leader and started constructing the
-block.
+the time when the block producer started constructing the block.
 
-- `block_user_agent: [u8; 256]` is a string that provides identifying
-information about the block producer.
+- `block_user_agent_len: u8` the length of the `block_user_agent` string in
+bytes.
 
-- `future fields` any other fields that are deemed necessary in the future may
-be added with a corresponding change to `version` / `header_length`. For
-example, SIMD
+- `block_user_agent: String` is a variable length utf-8 encoded string that
+provides identifying information about the block producer.
+
+Any other fields that are deemed necessary in the future may be added with a
+corresponding change to `version` / `header_length`. For example, SIMD
 [0298](https://github.com/solana-foundation/solana-improvement-documents/pull/298)
-proposes a field header, which could be added as a subsequent SIMD (or folded
-into this one).
+proposes a field header, which could be added as a subsequent SIMD (or even
+folded into this one).
 
 ### Header Field Specification
 
@@ -121,18 +123,17 @@ without any enforced constraint on their contents. This SIMD includes the
 following fields in the header
 
 - `block_producer_time_nanos`: u64
-- `block_user_agent`: [u8; 256]
+- `block_user_agent_len`: u8
+- `block_user_agent`: String
 
 Because it is desirable to maintain cluster-wide diagnostics this SIMD provides
 a suggested format for the `block_user_agent` string which includes basic
-information about the block producer. This should be an UTF-8 encoded, null
-terminated string. The null character should terminate valid UTF-8 data. Any
-data following the null character is ignored by parsers and may contain
-arbitrary information. It is expected that all producers use this format,
-though this will not be enforced. Clients that choose to opt out of the
-suggested format should set the first byte of the field to 0 (i.e. the null
-character). The format is loosely based on HTTP `user-agent` header format
-specification:
+information about the block producer. This should be a UTF-8 encoded variable
+length string (up to 255 bytes long). It is not necessarily null-terminated. It
+is expected that all producers use the format specified here, though this will
+not be enforced. Clients are encouraged to at the very least use a valid utf-8
+string and include extraneous data in a way that coheres with the specification.
+The format is loosely based on HTTP `user-agent` header format specification:
 
 ```
 <product>/<product-version> <comment>
