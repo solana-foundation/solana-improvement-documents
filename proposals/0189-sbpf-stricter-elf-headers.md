@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Idea
 created: 2024-10-21
-feature: TBD
+feature: GJav1vwg2etvSWraPT96QvYuQJswJTJwtcyARrvkhuV9
 extends: SIMD-0178, SIMD-0179
 ---
 
@@ -33,6 +33,9 @@ compatibility.
 None.
 
 ## Detailed Design
+
+The following must go into effect if and only if a program indicates the
+SBPF-version v3 or higher in its program header (see SIMD-0161).
 
 ### File header
 
