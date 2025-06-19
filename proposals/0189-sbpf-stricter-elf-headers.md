@@ -66,16 +66,16 @@ If any check fails `ElfParserError::InvalidFileHeader` must be thrown.
 
 ### Program headers
 
-|  purpose  |    p_type    |   p_flags  | p_vaddr |
-| --------- | ------------ | ---------- | ------- |
-| bytecode  | PT_LOAD      | PF_X       | 0 << 32 |
-| ro data   | PT_LOAD      | PF_R       | 1 << 32 |
-| stack     | PT_GNU_STACK | PF_R, PF_W | 2 << 32 |
-| heap      | PT_LOAD      | PF_R, PF_W | 3 << 32 |
+| index |  purpose  |   p_flags  | p_vaddr |
+| ----- | --------- | ---------- | ------- |
+| 0     | bytecode  | PF_X       | 0 << 32 |
+| 1     | ro data   | PF_R       | 1 << 32 |
+| 2     | stack     | PF_R, PF_W | 2 << 32 |
+| 3     | heap      | PF_R, PF_W | 3 << 32 |
 
 For each of these predefined program headers:
 
-- `p_type` must match the `p_type` of the entry in the table above
+- `p_type` must be `PT_LOAD`
 - `p_flags` must match the `p_flags` of the entry in the table above
 - `p_offset` must not be less than `e_phoff + e_phnum * size_of::<Elf64Phdr>()`
 - `p_offset` must be less than `file.len() as u64`
