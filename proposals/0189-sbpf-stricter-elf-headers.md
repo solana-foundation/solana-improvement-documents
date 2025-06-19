@@ -49,7 +49,8 @@ otherwise `ElfParserError::OutOfBounds` must be thrown.
 - `e_type` must be `ET_DYN` (`0x0003`)
 - `e_machine` must be `EM_SBPF` (`0x0263`)
 - `e_version` must be `EV_CURRENT` (`0x00000001`)
-- `e_entry` is checked later (see dynamic symbol table)
+- `e_entry` must point to a function start marker in the text section,
+see SIMD-0179 for details on how a function start is marked.
 - `e_phoff` must be `size_of::<Elf64Ehdr>()` (64 bytes)
 - `e_shoff` is not checked
 - `e_flags` see SIMD-0161
@@ -71,7 +72,6 @@ If any check fails `ElfParserError::InvalidFileHeader` must be thrown.
 | ro data   | PT_LOAD      | PF_R       | 1 << 32 |
 | stack     | PT_GNU_STACK | PF_R, PF_W | 2 << 32 |
 | heap      | PT_LOAD      | PF_R, PF_W | 3 << 32 |
-| symbols   | PT_NONE      |            | 1 << 63 |
 
 For each of these predefined program headers:
 
@@ -90,32 +90,6 @@ For each of these predefined program headers:
 - `p_align` is ignored
 
 If any check fails `ElfParserError::InvalidProgramHeader` must be thrown.
-
-### Dynamic symbol table
-
-For each entry in the dynamic symbol table:
-
-- if `st_info` does not contain `STT_FUNC` it is ignored, otherwise:
-- the first `st_value` must be the start of the first program header,
-otherwise `ElfParserError::OutOfBounds` must be thrown
-- every subsequent `st_value` must be the end of the last
-(`st_value + st_size`), otherwise `ElfParserError::OutOfBounds` must be thrown
-- the `st_size` must be greater zero and evenly divisible by 8 bytes (the
-instruction size), otherwise `ElfParserError::InvalidSize` must be thrown
-- `st_value + st_size` must not be greater than the end of the first program
-header, otherwise `ElfParserError::OutOfBounds` must be thrown
-- the last `st_value + st_size` must end at the end of the first program
-header, otherwise `ElfParserError::OutOfBounds` must be thrown
-- the symbol is registered in the function registry for the subsequent
-bytecode verification pass
-
-In other words the `STT_FUNC` symbols must form an ordered
-[partition](https://en.wikipedia.org/wiki/Partition_of_a_set) of the virtual
-address space of the first program header.
-
-The `e_entry` filed of the file header must be a `STT_FUNC` entry in the
-dynamic symbol table, otherwise `ElfParserError::InvalidFileHeader` must be
-thrown.
 
 ## Impact
 
