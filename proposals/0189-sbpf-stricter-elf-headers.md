@@ -34,6 +34,9 @@ None.
 
 ## Detailed Design
 
+The following must go into effect if and only if a program indicates the
+SBPF-version v3 or higher in its program header (see SIMD-0161).
+
 ### File header
 
 The file size must not be less than `size_of::<Elf64Ehdr>()` (64 bytes),
