@@ -39,6 +39,18 @@ are currently allowed but make no sense and are even dangerous for dApps:
 - Syscall slice parameters
   - Bad read and write accesses which span nonsensical ranges go unnoticed
 
+Furthermore, at the moment all validator implementations have to copy
+(and compare) data in and out of the virtual memory of the virtual machine.
+There are four possible account data copy paths:
+
+- Serialization: Copy from program runtime (host) to virtual machine (guest)
+- CPI call edge: Copy from virtual machine (guest) to program runtime (host)
+- CPI return edge: Copy from program runtime (host) to virtual machine (guest)
+- Deserialization: Copy from virtual machine (guest) to program runtime (host)
+
+By restricting the allowed behavior of dApps we enable the validator to map
+account payload data directly, avoiding copies and compares.
+
 ## Alternatives Considered
 
 None.
