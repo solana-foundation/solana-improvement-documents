@@ -28,6 +28,11 @@ The new syscall instruction introduced in SIMD-0178 permits the
 differentiation of internal and external calls, so we can introduce new 
 verification rules to prevent any unwarranted behavior.
 
+Another motivitation is to have the ability to treat functions as
+self-contained compilation units, allowing a hybrid virtual machine that works 
+with both JIT compilation and an interpreter, depending on the trade off 
+between performance and compilation time on a per function basis.
+
 ## New Terminology
 
 None.
@@ -35,12 +40,27 @@ None.
 ## Detailed Design
 
 The following must go into effect if and only if a program indicates the SBF 
-version XX or higher in its ELF header e_flags field, according to the 
+version `0x3` or higher in its ELF header e_flags field, according to the 
 specification of SIMD-0161.
+
+### Restrict functions' first instruction
+
+Since SIMD-0166, SBPF functions can modify the stack pointer using the 
+`add64 r10, imm` (opcode `0x07`) with the restriction that `r10` is the 
+destination register and the source is an immediate value.
+
+The instruction `add64 r10, imm` must be used as a marker for a function 
+start. Therefore, the verifier must enfroce that functions start with 
+an `add64 r10, imm` instruction that modifies the stack pointer `r10`, without 
+any restriction for the immediate value.
+
+The only exception to this requirement is the first function in the ELF 
+text area. Since the first instruction in the ELF can only represent a 
+function beginning, the verifier must not require it to be an `add64 r10, imm`.
 
 ### Restrict functions’ last instruction
 
-Functions must only end with the `ja` (opcode `0x05`) or the exit (opcode 
+Functions must only end with the `ja` (opcode `0x05`) or the return (opcode 
 `0x9D` since SIMD-0178) instruction. Allowing calls to be the last instruction 
 of functions was inconvenient, because when the call returns, and there is no 
 other instruction to redirect the control flow, we will execute the very next 
@@ -52,15 +72,12 @@ Offending this new validation condition must throw an
 
 This SIMD introduces in the two following subsections restrictions for jump 
 destinations to be verified both during runtime and during verification time. 
-They depend on knowing beforehand which program counter addresses represent a 
-valid function and the address range of each function.
+They depend on knowing beforehand which program counter addresses represent 
+valid function starts.
 
-For that, we must rely on the ELF symbol table as the only source of truth, 
-as specified in SIMD-178. The ELF symbol table must include function symbols 
-and specify their start address and their range. We must register such symbols 
-as valid functions for verification and runtime checks. Additionally, the 
-contract's entrypoint function must also be registered as a valid function 
-according to the aforementioned rules.
+As previously mentioned, except for the first function in the ELF, 
+`add64 r10, imm` must represent the start of a function, so validation must 
+rely on this instruction as a source of truth.
 
 #### Restrict jump instruction destination
 
@@ -69,40 +86,23 @@ All jump instructions, except for `call` (opcode `0x85`) and `callx` (opcode
 to arbitrary locations hinders a precise program verification. 
 `VerifierError::JumpOutOfCode` must be thrown for offending this rule.
 
-Such a check can be broken down in the following steps:
-
-1. The verifier keeps track of which function it is currently analyzing and 
-scans all instructions.
-2. When it finds a jump instruction, it checks if the jump destination is 
-within the current function's range.
-3. When it reaches the final address of the function, it advances to the next 
-symbol in the symbol table, which contains the next function's start address 
-and range.
-
 `call imm` (opcode `0x85`) must only be allowed to jump to a program counter 
-previously registered as the start of a function. Otherwise 
-`VerifierError::InvalidFunction` must be thrown. Functions are registered by 
-presence in the symbol table, according to the previous sention's explanation.
+that points to an `add64 r10, imm` instruction. Otherwise 
+`VerifierError::InvalidFunction` must be thrown.
 
 #### Runtime check for callx
 
 The jump destination of `callx` (opcode `0x8D`) must be checked during 
-execution time to match the initial address of a registered function. If this 
-is not the case, a `EbpfError::UnsupportedInstruction` must be thrown. This 
-measure is supposed to improve security of programs, disallowing the malicious 
-use of callx.
+execution time to be an `add64 reg, imm` instruction. If this is not the case, 
+a `EbpfError::UnsupportedInstruction` must be thrown. This measure is supposed 
+to improve security of programs, disallowing the malicious use of callx.
 
-A function is registered according to the rules mentioned in the previous 
-section.
+### Prevent calls to middle of LLDW instruction
 
-### Limit where a function can start
-
-Presently, functions may start in any part of the ELF text section, however 
-this is an encumbrance when it comes to `lddw` (opcode `0x18`) instructions. 
-As they occupy two instruction slots in an ELF, it is possible for functions 
-to start between these lddw slots, very likely resulting in undesired 
-behavior. The verifier must throw an `VerifierError::JumpToMiddleOfLddw` error 
-when that is the case.
+As `lddw` (opcode `0x18`) occupies two instruction slots in an ELF, it is 
+possible for call instrcutions to jump in between these lddw slots, very 
+likely resulting in undesired behavior. The verifier must throw an 
+`VerifierError::JumpToMiddleOfLddw` error when that is the case.
 
 ### Removal of ExecutionOverrun error
 
@@ -118,7 +118,7 @@ None.
 ## Impact
 
 The changes proposed in this SIMD are transparent to dApp developers. The 
-compiler toolchain will emit correct code for the specified SBF version. The 
+compiler toolchain will emit correct code for the specified SBPF version. The 
 enhanced verification restrictions will improve the security of programs 
 deployed to the blockchain, filtering out unwarranted behavior that could be 
 used with malicious intents.
