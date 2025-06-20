@@ -17,13 +17,25 @@ A new upgradeable loader which only requires a single account per program.
 ## Motivation
 
 Loader-v3, which is currently the only deployable loader, requires two accounts
-per program. This was a workaround to circumvent the finality of the
-`is_executable` flag, which is removed in SIMD-0162. Consequentially, this
-setup of the program account being a proxy account, containing the address of
-the actual program data account, is no longer necessary and should be removed.
+per program. And has three account types: Program, program-data and buffer.
+This was a workaround to circumvent the finality of the `is_executable` flag,
+which will be ignored by the program runtime from SIMD-0162 onwards.
+Consequentially, this setup of the program account being a proxy account,
+containing the address of the actual program data account, is no longer
+necessary and should be removed. Likewise the distinction of executable program
+accounts and non-executable buffer accounts is also no longer necessary and
+should be removed as well.
+
+In loader-v3 every instruction which modified the program data had to re-verify
+the ELF in the end. Instead we are now aiming for a more modular workflow which
+explicates these steps in a Retract-Modify-Redeploy sequence of instructions
+that allows multiple modifications to share one verification of the ELF in the
+end. This sequence can be a single transaction or split across multiple
+transactions.
 
 Another issue with loader-v3 is that the executable file stored in the
 programdata account is misaligned relative to the beginning of the account.
+This currently requires a copy in the ELF loader to re-align the program.
 
 Additionally, there currently is no complete specification of the loaders
 program management instructions. This proposal would thus fill that gap once
