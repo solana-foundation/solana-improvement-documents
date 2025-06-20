@@ -12,7 +12,7 @@ feature: TBD
 
 ## Summary
 
-Increase the per account CU limit from 12M to 20M.
+Increase the per account CU limit from a static 12M to 40% of the block CU limit.
 
 ## Motivation
 
@@ -41,7 +41,7 @@ limits:
 | Type | Current Block Limit | SIMD-0256 Limit | SIMD-0286 Limit | Proposed Block Limit |
 |------|-----|---------------|---------------------|
 | Max Block Units | 50M | 60M | 100M | 60M |
-| Max Writable Account Units | 12M | 12M  | 12M | 20M |
+| Max Writable Account Units | 12M | 12M  | 12M | 40% of Max Block Units (24M) |
 | Max Vote Units | 36M | 36M  | 36M  | 36M |
 | Max Block Accounts Data Size Delta | 100MB | 100MB | 100MB | 100MB |
 
@@ -59,7 +59,8 @@ development dependencies.
 
 ## Alternatives Considered
 
-Killing per account limits altogether. But this is too easy to attack by aggressively targeting a single account up to the global CU limit.
+Killing per account limits altogether. But this is too easy to attack by
+aggressively targeting a single account up to the global CU limit.
 
 ## Impact
 
@@ -69,12 +70,12 @@ could impact slot times for some unforeseen cases.
 
 ## Security Considerations
 
-- Blocks may take longer to execute, slowing down network progress and catchup times.
+Blocks may take longer to execute, slowing down network progress and catchup times.
 
 ## Drawbacks *(Optional)*
 
-- Larger blocks may cause unforseen issues in infrastructure beyond the
-  validators.
+Increasing the CU limit for single account will increase worst case serialized
+execution, which could increase block verification and/or slot time.
 
 ## Backwards Compatibility *(Optional)*
 
