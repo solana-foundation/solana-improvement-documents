@@ -19,24 +19,28 @@ simplify the address translation logic and allow for easy direct mapping.
 
 ## Motivation
 
-At the moment all validator implementations have to copy (and compare) data in
-and out of the virtual memory of the virtual machine. There are four possible
-account data copy paths:
+Direct mapping of the account payload data is enabled by SIMD-0219.
+However, there remains a big optimization potential for both programs and the
+program runtime:
 
-- Serialization: Copy from program runtime (host) to virtual machine (guest)
-- CPI call edge: Copy from virtual machine (guest) to program runtime (host)
-- CPI return edge: Copy from program runtime (host) to virtual machine (guest)
-- Deserialization: Copy from virtual machine (guest) to program runtime (host)
+- Instruction data could be mapped directly as well
+- Return data could be mapped directly too
+- Account payload could be resized freely (no more 10 KiB growth limit)
+- CPI could become cheaper in terms of CU consumption
+- Most structures could be shared between programs and program runtime,
+requiring only a single serialization at the beginning of a transaction and
+only small adjustments after
+- Per instruction serialization before a program runs could be removed entriely
+- Per instruction deserialization after a program runs could be removed too
+- Deserialization inside the dApp could be reduced to a minimum
+- programs would only have to pay for what they use, not having to deserialize
+all instruction accounts which were passed in
+- Scanning sibling instructions would not require a syscall
+- Memory regions (and thus address translation) which SIMD-0219 made unaligned
+could be aligned (to 4 GiB) again
 
-To avoid this, a feature named "direct mapping" was designed which uses the
-address translation logic of the virtual machine to emulate the serialization
-and deserialization without actually performing copies.
-
-Implementing direct mapping in the current ABI v0 and v1 is very complex
-because of unaligned virtual memory regions and memory accesses overlapping
-multiple virtual memory regions. Instead the layout of the virtual address
-space should be adjusted so that all virtual memory regions are aligned to
-4 GiB.
+All of these however do necessitate a major change in the layout how the
+program runtime and programs interface (ABI).
 
 ## Alternatives Considered
 
