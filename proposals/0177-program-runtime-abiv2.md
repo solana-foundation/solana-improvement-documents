@@ -98,6 +98,8 @@ updated at each CPI call edge. The contents of this region are the following:
 
 - For each instruction in transaction:
   - Index in transaction of program account to be executed: `u64`
+  - CPI nesting level: `u16`
+  - Index of parent instruction (`u16::MAX` for top-level instructions): `u16`
   - Reference to a slice of instruction accounts `&[InstructionAccount]`, 
     consisting of:
     - Pointer to beginning of slice: `u64`
