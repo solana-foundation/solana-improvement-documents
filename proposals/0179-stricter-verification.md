@@ -58,6 +58,10 @@ The only exception to this requirement is the first function in the ELF
 text area. Since the first instruction in the ELF can only represent a 
 function beginning, the verifier must not require it to be an `add64 r10, imm`.
 
+As a corollary of this definition, a function must only have a single 
+`add64 r10, imm` instruction. A second one would consequently indicate the 
+start of another adjacent function.
+
 ### Restrict functions’ last instruction
 
 Functions must only end with the `ja` (opcode `0x05`) or the return (opcode 
