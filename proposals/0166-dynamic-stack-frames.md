@@ -86,6 +86,12 @@ The stack frame gaps feature, which creates a memory layout where frames are
 interleaved with equally sized gaps, are not compatible with dynamic stack 
 frames and must be deactivated.
 
+The VM must maintain a shadow stack to reset the stack pointer to the value 
+in usage at the caller function when the callee returns via either the `exit` 
+(opcode `0x95`) or the `return` instruction (opcode `0x9D`). This setting 
+entails that a function does not need to manually adjust the stack pointer 
+to its original value with a second `add64 reg, imm` instruction at its end.
+
 ### Stack alignment
 
 We want to enforce that the stack pointer remains aligned, therefore R10 must 
