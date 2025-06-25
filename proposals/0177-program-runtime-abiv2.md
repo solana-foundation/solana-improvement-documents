@@ -159,7 +159,6 @@ information about the transaction and the instructions.
 Changes to the account metadata must now be communicated with specific 
 syscalls, as detailed below:
 
-- `sol_resize_account`: Dst account, new length as `u64`
 - `sol_assign_owner`: Dst account, new owner as `&[u8; 32]`
 - `sol_transfer_lamports`: Dst account, src account, amount as `u64`
 
