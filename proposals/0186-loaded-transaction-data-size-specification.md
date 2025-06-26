@@ -114,6 +114,35 @@ Account size for programs owned by LoaderV4 is left undefined. This SIMD should
 be amended to define the required semantics before LoaderV4 is enabled on any
 network.
 
+### Sidebar: Program ID and Loader Validation
+
+After all accounts are loaded, if the transaction's size comes at or under its
+loaded accounts data size limit, the program IDs of each instruction, along with
+their program owners, are validated. This process is unrelated to the rest of
+this SIMD, but is not defined elsewhere, so we define it here.
+
+The process is as follows; for each instruction's program ID:
+
+* Verify the account exists.
+* If [SIMD-0162](
+https://github.com/solana-foundation/solana-improvement-documents/pull/162)
+has not been activated, verify the program account is marked executable. When
+SIMD-0162 is active, skip this step.
+* Verify the program account's owner is one of:
+    * `NativeLoader1111111111111111111111111111111`
+    * `BPFLoader1111111111111111111111111111111111`
+    * `BPFLoader2111111111111111111111111111111111`
+    * `BPFLoaderUpgradeab1e11111111111111111111111`
+    * `LoaderV411111111111111111111111111111111111`
+
+If any of these conditions are violated, loading is aborted and the transaction
+pays fees.
+
+Previously, these checks were skipped if the program ID was
+`NativeLoader1111111111111111111111111111111` itself. This special case has been
+removed, and `NativeLoader1111111111111111111111111111111` behaves like any
+other account.
+
 ## Alternatives Considered
 
 * Transaction data size accounting is already enabled, so the null option is to
