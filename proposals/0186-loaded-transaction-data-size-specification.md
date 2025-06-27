@@ -118,8 +118,9 @@ network.
 
 After all accounts are loaded, if the transaction's size comes at or under its
 loaded accounts data size limit, the program IDs of each instruction, along with
-their program owners, are validated. This process is unrelated to the rest of
-this SIMD, but is not defined elsewhere, so we define it here.
+their program owners, are validated. This process is not part of determining
+loaded transaction data size, but it is part of account loading (and consensus),
+and it is not explicitly defined elsewhere. So we define it here.
 
 The process is as follows; for each instruction's program ID:
 
@@ -138,7 +139,12 @@ SIMD-0162 is active, skip this step.
 If any of these conditions are violated, loading is aborted and the transaction
 pays fees.
 
-Previously, these checks were skipped if the program ID was
+Previously, instead of a hardcoded list of valid loaders, the program owner was
+loaded and verified to be executable and itself owned by
+`NativeLoader1111111111111111111111111111111`. This is undesirable because there
+are many programs which match this criteria but are in fact not program loaders.
+
+Previously, all checks were skipped if the program ID was
 `NativeLoader1111111111111111111111111111111` itself. This special case has been
 removed, and `NativeLoader1111111111111111111111111111111` behaves like any
 other account.
