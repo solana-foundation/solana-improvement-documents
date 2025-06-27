@@ -7,7 +7,7 @@ authors:
   - Lucas Steuernagel
 category: Standard
 type: Core
-status: Review
+status: Implemented
 created: 2024-08-19T00:00:00.000Z
 feature: null
 supersedes: null
@@ -146,10 +146,9 @@ one, often reaching the 4096 bytes limit. Refer to issues
 [#1186](https://github.com/anza-xyz/agave/issues/1186) and 
 [#1158](https://github.com/anza-xyz/agave/issues/1158).
 
-We also expect some improvements in program execution. For functions with no 
-stack usage, we will not emit the additional instruction that modifies R10. 
-Furthermore, for function calls that handle more than five arguments, there 
-will be one less store and one less load operation due to the new call convention.
+We also expect some improvements in program execution. For function calls that 
+handle more than five arguments, there will be one less store and one less 
+load operation due to the new call convention.
 
 ## Security Considerations
 
