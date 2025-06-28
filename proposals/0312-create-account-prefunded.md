@@ -28,7 +28,7 @@ wallet address and permanently locking its lamports after `allocate` and
 However, it is common practice to provide rent lamports to accounts prior to
 the actual creation (allocation and assigning) of the account space, rather
 than forcing the payer of the ATA account creation transaction to provide
-all of the required lamports. In this and similar instances, developers 
+all of the required lamports. In this and similar instances, developers
 currently must manually construct a patched `CreateAccount` call of their
 own with 2-3 CPI calls: sometimes `Transfer`, then `Allocate`, and then
 `Assign`. While these actions themselves are minimally expensive, the overhead
@@ -84,8 +84,9 @@ CPI improvements can land.
 
 ## Impact
 
-The primary impact is a reduction in CPI overhead for applications which
-currently perform these operations manually across 2 to 3 instructions.
+The primary impact is an available reduction in CPI overhead for programs
+which currently must perform these operations manually across 2 to 3
+CPIs.
 
 ## Security Considerations
 
