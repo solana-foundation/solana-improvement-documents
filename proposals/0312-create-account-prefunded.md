@@ -5,7 +5,7 @@ authors:
   - Peter Keay
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2025-06-27
 feature: create-account-prefunded
 ---
