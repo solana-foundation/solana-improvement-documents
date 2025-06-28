@@ -85,8 +85,7 @@ CPI improvements can land.
 ## Impact
 
 The primary impact is a reduction in CPI overhead for applications which
-currently perform these operations manually across 2 to 3 instructions. Of
-the top 10 programs on Solana as of this writing, all 10 take this approach.
+currently perform these operations manually across 2 to 3 instructions.
 
 ## Security Considerations
 
