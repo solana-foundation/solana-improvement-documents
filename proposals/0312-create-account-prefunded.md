@@ -61,12 +61,13 @@ account's `lamports > 0`.
 
 ## Alternatives Considered
 
-* A separate `AllocateAndAssign` instruction. Multiple-instruction helpers
-like this incur short-term interface sprawl, at least ahead of future CPI
-improvements, but these are not just helpers for developer ergonomics; they
-prevent common activities from causing repetitive computation. Using
-`CreateAccountPrefunded` and specifying 0 lamports as the amount to transfer
-reduces interface sprawl without incurring any appreciable compute cost.
+* A separate `AllocateAndAssign` instruction. However, using
+`CreateAccountPrefunded` is appropriate for a caller needing to `allocate`
+and `assign`, as `transfer` is called to top up the storage rent
+requirement only if current lamports are insufficient (equivalent to how an
+instruction named `AllocateAndAssignAndMaybeTransfer` would function).
+A separate `AllocateAndAssign` would save one check, but the compute savings 
+may not be enough to justify the resulting interface sprawl.
 
 ## Drawbacks
 
