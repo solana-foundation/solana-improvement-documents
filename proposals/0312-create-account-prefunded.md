@@ -66,7 +66,7 @@ account's `lamports > 0`.
 and `assign`, as `transfer` is called to top up the storage rent
 requirement only if current lamports are insufficient (equivalent to how an
 instruction named `AllocateAndAssignAndMaybeTransfer` would function).
-A separate `AllocateAndAssign` would save one check, but the compute savings 
+A separate `AllocateAndAssign` would save one check, but the compute savings
 may not be enough to justify the resulting interface sprawl.
 
 ## Drawbacks
