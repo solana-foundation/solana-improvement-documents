@@ -48,8 +48,6 @@ from `CreateAccountPrefunded`.
 
 ## New Terminology
 
-No new terms are introduced by this SIMD, however we define these for clarity:
-
 * Prefunded: an account which receives lamports to pay for its rent in whole
 or in part before its space is `allocate`d and its owner is `assign`ed.
 
@@ -68,10 +66,20 @@ requirement only if current lamports are insufficient (equivalent to how an
 instruction named `AllocateAndAssignAndMaybeTransfer` would function).
 A separate `AllocateAndAssign` would save one check, but the compute savings
 may not be enough to justify the resulting interface sprawl.
+* Redesigning CPIs. The current CPI model spins up a new context for every
+invocation - re-copying and re-verifying account and signer data. A CPI
+redesign ​could slash this overhead for innumerable programs, but such a
+redesign would involve extensive implementation and audit time. By contrast,
+`CreateAccountPrefunded` delivers quick compute savings for a common pattern
+with minimal surface area. Instruction-batching helpers such as
+`CreateAccountPrefunded` and `CreateAccount` can be deprecated whenever
+CPI improvements land, enabling such helpers to become library-level functions
+rather than system instructions.
 
 ## Drawbacks
 
-Interface sprawl
+Interface sprawl. As mentioned, this is a temporary compromise until
+CPI improvements can land.
 
 ## Impact
 
