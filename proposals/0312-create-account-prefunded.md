@@ -27,13 +27,14 @@ wallet address and permanently locking its lamports after `allocate` and
 
 However, it is common practice to provide rent lamports to accounts prior to
 the actual creation (allocation and assigning) of the account space, rather
-than forcing the `payer` of the ATA account creation transaction to provide
-all of the required lamports. In this and similar instances, developers must
-manually construct a patched `CreateAccount` call of their own with 2-3 CPI
-calls: sometimes `Transfer`, then `Allocate`, and then `Assign`. While these
-actions themselves are minimally expensive, the overhead incurred with every
-Cross-Program Invocation - depth check, signer check, account copy, etc. -
-can make up the bulk of the computation done in the transaction.
+than forcing the payer of the ATA account creation transaction to provide
+all of the required lamports. In this and similar instances, developers 
+currently must manually construct a patched `CreateAccount` call of their
+own with 2-3 CPI calls: sometimes `Transfer`, then `Allocate`, and then
+`Assign`. While these actions themselves are minimally expensive, the overhead
+incurred with every Cross-Program Invocation - depth check, signer check,
+account copy, etc. - can make up the bulk of the computation done in the
+transaction.
 
 `CreateAccountPrefunded` performs `allocate`, `assign`, and `transfer`
 without asserting that the created account has zero lamports. Applications
