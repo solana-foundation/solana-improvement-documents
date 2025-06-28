@@ -20,7 +20,7 @@ of account creation.
 
 The existing `CreateAccount` wrapper instruction creates accounts within a
 program by use of `transfer`, `allocate`, and `assign`. However,
-`CreateAccount` fails if `lamports == 0`. This was intended as a protection
+`CreateAccount` fails if `lamports > 0`. This was intended as a protection
 measure, preventing developers from accidentally passing in some normal
 wallet address and permanently locking its lamports after `allocate` and
 `assign`.
@@ -65,7 +65,7 @@ and `assign`, as `transfer` is called to top up the storage rent
 requirement only if current lamports are insufficient (equivalent to how an
 instruction named `AllocateAndAssignAndMaybeTransfer` would function).
 A separate `AllocateAndAssign` would save one check, but the compute savings
-may not be enough to justify the resulting interface sprawl.
+are likely not enough to justify the resulting interface sprawl.
 * Redesigning CPIs. The current CPI model spins up a new context for every
 invocation - re-copying and re-verifying account and signer data. A CPI
 redesign ​could slash this overhead for innumerable programs, but such a
