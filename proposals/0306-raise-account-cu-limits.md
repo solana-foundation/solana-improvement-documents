@@ -35,31 +35,41 @@ No new terms, but the following definitions are given for clarity:
 
 ## Detailed Design
 
-The following table shows the current block limits and the proposed block
+The following table shows the current block limits and future proposed block
 limits:
 
-| Type | Current Block Limit | SIMD-0256 Limit | SIMD-0286 Limit | Proposed Block Limit |
+| Type | Current Block Limit | SIMD-0256 Limit | SIMD-0286 Limit |
 |------|-----|---------------|---------------------|
-| Max Block Units | 50M | 60M | 100M | 60M |
-| Max Writable Account Units | 12M | 12M  | 12M | 40% of Max Block Units (24M) |
-| Max Vote Units | 36M | 36M  | 36M  | 36M |
-| Max Block Accounts Data Size Delta | 100MB | 100MB | 100MB | 100MB |
+| Max Block Units | 50M | 60M | 100M |
+| Max Writable Account Units | 12M | 12M  | 12M |
+| Max Vote Units | 36M | 36M  | 36M  |
+| Max Block Accounts Data Size Delta | 100MB | 100MB | 100MB |
+
+This proposal advocates to set `Max Writable Account Units` to 40% of `Max Block
+Units`. This will result in the following `Max Writable Account Units` for
+current and future proposed `Max Block Units`:
+
+| Block Limit | Max Block Units | Max Writable Account Units |
+| Current | 50M | 20M |
+| SIMD-0256 | 60M | 24M |
+| SIMD-0286 | 100M | 40M |
 
 This proposal only changes the `Max Writable Account Units` limit. The purpose
 is to increase amount of activity that can target a single account. The `Max
-Block Unit` is left unchanged from SIMD-0256. Further increases to global limit
-will be addressed with SIMD-0286. Increasing `Max Writeable Account Units` while
-leaving `Max Block Units` unchanged takes advantage of underutilized serial
-execution capacity.
+Block Unit` is left unchanged. Further increases to global limit will be
+addressed with SIMD-0286. Increasing `Max Writeable Account Units` while leaving
+`Max Block Units` unchanged takes advantage of underutilized serial execution
+capacity.
 
 The intention is for this to follow SIMD-0256 but activate before SIMD-0286
 (which has not merged yet). Rationale is that we are ready to handle this
 increased serialized execution today but the 100M CU increase has some
-development dependencies.
+development dependencies. That said, we will be capable of handling a scenario
+where SIMD-0286 merges and gets activated first.
 
 ## Alternatives Considered
 
-Killing per account limits altogether. But this is too easy to attack by
+Killing per account limits altogether. But this may be too easy to attack by
 aggressively targeting a single account up to the global CU limit.
 
 ## Impact
