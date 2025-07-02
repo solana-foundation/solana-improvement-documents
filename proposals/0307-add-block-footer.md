@@ -1,6 +1,6 @@
 ---
 simd: '0307'
-title: Add Block Header
+title: Add Block Footer
 authors:
   - jherrera-jump (Firedancer)
 category: Standard
@@ -14,7 +14,7 @@ development:
 
 ## Summary
 
-Add a block header to solana blocks and expose header fields in the
+Add a block footer to Solana blocks and expose Footer fields in the
 `getBlock` rpc endpoint.
 
 ## Motivation
@@ -34,7 +34,7 @@ timestamps. Unfortunately there are some problems with the current approach:
 - Vote timestamps will be removed with Alpenglow.
 
 This SIMD solves these issues by including relevant information in a static
-block header.
+block footer.
 
 ## New Terminology
 
@@ -63,19 +63,19 @@ set contains a handful of shreds (~32). Once sufficient shreds are available
 the raw block data is reconstructed and reinterpreted as an array of entry
 batches. Entry batches do not cross shred boundaries.
 
-This SIMD add the following header at the beginning of the raw block data. This
+This SIMD add the following footer at the end of the raw block data. This
 puts it on the same abstraction layer as serialized entry batch data. Put
-differently, the serialized header will be prepended to the first serialized
+differently, the serialized footer will be appended after the last serialized
 entry batch in the block.
 
 ```
-           Block Header Layout
+           Block Footer Layout
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_header_flag           (64 bits) |
+| block_footer_flag           (64 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | version                     (64 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| header_length               (16 bits) |
+| footer_length               (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | block_producer_time_nanos   (64 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -84,25 +84,29 @@ entry batch in the block.
 | block_user_agent        (0-255 bytes) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-Note that header fields are packed together without any alignment requirements
+Note that footer fields are packed together without any alignment requirements
 or padding.
 ```
 
-- `block_header_flag: u64` will always be zero. The first 8 bytes of an entry
+- `block_footer_flag: u64` will always be zero. The first 8 bytes of an entry
 batch are always a positive number (the number of entries in the batch), so
-this flag allows parsers to differentiate between a normal entry batch and one
-with a header prepended. Though not strictly necessary, this may facilitate
-parsing block data, and allows us to make the header optional if we ever need
-to.
+this flag allows parsers to differentiate the footer from a normal entry batch.
+This facilitates parsing block data and would also allow us to make the footer
+optional if that's ever needed.
 
 - `version: u64` is a positive integer which changes anytime a change is made to
-the header. The initial version will be 1.
+the footer. The initial version will be 1.
 
-- `header_length: u16` is the length of the rest of the header in bytes (i.e.
-not including the `block_header_flag`, `version`, and `header_length` fields).
+- `footer_length: u16` is the length of the rest of the footer in bytes (i.e.
+not including the `block_footer_flag`, `version`, and `footer_length` fields).
 
 - `block_producer_time_nanos: u64` is a nanosecond UNIX timestamp representing
 the time when the block producer started constructing the block.
+"started constructing" is the point at which, from the perspective of the
+leader, all of the consensus checks required for assuming leadership have
+"just passed". For example, in Agave's pre-alpenglow implementations, this would
+be in replay/maybe_start_leader. In a post-Alpenglow implementation, this would
+be after receiving the proper vote/skip certificate for the previous slot.
 
 - `block_user_agent_len: u8` the length of the `block_user_agent` string in
 bytes.
@@ -111,16 +115,16 @@ bytes.
 provides identifying information about the block producer.
 
 Any other fields that are deemed necessary in the future may be added with a
-corresponding change to `version` / `header_length`. For example, SIMD
+corresponding change to `version` / `footer_length`. For example, SIMD
 [0298](https://github.com/solana-foundation/solana-improvement-documents/pull/298)
-proposes a field header, which could be added as a subsequent SIMD (or even
+proposes a header field, which could be added as a subsequent SIMD (or even
 folded into this one).
 
-### Header Field Specification
+### Footer Field Specification
 
-Header fields will be unilaterally populated by their respective block producer
+Footer fields will be unilaterally populated by their respective block producer
 without any enforced constraint on their contents. This SIMD includes the
-following fields in the header
+following fields in the footer
 
 - `block_producer_time_nanos`: u64
 - `block_user_agent_len`: u8
@@ -180,10 +184,10 @@ agave/v3.0.0 (doublezero) greedy-scheduler/v3 (mode:perf; another-flag)
 
 ### RPC Protocol Changes
 
-The `getBlock` RPC response will be extended to, optionally, include all header
-fields. The request will be extended with the `header` parameter, which lets
-the client signal that they want the header fields in the response. By default,
-header fields will be included in the response.
+The `getBlock` RPC response will be extended to, optionally, include all footer
+fields. The request will be extended with the `footer` parameter, which lets
+the client signal that they want the footer fields in the response. By default,
+footer fields will be included in the response.
 
 Sample Request Payload
 
@@ -199,7 +203,7 @@ Sample Request Payload
       "maxSupportedTransactionVersion": 0,
       "transactionDetails": "full",
       "rewards": false,
-      "header": true
+      "footer": true
     }
   ]
 }
@@ -217,7 +221,7 @@ Sample Response Payload
     "blockhash": "3Eq21vXNB5s86c62bVuUfTeaMif1N2kUqRPBmGRJhyTA",
     "parentSlot": 429,
     "previousBlockhash": "mfcyqEXB3DnHXki6KjjmZck6YjmZLvpAByy2fj4nh6B",
-    "header": {
+    "footer": {
         "blockProducerTimeNanos": 1750176982899968023,
         "blockUserAgent": "agave/v3.0.0 (doublezero) greedy-scheduler/v3 (mode:perf; another-flag)",
     },
@@ -246,7 +250,7 @@ Sample Response Payload
               "SysvarC1ock11111111111111111111111111111111",
               "Vote111111111111111111111111111111111111111"
             ],
-            "header": {
+            "footer": {
               "numReadonlySignedAccounts": 0,
               "numReadonlyUnsignedAccounts": 3,
               "numRequiredSignatures": 1
@@ -272,6 +276,13 @@ Sample Response Payload
 ```
 <!-- markdownlint-restore -->
 
+### Mandating the block footer
+
+While it is possible to make the block footer optional thanks to the
+`block_footer_flag` field, this proposal makes it mandatory. Blocks that don't
+include a valid footer in the block payload will be flagged as dead blocks and
+skipped by the other nodes in the cluster.
+
 ## Alternatives Considered
 
 - Do nothing
@@ -279,7 +290,7 @@ Sample Response Payload
     won't be able to estimate at all when votes are changed in alpenglow.
   - We will continue to have an incomplete, ephemeral record of who produced
     blocks.
-- derive timestamp header field from consensus and enforce user agent format
+- derive timestamp footer field from consensus and enforce user agent format
   - This can and probably should be implemented as a future SIMD. Meanwhile,
     these fields are still useful since
     1. most of the cluster is expected to
@@ -297,11 +308,11 @@ Sample Response Payload
 This change will enable more reliable monitoring and benchmarking for operators
 and for the community. Clients and indexers will need to extend both in-memory
 and long-term block storage to be aware of the new columns added to the block
-header. The client rpc engine will need to change to support the new fields.
+footer. The client rpc engine will need to change to support the new fields.
 
 ## Security Considerations
 
-- The header fields are untrusted and purely informational. Tools that expose
+- The footer fields are untrusted and purely informational. Tools that expose
   these fields to external users should clearly communicate their untrusted
   nature.
 
@@ -314,6 +325,6 @@ header. The client rpc engine will need to change to support the new fields.
 - RPC requests for old slots should properly document and return a suitable
   default value (e.g. None).
 - Clients that don't implement this SIMD will reject new blocks because they
-will fail to parse the new header.
-- Because this header is mandatory, leaders that produce blocks without a
-header will skip, since the header is required.
+will fail to parse the new footer.
+- Because this footer is mandatory, leaders that produce blocks without a
+footer will skip.
