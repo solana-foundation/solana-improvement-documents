@@ -27,7 +27,7 @@ wallet address and permanently locking its lamports after `allocate` and
 
 However, it is common practice to provide rent lamports to accounts prior to
 the actual creation (allocation and assigning) of the account space, rather
-than forcing the payer of the ATA account creation transaction to provide
+than forcing the fee payer of the transaction to provide
 all of the required lamports. In this and similar instances, developers
 currently must manually construct a patched `CreateAccount` call of their
 own with 2-3 CPI calls: sometimes `Transfer`, then `Allocate`, and then
