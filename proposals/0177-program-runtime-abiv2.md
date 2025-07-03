@@ -57,14 +57,13 @@ v4 or above.
 
 ### Memory Regions
 
-#### Transaction area
+#### Transaction metadata area
 
 At the beginning of a transaction the program runtime must prepare a 
 readonly memory region starting at `0x400000000`. This region is shared by all 
 instructions running programs with support to new ABI. It must be updated as
-as instructions through out the transaction modify the account metadata, the
-CPI scratchpad or the return data. The contents of this memory region are the
-following:
+as instructions through out the transaction modify the CPI scratchpad or the 
+return data. The contents of this memory region are the following:
 
 - Key of the program which wrote to the return-data scratchpad most 
   recently: `[u8; 32]`
@@ -77,6 +76,16 @@ following:
 - Index of current executing instruction: `u64`
 - Number of instructions in transaction: `u64`
 - The number of transaction accounts: `u64`
+
+
+#### Account metadata area
+
+This region starts at `0x500000000`, is readonly and holds the metadata for 
+all accounts in the transaction. It is shared by all instructions running 
+programs with support for ABIv2, and must be updated as instruction modify the 
+metadata with the provided syscalls (see the `Changes to syscalls` section).
+The contents for this region are as follow:
+
 - For each transaction account:
   - Key: `[u8; 32]`
   - Owner: `[u8; 32]`
@@ -84,11 +93,6 @@ following:
   - Account payload: `&[u8]` which is composed of:
     - Pointer to account payload: `u64`
     - Account payload length: `u64`
-
-#### Return data scratchpad
-
-A writable memory region starting at `0x500000000` must be mapped in for the
-return-data scratchpad.
 
 #### Instruction area
 
@@ -102,7 +106,8 @@ updated at each CPI call edge. The contents of this region are the following:
   - Index of parent instruction (`u16::MAX` for top-level instructions): `u16`
   - Reference to a slice of instruction accounts `&[InstructionAccount]`, 
     consisting of:
-    - Pointer to beginning of slice: `u64`
+    - Pointer to beginning of slice: `u64` (points to the `0x700000000` 
+      region)
     - Number of elements in slice: `u64`
   - Instruction data `&[u8]`, which is composed of:
     - Pointer to data: `u64`
@@ -125,10 +130,15 @@ updated at each CPI call edge. This region contains an array of all
         - Signer flag: `u8` (1 for signer, 0 for non-singer)
         - Writable flag: `u8` (1 for writable, 0 for readonly)
 
+#### Return data scratchpad
+
+A writable memory region starting at `0x800000000` must be mapped in for the
+return-data scratchpad.
+
 ### Accounts area
 
 For each unique (meaning deduplicated) instruction account the payload must
-be mapped in at `0x800000000` plus `0x100000000` times the index of the
+be mapped in at `0x900000000` plus `0x100000000` times the index of the
 **transaction** account (not the index of the instruction account). Only if the
 instruction account has the writable flag set and is owned by the current
 program it is mapped in as a writable region. The writability of a region must
@@ -141,20 +151,21 @@ must NOT be mapped.
 ### Instruction payload area
 
 For each instruction, the runtime must map its payload at address 
-`0x10800000000` plus `0x100000000` times the index of the instruction in the 
+`0x10900000000` plus `0x100000000` times the index of the instruction in the 
 trasaction. All instruction payload mappings are readonly.
 
 One extra writable mapping must be created after the last instruction payload 
-area to be the CPI scratch pad, i.e. at address `0x10800000000` plus 
+area to be the CPI scratch pad, i.e. at address `0x10900000000` plus 
 `0x100000000` times the number of instructions in the transaction. Its purpose 
 is for programs to write CPI instruction data directly to it and avoid copies.
 
 ### VM initialization
 
 During the initilization of the virtual machine, the runtime must load the 
-value `0x400000000` in register `R1` and value `0x600000000` in register `R2`. 
-These values represent addresses for programs to easily find the areas to read 
-information about the transaction and the instructions.
+value `0x400000000` in register `R1`, value `0x500000000` in register `R2`, 
+and value `0x600000000` in register `R3`. These values represent addresses for 
+programs to easily find the areas to read information about the transaction 
+and the instructions.
 
 ### Changes to syscalls
 
