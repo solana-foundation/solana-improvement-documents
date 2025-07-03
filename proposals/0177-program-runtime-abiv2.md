@@ -111,7 +111,8 @@ updated at each CPI call edge. The contents of this region are the following:
 Let `InstrucionAccount` contain the following fields:
 
   - Index to transaction account: `u16`
-  - Flags bitfield: `u16` (bit 0 is signer, bit 1 is writable)
+  - Signer flag: `u8` (1 for signer, 0 for non-singer)
+  - Writable flag: `u8` (1 for writable, 0 for readonly)
 
 The second region is readonly and starts at `0x700000000`. It must also be 
 updated at each CPI call edge. This region contains an array of all 
@@ -121,7 +122,8 @@ updated at each CPI call edge. This region contains an array of all
   - For each account in instruction:
     - `InstructionAccount`, consisting of:
       - Index to transaction account: `u16`
-      - Flags bitfield: `u16` (bit 0 is signer, bit 1 is writable)
+        - Signer flag: `u8` (1 for signer, 0 for non-singer)
+        - Writable flag: `u8` (1 for writable, 0 for readonly)
 
 ### Accounts area
 
@@ -185,7 +187,8 @@ syscall `sol_invoke_signed_v2` must replace them. The parameters for
 - A slice `&[InstructionAccount]`, with each element `InstructionAccount` 
   containing, as previously mentioned:
   - Index to transaction account: `u16`
-  - Flags bitfield: `u16` (bit 0 is signer, bit 1 is writable)
+    - Signer flag: `u8` (1 for signer, 0 for non-singer)
+    - Writable flag: `u8` (1 for writable, 0 for readonly)
 
 Programs using `sol_get_return_data` and `sol_set_return_data` must be 
 rejected by the verfier if ABI v2 is in use.
