@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2024-08-15
-feature: 2aQJYqER2aKyb3cZw22v4SL2xMX7vwXBRWfvS4pTrtED
+feature: TBD
 extends: SIMD-0167
 ---
 
@@ -23,7 +23,33 @@ loader-v4.
 
 ## Alternatives Considered
 
-None.
+### Loader-v1 programs
+
+Programs of loader-v1 have ABI v0, which is incompatible with ABI v1 used
+by programs of loader-v2, v3 and v4. Thus there is no way to migrate these.
+
+### Loader-v2 programs
+
+The two loader-v3 accounts per program in their sum are always larger than
+the one resulting loader-v4 account. Thus there is no need for additional
+funding. This would not be the case when migrating from loader-v2. Meaning
+that expanding this SIMD to cover it as well would require a funding source.
+
+### Global Migration: Coordinated in valiator or out of validator
+
+The global migration could be implemented in the validator, however:
+
+- If the global migration mechanism is inside the validator, the risk of it
+being detrimental to block production outweights any possible benefits.
+- It would have to be coordinated across all validator implementations,
+tested, fuzzed, etc. simply a whole lot more work for something which is only
+used once.
+- It being triggered manually per program or once (via a feature gate) for all
+programs changes nothing about it being controlled by a single key.
+- The only difference is in having more fine granular control over the
+timing in when a specific programs migration is triggered.
+- Doing it outside of the validator allows for the process to be aborted or
+patched quickly in case things start going sideways.
 
 ## New Terminology
 
@@ -31,12 +57,7 @@ None.
 
 ## Detailed Design
 
-The feature gate must:
-
-- enable loader-v4 `LoaderV411111111111111111111111111111111111` program
-management and execution (see SIMD-0167).
-- enable the loader-v3 `BPFLoaderUpgradeab1e11111111111111111111111`
-instruction `UpgradeableLoaderInstruction::Migrate`.
+The feature gate must enable the new loader-v3 instruction.
 
 ### Loader-v3 Instruction: Migrate
 
@@ -51,8 +72,9 @@ instruction `UpgradeableLoaderInstruction::Migrate`.
   otherwise throw `NotEnoughAccountKeys`
   - Check that the program data account is writable,
   otherwise throw `InvalidArgument`
-  - Check that the program data was last modified before the current slot
-  if the program data has the state `ProgramData`,
+  - Check that the last modified slot (stored in the program data accounts
+  header) is less than the current slot if the program data has the state
+  `ProgramData`,
   otherwise throw `InvalidArgument`
   - Check that the provided authority is either:
     - the migration authority
@@ -67,26 +89,26 @@ instruction `UpgradeableLoaderInstruction::Migrate`.
   otherwise throw `InvalidArgument`
   - Check that the program account is owned by loader-v3,
   otherwise throw `IncorrectProgramId`
-  - Check that the program account has the state `Program`,
-  otherwise throw `InvalidAccountData`
-  - Check that the program account points to the program data account,
-  otherwise throw `InvalidArgument`
-  - Clear the program account (setting its size to zero)
-  - Transfer all funds from the program data account to the program account
-  - Assign ownership of the program account to loader-v4
-  - If the program data account was not closed / empty or uninitialized:
-    - CPI loader-v4 `SetProgramLength` the program account to the size of the
-    program data account minus the loader-v3 header size and use the migration
-    authority.
+  - If the program account has the state `Program` and
+  the referenced program data account is owned by loader-v3:
+    - Set the length of the program account to 0
+    - Transfer all funds from the program data account to the program account
+    - Assign ownership of the program account to loader-v4
+    - CPI loader-v4 `SetProgramLength` the program account to the program data
+    account size minus the loader-v3 header size (45 bytes) and use the
+    provided authority.
     - CPI loader-v4 `Copy` the program data account into the program account
     - CPI loader-v4 `Deploy` the program account
     - If the program data account was finalized (upgrade authority is `None`):
-      - CPI loader-v4 `Finalize` without a next version forwarding
+      - CPI loader-v4 `Finalize`
     - otherwise, if the program data account was not finalized and the
     migration authority (as opposed to the upgrade authority) was provided:
       - CPI loader-v4 `TransferAuthority` to the upgrade authority
-  - Clear the program data account (setting its size to zero)
-  - Assign ownership of the program data account to the system program
+    - Set the length of the program data account to 0 (removing the header too)
+  - otherwise, if the program account is empty, has the state `Buffer` or has
+  the state `Program` but the program data account is not owned by loader-v3:
+    - Set the length of the program account to 0
+  - Set the `is_executable` flag of the program account to `false`
 
 ## Impact
 
