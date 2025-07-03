@@ -23,7 +23,28 @@ loader-v4.
 
 ## Alternatives Considered
 
-None.
+### Loader-v1 and loader-v2 programs
+
+The two loader-v3 accounts per program in their sum are always larger than
+the one resulting loader-v4 account. Thus there is no need for additional
+funding. This would not be the case when migrating from older loaders. Meaning
+that expanding this SIMD to cover these as well would require a funding source.
+
+### Global Migration: Coordinated in valiator or out of validator
+
+The global migration could be implemented in the validator, however:
+
+- If the global migration mechanism is inside the validator, the risk of it
+being detrimental to block production outweights any possible benefits.
+- It would have to be coordinated across all validator implementations,
+tested, fuzzed, etc. simply a whole lot more work for something which is only
+used once.
+- It being triggered manually per program or once (via a feature gate) for all
+programs changes nothing about it being controlled by a single key.
+- The only difference is in having more fine granular control over the
+timing in when a specific programs migration is triggered.
+- Doing it outside of the validator allows for the process to be aborted or
+patched quickly in case things start going sideways.
 
 ## New Terminology
 
@@ -51,8 +72,9 @@ instruction `UpgradeableLoaderInstruction::Migrate`.
   otherwise throw `NotEnoughAccountKeys`
   - Check that the program data account is writable,
   otherwise throw `InvalidArgument`
-  - Check that the program data was last modified before the current slot
-  if the program data has the state `ProgramData`,
+  - Check that the last modified slot (stored in the program data accounts
+  header) is less than the current slot if the program data has the state
+  `ProgramData`,
   otherwise throw `InvalidArgument`
   - Check that the provided authority is either:
     - the migration authority
@@ -71,13 +93,13 @@ instruction `UpgradeableLoaderInstruction::Migrate`.
   otherwise throw `InvalidAccountData`
   - Check that the program account points to the program data account,
   otherwise throw `InvalidArgument`
-  - Clear the program account (setting its size to zero)
+  - Clear the program accounts payload data (setting its size to zero)
   - Transfer all funds from the program data account to the program account
   - Assign ownership of the program account to loader-v4
   - If the program data account was not closed / empty or uninitialized:
-    - CPI loader-v4 `SetProgramLength` the program account to the size of the
-    program data account minus the loader-v3 header size and use the migration
-    authority.
+    - CPI loader-v4 `SetProgramLength` the program account to the program data
+    account size minus the loader-v3 header size (45 bytes) and use the
+    provided authority.
     - CPI loader-v4 `Copy` the program data account into the program account
     - CPI loader-v4 `Deploy` the program account
     - If the program data account was finalized (upgrade authority is `None`):
@@ -85,8 +107,7 @@ instruction `UpgradeableLoaderInstruction::Migrate`.
     - otherwise, if the program data account was not finalized and the
     migration authority (as opposed to the upgrade authority) was provided:
       - CPI loader-v4 `TransferAuthority` to the upgrade authority
-  - Clear the program data account (setting its size to zero)
-  - Assign ownership of the program data account to the system program
+  - Clear the program data accounts payload data (setting its size to zero)
 
 ## Impact
 
