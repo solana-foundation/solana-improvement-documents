@@ -204,7 +204,7 @@ All program management instructions must cost 2000 CUs.
       - Transfer the surplus from the program account to the recipient account
     - otherwise, if the requested new size is zero throw `InvalidArgument`
   - If the requested new size is zero:
-    - Delete the entire program account, including the header
+    - Set the length of the program account to 0 (removing the header too)
   - If the requested new size is greater than zero:
     - Set the length of the program account to the requested new size plus
     the header size
