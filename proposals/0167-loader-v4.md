@@ -45,11 +45,29 @@ See impact for further motivation.
 
 ## Alternatives Considered
 
+### Hot swap redeployment
+
 A delay-visibility-free redeployment could be achieved by keeping the swap
 program around until the end of the slot. This would however mean that two
 accounts per program must be loaded until the dapp developer reclaims the
 second one. That would defy the purpose of this proposal which is to get rid
 of the proxy account.
+
+### Adding a loader-v3 status
+
+Instead of adding a loader-v3 status a new loader was added for the following
+reasons:
+
+- There is a lot of special casing throughout the validator for loader-v3,
+which does not apply to loader-v4.
+- The existing instruction interface of loader-v3 (e.g. the distinction
+of program account and programdata account) are incompatible with loader-v4.
+- Adding a new loader-v3 status would create new unforseen interactions with
+the existing status enum and instructions.
+- Modifying the existing loader-v3 implementation risks breaking it, while
+a independent new loader does not.
+- Loader-v3 is undocumented and unspecified. Starting fresh allows to have
+a complete implementation, specification and documentation.
 
 ## New Terminology
 
