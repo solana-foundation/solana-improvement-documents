@@ -61,12 +61,22 @@ arrangement of a typical network packet (e.g. MAC -> IP -> TCP -> HTTP). At the
 highest layer a block consists of some number (~100+) FEC sets. A single FEC
 set contains a handful of shreds (~32). Once sufficient shreds are available
 the raw block data is reconstructed and reinterpreted as an array of entry
-batches. Entry batches do not cross shred boundaries.
+batches. Entry batches are aligned with shred boundaries (i.e. they will
+start/stop at a shred boundary).
 
 This SIMD add the following footer at the end of the raw block data. This
 puts it on the same abstraction layer as serialized entry batch data. Put
 differently, the serialized footer will be appended after the last serialized
-entry batch in the block.
+entry batch in the block as its own pseudo-entry-batch. Parsers should,
+however, support the footer actually being placed anywhere in the block,
+between any other entry batches. The footer should be parsed as its own
+pseudo-entry-batch and will be differentiated from other entry batches using
+the `block_footer_flag` field. Allowing the footer anywhere in the block
+gives us the flexibility to fix it as a header or a footer in a future SIMD.
+Currently, we call it a "footer" and encourage block producers to add it to
+the end of the block since we think future SIMD's may require the footer to
+be computed after constructing the block (e.g. a new timing metric, async
+execution).
 
 ```
            Block Footer Layout
@@ -280,7 +290,7 @@ Sample Response Payload
 
 While it is possible to make the block footer optional thanks to the
 `block_footer_flag` field, this proposal makes it mandatory. Blocks that don't
-include a valid footer in the block payload will be flagged as dead blocks and
+include a valid footer in the block payload must be flagged as dead blocks and
 skipped by the other nodes in the cluster.
 
 ## Alternatives Considered
