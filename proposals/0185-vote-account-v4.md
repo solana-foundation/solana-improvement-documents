@@ -122,6 +122,9 @@ pub struct VoteStateV4 {
     /// NEW: reward amount pending distribution to stake delegators
     pub pending_delegator_rewards: u64,
 
+    /// NEW: compressed bls pubkey for alpenglow
+    pub bls_pubkey_compressed: Option<[u8; 48]>
+
     pub votes: VecDeque<LandedVote>,
     pub root_slot: Option<Slot>,
 
@@ -155,6 +158,7 @@ VoteStateV4 {
     inflation_rewards_commission_bps: 100u16 * (old_vote_state.commission as u16),
     block_revenue_commission_bps: 10_000u16,
     pending_delegator_rewards: 0u64,
+    bls_pubkey_compressed: None,
 
     // ..
 }
