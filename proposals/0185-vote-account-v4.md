@@ -153,8 +153,8 @@ above:
 VoteStateV4 {
     // ..
 
-    inflation_rewards_collector: Pubkey::default(),
-    block_revenue_collector: Pubkey::default(),
+    inflation_rewards_collector: vote_pubkey,
+    block_revenue_collector: old_vote_state.node_pubkey,
     inflation_rewards_commission_bps: 100u16 * (old_vote_state.commission as u16),
     block_revenue_commission_bps: 10_000u16,
     pending_delegator_rewards: 0u64,
