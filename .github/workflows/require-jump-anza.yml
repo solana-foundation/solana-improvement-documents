@@ -18,7 +18,7 @@ jobs:
 
             
             const jumpApprovers = ['jacobcreech', 'topointon-jump','0x0ece']
-            const anzaApprovers = ['benhawkins18', 't-nelson','sakridge']
+            const anzaApprovers = ['benhawkins18', 'tigarcia', 't-nelson','sakridge']
             //TODO: remove benhawkins18 and JacobCreech from the list of approvers and get final list from Jump and Anza
             
 
