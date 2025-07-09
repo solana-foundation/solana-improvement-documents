@@ -1,0 +1,50 @@
+name: Require 1 Jump + 1 Anza approval
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed, edited]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify approvals
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {github, context, core} = require('@actions/github')
+
+            
+            const jumpApprovers = ['jacobcreech', 'topointon-jump','0x0ece']
+            const anzaApprovers = ['benhawkins18', 't-nelson','sakridge']
+            //TODO: remove benhawkins18 and JacobCreech from the list of approvers and get final list from Jump and Anza
+            
+
+            // pull all reviews on this PR
+            const prNum = context.payload.pull_request.number
+            const {data: reviews} = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNum,
+              per_page: 100
+            })
+
+            // keep last state per reviewer
+            const latest = {}
+            reviews.forEach(r => latest[r.user.login] = r.state)
+            const approved = Object.entries(latest)
+                                   .filter(([,s]) => s === 'APPROVED')
+                                   .map(([u]) => u)
+
+            const hasJump = jumpApprovers.some(u => approved.includes(u))
+            const hasAnza = anzaApprovers.some(u => approved.includes(u))
+
+            core.summary.addHeading('Jump + Anza approval check')
+                        .addRaw(`Jump: **${hasJump ? '✔︎' : '✘'}**  •  ` +
+                                `Anza: **${hasAnza ? '✔︎' : '✘'}**`).write()
+
+            if (!hasJump || !hasAnza) {
+              core.setFailed('Need at least one Jump and one Anza approval')
+            }
