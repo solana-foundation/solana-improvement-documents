@@ -14,9 +14,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const {github, context, core} = require('@actions/github')
 
-            
             const jumpApprovers = ['jacobcreech', 'topointon-jump','0x0ece']
             const anzaApprovers = ['benhawkins18', 'tigarcia', 't-nelson','sakridge']
             //TODO: remove benhawkins18 and JacobCreech from the list of approvers and get final list from Jump and Anza
