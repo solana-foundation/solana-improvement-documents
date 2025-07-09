@@ -87,16 +87,16 @@ instruction `UpgradeableLoaderInstruction::Migrate` (see SIMD-0315).
 Accounts of programs owned by loader-v4 must have the following layout:
 
 - Header (which is 48 bytes long):
+  - `u64` status enum:
+    - Enum variant `0u64`: Uninitialized, program needs to be initialized
+    - Enum variant `1u64`: Retracted, program is in maintenance
+    - Enum variant `2u64`: Deployed, program is ready to be executed
+    - Enum variant `3u64`: Finalized, same as `Deployed`, but can not be
+    modified anymore
   - `u64` Slot in which the program was last deployed, retracted or
   initialized.
   - `[u8; 32]` Authority address which can send program management
-  instructions. Or if the status is finalized, then the address of the next
-  version of the program.
-  - `u64` status enum:
-    - Enum variant `0u64`: Retracted, program is in maintenance
-    - Enum variant `1u64`: Deployed, program is ready to be executed
-    - Enum variant `2u64`: Finalized, same as `Deployed`, but can not be
-    modified anymore
+  instructions.
 - Body:
   - `[u8]` The programs executable file
 
@@ -120,7 +120,7 @@ Invoking programs owned by loader-v4 checks in the following order that:
 
 - the owner of the program account is loader-v4
 - the program account is at least as long enough for the header
-- the status stored in the program account is not retracted
+- the status stored in the program account is deployed or finalized
 - the program account was not deployed within the current slot (delay
 visibility)
 - the executable file stored in the program account passes executable
@@ -193,7 +193,6 @@ All program management instructions must cost 2000 CUs.
 - Instruction accounts:
   - `[writable]` The program account to change the size of.
   - `[signer]` The authority of the program.
-  - `[writable]` Optional, the recipient account.
 - Instruction data:
   - Enum variant `2u32`
   - `u32` The new size after the operation.
@@ -201,7 +200,7 @@ All program management instructions must cost 2000 CUs.
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
   - If this is an initialization (program account length is too short to
-  contain the header):
+  contain the header or the status is uninitialized):
     - the owner of the program account is loader-v4,
     otherwise throw `InvalidAccountOwner`
     - the program account is writable, otherwise throw `InvalidArgument`
@@ -212,22 +211,13 @@ All program management instructions must cost 2000 CUs.
     - Check that the status stored in the program account is retracted,
     otherwise throw `InvalidArgument`
   - Check that there are enough funds in the program account for rent
-  exemption, otherwise throw `InsufficientFunds`
-  - If there are more than enough funds:
-    - Check there are at least three instruction accounts,
-    otherwise throw `NotEnoughAccountKeys`
-    - Check that the recipient account (instruction account at index 2) is
-    writable, otherwise throw `InvalidArgument`
-    - If a recipient account was provided that is not the program account:
-      - Transfer the surplus from the program account to the recipient account
-    - otherwise, if the requested new size is zero throw `InvalidArgument`
+  exemption of the new length, otherwise throw `InsufficientFunds`
   - If the requested new size is zero:
     - Set the length of the program account to 0 (removing the header too)
   - If the requested new size is greater than zero:
     - Set the length of the program account to the requested new size plus
     the header size
     - In case that this is an initialization, also initialize the header:
-      - Set the `is_executable` flag to `true`
       - Set the slot to zero, **not** the current slot
       - Set the authority address (from the instruction account at index 1)
       - Set the status to retracted
@@ -253,6 +243,7 @@ All program management instructions must cost 2000 CUs.
   executable verification
   - Change the slot in the program account to the current slot
   - Change the status stored in the program account to deployed
+  - Set the `is_executable` flag to `true`
 
 #### Retract
 
@@ -273,6 +264,7 @@ All program management instructions must cost 2000 CUs.
   retract-modify-redeploy-sequence within the same slot or even within the
   same transaction.
   - Change the status stored in the program account to retracted
+  - Set the `is_executable` flag to `false`
 
 #### TransferAuthority
 
@@ -297,7 +289,6 @@ All program management instructions must cost 2000 CUs.
 - Instruction accounts:
   - `[writable]` The program account to change the authority of.
   - `[signer]` The current authority of the program.
-  - `[]` Optional, the reserved address for the next version of the program.
 - Instruction data:
   - Enum variant `6u32`
 - Behavior:
@@ -306,19 +297,26 @@ All program management instructions must cost 2000 CUs.
   - Verify the program account
   - Check that the status stored in the program account is deployed,
     otherwise throw `InvalidArgument`
-  - for the program account of the next version
-  (instruction account at index 2) check that:
-    - the owner of the program account is loader-v4,
-    otherwise throw `InvalidAccountOwner`
-    - the program account is at least as long enough for the header,
-    otherwise throw `AccountDataTooSmall`
-    - the authority stored in the program account is the one provided,
-    otherwise throw `IncorrectAuthority`
-    - the status stored in the program account is not finalized,
-    otherwise throw `Immutable`
-  - Copy the address of the next version into the next version field stored in
-  the previous versions program account
   - Change the status stored in the program account to finalized
+
+#### WithdrawExcessLamports
+
+- Instruction accounts:
+  - `[writable]` The program account to withdraw from.
+  - `[signer]` The authority of the program.
+  - `[writable]` The recipient account.
+- Instruction data:
+  - Enum variant `7u32`
+  - `u64` The amount in lamports.
+- Behavior:
+  - Check there are at least two instruction accounts,
+    otherwise throw `NotEnoughAccountKeys`
+  - Check that program account and recipient account do not alias,
+    otherwise throw `AccountBorrowFailed`
+  - Verify the program account
+  - Check that there would be enough funds in the program account remaining for
+  rent exemption after the withdrawl, otherwise throw `InsufficientFunds`
+  - Transfer the amount from the program account to the recipient account
 
 ## Impact
 
@@ -343,11 +341,6 @@ redeployment, loader-v4 supports partial uploads for patching chunks of the
 program.
 - loader-v3 ELFs were misaligned, loader-v4 properly aligns the executable
 file relative to the beginning of the account.
-- loader-v4 allows finalized programs to mark which other program supersedes
-them which can then be offered as an option in frontends. This provides a
-more secure alternative to redeployment / upgrading of programs at the same
-address. The keypair for the next version linked during finalization should be
-generated beforehand.
 - An option to migrate programs from loader-v3 to loader-v4 without changing
 their program address will be available via a new loader-v3 instruction. (see
 SIMD-0315)
