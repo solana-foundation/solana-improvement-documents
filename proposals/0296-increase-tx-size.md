@@ -78,7 +78,7 @@ NumInstructions (u16)
 ResourceRequestMask (u16) -- Bitmask of which resource requests are present.
  For example bit 0 may mean "requested_cus", bit 1 may mean "microlamports per
  cu"
-RecentBlockhash (hash)
+LifetimeSpecficier (hash)
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Number matches NumAddresses
 ResourceRequests [u64] -- Array of request values. (section size is popcount
