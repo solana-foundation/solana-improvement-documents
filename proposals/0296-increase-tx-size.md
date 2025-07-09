@@ -76,8 +76,10 @@ LegacyHeader (u8, u8, u8) -- Required signatures from the current
 Payload Length (u16) -- Total size excluding signatures
 NumInstructions (u8)
 ResourceRequestMask (u64) -- Bitmask of which resource requests are present.
- For example bit 0 may mean "requested_cus", bit 1 may mean "microlamports per
- cu"
+ - 0: requested_compute_unit_limit
+ - 1: requested_compute_unit_price
+ - 2: requested_heap_size
+ - 3: requested_loaded_accounts_data_size_limit
 LifetimeSpecificier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Number matches NumAddresses
