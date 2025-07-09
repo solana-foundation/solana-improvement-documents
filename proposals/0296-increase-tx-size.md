@@ -74,11 +74,11 @@ VersionByte (u8) - >129 to distinguish from legacy/v0 formats
 LegacyHeader (u8, u8, u8) -- Required signatures from the current
 `MessageHeader` type
 Payload Length (u16) -- Total size excluding signatures
-NumInstructions (u16)
-ResourceRequestMask (u16) -- Bitmask of which resource requests are present.
+NumInstructions (u8)
+ResourceRequestMask (u64) -- Bitmask of which resource requests are present.
  For example bit 0 may mean "requested_cus", bit 1 may mean "microlamports per
  cu"
-LifetimeSpecificier (hash)
+LifetimeSpecificier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Number matches NumAddresses
 ResourceRequests [u64] -- Array of request values. (section size is popcount
