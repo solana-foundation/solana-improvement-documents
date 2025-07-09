@@ -78,13 +78,14 @@ NumInstructions (u16)
 ResourceRequestMask (u16) -- Bitmask of which resource requests are present.
  For example bit 0 may mean "requested_cus", bit 1 may mean "microlamports per
  cu"
-LifetimeSpecficier (hash)
+LifetimeSpecificier (hash)
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Number matches NumAddresses
 ResourceRequests [u64] -- Array of request values. (section size is popcount
  ResourceRequestMask * 8). each value is a u64.
-Ixs [(u16, u16, u16, u16)] -- Number matches NumInstructions. Values are
- (num_accounts, accounts_offset, num_data_bytes, bytes_offset).
+Ixs [(u8, u8, u16, u16, u16)] -- Number matches NumInstructions. Values are 
+ (program_account_index, num_accounts, accounts_offset, num_data_bytes, 
+ bytes_offset)
 [TRAILING DATA SECTION] -- Length is such that PayloadLength is matched.
 Signatures [[u8; 64]] -- Length of `num_required_signatures` from
  `LegacyHeader`
