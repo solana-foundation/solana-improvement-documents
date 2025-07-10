@@ -86,12 +86,12 @@ for the lamport transfer. |
 
 The `CreatePrefundedAccount` instruction performs the following actions:
 
-1.  **Allocate**: As with `CreateAccount`, this instruction calls `allocate`,
+1. **Allocate**: As with `CreateAccount`, this instruction calls `allocate`,
 which will fail if the new account is non-empty.
 
 2. **Assign**: As with `CreateAccount`, this instruction calls `assign`.
 
-3.  **Transfer**: If `lamports` is greater than 0, it transfers the
+3. **Transfer**: If `lamports` is greater than 0, it transfers the
 specified number of lamports from the `funding_account` to the `new_account`.
 `lamports` can be used when the account is prefunded insufficiently; in other
 words, when the account has some lamports, but needs more to cover rent.
@@ -100,13 +100,13 @@ The only reasons this instruction will fail are underlying; in other words,
 it will fail if `allocate`, `assign`, or `transfer` fail for any reason,
 including:
 
--   The `funding_account` does not have enough lamports for the transfer.
--   The `new_account` already contains data or is not owned by the System
+* The `funding_account` does not have enough lamports for the transfer.
+* The `new_account` already contains data or is not owned by the System
 Program.
--   The `new_account` does not have sufficient lamports to be rent-exempt
+* The `new_account` does not have sufficient lamports to be rent-exempt
 after the transfer.
--   Either account is not writable or not a signer.
--   The requested `space` exceeds the max permitted data length. 
+* Either account is not writable or not a signer.
+* The requested `space` exceeds the max permitted data length. 
 
 ## Alternatives Considered
 
