@@ -23,7 +23,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // globals github, context, core are injected by github-script
+            // github, context, core are injected by github-script
 
             // ──────────── 1. MANUAL ROSTERS ────────────
             const jumpApprovers = ['jacobcreech', 'topointon-jump', '0x0ece'];
@@ -33,7 +33,7 @@ jobs:
             const pr = context.payload.pull_request;
             if (!pr) { core.setFailed('No pull_request context'); return; }
 
-            // 2. fetch every review on this PR
+            // 2. fetch *all* reviews on this PR
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -46,38 +46,55 @@ jobs:
             reviews.forEach(r =>
               core.info(`${r.user.login} -> ${r.state} @ ${r.submitted_at}`));
 
-            // 3. reduce to effective state per reviewer
-            const states = {};  // login → {approved, changesRequested}
+            // 3. determine effective state per reviewer
+            //    We replay events chronologically so DISMISSED or REQUEST_CHANGES
+            //    can override an earlier APPROVED.
+            reviews.sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+
+            const status = {};   // login → {approved, blocked}
             for (const r of reviews) {
               const u = r.user.login;
-              states[u] = states[u] || { approved: false, changesRequested: false };
-              if (r.state === 'APPROVED')        states[u].approved = true;
-              if (r.state === 'REQUEST_CHANGES') states[u].changesRequested = true;
+              status[u] = status[u] || { approved: false, blocked: false };
+
+              switch (r.state) {
+                case 'APPROVED':
+                  status[u].approved = true;
+                  status[u].blocked  = false;
+                  break;
+                case 'REQUEST_CHANGES':
+                  status[u].approved = false;
+                  status[u].blocked  = true;   // blocks until new approval
+                  break;
+                case 'DISMISSED':
+                  status[u].approved = false;   // previous approval is now void
+                  break;
+                default:
+                  // COMMENTED etc – ignore
+              }
             }
 
             // DEBUG 2: effective map
             core.info('=== Effective state per reviewer ===');
-            Object.entries(states).forEach(([u, s]) =>
-              core.info(`${u}: approved=${s.approved}, changesRequested=${s.changesRequested}`));
+            Object.entries(status).forEach(([u, s]) =>
+              core.info(`${u}: approved=${s.approved}, blocked=${s.blocked}`));
 
-            // 4. build final approved-and-not-blocked set
-            const approved = Object.entries(states)
-                                   .filter(([_, s]) => s.approved && !s.changesRequested)
+            // 4. final approved list (approved && not blocked)
+            const approved = Object.entries(status)
+                                   .filter(([_, s]) => s.approved && !s.blocked)
                                    .map(([u]) => u);
 
-            // DEBUG 3: final list
             core.info(`Approved reviewers counted: ${approved.join(', ') || 'none'}`);
 
             // 5. org-level checks
             const hasJump = jumpApprovers.some(u => approved.includes(u));
             const hasAnza = anzaApprovers.some(u => approved.includes(u));
 
-            // prepare helpful failure message
-            const missing = [];
-            if (!hasJump) missing.push(
-              `Jump approval missing. Any of: ${jumpApprovers.join(', ')}`);
-            if (!hasAnza) missing.push(
-              `Anza approval missing. Any of: ${anzaApprovers.join(', ')}`);
+            // helpful failure message
+            const missingMsgs = [];
+            if (!hasJump)
+              missingMsgs.push(`Jump approval missing – need one of: ${jumpApprovers.join(', ')}`);
+            if (!hasAnza)
+              missingMsgs.push(`Anza approval missing – need one of: ${anzaApprovers.join(', ')}`);
 
             // PR-check summary
             core.summary
@@ -88,8 +105,8 @@ jobs:
                 ])
                 .write();
 
-            if (missing.length) {
-              core.setFailed(missing.join(' | '));
+            if (missingMsgs.length) {
+              core.setFailed(missingMsgs.join(' | '));
             } else {
               core.notice('All required approvals present; merge allowed.');
             }
