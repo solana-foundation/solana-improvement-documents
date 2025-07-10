@@ -92,9 +92,9 @@ jobs:
             // helpful failure message
             const missingMsgs = [];
             if (!hasJump)
-              missingMsgs.push(`Jump approval missing – need one of: ${jumpApprovers.join(', ')}`);
+              missingMsgs.push(`Jump approval missing, need one of: ${jumpApprovers.join(', ')}`);
             if (!hasAnza)
-              missingMsgs.push(`Anza approval missing – need one of: ${anzaApprovers.join(', ')}`);
+              missingMsgs.push(`Anza approval missing, need one of: ${anzaApprovers.join(', ')}`);
 
             // PR-check summary
             core.summary
