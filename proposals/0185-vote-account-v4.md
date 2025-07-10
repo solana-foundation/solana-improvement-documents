@@ -11,8 +11,8 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-Add a new version of vote account state which removes unused state to make
-room for new state information.
+Add a new version of vote account state to support alpenglow, block revenue
+distribution, and commission improvements.
 
 ## Motivation
 
@@ -223,16 +223,18 @@ accounts.
 
 ### Runtime
 
-Commission rates will now be stored in basis points, but higher precision values
-cannot be set until [SIMD-0249] is adopted. From the runtime's perspective,
-commission rates will remain limited to multiples of 100 basis points,
-equivalent to integer percentages. Therefore, commission calculations
-should continue to use integer percentage values for now.
+Commission rates will now be stored in basis points but the pre-existing
+`UpdateCommission` instruction only supports integer percentage commission
+values (higher precision values cannot be set until [SIMD-0291] is adopted).
+So from the runtime's perspective, commission rates will remain limited to
+multiples of 100 basis points, equivalent to integer percentages. Therefore,
+commission calculations should continue to use integer percentage values for
+now.
 
 The runtime stakes cache and epoch stakes stored in snapshots MUST also be
 updated to support initialized v4 vote accounts.
 
-[SIMD-0249]: https://github.com/solana-foundation/solana-improvement-documents/pull/249
+[SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/pull/291
 
 ### Other
 
