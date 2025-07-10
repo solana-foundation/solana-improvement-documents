@@ -54,9 +54,9 @@ from `CreatePrefundedAccount`.
 
 ## New Terminology
 
-* Prefunded Account: an account which receives lamports to pay for its rent
-in whole or in part before its space is `allocate`d and its owner is
-`assign`ed.
+* Prefunded Account: an account which has received lamports to pay for its rent
+in whole or in part in any prior instruction or prior transaction, before the
+instruction in which its space is `allocate`d and its owner is `assign`ed.
 
 ## Detailed Design
 
