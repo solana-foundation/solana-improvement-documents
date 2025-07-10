@@ -1,13 +1,16 @@
 name: Require Jump + Anza approval
 
-# ────── trigger on every meaningful PR event ──────
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - converted_to_draft
   pull_request_review:
     types: [submitted, dismissed, edited]
 
-# built-in token is enough (repo-only API)
 permissions:
   contents: read
   pull-requests: read
@@ -20,19 +23,17 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // <-- globals github, context, core are injected by github-script -->
+            // globals github, context, core are injected by github-script
 
-            // ──────── 1. MANUAL ROSTERS – edit as needed ────────
+            // ──────────── 1. MANUAL ROSTERS ────────────
             const jumpApprovers = ['jacobcreech', 'topointon-jump', '0x0ece'];
             const anzaApprovers = ['benhawkins18', 'tigarcia', 't-nelson', 'sakridge'];
-            // ─────────────────────────────────────────────────────
+            // ───────────────────────────────────────────
 
             const pr = context.payload.pull_request;
-            if (!pr) {
-              core.setFailed('No pull_request context'); return;
-            }
+            if (!pr) { core.setFailed('No pull_request context'); return; }
 
-            // 2. pull every review on this PR
+            // 2. fetch every review on this PR
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -40,39 +41,45 @@ jobs:
               per_page: 100
             });
 
-            // ──────── DEBUG BLOCK #1 – raw reviews ────────
+            // DEBUG 1: raw events
             core.info('=== Raw review events ===');
             reviews.forEach(r =>
               core.info(`${r.user.login} -> ${r.state} @ ${r.submitted_at}`));
-            // ───────────────────────────────────────────────
 
-            // 3. collapse to effective state per reviewer
-            const states = {};              // login → {approved, changesRequested}
+            // 3. reduce to effective state per reviewer
+            const states = {};  // login → {approved, changesRequested}
             for (const r of reviews) {
               const u = r.user.login;
               states[u] = states[u] || { approved: false, changesRequested: false };
-              if (r.state === 'APPROVED')           states[u].approved = true;
-              if (r.state === 'REQUEST_CHANGES')    states[u].changesRequested = true;
+              if (r.state === 'APPROVED')        states[u].approved = true;
+              if (r.state === 'REQUEST_CHANGES') states[u].changesRequested = true;
             }
 
-            // ──────── DEBUG BLOCK #2 – latest state map ────────
+            // DEBUG 2: effective map
             core.info('=== Effective state per reviewer ===');
             Object.entries(states).forEach(([u, s]) =>
               core.info(`${u}: approved=${s.approved}, changesRequested=${s.changesRequested}`));
-            // ───────────────────────────────────────────────────
 
+            // 4. build final approved-and-not-blocked set
             const approved = Object.entries(states)
                                    .filter(([_, s]) => s.approved && !s.changesRequested)
                                    .map(([u]) => u);
 
-            // ──────── DEBUG BLOCK #3 – final approved list ────────
+            // DEBUG 3: final list
             core.info(`Approved reviewers counted: ${approved.join(', ') || 'none'}`);
-            // ───────────────────────────────────────────────────────
 
+            // 5. org-level checks
             const hasJump = jumpApprovers.some(u => approved.includes(u));
             const hasAnza = anzaApprovers.some(u => approved.includes(u));
 
-            // 4. nice summary in the PR “Checks” view
+            // prepare helpful failure message
+            const missing = [];
+            if (!hasJump) missing.push(
+              `Jump approval missing. Any of: ${jumpApprovers.join(', ')}`);
+            if (!hasAnza) missing.push(
+              `Anza approval missing. Any of: ${anzaApprovers.join(', ')}`);
+
+            // PR-check summary
             core.summary
                 .addHeading('Jump + Anza approval check')
                 .addTable([
@@ -81,8 +88,8 @@ jobs:
                 ])
                 .write();
 
-            if (!hasJump || !hasAnza) {
-              core.setFailed('Need at least one Jump and one Anza approval');
+            if (missing.length) {
+              core.setFailed(missing.join(' | '));
             } else {
               core.notice('All required approvals present; merge allowed.');
             }
