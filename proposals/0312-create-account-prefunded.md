@@ -43,7 +43,7 @@ which do not need to `transfer` can specify 0 lamports, effectively providing
 them with an `AllocateAndAssign`.
 
 p-ATA program benchmarks demonstrate that use of `CreatePrefundedAccount`
-saves approximately 2_500 compute units:
+can save approximately 2_500 compute units:
 https://github.com/solana-program/associated-token-account/pull/102
 
 This is a stopgap measure, as it extends the undesired interface sprawl of
@@ -97,7 +97,7 @@ specified number of lamports from the `funding_account` to the `new_account`.
 words, when the account has some lamports, but needs more to cover rent.
 
 The only reasons this instruction will fail are underlying; in other words,
-it will fail if `transfer`, `allocate`, or `assign` fail for any reason,
+it will fail if `allocate`, `assign`, or `transfer` fail for any reason,
 including:
 
 -   The `funding_account` does not have enough lamports for the transfer.
@@ -116,7 +116,7 @@ and `assign`, as `transfer` is called to top up the storage rent
 requirement only if current lamports are insufficient (equivalent to how an
 instruction named `AllocateAndAssignAndMaybeTransfer` would function).
 A separate `AllocateAndAssign` would save one check, but the compute savings
-are likely not enough to justify the resulting interface sprawl.
+are not enough to justify the resulting interface sprawl.
 * Redesigning CPIs. The current CPI model spins up a new context for every
 invocation - re-copying and re-verifying account and signer data. A CPI
 redesign ​could slash this overhead for innumerable programs, but such a
@@ -137,6 +137,10 @@ CPI improvements can land.
 The primary impact is an available reduction in CPI overhead for programs
 which currently must perform these operations manually across 2 to 3
 CPIs.
+
+As mentioned previously, the p-ATA program takes advantage of
+`CreatePrefundedAccount` to save approximately 2_500 compute units:
+https://github.com/solana-program/associated-token-account/pull/102
 
 ## Security Considerations
 
