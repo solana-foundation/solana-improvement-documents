@@ -63,24 +63,50 @@ in whole or in part before its space is `allocate`d and its owner is
 `CreatePrefundedAccount` is added as a system program instruction, identical
 to `CreateAccount` in all but discriminant (13).
 
-```
-/// # Account references
-///   0. `[WRITE, SIGNER]` Funding account
-///   1. `[WRITE, SIGNER]` New account
-CreatePrefundedAccount {
-    /// Number of lamports to transfer to the new account (can be 0)
-    lamports: u64,
+### Instruction Data
 
-    /// Number of bytes of memory to allocate
-    space: u64,
+| Field | Type | Description |
+|---|---|---|
+| Discriminant | `u32` | The instruction discriminant, value `13`. |
+| `lamports` | `u64` | Number of lamports to transfer to the new account. |
+| `space` | `u64` | Number of bytes of memory to allocate. |
+| `owner` | `Pubkey` | Address of program that will own the new account. |
 
-    /// Address of program that will own the new account
-    owner: Pubkey,
-},
-```
+### Accounts
 
-Behavior is identical to `CreateAccount`, but does not fail if the
-new account's `lamports > 0`.
+The instruction requires the following accounts:
+
+| Index | Role | Description |
+|---|---|---|
+| 0 | `[WRITE, SIGNER]` | **Funding account**: The account that will pay
+for the lamport transfer. |
+| 1 | `[WRITE, SIGNER]` | **New account**: The account to be created. |
+
+### Behavior
+
+The `CreatePrefundedAccount` instruction performs the following actions:
+
+2.  **Allocate**: As with `CreateAccount`, this instruction calls `allocate`,
+which will fail if the new account is non-empty.
+
+3. **Assign**: As with `CreateAccount`, this instruction calls `assign`.
+
+1.  **Transfer**: If `lamports` is greater than 0, it transfers the
+specified number of lamports from the `funding_account` to the `new_account`.
+`lamports` can be used when the account is prefunded insufficiently; in other
+words, when the account has some lamports, but needs more to cover rent.
+
+The only reasons this instruction will fail are underlying; in other words,
+it will fail if `transfer`, `allocate`, or `assign` fail for any reason,
+including:
+
+-   The `funding_account` does not have enough lamports for the transfer.
+-   The `new_account` already contains data or is not owned by the System
+Program.
+-   The `new_account` does not have sufficient lamports to be rent-exempt
+after the transfer.
+-   Either account is not writable or not a signer.
+-   The requested `space` exceeds the max permitted data length. 
 
 ## Alternatives Considered
 
