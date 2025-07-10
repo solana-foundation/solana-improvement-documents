@@ -10,39 +10,50 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify approvals
-        uses: actions/github-script@v7
-        with:
-          script: |
+      name: Verify Jump + Anza approvals
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // ---- hard-coded rosters ----
+          const jumpApprovers = ['jacobcreech', 'topointon-jump', '0x0ece']
+          const anzaApprovers = ['benhawkins18', 'tigarcia', 't-nelson', 'sakridge']
+          // -----------------------------
 
-            const jumpApprovers = ['jacobcreech', 'topointon-jump','0x0ece']
-            const anzaApprovers = ['benhawkins18', 'tigarcia', 't-nelson','sakridge']
-            //TODO: remove benhawkins18 and JacobCreech from the list of approvers and get final list from Jump and Anza
-            
+          // pull every review on this PR
+          const prNum = context.payload.pull_request.number
+          const { data: reviews } = await github.rest.pulls.listReviews({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: prNum,
+            per_page: 100
+          })
 
-            // pull all reviews on this PR
-            const prNum = context.payload.pull_request.number
-            const {data: reviews} = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNum,
-              per_page: 100
-            })
+          /* Build the “effective” state for each reviewer:
+            - If the latest review is REQUEST_CHANGES → disqualify
+            - Else if they ever APPROVED (and never requested changes later) → qualifies
+            - COMMENTED doesn’t override a prior APPROVED
+          */
+          const states = {}        // username → {hasApproved, blocked}
+          reviews.forEach(r => {
+            const u = r.user.login
+            states[u] = states[u] || {hasApproved: false, blocked: false}
+            if (r.state === 'REQUEST_CHANGES') states[u].blocked = true
+            if (r.state === 'APPROVED')        states[u].hasApproved = true
+          })
 
-            // keep last state per reviewer
-            const latest = {}
-            reviews.forEach(r => latest[r.user.login] = r.state)
-            const approved = Object.entries(latest)
-                                   .filter(([,s]) => s === 'APPROVED')
-                                   .map(([u]) => u)
+          const approved = Object.entries(states)
+                                .filter(([,s]) => s.hasApproved && !s.blocked)
+                                .map(([u]) => u)
 
-            const hasJump = jumpApprovers.some(u => approved.includes(u))
-            const hasAnza = anzaApprovers.some(u => approved.includes(u))
+          const hasJump = jumpApprovers.some(u => approved.includes(u))
+          const hasAnza = anzaApprovers.some(u => approved.includes(u))
 
-            core.summary.addHeading('Jump + Anza approval check')
-                        .addRaw(`Jump: **${hasJump ? '✔︎' : '✘'}**  •  ` +
-                                `Anza: **${hasAnza ? '✔︎' : '✘'}**`).write()
+          core.summary
+              .addHeading('Jump + Anza approval check')
+              .addRaw(`Jump: **${hasJump ? '✔' : '✘'}**  •  ` +
+                      `Anza: **${hasAnza ? '✔' : '✘'}**`)
+              .write()
 
-            if (!hasJump || !hasAnza) {
-              core.setFailed('Need at least one Jump and one Anza approval')
-            }
+          if (!hasJump || !hasAnza) {
+            core.setFailed('Need at least one Jump and one Anza approval')
+          }
