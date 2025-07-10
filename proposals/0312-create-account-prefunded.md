@@ -86,12 +86,12 @@ for the lamport transfer. |
 
 The `CreatePrefundedAccount` instruction performs the following actions:
 
-2.  **Allocate**: As with `CreateAccount`, this instruction calls `allocate`,
+1.  **Allocate**: As with `CreateAccount`, this instruction calls `allocate`,
 which will fail if the new account is non-empty.
 
-3. **Assign**: As with `CreateAccount`, this instruction calls `assign`.
+2. **Assign**: As with `CreateAccount`, this instruction calls `assign`.
 
-1.  **Transfer**: If `lamports` is greater than 0, it transfers the
+3.  **Transfer**: If `lamports` is greater than 0, it transfers the
 specified number of lamports from the `funding_account` to the `new_account`.
 `lamports` can be used when the account is prefunded insufficiently; in other
 words, when the account has some lamports, but needs more to cover rent.
