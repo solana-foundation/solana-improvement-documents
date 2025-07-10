@@ -34,12 +34,17 @@ sometimes `Transfer`, then `Allocate`, and then `Assign`. While these
 actions themselves are minimally expensive, the overhead incurred
 with every Cross-Program Invocation - depth check, signer check,
 account copy, etc. - can make up the bulk of the computation done in the
-transaction. Each CPI incurs 1k compute units, 
+transaction. Each CPI incurs a minimum of 1_000 compute units, plus
+additional amounts depending on the instruction and account length.
 
 `CreateAccountPrefunded` performs `allocate`, `assign`, and `transfer`
 without asserting that the created account has zero lamports. Applications
 which do not need to `transfer` can specify 0 lamports, effectively providing
 them with an `AllocateAndAssign`.
+
+p-ATA program benchmarks demonstrate that use of `CreateAccountPrefunded`
+saves approximately 2_500 compute units:
+https://github.com/solana-program/associated-token-account/pull/102
 
 This is a stopgap measure, as it extends the undesired interface sprawl of
 helper instructions such as `CreateAccount`. However, any redesign of
@@ -49,8 +54,9 @@ from `CreateAccountPrefunded`.
 
 ## New Terminology
 
-* Prefunded: an account which receives lamports to pay for its rent in whole
-or in part before its space is `allocate`d and its owner is `assign`ed.
+* Prefunded Account: an account which receives lamports to pay for its rent
+in whole or in part before its space is `allocate`d and its owner is
+`assign`ed.
 
 ## Detailed Design
 
