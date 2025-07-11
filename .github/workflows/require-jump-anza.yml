@@ -1,0 +1,112 @@
+name: Require Jump + Anza approval
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - converted_to_draft
+  pull_request_review:
+    types: [submitted, dismissed, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Jump + Anza approvals
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // github, context, core are injected by github-script
+
+            // ──────────── 1. MANUAL ROSTERS ────────────
+            const jumpApprovers = ['taffet-jump', 'topointon-jump', '0x0ece', 'lidatong', 'benhawkins18', 'jacobcreech'];
+            const anzaApprovers = ['t-nelson', 'sakridge', 'bw-solana', 'benhawkins18', 'jacobcreech'];
+            // ───────────────────────────────────────────
+
+            const pr = context.payload.pull_request;
+            if (!pr) { core.setFailed('No pull_request context'); return; }
+
+            // 2. fetch *all* reviews on this PR
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100
+            });
+
+            // DEBUG 1: raw events
+            core.info('=== Raw review events ===');
+            reviews.forEach(r =>
+              core.info(`${r.user.login} -> ${r.state} @ ${r.submitted_at}`));
+
+            // 3. determine effective state per reviewer
+            //    We replay events chronologically so DISMISSED or REQUEST_CHANGES
+            //    can override an earlier APPROVED.
+            reviews.sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+
+            const status = {};   // login → {approved, blocked}
+            for (const r of reviews) {
+              const u = r.user.login;
+              status[u] = status[u] || { approved: false, blocked: false };
+
+              switch (r.state) {
+                case 'APPROVED':
+                  status[u].approved = true;
+                  status[u].blocked  = false;
+                  break;
+                case 'REQUEST_CHANGES':
+                  status[u].approved = false;
+                  status[u].blocked  = true;   // blocks until new approval
+                  break;
+                case 'DISMISSED':
+                  status[u].approved = false;   // previous approval is now void
+                  break;
+                default:
+                  // COMMENTED etc – ignore
+              }
+            }
+
+            // DEBUG 2: effective map
+            core.info('=== Effective state per reviewer ===');
+            Object.entries(status).forEach(([u, s]) =>
+              core.info(`${u}: approved=${s.approved}, blocked=${s.blocked}`));
+
+            // 4. final approved list (approved && not blocked)
+            const approved = Object.entries(status)
+                                   .filter(([_, s]) => s.approved && !s.blocked)
+                                   .map(([u]) => u);
+
+            core.info(`Approved reviewers counted: ${approved.join(', ') || 'none'}`);
+
+            // 5. org-level checks
+            const hasJump = jumpApprovers.some(u => approved.includes(u));
+            const hasAnza = anzaApprovers.some(u => approved.includes(u));
+
+            // helpful failure message
+            const missingMsgs = [];
+            if (!hasJump)
+              missingMsgs.push(`Jump approval missing, need one of: ${jumpApprovers.join(', ')}`);
+            if (!hasAnza)
+              missingMsgs.push(`Anza approval missing, need one of: ${anzaApprovers.join(', ')}`);
+
+            // PR-check summary
+            core.summary
+                .addHeading('Jump + Anza approval check')
+                .addTable([
+                  ['Jump approval', hasJump ? '✅' : '❌'],
+                  ['Anza approval', hasAnza ? '✅' : '❌']
+                ])
+                .write();
+
+            if (missingMsgs.length) {
+              core.setFailed(missingMsgs.join(' | '));
+            } else {
+              core.notice('All required approvals present; merge allowed.');
+            }
