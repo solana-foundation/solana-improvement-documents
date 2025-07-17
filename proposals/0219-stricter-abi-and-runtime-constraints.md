@@ -1,6 +1,6 @@
 ---
 simd: '0219'
-title: Stricter VM verification constraints
+title: Stricter ABI and Runtime Constraints
 authors:
   - Sean Young
   - Alexander Meißner
@@ -13,7 +13,7 @@ feature: C37iaPi6VE4CZDueU1vL8y6pGp5i8amAbEsF31xzz723
 
 ## Summary
 
-Removing pitfalls and foot-guns from the virtual machine and syscalls.
+Removing pitfalls and foot-guns from the ABI (including syscalls) and runtime.
 
 ## Motivation
 
