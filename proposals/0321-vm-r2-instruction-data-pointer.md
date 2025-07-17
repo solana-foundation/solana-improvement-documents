@@ -66,7 +66,7 @@ details.
 * The pointer in `r2` points to the first byte of the actual instruction data,
   NOT the length field.
 * The pointer value in `r2` is stored as a native 64-bit pointer (8 bytes) in
-  little-endian format (x86_64).
+  little-endian format.
 * When there is no instruction data (length = 0), `r2` still points to the
   offset immediately proceeding the instruction length counter; in this case,
   the first byte of the program ID, ensuring it will always point to valid,
