@@ -89,12 +89,16 @@ jobs:
             const hasJump = jumpApprovers.some(u => approved.includes(u));
             const hasAnza = anzaApprovers.some(u => approved.includes(u));
 
+            // Filter out 'benhawkins18' and 'jacobcreech' from error messages
+            const jumpApproversForMsg = jumpApprovers.filter(u => u !== 'benhawkins18' && u !== 'jacobcreech');
+            const anzaApproversForMsg = anzaApprovers.filter(u => u !== 'benhawkins18' && u !== 'jacobcreech');
+
             // helpful failure message
             const missingMsgs = [];
             if (!hasJump)
-              missingMsgs.push(`Jump approval missing, need one of: ${jumpApprovers.join(', ')}`);
+              missingMsgs.push(`Jump approval missing, need one of: ${jumpApproversForMsg.join(', ')}`);
             if (!hasAnza)
-              missingMsgs.push(`Anza approval missing, need one of: ${anzaApprovers.join(', ')}`);
+              missingMsgs.push(`Anza approval missing, need one of: ${anzaApproversForMsg.join(', ')}`);
 
             // PR-check summary
             core.summary
