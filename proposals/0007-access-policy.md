@@ -43,9 +43,12 @@ control to keep the repository healthy.
 **Requirement**  One voucher from a Level 2 member **or** two vouchers from
 existing Level 1 members.
 
-Write maps to GitHub’s built‑in [**Write** role](https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/repository-roles-for-an-organization#permissions-for-each-role):
+Write maps to GitHub’s built‑in 
+[**Write** role](https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/repository-roles-for-an-organization#permissions-for-each-role):
 
-* Open pull requests and **self‑merge** once mandatory status checks (e.g. Jump + Anza approvals) are green. Write‑level contributors may not merge pull requests opened by other users; that capability is reserved for Level 2 maintainers.
+* Open pull requests and **self‑merge** once mandatory status checks 
+(e.g. Jump + Anza approvals) are green. Write‑level contributors may not merge
+pull requests opened by other users; that capability is reserved for Level 2 maintainers.
 * Manage issues, labels, and project boards.
 * Create and push branches.
 
@@ -53,7 +56,8 @@ Write maps to GitHub’s built‑in [**Write** role](https://docs.github.com/en/
 
 **Requirement**  One voucher from an existing Level 2 member.
 
-Maintain maps to GitHub’s [**Maintain** role](https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/repository-roles-for-an-organization#permissions-for-each-role):
+Maintain maps to GitHub’s 
+[**Maintain** role](https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/repository-roles-for-an-organization#permissions-for-each-role):
 
 * All capabilities of Level 1, **plus the ability to merge any pull request** once required status checks are satisfied.
 * Manage repository settings, branch‑protection rules, and workflows.
@@ -88,4 +92,3 @@ clear custodianship of the SIMD process.
 Should a malicious actor gain access, community members must invoke the Access
 Removal Process promptly. Maintainers may also tighten branch‑protection rules
 or revoke credentials as warranted.
-
