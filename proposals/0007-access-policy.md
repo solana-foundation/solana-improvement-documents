@@ -59,7 +59,8 @@ pull requests opened by other users; that capability is reserved for Level 2 m
 Maintain maps to GitHub’s 
 [**Maintain** role](https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/repository-roles-for-an-organization#permissions-for-each-role):
 
-* All capabilities of Level 1, **plus the ability to merge any pull request** once required status checks are satisfied.
+* All capabilities of Level 1, **plus the ability to merge any pull request** 
+if required status checks are satisfied.
 * Manage repository settings, branch‑protection rules, and workflows.
 * Grant or revoke Write and Maintain access according to this SIMD.
 
