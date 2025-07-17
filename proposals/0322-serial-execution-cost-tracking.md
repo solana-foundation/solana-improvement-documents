@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0322'
 title: Add Serial Execution Replay Constraint
 authors:
   - Igor Durovic (Anza)
@@ -33,7 +33,7 @@ The Max Writable Account Unit limit which specifies the maximum number of CU's t
 
 The per-account limit doesn't only fail in these pathological cases. Data sampled from mainnet shows that among blocks with 40M+ CUs, the **median** serial workload (the critical path as described in the Terminology section below) already exceeds the 12M CU limit. Additionally, many blocks exceed the limit by significant amounts. This will only get worse as the block CU limit increases.
 
-![Serial Execution/Critical Path CUs](../supporting_images/XXXX-serial-execution-cost-tracking/crit_path.png)
+![Serial Execution/Critical Path CUs](../supporting_images/0322-serial-execution-cost-tracking/crit_path.png)
 
 This proposal introduces a new block level constraint that would prevent this worst case scenario, allowing us to safely increase Global CU limits more quickly. 
 
@@ -68,8 +68,8 @@ Note that this change is purely a resource constraint on which blocks are consid
 
 Example applications of DTAA to mainnet blocks (the red transactions are on the critical path):
 
-![DTAA applied to example mainnet block (efficient compute utilization)](../supporting_images/XXXX-serial-execution-cost-tracking/exec-good.png)
-![DTAA applied to example mainnet block (inefficient compute utilization)](../supporting_images/XXXX-serial-execution-cost-tracking/exec-bad.png)
+![DTAA applied to example mainnet block (efficient compute utilization)](../supporting_images/0322-serial-execution-cost-tracking/exec-good.png)
+![DTAA applied to example mainnet block (inefficient compute utilization)](../supporting_images/0322-serial-execution-cost-tracking/exec-bad.png)
 
 side note: these are two blocks with similar total CUs, but despite this the first has a much smaller makespan. In a 4-thread, parallel execution context, the first block can be executed nearly twice as fast if using CUs as a proxy for time.
 
@@ -159,13 +159,13 @@ For a block `B`, `max(critical_path(B), total_cus(B) / N)` represents a lower bo
 The closer to 1 `r` is the more optimal DTAA is estimated to be. Empirical analysis shows that when applying `DTAA` retroactively to all mainnet blocks
 with total CUs greater that 40M in a sample thousand slot range, the median `r` is `0.8`.
 
-![optimality analys on mainnet blocks](../supporting_images/XXXX-serial-execution-cost-tracking/ratio.png)
+![optimality analys on mainnet blocks](../supporting_images/0322-serial-execution-cost-tracking/ratio.png)
 
 Applying DTAA to historical mainnet blocks also provides an upper and lower bound on how much leftover capacity there is:
 - lower bound (worst-case): subtract the makespan of the block from the serial execution constraint of 25M CUs
 - upper bound (best-case): sum the differences between each track's CUs and the serial execution constraint
 
-![leftover capacity estimate](../supporting_images/XXXX-serial-execution-cost-tracking/leftover-capacity.png)
+![leftover capacity estimate](../supporting_images/0322-serial-execution-cost-tracking/leftover-capacity.png)
 
 ## Alternatives Considered
 
