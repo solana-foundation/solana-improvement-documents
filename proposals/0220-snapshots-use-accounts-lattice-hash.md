@@ -5,11 +5,9 @@ authors:
   - Brooks Prumo
 category: Standard
 type: Core
-status: Implemented
+status: Activated
 created: 2025-01-08
 feature: LTsNAP8h1voEVVToMNBNqoiNQex4aqfUrbFhRH3mSQ2
-development:
-  - Agave: Implemented (v2.2.0)
 ---
 
 ## Summary
