@@ -93,6 +93,20 @@ Signatures [[u8; 64]] -- Length of `num_required_signatures` from
  `LegacyHeader`
 ```
 
+The [TRAILING DATA SECTION] contains instruction's serialized account indexes
+and instruction data bytes,
+in the order they appear in the transaction. Each instruction's account indexes
+must appear before its data bytes.
+For example, if there are two instructions:
+1. `Instruction { account_indexes: [0, 1], data: [2, 3, 4] }`
+2. `Instruction { account_indexes: [5, 6], data: [7, 8] }`
+The TRAILING DATA SECTION must look like this:
+```
+[0, 1, 5, 6, 2, 3, 4, 7, 8]
+```
+Lengths are serialized in the earlier `Ixs` section, and so are not repeated in
+the trailing data section.
+
 This new `v1` transaction format notably does not include address lookup
 tables.
 
