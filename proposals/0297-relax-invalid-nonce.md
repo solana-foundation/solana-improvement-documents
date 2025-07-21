@@ -45,11 +45,11 @@ block to be rejected) if any of the following occurs:
 
 ### Proposed Change
 
-Update the replay logic to treat invalid nonce transactions as
-non-state-modifying, non-fee-charging failures, as follows:
+Update replay logic to treat invalid nonce transactions — those failing the
+checks above — as non-state-modifying and non-fee-charging failures, as follows:
 
 - The transaction is not executed.
-- The transaction is metered by CU limits.
+- The transaction’s CU cost still applies to the block limit.
 - The transaction is not charged with fee.
 - The transaction is recorded in the block (marked as failed).
 - No account state is modified, including the nonce account (i.e., nonce is
