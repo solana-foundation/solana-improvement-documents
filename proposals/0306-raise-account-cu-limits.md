@@ -1,6 +1,6 @@
 ---
 simd: '0306'
-title: Increase writeable account CU limit to 20M CUs.
+title: Increase writeable account limit to 20M CUs
 authors:
   - Brennan Watt (Anza)
 category: Standard
