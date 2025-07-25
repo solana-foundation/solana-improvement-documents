@@ -104,14 +104,16 @@ paper.
 
 Voting proceeds in two rounds: 
 
-- In the first round, validators vote either to *notarize* a specific block or
+In the first round, validators vote either to *notarize* a specific block or
 *skip* the slot, based on whether they saw a valid block before their local
 timeout. 
-- In the second round, validators vote *finalize* if they saw enough *notarize*
+
+In the second round, validators vote *finalize* if they saw enough *notarize*
 votes in the first round. Otherwise there are two conditions (*safe-to-notar*
 and *safe-to-skip*, explained in the white paper) that cause the validators to
-vote *notarize-fallback* or *skip-fallback*. Votes are distributed by
-broadcasting them directly to all other validators.
+vote *notarize-fallback* or *skip-fallback*. 
+
+Votes are distributed by broadcasting them directly to all other validators.
 
 
 ### Certificates
