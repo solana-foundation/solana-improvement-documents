@@ -58,8 +58,8 @@ FEC-set.
 **Timeouts** are short periods of time measured locally by the nodes. Their
 purpose is akin to Proof-of-History, but without any notion of synchronized
 time. The absolute wall-clock time and clock skew have no significance to the
-protocol. Even extreme clock drift can be simply incorporated into the timeouts
-- e.g. to tolerate clock drift of 5%, the timeouts can simply be extended by 5%.
+protocol. Even extreme clock drift can be simply incorporated into the timeouts,
+e.g. to tolerate clock drift of 5%, the timeouts can simply be extended by 5%.
 As explained later, Alpenglow is partially-synchronous, so no timing- or
 clock-related errors can derail the protocol.
 
