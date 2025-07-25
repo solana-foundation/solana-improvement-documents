@@ -164,9 +164,9 @@ casting both votes is a provable offence.
 
 The rewards are computed as follows:
 
-Epoch inflation: E = (1+(yearly inflation))^((epoch length) / year)-1 Inflation
-in SOL per slot: T = (total SOL supply) * E / (slots per epoch) Given
-validator’s stake: R = (validator’s stake) / (total stake)
+- Epoch inflation: E = (1+(yearly inflation))^((epoch length) / year)-1 
+- Inflation in SOL per slot: T = (total SOL supply) * E / (slots per epoch) 
+- Given validator’s stake: R = (validator’s stake) / (total stake)
 
 For each submitted vote in the two aggregates, the voter receives *R*x*T*/2 SOL,
 where *R* is the voter’s fractional stake and *T* is the total target issuance
