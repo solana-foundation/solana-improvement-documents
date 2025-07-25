@@ -23,27 +23,29 @@ This SIMD comes with an extensive companion paper. The Alpenglow White Paper
 v1.1 is available at https://www.anza.xyz/alpenglow-1-1.
 
 More precisely, this SIMD covers everything in the v1.1 White Paper **except**
-Section 2.2 Rotor: Initially we stay with Turbine as the data dissemination
-protocol. Rotor will be introduced later and will get its own SIMD. Section 3.1
-Smart Sampling: Related to Rotor, will be included in the Rotor SIMD. Section
-3.2 Lazy (Asynchronous) Execution: Has its own SIMD.
+
+- Section 2.2 Rotor: Initially we stay with Turbine as the data dissemination
+protocol. Rotor will be introduced later and will get its own SIMD. 
+- Section 3.1 Smart Sampling: Related to Rotor, will be included in the Rotor SIMD. 
+- Section 3.2 Lazy (Asynchronous) Execution: Has its own SIMD.
 
 
 ## Motivation
 
-The current TowerBFT consensus protocol: has a consensus finality time of 12.8
-seconds, additionally provides earlier pre-confirmations, and does not have a
-security proof, which is concerning.
+The current TowerBFT consensus protocol: 
+
+- has a consensus finality time of 12.8 seconds, 
+- additionally provides earlier pre-confirmations, 
+- and does not have a security proof, which is concerning.
 
 Alpenglow takes into account the current state of the art in consensus research
 to improve the consensus protocol in all points mentioned above. Alpenglow:
-Lowers actual consensus finality latency below the pre-confirmation latency of
-TowerBFT. Decreases bandwidth use, e.g., by eliminating costly gossip traffic.
-Reduces the consensus computation overhead, e.g., by replacing on-chain
-signature verification with local signature aggregation. Increases resilience on
-all fronts (sophisticated attackers, adversarial network conditions, DOS attacks
-and crash failures). Removes harmful incentives, such as waiting to cast more
-profitable votes.
+
+- Lowers actual consensus finality latency below the pre-confirmation latency of TowerBFT. 
+- Decreases bandwidth use, e.g., by eliminating costly gossip traffic.
+- Reduces the consensus computation overhead, e.g., by replacing on-chain signature verification with local signature aggregation. 
+- Increases resilience on all fronts (sophisticated attackers, adversarial network conditions, DOS attacks and crash failures). 
+- Removes harmful incentives, such as waiting to cast more profitable votes.
 
 
 ## New Terminology
