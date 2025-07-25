@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0326'
 title: Alpenglow
 authors:
   - Quentin Kniep
@@ -87,7 +87,7 @@ rounds of votes for the block from 60% of the stake.
 of voting into a similar economic equilibrium for Alpenglow.
 
 
-## Design Overview
+## Detailed Design
 
 Here we only give a short rundown of the parts that will be most visible to
 validator operators. For more details and proofs please read the Alpenglow white
