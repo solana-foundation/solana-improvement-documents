@@ -25,8 +25,9 @@ v1.1 is available at https://www.anza.xyz/alpenglow-1-1.
 More precisely, this SIMD covers everything in the v1.1 White Paper **except**
 
 - Section 2.2 Rotor: Initially we stay with Turbine as the data dissemination
-protocol. Rotor will be introduced later and will get its own SIMD. 
-- Section 3.1 Smart Sampling: Related to Rotor, will be included in the Rotor SIMD. 
+  protocol. Rotor will be introduced later and will get its own SIMD. 
+- Section 3.1 Smart Sampling: Related to Rotor, will be included in the Rotor
+  SIMD. 
 - Section 3.2 Lazy (Asynchronous) Execution: Has its own SIMD.
 
 
@@ -41,10 +42,13 @@ The current TowerBFT consensus protocol:
 Alpenglow takes into account the current state of the art in consensus research
 to improve the consensus protocol in all points mentioned above. Alpenglow:
 
-- Lowers actual consensus finality latency below the pre-confirmation latency of TowerBFT. 
+- Lowers actual consensus finality latency below the pre-confirmation latency of
+  TowerBFT. 
 - Decreases bandwidth use, e.g., by eliminating costly gossip traffic.
-- Reduces the consensus computation overhead, e.g., by replacing on-chain signature verification with local signature aggregation. 
-- Increases resilience on all fronts (sophisticated attackers, adversarial network conditions, DOS attacks and crash failures). 
+- Reduces the consensus computation overhead, e.g., by replacing on-chain
+  signature verification with local signature aggregation. 
+- Increases resilience on all fronts (sophisticated attackers, adversarial
+  network conditions, DOS attacks and crash failures). 
 - Removes harmful incentives, such as waiting to cast more profitable votes.
 
 
@@ -98,30 +102,38 @@ paper.
 
 ### Voting
 
-Voting proceeds in two rounds: In the first round, validators vote either to
-*notarize* a specific block or *skip* the slot, based on whether they saw a
-valid block before their local timeout. In the second round, validators vote
-*finalize* if they saw enough *notarize* votes in the first round. Otherwise
-there are two conditions (*safe-to-notar* and *safe-to-skip*, explained in the
-white paper) that cause the validators to vote *notarize-fallback* or
-*skip-fallback*. Votes are distributed by broadcasting them directly to all
-other validators.
+Voting proceeds in two rounds: 
+
+- In the first round, validators vote either to *notarize* a specific block or
+*skip* the slot, based on whether they saw a valid block before their local
+timeout. 
+- In the second round, validators vote *finalize* if they saw enough *notarize*
+votes in the first round. Otherwise there are two conditions (*safe-to-notar*
+and *safe-to-skip*, explained in the white paper) that cause the validators to
+vote *notarize-fallback* or *skip-fallback*. Votes are distributed by
+broadcasting them directly to all other validators.
 
 
 ### Certificates
 
-There are five types of certificates: Notarization: corresponds to 60% of
-*notarize* votes. Skip: corresponds to 60% of *skip* or *skip-fallback* votes.
-Finalization: corresponds to 60% of *finalize* votes. Fast-Finalization:
-corresponds to 80% of *notarize* votes. Notar-fallback: corresponds to 60% of
-*notarize* or *notar-fallback* votes.
+There are five types of certificates: 
+
+- Notarization: corresponds to 60% of *notarize* votes. 
+- Skip: corresponds to 60% of *skip* or *skip-fallback* votes.
+- Finalization: corresponds to 60% of *finalize* votes. 
+- Fast-Finalization: corresponds to 80% of *notarize* votes. 
+- Notar-fallback: corresponds to 60% of *notarize* or *notar-fallback* votes.
 
 
 ### Finality
 
-A slot can be directly finalized (and thus decided) in one of two ways: Create
-or receive a *fast-finalization* certificate. Create or receive a
-*slow-finalization* certificate and a *notarization* certificate. Whenever a
+A slot can be directly finalized (and thus decided) in one of two ways: 
+
+- Create or receive a *fast-finalization* certificate. 
+- Create or receive a *slow-finalization* certificate and a *notarization*
+certificate. 
+
+Whenever a
 block *b* in slot *s* is finalized directly, all previous slots that were
 undecided are decided indirectly. All ancestors of *b* are finalized, and slots
 omitted in the chain of *b* are skipped.
