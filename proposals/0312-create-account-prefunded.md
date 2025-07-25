@@ -101,13 +101,16 @@ to the `new_account` (account index 0).
 `lamports` can be used when the account is prefunded insufficiently; in other
 words, when the account has some lamports, but needs more to cover rent.
 
-The only reasons this instruction will fail are underlying; in other words,
-it will fail if `allocate`, `assign`, or `transfer` fail for any reason,
-including:
+This instruction will fail if:
+
+* The `funding_account` is not provided when `lamports > 0`.
+
+Additional underlying reasons may cause the instruction to fail; in other
+words, it will fail if `allocate`, `assign`, or `transfer` fail for any
+reason including:
 
 * The `funding_account` does not have enough lamports for the transfer (when
 `lamports > 0`).
-* The `funding_account` is not provided when `lamports > 0`.
 * The `new_account` already contains data or is not owned by the System
 Program.
 * The `new_account` does not have sufficient lamports to be rent-exempt
