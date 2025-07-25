@@ -61,7 +61,10 @@ instruction in which its space is `allocate`d and its owner is `assign`ed.
 ## Detailed Design
 
 `CreatePrefundedAccount` is added as a system program instruction, identical
-to `CreateAccount` in all but discriminant (13).
+to `CreateAccount` except for the following:
+1. The instruction has a new discriminant (13).
+2. The funding account is optional.
+3. Due to #2, the accounts are ordered differently.
 
 ### Instruction Data
 
@@ -78,9 +81,9 @@ The instruction requires the following accounts:
 
 | Index | Role | Description |
 |---|---|---|
-| 0 | `[WRITE, SIGNER]` | **Funding account**: The account that will pay
-for the lamport transfer. |
-| 1 | `[WRITE, SIGNER]` | **New account**: The account to be created. |
+| 0 | `[WRITE, SIGNER]` | **New account**: The account to be created. |
+| 1 | `[WRITE, SIGNER] (optional)` | **Funding account**: The account that
+will pay for the lamport transfer. Required only when `lamports > 0`. |
 
 ### Behavior
 
@@ -92,7 +95,7 @@ which will fail if the new account is non-empty.
 2. **Assign**: As with `CreateAccount`, this instruction calls `assign`.
 
 3. **Transfer**: If `lamports` is greater than 0, it transfers the
-specified number of lamports from the `funding_account` to the `new_account`.
+specified number of lamports from the `funding_account` (account index 1) to the `new_account` (account index 0).
 `lamports` can be used when the account is prefunded insufficiently; in other
 words, when the account has some lamports, but needs more to cover rent.
 
@@ -100,12 +103,14 @@ The only reasons this instruction will fail are underlying; in other words,
 it will fail if `allocate`, `assign`, or `transfer` fail for any reason,
 including:
 
-* The `funding_account` does not have enough lamports for the transfer.
+* The `funding_account` does not have enough lamports for the transfer (when
+`lamports > 0`).
+* The `funding_account` is not provided when `lamports > 0`.
 * The `new_account` already contains data or is not owned by the System
 Program.
 * The `new_account` does not have sufficient lamports to be rent-exempt
 after the transfer.
-* Either account is not writable or not a signer.
+* Required accounts are not writable or not signers.
 * The requested `space` exceeds the max permitted data length. 
 
 ## Alternatives Considered
