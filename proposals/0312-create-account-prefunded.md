@@ -62,6 +62,7 @@ instruction in which its space is `allocate`d and its owner is `assign`ed.
 
 `CreatePrefundedAccount` is added as a system program instruction, identical
 to `CreateAccount` except for the following:
+
 1. The instruction has a new discriminant (13).
 2. The funding account is optional.
 3. Due to #2, the accounts are ordered differently.
@@ -95,7 +96,8 @@ which will fail if the new account is non-empty.
 2. **Assign**: As with `CreateAccount`, this instruction calls `assign`.
 
 3. **Transfer**: If `lamports` is greater than 0, it transfers the
-specified number of lamports from the `funding_account` (account index 1) to the `new_account` (account index 0).
+specified number of lamports from the `funding_account` (account index 1)
+to the `new_account` (account index 0).
 `lamports` can be used when the account is prefunded insufficiently; in other
 words, when the account has some lamports, but needs more to cover rent.
 
