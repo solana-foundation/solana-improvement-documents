@@ -89,7 +89,7 @@ round of votes for the block from 80% of the stake.
 **Slow-finalization** is the mechanism of finalizing a block after observing two
 rounds of votes for the block from 60% of the stake.
 
-**VAT** (Validator Admission Ticket) is a mechanism translating the current cost
+**Validator Admission Ticket** (VAT) is a mechanism translating the current cost
 of voting into a similar economic equilibrium for Alpenglow.
 
 
