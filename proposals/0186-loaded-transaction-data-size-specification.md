@@ -79,9 +79,9 @@ irrespective of how they are used.
 accounts specified on the transaction.
 2. Each loaded account's size is defined as the byte length of its data prior to
 transaction execution plus 64 bytes to account for metadata.
-3. There is an additional flat 8248 byte cost for each address lookup table used
-by a transaction, accounting for the 8192 bytes for the maximum size of such a
-table plus 56 bytes for metadata.
+3. There is a flat 8248 byte cost for each address lookup table used by a
+transaction, accounting for the 8192 bytes for the maximum size of such a table
+plus 56 bytes for metadata.
 4. The total transaction loaded account data size is the sum of these sizes.
 
 Transactions may include a
@@ -113,6 +113,9 @@ loading continues as normal.
 
 There is no special handling for any account owned by the native loader,
 LoaderV1, LoaderV2, or LoaderV4.
+
+The cost for address lookup tables described in point 3 does not include the
+actual byte length or the additional 64 bytes described in point 2.
 
 ## Alternatives Considered
 
