@@ -5,7 +5,7 @@ authors:
   - Andrew Fitzgerald (anza)
 category: Standard
 type: Core
-status: Idea
+status: Accepted
 created: 2024-07-24
 feature:
 supersedes:
