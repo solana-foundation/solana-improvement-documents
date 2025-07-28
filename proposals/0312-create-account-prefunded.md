@@ -19,7 +19,8 @@ or in part) in advance of account creation.
 ## Motivation
 
 The existing `CreateAccount` system program instruction creates accounts
-within a program by use of `transfer`, `allocate`, and `assign`. However,
+within a program by use of `transfer`, `allocate`, and `assign`.
+
 `CreateAccount` fails if `lamports > 0`. This was intended as a protection
 measure, preventing developers from accidentally passing in some normal
 wallet address and permanently locking its lamports after `allocate` and
