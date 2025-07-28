@@ -75,7 +75,7 @@ LegacyHeader (u8, u8, u8) -- Required signatures from the current
 `MessageHeader` type
 Payload Length (u16) -- Total size excluding signatures
 NumInstructions (u8)
-ResourceRequestMask (u64) -- Bitmask of which resource requests are present.
+TransactionConfigMask (u64) -- Bitmask of which config requests are present.
  - 0: requested_compute_unit_limit
  - 1: requested_compute_unit_price
  - 2: requested_heap_size
@@ -83,8 +83,8 @@ ResourceRequestMask (u64) -- Bitmask of which resource requests are present.
 LifetimeSpecificier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Number matches NumAddresses
-ResourceRequests [u64] -- Array of request values. (section size is popcount
- ResourceRequestMask * 8). each value is a u64.
+ConfigRequests [u64] -- Array of request values. (section size is popcount
+ TransactionConfigMask * 8). each value is a u64.
 Ixs [(u8, u8, u16, u16, u16)] -- Number matches NumInstructions. Values are 
  (program_account_index, num_accounts, accounts_offset, num_data_bytes, 
  bytes_offset)
