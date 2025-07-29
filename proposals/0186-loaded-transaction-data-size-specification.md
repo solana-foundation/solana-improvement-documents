@@ -124,11 +124,7 @@ and it is not explicitly defined elsewhere. So we define it here.
 
 The process is as follows; for each instruction's program ID:
 
-* Verify the account exists.
-* If [SIMD-0162](
-https://github.com/solana-foundation/solana-improvement-documents/pull/162)
-has not been activated, verify the program account is marked executable. When
-SIMD-0162 is active, skip this step.
+* Verify the account exists. Otherwise, return `ProgramAccountNotFound`.
 * Verify the program account's owner is one of:
     * `NativeLoader1111111111111111111111111111111`
     * `BPFLoader1111111111111111111111111111111111`
@@ -136,8 +132,10 @@ SIMD-0162 is active, skip this step.
     * `BPFLoaderUpgradeab1e11111111111111111111111`
     * `LoaderV411111111111111111111111111111111111`
 
-If any of these conditions are violated, loading is aborted and the transaction
-pays fees.
+  Otherwise, return `InvalidProgramForExecution`.
+
+If either of these conditions are violated, loading is aborted and the
+transaction pays fees.
 
 Previously, instead of a hardcoded list of valid loaders, the program owner was
 loaded and verified to be executable and itself owned by
