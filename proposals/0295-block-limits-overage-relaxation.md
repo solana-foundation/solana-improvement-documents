@@ -38,9 +38,9 @@ reject, a valid voted-on block that exceeds CU limit during replay.
 
 ## New Terminology
 
-Skipped Block: a valid, committed block in terms of ledger continuity and votes,
-but all transactions in it are treated as having failed, therefore no state
-changes at all, nor fee collection, nor nonce advancement.
+Stateless Block: a valid, committed block in terms of ledger continuity and
+votes, but all transactions in it are treated as having been skipped, therefore
+no state changes at all, nor fee collection, nor nonce advancement.
 
 ## Detailed Design
 
@@ -63,16 +63,16 @@ support asynchronous block execution.
 
 - Changes only affect validator replay logic, no change required for existing
   users or programs.
-- Dapp developers may observe transactions in Skipped Blocks fail silently,
+- Dapp developers may observe transactions in Stateless Blocks fail silently,
   even Block Producer may have confirmed transaction inclusion.
 - Validators may observe additional ledger storage space due to including
-  Skipped Blocks (which are dropped currently).
+  Stateless Blocks (which are dropped currently).
 
 ## Security Considerations
 
-- Validators could potentially waste time and storage on Skipped Blocks. This
+- Validators could potentially waste time and storage on Stateless Blocks. This
   is mitigated somewhat due to the block producer will not receive rewards.
-  Skipped blocks that available on-chain can also be evidence of slashing when
+  Stateless blocks that available on-chain can also be evidence of slashing when
   necessary.
 
 ## Backwards Compatibility
