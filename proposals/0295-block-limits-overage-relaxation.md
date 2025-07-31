@@ -48,11 +48,12 @@ Change the block CU validation logic during replay as follows:
 
 - If a block exceeds the Block CU limit during replay execution:
   - Stop execution of remaining transactions in the block, and rollback all
-    previously executed transaction.
+    previously executed transactions.
   - Do not fail the block.
   - Treat the block as committed but stateless — no accounts are modified, no
     fee collected, no nonce advanced if apply.
-  - Maintain consensus liveness and ledger continuity.
+  - Maintain consensus liveness and ledger continuity. Stateless block should
+    advance PoH and tick count.
 
 ## Alternatives Considered
 
