@@ -35,7 +35,7 @@ which describes the SIMD process in detail.
 This repository is for documenting standards and not for implementation help.
 For specific questions and concerns regarding SIMDs, it's best to discuss them
 in the [questions section](https://github.com/solana-foundation/solana-improvement-documents/discussions/categories/questions)
-of this [repo's disucssion page](https://github.com/solana-foundation/solana-improvement-documents/discussions).
+of this [repo's discussion page](https://github.com/solana-foundation/solana-improvement-documents/discussions).
 
 ## Access Policy
 
