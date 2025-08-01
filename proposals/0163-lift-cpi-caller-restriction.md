@@ -5,7 +5,7 @@ authors:
   - Alexander Meißner
 category: Standard
 type: Core
-status: Implemented
+status: Withdrawn
 created: 2024-07-16
 feature: HcW8ZjBezYYgvcbxNJwqv1t484Y2556qJsfNDWvJGZRH
 ---
@@ -70,7 +70,7 @@ None.
 
 ## Impact
 
-See motivation.
+See motivation and security considerations.
 
 Dapp developers who wish to benefit from the lifting of the restriction shall:
 
@@ -86,7 +86,20 @@ transaction is explicitly left unspecified.
 
 ## Security Considerations
 
-None.
+For a program to be allowed to modify an account it must be the owner and the
+instruction account must have been passed in with the `is_writable` flag set.
+Some programs take custody of an accounts ownership and allow control via a
+signer authority. In these cases the instruction account must have been passed
+in with the `is_signer` flag set additionally. Both these flags can only be set
+in the inner most nested CPI if all parent CPIs did also set them. However,
+they can not be controlled at per top-level-instruction. All of these
+instructions share the same flags throughout the transaction.
+
+This means the CPI caller restriction has been used as a security feature to
+prevent a top-level-instruction from calling into a program which has custody
+of an account that another top-level-instruction required as a signer. Removing
+this restriction would require a lot more care to be taken in transaction
+builing to prevent the relaxation from being exploited.
 
 ## Backwards Compatibility
 
