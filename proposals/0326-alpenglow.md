@@ -148,9 +148,10 @@ future finalized blocks are descendants of b.
 ### Rewards
 
 In this SIMD we focus on the consensus-related benefits of Alpenglow. Below, we
-translate the existing vote rewards as they are, while removing some harmful
-incentives (such as the incentive to wait before casting a vote). Economic
-changes are left to future economics-focused SIMDs.
+translate the existing vote rewards as they are (same mechanisms, just different
+programs), while removing some harmful incentives (such as the incentive to wait
+before casting a vote). Economic changes are left to future economics-focused
+SIMDs.
 
 In this proposal we make sure that nodes that do not participate in the protocol
 will not be rewarded. Towards this end, all nodes prove that they are voting
