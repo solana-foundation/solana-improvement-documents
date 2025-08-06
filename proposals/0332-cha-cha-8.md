@@ -52,6 +52,7 @@ malicious minority of stake could censor unrecoverable portions of a block, this
 would be a problem. Today, the grinding can be done, which means further ChaCha
 rounds provide very limited beenfit, but the ability to influence the generated
 tree is clamped down because the input data includes:
+
 - shred index
 - shred slot
 - shred type (coding or data)
