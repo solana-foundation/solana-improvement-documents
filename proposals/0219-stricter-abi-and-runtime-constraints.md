@@ -25,11 +25,6 @@ are currently allowed but make no sense and are even dangerous for dApps:
   runtime never serialized
   - `AccountInfo` structures can be overwritten by CPI during CPI, causing
   complex side effects
-- Gaps in between VM stack frames
-  - Complicates virtual address calculations
-  - False sense of security, dApps which overrun their stack can go unnoticed
-  anyway if they overrun it by an entire frame
-  - Unaligned accesses near the edge of a stack frame can bleed into the next
 - VM memory access
   - Bad read accesses to account payload go unnoticed as long as they stay
   within the reserved address space, even if they leave the actual account
@@ -78,16 +73,6 @@ otherwise `SyscallError::InvalidPointer` must be thrown:
   - `AccountInfo::owner` / `SolAccountInfo::owner`
   - `AccountInfo::lamports` / `SolAccountInfo::lamports`
   - `AccountInfo::data::ptr` / `SolAccountInfo::data`
-
-### Gaps in between VM stack frames
-
-The virtual address space of the stack frames must become consecutive:
-
-- From: `0x200000000..0x200001000`, `0x200002000..0x200003000`, ...
-- To: `0x200000000..0x200001000`, `0x200001000..0x200002000`, ...
-
-This goes for all programs globally and is not opt-in.
-Thus, this change is independent of SIMD-0166.
 
 ### VM memory access
 
