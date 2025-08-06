@@ -5,9 +5,9 @@ authors:
   - Dean Little (@deanmlittle)
   - Leonardo Donatacci (@L0STE)
   - febo (Anza)
-category: Standard/Meta
+category: Standard
 type: Core
-status: Draft
+status: Accepted
 created: 2024-11-13
 feature: (fill in with feature tracking issues once accepted)
 ---
