@@ -1,13 +1,13 @@
 ---
 simd: 'XXXX'
-title: Title of SIMD
+title: Title of SIMD. This should be concise and descriptive.
 authors:
   - (fill in with names of authors)
 category: Standard/Meta
 type: Core/Networking/Interface/Meta
-status: Draft
+status: Idea/Review
 created: (fill me in with today's date, YYYY-MM-DD)
-feature: (fill in with feature tracking issues once accepted)
+feature: (fill in with feature key and github tracking issues once accepted)
 supersedes: (optional - fill this in if the SIMD supersedes a previous SIMD)
 superseded-by: (optional - fill this in if the SIMD is superseded by a subsequent
  SIMD)
@@ -23,6 +23,16 @@ A brief summary of what the feature is.
 
 Why are we doing this? What use cases does it support? What is the expected
 outcome?
+
+## Dependencies *(Optional)*
+
+This proposal depends on the following previously accepted proposals:
+
+- **[SIMD-XXXX]: Title of SIMD**
+
+    A brief summary of the reason for the dependency
+
+[SIMD-XXXX]: https://github.com/solana-foundation/solana-improvement-documents/pull/XXXX
 
 ## New Terminology
 

@@ -1,21 +1,18 @@
 ---
-simd: '0140'
-title: Migrate Config to Core BPF
+simd: '0196'
+title: Migrate Stake to Core BPF
 authors:
-  - Joe Caulfield - Anza Technology
+  - Hanako Mumei
 category: Standard
 type: Core
-status: Activated
-created: 2024-04-02
-feature: 2Fr57nzzkLYXW695UdDxDeR5fhnZWSttZeZYemrnpGFV (https://github.com/anza-xyz/agave/issues/1378)
-development:
-  - Anza - Implemented (https://github.com/anza-xyz/agave/pull/1379)
-  - Firedancer - Not started
+status: Implemented
+created: 2024-11-14
+feature: 6M4oQ6eXneVhtLoiAr4yRYQY43eVLjrKbiDZDJc892yk (https://github.com/anza-xyz/feature-gate-tracker/issues/73)
 ---
 
 ## Summary
 
-Migrate the Config program to Core BPF.
+Migrate the Stake program to Core BPF.
 
 ## Motivation
 
@@ -24,11 +21,11 @@ as Firedancer, since developers will no longer have to keep up with program
 changes in their runtime implementations. Instead, the program can just be
 updated once.
 
-In this spirit, the Config program should be migrated to Core BPF.
+In this spirit, the Stake program should be migrated to Core BPF.
 
 ## Alternatives Considered
 
-The Config program could instead remain a builtin program. This would mean each
+The Stake program could instead remain a builtin program. This would mean each
 validator client implementation would have to build and maintain this program
 alongside their runtime, including any future changes.
 
@@ -38,7 +35,7 @@ N/A.
 
 ## Detailed Design
 
-The Config program will be reimplemented in order to be compiled to BPF and
+The Stake program will be reimplemented in order to be compiled to BPF and
 executed by the BPF loader.
 
 The reimplemented program's ABI will exactly match that of the original.
@@ -56,9 +53,9 @@ essential network operations, the program will be updated using feature-gates.
 ## Impact
 
 Validator client teams are no longer required to implement and maintain the
-Config program within their runtime.
+Stake program within their runtime.
 
-All validator client teams can work to maintain the single Config program
+All validator client teams can work to maintain the single Stake program
 together.
 
 ## Security Considerations
@@ -72,4 +69,3 @@ The greatest security concern is a mistake in the reimplementation.
 
 The Core BPF implementation is 100% backwards compatible with the original
 builtin implementation.
-

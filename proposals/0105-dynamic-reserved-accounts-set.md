@@ -5,7 +5,7 @@ authors:
   - Justin Starry
 category: Standard
 type: Core
-status: Accepted
+status: Activated
 created: 2024-01-17
 feature: 8U4skmMVnF6k2kMvrWbQuRUT3qQSiTYpSjqmhmgfthZu (https://github.com/solana-labs/solana/issues/34899)
 development:

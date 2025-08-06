@@ -28,7 +28,7 @@ SIMDs can be divided into the following categories:
 Before you write a SIMD, ideas MUST be thoroughly discussed and vetted on the
 [ideas section](https://github.com/solana-foundation/solana-improvement-documents/discussions/categories/ideas)
 within this
-[repo's disucssion page](https://github.com/solana-foundation/solana-improvement-documents/discussions).
+[repo's discussion page](https://github.com/solana-foundation/solana-improvement-documents/discussions).
 Read and review [SIMD-0001](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0001-simd-process.md),
 which describes the SIMD process in detail.
 
