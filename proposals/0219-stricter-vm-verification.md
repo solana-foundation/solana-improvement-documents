@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-01-06
-feature: GJVDwRkUPNdk9QaK4VsU4g1N41QNxhy1hevjf8kz45Mq
+feature: C37iaPi6VE4CZDueU1vL8y6pGp5i8amAbEsF31xzz723
 ---
 
 ## Summary
@@ -30,7 +30,10 @@ are currently allowed but make no sense and are even dangerous for dApps:
   - False sense of security, dApps which overrun their stack can go unnoticed
   anyway if they overrun it by an entire frame
   - Unaligned accesses near the edge of a stack frame can bleed into the next
-- VM write access
+- VM memory access
+  - Bad read accesses to account payload go unnoticed as long as they stay
+  within the reserved address space, even if they leave the actual account
+  payload
   - Bad write accesses to account payload go unnoticed as long as the original
   value is restored
 - Syscall slice parameters
@@ -74,48 +77,60 @@ The virtual address space of the stack frames must become consecutive:
 This goes for all programs globally and is not opt-in.
 Thus, this change is independent of SIMD-0166.
 
-### VM write access
+### VM memory access
 
-When a write access to the input region (`0x400000000..0x500000000`) happens,
-which overlaps with a range in which an accounts payload, including its resize
-padding but not its metadata, was serialized it must be checked that:
+Memory accesses (both by the program and by syscalls) which span across memory
+mapping regions are considered access violations. Accesses to multiple regions
+(e.g. by memcpy syscalls) have to be split into multiple separate accesses,
+one for each region:
+
+- Readonly data (`0x100000000..0x200000000`)
+- Stack (`0x200000000..0x300000000`)
+- Heap (`0x300000000..0x400000000`)
+- Instruction meta data
+- Account meta data
+- Account payload address space
+- Instruction payload
+
+The payload address space of an account is the range in the serialized input
+region (`0x400000000..0x500000000`) which covers the payload and optionally the
+10 KiB resize padding (if not a loader-v1 program), but not the accounts
+metadata.
+
+For all memory accesses to the payload address space of an account which is
+flagged as writable and owned by the currently executed program, check that:
+
+- The access is completely within the maximum account length,
+otherwise `InstructionError::InvalidRealloc` must be thrown.
+- The access is completely within the rest of the account growth budget of the
+transaction, otherwise `InstructionError::InvalidRealloc` must be thrown.
+- The access is completely within the current length of the account,
+otherwise extend the account with zeros to the maximum allowed by the previous
+two checks.
+
+For loads / read accesses to the payload address space of an account check
+that:
+
+- The access is completely within the current length of the account,
+otherwise `InstructionError::AccountDataTooSmall` must be thrown.
+
+For stores / write accesses to the payload address space of an account check
+that:
 
 - The account is flagged as writable,
 otherwise `InstructionError::ReadonlyDataModified` must be thrown
 - The account is owned by the currently executed program,
-otherwise `InstructionError::ExternalAccountDataModified` must be thrown
-
-Thus, changing and later restoring data in unowned accounts is prohibited.
-
-### Syscall slice parameters
-
-When a range in virtual address space which:
-
-- starts in any account data (including its resize padding) and leaves it
-- starts outside account data and enters it
-
-is passed to `memcpy`, `memmove`, `memset`, or `memcmp`, it must throw
-`SyscallError::InvalidLength`.
-
-Except for CPI, all other syscalls which
-act on ranges in the virtual address space are confined to a single
-memory region for now. Meaning they have to stay within one of:
-
-- Readonly data
-- Stack
-- Heap
-- Account meta data
-- Account data without resize padding
-- Account resize padding
-
-And can not cross into any other region. This restriction is planned to
-be lifted in another SIMD.
+otherwise `InstructionError::ExternalAccountDataModified` must be thrown.
 
 ## Impact
 
 These restrictions have been extensively tested by replay against MNB.
 Most of the dApps devs whose dApps would fail have been contacted and had
 their dApps fixed already.
+
+Programs which used the SDKs account realloc function, which is now deprecated,
+should upgrade in order to avoid the read-before-write access to uninitialized
+memory.
 
 ## Security Considerations
 
