@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0332'
 title: Reduce ChaCha rounds for Turbine from 20 to 8
 authors:
   - Brennan Watt
