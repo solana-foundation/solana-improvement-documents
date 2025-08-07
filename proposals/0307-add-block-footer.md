@@ -14,7 +14,7 @@ development:
 
 ## Summary
 
-Add a block footer to Solana blocks and expose Footer fields in the
+Add a block footer to Solana blocks and expose footer fields in the
 `getBlock` rpc endpoint.
 
 ## Motivation
@@ -51,6 +51,9 @@ No new terms, but the following definitions are given for clarity:
 - Shreds - A fixed chunk of encoded raw block data.
 - Entry Batch - An array of entries.
 - Entry - An array of transactions.
+- Block Meta Chunk - A chunk of structured non-transaction data, typically
+  metadata fields, that can be placed before, after, or in-between entry
+  batches in a block.
 
 ## Detailed Design
 
@@ -58,34 +61,75 @@ No new terms, but the following definitions are given for clarity:
 
 Solana blocks are organized in abstraction layers not entirely unlike the
 arrangement of a typical network packet (e.g. MAC -> IP -> TCP -> HTTP). At the
-highest layer a block consists of some number (~100+) FEC sets. A single FEC
-set contains a handful of shreds (~32). Once sufficient shreds are available
-the raw block data is reconstructed and reinterpreted as an array of entry
-batches. Entry batches are aligned with shred boundaries (i.e. they will
-start/stop at a shred boundary).
+highest layer a block consists of some number (~100+) FEC sets. A single FEC set
+contains a handful of shreds (~32). Once sufficient shreds are available the raw
+block data is reconstructed and reinterpreted as an array of entry batches.
+Entry batches are aligned with shred boundaries (i.e. they will start/stop at a
+shred boundary).
 
-This SIMD add the following footer at the end of the raw block data. This
-puts it on the same abstraction layer as serialized entry batch data. Put
-differently, the serialized footer will be appended after the last serialized
-entry batch in the block as its own pseudo-entry-batch. Parsers should,
-however, support the footer actually being placed anywhere in the block,
-between any other entry batches. The footer should be parsed as its own
-pseudo-entry-batch and will be differentiated from other entry batches using
-the `block_footer_flag` field. Allowing the footer anywhere in the block
-gives us the flexibility to fix it as a header or a footer in a future SIMD.
-Currently, we call it a "footer" and encourage block producers to add it to
-the end of the block since we think future SIMD's may require the footer to
-be computed after constructing the block (e.g. a new timing metric, async
-execution).
+This SIMD introduces the idea of a block metadata chunk (block meta). This is a
+piece of data that would take the place of an entry batch in an incoming shred
+stream. Entry batch data starts with an 8 byte value that represents the number
+of entries in the batch. This number cannot be zero. By including 8 zero bytes
+at the beginning of the block meta header, a replay parser can differentiate it
+from a regular entry batch. A block meta chunk has the following versioned
+header:
 
 ```
-           Block Footer Layout
+
+          Block Meta Header Layout
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_footer_flag           (64 bits) |
+| block_meta_flag        (64 bits of 0) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| version                     (64 bits) |
+| version=1                   (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| footer_length               (16 bits) |
+| variant                      (8 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| length                      (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|              --payload--              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Note that all data fields below are packed together without any alignment or
+padding constraints.
+
+```
+
+`block_meta_flag: u64`: will always be zero. The first 8 bytes of an entry batch
+are always a positive number (the number of entries in the batch), so this flag
+allows parsers to differentiate the block meta from a normal entry batch.
+
+- `version: u16` is a positive integer which changes anytime a change is made to
+the block meta header. The initial version will be 1.
+
+- `variant: u8` is a positive integer which identifies the structure of the
+block meta payload. For example, the block footer will be identified by
+`variant=1`. New metadata may be added without changing the footer by adding a
+new variant which corresponds to a differently specified payload.
+
+- `length: u16` is the length of the block meta payload in bytes (i.e. not
+including the `block_meta_flag`, `version`, `variant`, and `length` fields).
+Though not necessary, this will make it easier for block parsers to ignore
+certain variants.
+
+This SIMD also proposes the following block meta variant with an additional
+constraint: it must occur once after the last entry batch in a block.  The block
+footer is meant to contain general block and producer metadata, along with any
+metrics that must be computed after the block has been produced.
+
+```
+
+               Block Footer 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_meta_flag       (64 bits of 0) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| version=1                   (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| variant=1                    (8 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| length                      (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| footer_version=1            (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | block_producer_time_nanos   (64 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -94,29 +138,21 @@ execution).
 | block_user_agent        (0-255 bytes) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-Note that footer fields are packed together without any alignment requirements
-or padding.
+Note that all data fields below are packed together without any alignment or
+padding constraints.
+
 ```
 
-- `block_footer_flag: u64` will always be zero. The first 8 bytes of an entry
-batch are always a positive number (the number of entries in the batch), so
-this flag allows parsers to differentiate the footer from a normal entry batch.
-This facilitates parsing block data and would also allow us to make the footer
-optional if that's ever needed.
-
-- `version: u64` is a positive integer which changes anytime a change is made to
-the footer. The initial version will be 1.
-
-- `footer_length: u16` is the length of the rest of the footer in bytes (i.e.
-not including the `block_footer_flag`, `version`, and `footer_length` fields).
+- `footer_version: u16` is a positive integer which changes anytime a change is
+made to the footer. The initial version will be 1.
 
 - `block_producer_time_nanos: u64` is a nanosecond UNIX timestamp representing
-the time when the block producer started constructing the block.
-"started constructing" is the point at which, from the perspective of the
-leader, all of the consensus checks required for assuming leadership have
-"just passed". For example, in Agave's pre-alpenglow implementations, this would
-be in replay/maybe_start_leader. In a post-Alpenglow implementation, this would
-be after receiving the proper vote/skip certificate for the previous slot.
+the time when the block producer started constructing the block. "started
+constructing" is the point at which, from the perspective of the leader, all of
+the consensus checks required for assuming leadership have "just passed". For
+example, in Agave's pre-alpenglow implementations, this would be in
+replay/maybe_start_leader. In a post-Alpenglow implementation, this would be
+after receiving the proper vote/skip certificate for the previous slot.
 
 - `block_user_agent_len: u8` the length of the `block_user_agent` string in
 bytes.
@@ -124,11 +160,11 @@ bytes.
 - `block_user_agent: String` is a variable length utf-8 encoded string that
 provides identifying information about the block producer.
 
-Any other fields that are deemed necessary in the future may be added with a
-corresponding change to `version` / `footer_length`. For example, SIMD
-[0298](https://github.com/solana-foundation/solana-improvement-documents/pull/298)
-proposes a header field, which could be added as a subsequent SIMD (or even
-folded into this one).
+Any other fields that are deemed necessary in the future may be added in one of
+two ways.
+
+- amend the `footer_version` and add the field the footer
+- create a new block meta variant and add the field to its payload
 
 ### Footer Field Specification
 
@@ -176,7 +212,7 @@ feature that is contained and enabled in the client it describes.
 e.g.
 
 ```
-agave/v2.2.15 (jito; doublezero; some-mod/v1.2.3)
+agave/v2.2.15 (jito; double0; some-mod/v1.2.3)
 ```
 
 Sometimes there may be software that coexists or runs alongside a validator
@@ -189,7 +225,7 @@ complementary software like this should add additional
 For example:
 
 ```
-agave/v3.0.0 (doublezero) greedy-scheduler/v3 (mode:perf; another-flag)
+agave/v3.0.0 (paladin; double0) greedy-scheduler/v3 (mode:perf; another-flag)
 ```
 
 ### RPC Protocol Changes
@@ -233,7 +269,7 @@ Sample Response Payload
     "previousBlockhash": "mfcyqEXB3DnHXki6KjjmZck6YjmZLvpAByy2fj4nh6B",
     "footer": {
         "blockProducerTimeNanos": 1750176982899968023,
-        "blockUserAgent": "agave/v3.0.0 (doublezero) greedy-scheduler/v3 (mode:perf; another-flag)",
+        "blockUserAgent": "agave/v3.0.0 (double0) greedy-scheduler/v3 (mode:perf; another-flag)",
     },
     "transactions": [
       {
@@ -286,12 +322,11 @@ Sample Response Payload
 ```
 <!-- markdownlint-restore -->
 
-### Mandating the block footer
+### Mandating the footer
 
-While it is possible to make the block footer optional thanks to the
-`block_footer_flag` field, this proposal makes it mandatory. Blocks that don't
-include a valid footer in the block payload must be flagged as dead blocks and
-skipped by the other nodes in the cluster.
+This proposal makes the block footer. Blocks that don't include a valid footer
+in the block payload must be flagged as dead blocks and skipped by the other
+nodes in the cluster.
 
 ## Alternatives Considered
 
