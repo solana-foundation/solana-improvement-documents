@@ -21,7 +21,11 @@ bank.
 
 It is convenient for multiple validator clients to have the block ID
 when booting from a snapshot, and allows the inter-slot equivocation
-block ID verification to not be special-cased on startup.
+block ID verification to not be special-cased on startup.  In addition,
+this future-proofs for Alpenglow, as Alpenglow votes and related
+tracking is done on (Slot, Block ID), and repair & duplicate block
+resolution uses block ID. Having the block ID available in snapshots
+enables this.
 
 ## New Terminology
 
@@ -32,7 +36,8 @@ N/A
 The block_id already lives in the bank. Snapshot producers for all
 clients must include the block ID of the snapshot slot in the serialized
 bank of the snapshot. This can be implemented by adding a `block_id`
-field to `BankFieldsToSerialize` in Agave.
+field to the snapshot serialization schema (eg. `BankFieldsToSerialize`
+in Agave or `fd_snapshot_manifest_t` in Firedancer).
 
 Snapshot consumers may optionally to read the block ID in the
 deserialized bank, and use it to validate as seen fit.
