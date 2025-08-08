@@ -175,11 +175,6 @@ voters included in the aggregate. Nodes receiving 0 SOL at the end of the epoch
 are removed from the active set of nodes. This scheme will practically eliminate
 today’s voting transaction overhead while still rewarding voting.
 
-In addition, the leader is rewarded for including all original fast-finalization
-(or notarization plus finalization) certificates for any slot on chain. The flat
-reward for such a first certificate is 100k Lamports (because we expect the cost
-of a BLS signature to be roughly 20x the 5k Lamports of a regular signature).
-
 
 ### Validator Admission Ticket (VAT)
 
