@@ -146,18 +146,29 @@ distribution mechanism described in [SIMD-0118].
 
 #### Delegator Rewards Calculation
 
-During the beginning of the first block of an epoch `N`, all pending delegator
-rewards from all vote accounts with a non-zero active stake delegation during
-the reward epoch `N - 1` MUST be transferred by the runtime to the epoch rewards
-sysvar account for distribution.
+Delegator rewards MUST be calculated during both the beginning of the first
+block of an epoch `N` and after restarting during partitioned rewards
+distribution.
 
-For each actively staked vote account, retrieve its state at the end of the
-reward epoch and check the `pending_delegator_rewards` field in its vote state.
-Let this value be `P`. If `P` is non-zero, set the `pending_delegator_rewards`
-field to `0` and deduct `P` from the vote account's lamport balance and credit
-it to the epoch rewards sysvar account's lamport balance.  Then if `P` is
-non-zero, sum all active stake delegated to the vote account during the reward
-epoch epoch `N - 1`. Let this total be `A`.
+For each vote account, get its total active stake delegation
+during the reward epoch `N - 1`. Let this value be `A`. If `A` is zero, skip
+this vote account (any pending delegator rewards will be distributed in a future
+epoch when the vote account has active stake.)
+
+Then for each vote account, get its pending delegator rewards from the
+`pending_delegator_rewards` field in the vote state at the end of reward epoch
+`N - 1`. Let this value be `P`. If `P` is zero, skip this vote account as there
+is nothing to be distributed.
+
+Lastly, if this is the first block of epoch `N`, the vote state's
+`pending_delegator_rewards` field MUST be reset to `0` and `P` lamports MUST be
+deducted from the vote account's lamport balance and credited to the epoch
+rewards sysvar account's lamport balance.
+
+Note that unlike inflation rewards distribution, block revenue distribution will
+not impact any internal epoch rewards sysvar state fields like `total_rewards`
+or `distributed_rewards` since block revenue will instead be tracked via the
+epoch rewards sysvar lamport balance.
 
 #### Individual Delegator Reward
 
@@ -178,6 +189,11 @@ lamport balance MUST be debited by the block revenue reward distribution amount
 to keep capitalization consistent.
 
 [SIMD-0118]: https://github.com/solana-foundation/solana-improvement-documents/pull/118
+
+#### Delegator Rewards Completion
+
+After distributing all partitioned delegator rewards, the epoch rewards sysvar balance
+MUST be reset to its rent exemption balance and any surplus lamports are burned.
 
 ### Vote Program
 
