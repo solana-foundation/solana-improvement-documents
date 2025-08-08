@@ -240,7 +240,7 @@ failing any of the above checks must throw `UnsupportedProgramId`.
 - Instruction accounts:
   - `[writable]` The program account to withdraw from.
   - `[signer]` The authority of the program.
-  - `[]` The recipient account.
+  - `[writable]` The recipient account.
 - Instruction data:
   - Enum variant `3u32`
 - Behavior:
@@ -249,6 +249,8 @@ failing any of the above checks must throw `UnsupportedProgramId`.
     otherwise throw `NotEnoughAccountKeys`
   - Check that program account and recipient account do not alias,
     otherwise throw `AccountBorrowFailed`
+  - Check that the recipient account is writable,
+  otherwise throw `InvalidArgument`
   - Verify the program account
   - Transfer lamports which are not needed for rent exemption from the
   program account to the recipient account
@@ -258,7 +260,7 @@ failing any of the above checks must throw `UnsupportedProgramId`.
 - Instruction accounts:
   - `[writable]` The program account to withdraw from.
   - `[signer]` The authority of the program.
-  - `[]` The recipient account.
+  - `[writable]` The recipient account.
 - Instruction data:
   - Enum variant `4u32`
 - Behavior:
@@ -267,6 +269,8 @@ failing any of the above checks must throw `UnsupportedProgramId`.
     otherwise throw `NotEnoughAccountKeys`
   - Check that program account and recipient account do not alias,
     otherwise throw `AccountBorrowFailed`
+  - Check that the recipient account is writable,
+  otherwise throw `InvalidArgument`
   - Verify the program account
   - Check that the status stored in the program account is
   `NeverBeenDeployed` or `Retracted`,
