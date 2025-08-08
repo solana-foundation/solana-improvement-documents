@@ -51,9 +51,8 @@ No new terms, but the following definitions are given for clarity:
 - Shreds - A fixed chunk of encoded raw block data.
 - Entry Batch - An array of entries.
 - Entry - An array of transactions.
-- Block Meta Chunk - A chunk of structured non-transaction data, typically
-  metadata fields, that can be placed before, after, or in-between entry
-  batches in a block.
+- Block Marker - A chunk of structured non-transaction data that can be placed
+  before, after, or in-between entry batches in a block.
 
 ## Detailed Design
 
@@ -67,19 +66,18 @@ block data is reconstructed and reinterpreted as an array of entry batches.
 Entry batches are aligned with shred boundaries (i.e. they will start/stop at a
 shred boundary).
 
-This SIMD introduces the idea of a block metadata chunk (block meta). This is a
-piece of data that would take the place of an entry batch in an incoming shred
-stream. Entry batch data starts with an 8 byte value that represents the number
-of entries in the batch. This number cannot be zero. By including 8 zero bytes
-at the beginning of the block meta header, a replay parser can differentiate it
-from a regular entry batch. A block meta chunk has the following versioned
-header:
+This SIMD introduces the idea of a block marker. This is a piece of data that
+would take the place of an entry batch in an incoming shred stream. Entry batch
+data starts with an 8 byte value that represents the number of entries in the
+batch. This number cannot be zero. By including 8 zero bytes at the beginning of
+the block marker header, a replay parser can differentiate it from a regular
+entry batch. A block marker chunk has the following versioned header:
 
 ```
 
-          Block Meta Header Layout
+        Block Marker Header Layout
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_meta_flag        (64 bits of 0) |
+| block_marker_flag      (64 bits of 0) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | version=1                   (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -95,33 +93,33 @@ padding constraints.
 
 ```
 
-`block_meta_flag: u64`: will always be zero. The first 8 bytes of an entry batch
-are always a positive number (the number of entries in the batch), so this flag
-allows parsers to differentiate the block meta from a normal entry batch.
+`block_marker_flag: u64`: will always be zero. The first 8 bytes of an entry
+batch are always a positive number (the number of entries in the batch), so this
+flag allows parsers to differentiate the block marker from a normal entry batch.
 
 - `version: u16` is a positive integer which changes anytime a change is made to
-the block meta header. The initial version will be 1.
+the block marker header. The initial version will be 1.
 
 - `variant: u8` is a positive integer which identifies the structure of the
-block meta payload. For example, the block footer will be identified by
+block marker payload. For example, the block footer will be identified by
 `variant=1`. New metadata may be added without changing the footer by adding a
 new variant which corresponds to a differently specified payload.
 
-- `length: u16` is the length of the block meta payload in bytes (i.e. not
-including the `block_meta_flag`, `version`, `variant`, and `length` fields).
+- `length: u16` is the length of the block marker payload in bytes (i.e. not
+including the `block_marker_flag`, `version`, `variant`, and `length` fields).
 Though not necessary, this will make it easier for block parsers to ignore
 certain variants.
 
-This SIMD also proposes the following block meta variant with an additional
+This SIMD also proposes the following block marker variant with an additional
 constraint: it must occur once after the last entry batch in a block.  The block
 footer is meant to contain general block and producer metadata, along with any
 metrics that must be computed after the block has been produced.
 
 ```
 
-               Block Footer 
+     Block Marker Variant -- Footer
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_meta_flag       (64 bits of 0) |
+| block_marker_flag      (64 bits of 0) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | version=1                   (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -164,7 +162,7 @@ Any other fields that are deemed necessary in the future may be added in one of
 two ways.
 
 - amend the `footer_version` and add the field the footer
-- create a new block meta variant and add the field to its payload
+- create a new block marker variant and add the field to its payload
 
 ### Footer Field Specification
 
