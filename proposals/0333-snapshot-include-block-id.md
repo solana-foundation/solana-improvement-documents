@@ -39,8 +39,8 @@ bank of the snapshot. This can be implemented by adding a `block_id`
 field to the snapshot serialization schema (eg. `BankFieldsToSerialize`
 in Agave or `fd_snapshot_manifest_t` in Firedancer).
 
-Snapshot consumers may optionally to read the block ID in the
-deserialized bank, and use it to validate as seen fit.
+Snapshot consumers may optionally read the block ID in the deserialized
+bank, and use it to validate as seen fit.
 
 ## Alternatives Considered
 
@@ -59,4 +59,4 @@ of the snapshot slot.
 
 ## Backwards Compatibility
 
-This feature is backwards compatible.
+This feature is not backwards compatible.
