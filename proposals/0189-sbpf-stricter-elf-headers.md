@@ -82,13 +82,14 @@ For each of these predefined program headers:
 - `p_flags` must match the `p_flags` of the entry in the table above
 - `p_offset` must not be less than `e_phoff + e_phnum * size_of::<Elf64Phdr>()`
 - `p_offset` must be less than `file.len() as u64`
-- `p_offset` must be  evenly divisible by 8 bytes,
+- `p_offset` must be evenly divisible by 8 bytes,
 - `p_vaddr` must match the `p_vaddr` of the entry in the table above
 - `p_paddr` must match the `p_vaddr` of the entry in the table above
 - `p_filesz` must be:
   - `0` if the section is writable (the `PF_W` flag is set)
   - `p_memsz` otherwise (the `PF_W` flag is clear)
 - `p_filesz` must not be greater than `file.len() as u64 - p_offset`
+- `p_filesz` must be evenly divisible by 8 bytes,
 - `p_memsz` must fit in 32 bits / be less than `1 << 32`
 - `p_align` is ignored
 
