@@ -100,10 +100,10 @@ flag allows parsers to differentiate the block marker from a normal entry batch.
 - `version: u16` is a positive integer which changes anytime a change is made to
 the block marker header. The initial version will be 1.
 
-- `variant: u8` is a positive integer which identifies the structure of the
-block marker payload. For example, the block footer will be identified by
-`variant=1`. New metadata may be added without changing the footer by adding a
-new variant which corresponds to a differently specified payload.
+- `variant: u8` is an integer which identifies the structure of the block marker
+payload. For example, the block footer will be identified by `variant=0`. New
+metadata may be added without changing the footer by adding a new variant which
+corresponds to a differently specified payload.
 
 - `length: u16` is the length of the block marker payload in bytes (i.e. not
 including the `block_marker_flag`, `version`, `variant`, and `length` fields).
@@ -123,7 +123,7 @@ metrics that must be computed after the block has been produced.
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | version=1                   (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| variant=1                    (8 bits) |
+| variant=0                    (8 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | length                      (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
