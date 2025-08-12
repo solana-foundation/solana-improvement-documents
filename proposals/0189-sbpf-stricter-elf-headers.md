@@ -58,7 +58,7 @@ see SIMD-0179 for details on how a function start is marked.
 - `e_shoff` is not checked
 - `e_flags` see SIMD-0161
 - `e_ehsize` must be `size_of::<Elf64Ehdr>()` (64 bytes)
-- `e_phnum` must not be less than `0x0005`
+- `e_phnum` must not be less than `0x0004`
 - `e_phoff + e_phnum * size_of::<Elf64Phdr>()` must be less than the file size
 - `e_phentsize` must be `size_of::<Elf64Phdr>()` (56 bytes)
 - `e_shnum` is not checked
