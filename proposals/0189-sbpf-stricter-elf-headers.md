@@ -49,8 +49,8 @@ otherwise `ElfParserError::OutOfBounds` must be thrown.
 - `e_ident.ei_osabi` must be `ELFOSABI_NONE` (`0x00`)
 - `e_ident.ei_abiversion` must be `0x00`
 - `e_ident.ei_pad` must be `[0x00; 7]`
-- `e_type` must be `ET_DYN` (`0x0003`)
-- `e_machine` must be `EM_SBPF` (`0x0263`)
+- `e_type` must be `ET_REL` (`0x0001`)
+- `e_machine` must be `EM_BPF` (`0x00F7`)
 - `e_version` must be `EV_CURRENT` (`0x00000001`)
 - `e_entry` must point to a function start marker in the text section,
 see SIMD-0179 for details on how a function start is marked.
@@ -58,7 +58,7 @@ see SIMD-0179 for details on how a function start is marked.
 - `e_shoff` is not checked
 - `e_flags` see SIMD-0161
 - `e_ehsize` must be `size_of::<Elf64Ehdr>()` (64 bytes)
-- `e_phnum` must not be less than `0x0005`
+- `e_phnum` must be `0x0004`
 - `e_phoff + e_phnum * size_of::<Elf64Phdr>()` must be less than the file size
 - `e_phentsize` must be `size_of::<Elf64Phdr>()` (56 bytes)
 - `e_shnum` is not checked
