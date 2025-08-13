@@ -110,6 +110,14 @@ including the `block_marker_flag`, `version`, `variant`, and `length` fields).
 Though not necessary, this will make it easier for block parsers to ignore
 certain variants.
 
+This header would precede any block marker variant inserted into the block data.
+Although the block marker data length can be inferred from the version/variant,
+an explicit length field is included for non-client parsers which discard
+non-transactional data from the block. This ensures that we don't create a
+dependency on these parsers when pushing out new/updated block markers. It also
+greatly simplifies the implementation of hardware parsers, especially
+considering that some variants contain variable length fields.
+
 This SIMD also proposes the following block marker variant with an additional
 constraint: it must occur once after the last entry batch in a block.  The block
 footer is meant to contain general block and producer metadata, along with any
