@@ -89,7 +89,8 @@ Variants:
 
 ### ParentReadyUpdate Specification
 
-The `ParentReadyUpdate` marker contains information about the new parent block that the leader switched to during optimistic packing:
+The `ParentReadyUpdate` marker contains information about the new parent block
+that the leader switched to during optimistic packing:
 
 ```
 ParentReadyUpdateV1 Layout:
@@ -103,6 +104,7 @@ Total size: 40 bytes
 ```
 
 Fields:
+
 - **Parent Slot**: The slot number of the new parent block (u64,
   little-endian)
 - **Parent Block ID**: The block ID identifying the new parent block (32-byte
@@ -222,5 +224,6 @@ activated.
 A reference implementation is available here: https://github.com/anza-xyz/alpenglow/pull/364
 
 This implementation includes:
+
 - Full `BlockComponent` enumeration with marker support
 - Serialization/deserialization logic
