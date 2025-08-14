@@ -1,5 +1,5 @@
 ---
-simd: '0335'
+simd: '0337'
 title: Add ParentReadyUpdate Block Marker for Alpenglow Optimistic Block Packing
 authors:
   - ksn6 (Anza)
