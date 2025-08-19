@@ -68,7 +68,7 @@ The correct logic should check that the reminder is 0.
 ```rust
 pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     if input.len() % ALT_BN128_PAIRING_ELEMENT_LEN != 0 {
-        return Err(ProgramError::InvalidArgument);
+        return Err(AltBn128Error::InvalidArgument);
     }
 
     // logic omitted...
