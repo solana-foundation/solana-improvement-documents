@@ -13,8 +13,8 @@ feature: (fill in with feature key and github tracking issues once accepted)
 ## Summary
 
 Increase the maximum account info length for cross-program invoked (CPI)
-instructions from 64 to 255 so that onchain programs can invoke CPI's without
-first needing to deduplicate account info's.
+instructions from 64 to 255 and consume compute units for serialized account
+info's and instruction account meta's.
 
 ## Motivation
 
@@ -29,15 +29,51 @@ This problem arises when onchain programs wrap another program (such as Jupiter)
 that composes many other programs and are invoked with over 64 accounts
 (including duplicates).
 
+Along with the increasing the account info limit, start charging for both
+serialized account info's and instruction account meta's to avoid abuse of
+resources in CPI calls.
+
 ## New Terminology
 
-NA
+- **Account Info:** The serialized information for each account referenced in a
+CPI instruction used to read account info from the caller program.
 
 ## Detailed Design
 
-Increase the max account info length imposed on CPI syscalls from 64 to 255.
-Note that this max is inclusive, meaning that account info's with a length of
-255 is valid.
+### Maximum Account Info Length
+
+Increase the maximum account info length imposed on CPI syscalls from **64** to
+**255**. The maximum is inclusive, meaning that a list of account info's with a
+length of 255 is valid.
+
+### Account Info Cost
+
+Consume **1 compute unit (CU)** for every `cpi_bytes_per_unit` (currently 250)
+bytes of account info.
+
+Fixed size of **80 bytes** for each `account_info` broken down as
+  - 32 bytes for account address
+  - 32 bytes for owner address
+  - 8 bytes for lamport balance
+  - 8 bytes for data length
+
+The total cost of account info's can be computed with
+`(account_info_size * account_infos_len) / cpi_bytes_per_unit` rounded down to
+the nearest CU.
+
+### Instruction Account Metadata Cost
+
+Consume **1 compute unit (CU)** for every `cpi_bytes_per_unit` (currently 250)
+bytes of instruction account metadata.
+
+Fixed size of **34 bytes** for each `ix_account_metadata` broken down as
+  - 32 bytes for account address
+  - 1 byte for signer flag
+  - 1 byte for writable flag
+
+The total cost of instruction account metadata can be computed with
+`(ix_account_metadata_size * ix.accounts.len()) / cpi_bytes_per_unit` rounded
+down to the nearest CU.
 
 ## Alternatives Considered
 
@@ -48,7 +84,11 @@ have relative to them?
 
 Since the list of account info's passed to a CPI can now be ~4 times longer,
 there will be more overhead in the SVM to map each instruction account address
-to one of the account info.
+to one of the account info's and translate account info's to callee instruction
+accounts.
+
+CPI's will consume additional compute units proportional to the number of
+account info's and instruction accounts.
 
 ## Security Considerations
 
@@ -60,5 +100,7 @@ Why should we not do this?
 
 ## Backwards Compatibility *(Optional)*
 
-The max account info length increase for CPI's will be feature gated. Since the
-limit is being increased, existing behavior will not be restricted.
+The max account info length increase for CPI's and new costs will be feature
+gated. Since the limit is being increased, existing behavior will not be
+restricted. However, new imposed costs for CPI instruction accounts and account
+info's may cause onchain programs to consume additional CU's.
