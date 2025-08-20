@@ -52,6 +52,7 @@ Consume **1 compute unit (CU)** for every `cpi_bytes_per_unit` (currently 250)
 bytes of account info.
 
 Fixed size of **80 bytes** for each `account_info` broken down as
+
   - 32 bytes for account address
   - 32 bytes for owner address
   - 8 bytes for lamport balance
@@ -67,6 +68,7 @@ Consume **1 compute unit (CU)** for every `cpi_bytes_per_unit` (currently 250)
 bytes of instruction account metadata.
 
 Fixed size of **34 bytes** for each `ix_account_metadata` broken down as
+
   - 32 bytes for account address
   - 1 byte for signer flag
   - 1 byte for writable flag
