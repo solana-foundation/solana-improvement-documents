@@ -55,10 +55,6 @@ start. Therefore, the verifier must enfroce that functions start with
 an `add64 r10, imm` instruction that modifies the stack pointer `r10`, without 
 any restriction for the immediate value.
 
-The only exception to this requirement is the first function in the ELF 
-text area. Since the first instruction in the ELF can only represent a 
-function beginning, the verifier must not require it to be an `add64 r10, imm`.
-
 As a corollary of this definition, a function must only have a single 
 `add64 r10, imm` instruction. A second one would consequently indicate the 
 start of another adjacent function.
