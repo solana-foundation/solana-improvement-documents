@@ -85,9 +85,8 @@ NumAddresses (u8)
 Addresses [[u8; 32]] -- Length matches NumAddresses
 ConfigRequests [u64] -- Array of request values. (section size is popcount
  TransactionConfigMask * 8). each value is a u64.
-Ixs [(u8, u8, u16, u16, u16)] -- Number matches NumInstructions. Values are 
- (program_account_index, num_accounts, accounts_offset, num_data_bytes, 
- bytes_offset)
+Ixs [(u8, u8, u16)] -- Number matches NumInstructions. Values are 
+ (program_account_index, num_accounts, num_data_bytes)
 [TRAILING DATA SECTION] -- Length is such that PayloadLength is matched.
 Signatures [[u8; 64]] -- Length of `num_required_signatures` from
  `LegacyHeader`
