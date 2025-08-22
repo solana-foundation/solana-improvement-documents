@@ -13,7 +13,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Historically, messages transmitted over the network must not exceed the IPc6 MTU
+Historically, messages transmitted over the network must not exceed the IPv6 MTU
 size to ensure a fast and reliable network delivery. Solana has used a 
 conservative MTU size of 1280 bytes, which after accounting for some of the
 overhead, leaves a maximum transaction size of 1232 bytes for data in the
@@ -82,7 +82,7 @@ TransactionConfigMask (u64) -- Bitmask of which config requests are present.
  - 3: requested_loaded_accounts_data_size_limit
 LifetimeSpecificier [u8; 32]
 NumAddresses (u8)
-Addresses [[u8; 32]] -- Number matches NumAddresses
+Addresses [[u8; 32]] -- Length matches NumAddresses
 ConfigRequests [u64] -- Array of request values. (section size is popcount
  TransactionConfigMask * 8). each value is a u64.
 Ixs [(u8, u8, u16, u16, u16)] -- Number matches NumInstructions. Values are 
@@ -113,6 +113,46 @@ the trailing data section.
 
 This new `v1` transaction format notably does not include address lookup
 tables.
+
+With the new transaction size limit, it is possible to go past some other 
+implicit limitations that are currently in place on the network. To avoid
+causing unintended issues, the following limitations are proposed to be in
+place:
+
+| max | value |
+| --- | --- |
+| max transaction size | 4096 |
+| max num signatures per transaction | 63 |
+| max num accounts | 64 |
+| max num instructions | 64 |
+| max accounts/instruction | 128 |
+| max data bytes/instruction | 3900 |
+| max UDP packets (fragmentation) | 6 |
+
+The above limits are useful to spec, but not necessarily different than what is
+currently in place on the network.
+
+## Alternatives Considered
+
+Alternative designs considered:
+
+- Having a transaction loading feature that would allow developers to load
+the transaction parts in a buffer and then be able to execute them at the
+end.
+This method is no longer considered as it requires a much higher level of
+latency on the application level and a decent amount of complexity within
+the validator
+- Bundles at the protocol level. This would not solve all problems that are
+ solved by larger transaction sizes. Bundles would still limit the ability for
+ developers to use cryptographic signature schemes that have large proof sizes.
+
+## Impact
+
+Developers would have to update with applications to use the new transaction
+format to take advantage of the larger transaction size. Those developers that
+had previously been using address lookup tables would be required to update the
+new transactions with the full address list instead of the address lookup table
+and its indices.
 
 In consideration of what size the new transaction size limit should increase
 to, [Jito's bundle
@@ -148,28 +188,6 @@ ensure that performance on the cluster is not adversely affected. This testing
 should include the different use cases mentioned within the motivation section,
 as well as the different sizes of transactions that are currently being used by
 developers on the network.
-
-## Alternatives Considered
-
-Alternative designs considered:
-
-- Having a transaction loading feature that would allow developers to load
-the transaction parts in a buffer and then be able to execute them at the
-end.
-This method is no longer considered as it requires a much higher level of
-latency on the application level and a decent amount of complexity within
-the validator
-- Bundles at the protocol level. This would not solve all problems that are
- solved by larger transaction sizes. Bundles would still limit the ability for
- developers to use cryptographic signature schemes that have large proof sizes.
-
-## Impact
-
-Developers would have to update with applications to use the new transaction
-format to take advantage of the larger transaction size. Those developers that
-had previously been using address lookup tables would be required to update the
-new transactions with the full address list instead of the address lookup table
-and its indices.
 
 ## Security Considerations
 
