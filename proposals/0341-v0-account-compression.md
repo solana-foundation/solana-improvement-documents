@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0341'
 title: v0 Account Compression
 authors:
   - Igor Durovic (anza)
