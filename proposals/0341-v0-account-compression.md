@@ -182,6 +182,7 @@ to prevent a cluster-wide slow disk read.
 ## Alternatives Considered
 
 ### fully off-chain storage of compressed account data with only fixed-size
+
 vector commitments stored on-chain
 
 **Pros**: Minimal on-chain storage
@@ -208,6 +209,7 @@ savings, performance predictability, and implementation complexity.
 ## Impact
 
 ### DApp and Wallet Developers
+
 - include checks for account compression status in program interaction
   workflow
 - add instructions to transactions for account recovery when appropriate
