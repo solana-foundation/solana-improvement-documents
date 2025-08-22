@@ -13,23 +13,23 @@ feature: TBD
 ## Summary
 
 This SIMD proposes upgrading `BlockMarkerV1`, introduced in SIMD-0307, to
-`BlockMarkerV2` to support optimistic block packing in the Alpenglow consensus
+`BlockMarkerV2` to support fast leader handover in the Alpenglow consensus
 protocol. In particular, `BlockMarkerV2` includes a new `ParentReadyUpdate`
-variant to support optimistic block packing. This marker signals when a leader
-has switched to a different parent block during optimistic block production
+variant to support fast leader handover. This marker signals when a leader
+has switched to a different parent block during fast leader handover
 due to a `ParentReady` event, providing critical metadata for consensus
 validation and block verification.
 
 ## Motivation
 
 The Alpenglow consensus protocol, as specified in SIMD-0326, introduces
-optimistic block packing as a key performance optimization. This mechanism
+fast leader handover as a key performance optimization. This mechanism
 allows leaders to begin constructing blocks on tentative parent blocks before
 the actual parent is fully finalized through the notarization process. This
 optimization significantly reduces block production latency by enabling
 parallel processing of block construction and parent finalization.
 
-However, during optimistic block packing, a leader may need to switch from
+However, during fast leader handover, a leader may need to switch from
 their initially assumed parent to a different parent block when a
 `ParentReady` event occurs. This event indicates that:
 
@@ -43,7 +43,7 @@ their initially assumed parent to a different parent block when a
 Currently, there is no standardized mechanism to signal these parent switches
 within the block structure. As such, without the capability that this SIMD
 details, leader validators cannot indicate that a parent switch has occurred
-during optimistic packing.
+during fast leader handover.
 
 This SIMD addresses these issues by leveraging the extensible `BlockMarker`
 framework introduced in SIMD-0307 to add a dedicated marker for parent switch
@@ -53,19 +53,19 @@ events.
 
 - **Block Marker**: A chunk of structured non-transaction data that can be
   placed before, after, or in-between entry batches in a block.
-- **Optimistic Block Packing**: A technique where leaders begin constructing
+- **Fast Leader Handover**: A technique where leaders begin constructing
   blocks on a tentative parent before the actual parent is finalized
 - **ParentReady Event**: A consensus event indicating that a block has met
   all requirements to serve as a parent for new block production
 - **Parent Switch**: The action of changing from one parent block to another
-  during optimistic block production
+  during fast leader handover
 - **ParentReadyUpdate**: A block marker that records when and to which parent
-  a switch occurred during optimistic packing
+  a switch occurred during fast leader handover
 
 ## Detailed Design
 
 This proposal extends the block marker system introduced in SIMD-0307 by
-adding a new variant specifically for Alpenglow's optimistic block packing
+adding a new variant specifically for Alpenglow's fast leader handover
 requirements.
 
 ### Block Marker Version 2
@@ -90,7 +90,7 @@ Variants:
 ### ParentReadyUpdate Specification
 
 The `ParentReadyUpdate` marker contains information about the new parent block
-that the leader switched to during optimistic packing:
+that the leader switched to during fast leader handover:
 
 ```
 ParentReadyUpdateV1 Layout:
@@ -169,7 +169,7 @@ Total overhead: 53 bytes per marker
   - Ambiguity in determining whether a parent switch occurred vs. a duplicate
     block was received
   - Inability to validate leader behavior
-  - Lack of auditability for optimistic packing decisions
+  - Lack of auditability for fast leader handover decisions
 
 - **Special Transaction Type**.
   Using a special transaction to signal parent switches was considered but
@@ -196,8 +196,8 @@ Total overhead: 53 bytes per marker
 ## Impact
 
 - **Positive**:
-  - Enables full implementation of Alpenglow's optimistic block packing
-  - Optimistic block packing, upon implementation, reduces block production
+  - Enables full implementation of Alpenglow's fast leader handover
+  - Fast leader handover, upon implementation, reduces block production
     latency
   - Minimal space overhead (53 bytes per switch event)
 
