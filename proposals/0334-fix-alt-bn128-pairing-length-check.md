@@ -63,7 +63,7 @@ pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
 }
 ```
 
-The correct logic should check that the reminder is 0.
+The correct logic should check that the remainder is 0.
 
 ```rust
 pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
