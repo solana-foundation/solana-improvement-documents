@@ -58,7 +58,7 @@ when it is lower. When an account is created, or decompressed, it pays at
 least 15 epochs worth of rent at the current rate. When an account is written
 for the first time in an epoch it pays at least 1 epoch worth of rent. If an
 account has not payed rent in a while, and the rent due is more than the rent
-paid, the account becomes elligable for compression at which point the leader
+paid, the account becomes eligible for compression at which point the leader
 can submit a transaction with compression instructions and earn a reward for
 decompressing the accounts. This reward is set such that it is never more than
 the sol burned in rent so no net new sol is created through this rent
@@ -145,29 +145,6 @@ Each account gets new fields:
 - **rent_paid** is set to zero when account is compressed (rent is "consumed"
   by the compression operation)
 
-### Rent Payment Syscall
-
-A new syscall `sol_pay_rent()` allows programs to pay rent for accounts:
-
-**Signature:**
-
-```c
-uint64_t sol_pay_rent(
-    uint8_t *account_pubkey,    // 32-byte account public key
-    uint64_t lamports_to_pay    // Amount of SOL to burn as rent payment
-);
-```
-
-**Returns:** Total rent paid for the account after this payment
-
-**Behavior:**
-
-- Burns `lamports_to_pay` lamports from the calling program's account
-- Adds `lamports_to_pay` to the target account's `rent_paid` field
-- Returns the updated total `rent_paid` value
-- Fails if calling program has insufficient lamports
-
-**Access Control:** Callable by any program with sufficient lamports
 
 ### Rent Collection Behavior
 
@@ -304,9 +281,7 @@ account.rent_paid = 0;
 getAccountCompressionStatus(pubkey) // Returns compression status and
                                     // eligibility
 estimateDecompressionCost(pubkey)   // Returns required rent payment for
-                                    // decompression  
-decompressAccount(pubkey, original_data, rent_payment) // Decompresses account
-                                                       // with rent payment
+                                    // decompression
 ```
 
 **Modified RPC Methods:**
@@ -416,9 +391,9 @@ display_cost_breakdown(transaction_fee, rent_collection_cost, total_cost);
 **Negative:**
 
 - **Breaking changes**: Programs must handle compressed account access
-  patterns and rent collection
-- **Increased complexity**: Need to integrate compression checks, rent
-  payments, and error handling
+  patterns
+- **Increased complexity**: Need to integrate compression checks and error
+  handling
 
 ### Network
 
@@ -607,7 +582,6 @@ if (current_epoch >= activation_epoch + 25) {
 **Program Updates:**
 
 - Add error handling for compressed account access
-- Integrate `sol_pay_rent()` syscall for better UX
 - Update account access patterns to check compression status
 
 ### Compatibility Guarantees
