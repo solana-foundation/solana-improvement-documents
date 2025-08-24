@@ -1,8 +1,8 @@
 ---
-simd: '0000'
+simd: '0344'
 title: Dynamic State Rent
 authors:
-  - Your Name
+  - Max Resnick (Anza)
 category: Standard
 type: Core
 status: Idea
