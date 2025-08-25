@@ -147,8 +147,8 @@ distribution mechanism described in [SIMD-0118].
 #### Delegator Rewards Calculation
 
 Delegator rewards MUST be calculated during both the beginning of the first
-block of an epoch `N` and after restarting during partitioned rewards
-distribution.
+block of an epoch `N` and any time the node is restarted during the partitioned
+rewards distribution period.
 
 For each vote account, get its total active stake delegation
 during the reward epoch `N - 1`. Let this value be `A`. If `A` is zero, skip
@@ -163,7 +163,8 @@ is nothing to be distributed.
 Lastly, if this is the first block of epoch `N`, the vote state's
 `pending_delegator_rewards` field MUST be reset to `0` and `P` lamports MUST be
 deducted from the vote account's lamport balance and credited to the epoch
-rewards sysvar account's lamport balance.
+rewards sysvar account's lamport balance before any transactions or votes are
+processed.
 
 Note that unlike inflation rewards distribution, block revenue distribution will
 not impact any internal epoch rewards sysvar state fields like `total_rewards`
@@ -175,7 +176,7 @@ epoch rewards sysvar lamport balance.
 For each individual stake account with an active non-zero delegation, multiply
 its active stake in reward epoch `N - 1` by `P`, and divide the result by
 `A` using integer division to get the individual stake account's block revenue
-reward distribution amount.
+reward distribution amount, truncating any sub-lamport portion.
 
 #### Delegator Rewards Distribution
 
