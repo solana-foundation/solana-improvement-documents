@@ -151,9 +151,7 @@ block of an epoch `N` and any time the node is restarted during the partitioned
 rewards distribution period.
 
 For each vote account, get its total active stake delegation
-during the reward epoch `N - 1`. Let this value be `A`. If `A` is zero, skip
-this vote account (any pending delegator rewards will be distributed in a future
-epoch when the vote account has active stake.)
+during the reward epoch `N - 1`. Let this value be `A`.
 
 Then for each vote account, get its pending delegator rewards from the
 `pending_delegator_rewards` field in the vote state at the end of reward epoch
@@ -161,10 +159,12 @@ Then for each vote account, get its pending delegator rewards from the
 is nothing to be distributed.
 
 Lastly, if this is the first block of epoch `N`, the vote state's
-`pending_delegator_rewards` field MUST be reset to `0` and `P` lamports MUST be
-deducted from the vote account's lamport balance and credited to the epoch
-rewards sysvar account's lamport balance before any transactions or votes are
-processed.
+`pending_delegator_rewards` field MUST be reset to `0`. Then, if `A` (active
+stake) is zero, the delegator rewards will effectively returned to the voter
+after the `pending_delegator_rewards` field is reset to `0`. Otherwise, if `A`
+is non-zero, `P` lamports MUST be debited from the vote account's lamport
+balance and credited to the epoch rewards sysvar account's lamport balance
+before any transactions or votes are processed.
 
 Note that unlike inflation rewards distribution, block revenue distribution will
 not impact any internal epoch rewards sysvar state fields like `total_rewards`
