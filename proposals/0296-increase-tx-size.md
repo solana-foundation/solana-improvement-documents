@@ -73,9 +73,8 @@ The `v1` transaction format would be:
 VersionByte (u8) - >129 to distinguish from legacy/v0 formats
 LegacyHeader (u8, u8, u8) -- Required signatures from the current
 `MessageHeader` type
-Payload Length (u16) -- Total size excluding signatures
 NumInstructions (u8)
-TransactionConfigMask (u64) -- Bitmask of which config requests are present.
+TransactionConfigMask (u32) -- Bitmask of which config requests are present.
  - 0: requested_compute_unit_limit
  - 1: requested_compute_unit_price
  - 2: requested_heap_size
@@ -83,11 +82,12 @@ TransactionConfigMask (u64) -- Bitmask of which config requests are present.
 LifetimeSpecificier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Length matches NumAddresses
-ConfigRequests [u64] -- Array of request values. (section size is popcount
- TransactionConfigMask * 8). each value is a u64.
+ConfigRequests [u8] -- Array of request values. (section size is popcount 
+  TransactionConfigMask * 4). See section TransactionConfigMask for details.
 Ixs [(u8, u8, u16)] -- Number matches NumInstructions. Values are 
  (program_account_index, num_accounts, num_data_bytes)
-[TRAILING DATA SECTION] -- Length is such that PayloadLength is matched.
+[TRAILING DATA SECTION] -- Length must be consistent with the sum of 
+ num_accounts and num_data_bytes in `Ixs`
 Signatures [[u8; 64]] -- Length of `num_required_signatures` from
  `LegacyHeader`
 ```
@@ -125,11 +125,43 @@ place:
 | max num accounts | 64 |
 | max num instructions | 64 |
 | max accounts/instruction | 128 |
-| max data bytes/instruction | 3900 |
 | max UDP packets (fragmentation) | 6 |
 
 The above limits are useful to spec, but not necessarily different than what is
 currently in place on the network.
+
+### TransactionConfigMask
+
+The transaction config mask is used to configure specific fee and resource 
+requests in a transaction.
+It is intended to be flexible enough to add new fields in the future, and is 
+initially aimed at replacing the ComputeBudgetProgram instructions that are 
+currently used to configure transactions.
+Each bit in the mask represents 4-bytes in the `ConfigRequests` array.
+If a configured value, such as priority-fee, needs more than 4-bytes a field can
+use 2 bits in the mask.
+
+Initially supported fields and assigned bits:
+- [0, 1] - priority-fee. 8-byte LE u64.
+- [2] - compute-unit-limit. 4 byte LE u32.
+- [3] - requested loaded accounts data size limit. 4 byte LE u32.
+- [4] - requested heap size. 4 byte LE u32.
+
+For 2 bit fields, such as priority-fee, both bits MUST be set. If only one of 
+the bits is set, the transaction is invalid and cannot be included in blocks.
+
+For TxV1 transactions, any ComputeBudgetProgram instructions are ignored for 
+configuration, even if they are invalid.
+The instructions will still consume compute-units if included.
+
+For the cost-model, all TxV1 transactions are treated as if requests are 
+present.
+For all fields, if the bit(s) are not set, the minimum allowed value is used:
+
+- If bits [0, 1] are not set, the priority-fee is 0.
+- If bit 2 is not set, the requested compute-unit-limit is 0.
+- If bit 3 is not set the requested accounts data size limit is 0.
+- If bit 4 is not set the requested heap size is 32768 (MIN_HEAP_FRAME_BYTES).
 
 ## Alternatives Considered
 
