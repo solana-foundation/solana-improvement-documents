@@ -142,6 +142,7 @@ If a configured value, such as priority-fee, needs more than 4-bytes a field can
 use 2 bits in the mask.
 
 Initially supported fields and assigned bits:
+
 - [0, 1] - priority-fee. 8-byte LE u64.
 - [2] - compute-unit-limit. 4 byte LE u32.
 - [3] - requested loaded accounts data size limit. 4 byte LE u32.
