@@ -52,7 +52,22 @@ None.
 
 ## New Terminology
 
-None.
+### VM memory regions
+
+The memory regions are (in ABI v0 and v1):
+
+- Readonly data (`0x100000000..0x200000000`)
+- Stack (`0x200000000..0x300000000`)
+- Heap (`0x300000000..0x400000000`)
+- Instruction meta data
+- Account meta data
+- Account payload address space
+- Instruction payload and program key
+
+The payload address space of an account is the range in the serialized input
+region (`0x400000000..0x500000000`) which covers the payload and optionally the
+10 KiB resize padding (if not a loader-v1 program), but not the accounts
+metadata.
 
 ## Detailed Design
 
@@ -79,20 +94,7 @@ otherwise `SyscallError::InvalidPointer` must be thrown:
 Memory accesses (both by the program and by syscalls) which span across memory
 mapping regions are considered access violations. Accesses to multiple regions
 (e.g. by memcpy syscalls) have to be split into multiple separate accesses,
-one for each region:
-
-- Readonly data (`0x100000000..0x200000000`)
-- Stack (`0x200000000..0x300000000`)
-- Heap (`0x300000000..0x400000000`)
-- Instruction meta data
-- Account meta data
-- Account payload address space
-- Instruction payload
-
-The payload address space of an account is the range in the serialized input
-region (`0x400000000..0x500000000`) which covers the payload and optionally the
-10 KiB resize padding (if not a loader-v1 program), but not the accounts
-metadata.
+one for each region.
 
 For all memory accesses to the payload address space of an account which is
 flagged as writable and owned by the currently executed program, check that:
