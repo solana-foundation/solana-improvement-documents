@@ -75,10 +75,6 @@ LegacyHeader (u8, u8, u8) -- Required signatures from the current
 `MessageHeader` type
 NumInstructions (u8)
 TransactionConfigMask (u32) -- Bitmask of which config requests are present.
- - 0: requested_compute_unit_limit
- - 1: requested_compute_unit_price
- - 2: requested_heap_size
- - 3: requested_loaded_accounts_data_size_limit
 LifetimeSpecificier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Length matches NumAddresses
