@@ -25,6 +25,10 @@ are currently allowed but make no sense and are even dangerous for dApps:
   runtime never serialized
   - `AccountInfo` structures can be overwritten by CPI during CPI, causing
   complex side effects
+- Syscall alignment requirements
+  - In ABI v0 the account input region has no alignment guarantees (it is
+  1 byte aligned) and ABI v1 has 8 byte alignment. However, there are some
+  syscalls such as the reading of sysvars which require 16 byte alignment.
 - VM memory access
   - Bad read accesses to account payload go unnoticed as long as they stay
   within the reserved address space, even if they leave the actual account
@@ -71,11 +75,12 @@ metadata.
 
 ## Detailed Design
 
-### CPI verification
+### Syscall parameters
 
 - The following pointers must be on the stack or heap,
 meaning their virtual address is inside `0x200000000..0x400000000`,
 otherwise `SyscallError::InvalidPointer` must be thrown:
+  - The destination address of all sysvar related syscalls
   - The pointer in the array of `&[AccountInfo]` / `SolAccountInfo*`
   - The `AccountInfo::data` field,
   which is a `RefCell<&[u8]>` in `sol_invoke_signed_rust`
