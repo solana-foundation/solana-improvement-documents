@@ -117,7 +117,7 @@ place:
 | max | value |
 | --- | --- |
 | max transaction size | 4096 |
-| max num signatures per transaction | 63 |
+| max num signatures per transaction | 42 |
 | max num accounts | 64 |
 | max num instructions | 64 |
 | max accounts/instruction | 128 |
