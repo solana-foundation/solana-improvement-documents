@@ -43,10 +43,13 @@ This proposal focuses on (3), leaving (1) and (2) for other SIMDs.
   existing account can be compressed. A specific compression condition isn't
   provided in this SIMD -- it is assumed to always be false, meaning no
   account is eligible for compression.
-- `account_hash = sha_256(account_pubkey)[0..10]`
-- `data_hash = sha_256(bincode_serialize(AccountSharedData))`
-- **Compressed Accounts Map (CAM)**: for each compressed account, maps the
-  `account_hash` to the `data_hash`.
+- `data_hash = lthash.out(Account)` where Account includes the pubkey, 
+  lamports, data, owner, executable, and rent_epoch fields. See 
+  [SIMD-0215](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0215-accounts-lattice-hash.md)
+  for the definition of the lattice hash functions.
+- **Decompression**: the process of restoring a compressed account to its
+  original state by providing the original account data and verifying it
+  matches the stored data_hash
 
 ## Detailed Design
 
@@ -54,7 +57,9 @@ This proposal focuses on (3), leaving (1) and (2) for other SIMDs.
 
 The following new syscalls will be introduced to support account compression
 operations. The compression system program will support two instructions that
-just wrap these syscalls.
+just wrap these syscalls. For the time being, these syscalls can only be used
+from the compression system program but that constraint may be relaxed in the
+future.
 
 #### `sol_compress_account(account_pubkey: &[u8; 32])`
 
@@ -64,142 +69,253 @@ cryptographic commitment.
 **Parameters**:
 
 - `account_pubkey`: pubkey of the account to be compressed
-- `combined_hash`: 32-byte hash of concatenated account pubkey and current
-  account data
 
 **Behavior**:
 
 - MUST verify that the caller is the hardcoded compression system program
 - MUST verify the provided account satisfies the compression condition
 - MUST mark the account as compressed if verification succeeds
-    - this is left as an implementation detail: the `CAM` is the in-protocol
-      authority on the compressed set but client implementations can, for
-      example, maintain a small in-memory set of compressed accounts that
-      haven't yet been added to the `CAM`. When a snapshot is created at a
-      particular slot, the `CAM` must be up to date as of that slot.
 - if the transaction containing the compression request succeeds, all
   subsequent attempts to access the account MUST fail unless the account has
   been decompressed.
 
 While marking the account as compressed must be done synchronously, the
 actual compression (ie the full replacement of the account with its
-compressed form stored in the `CAM`) can be done asynchronously for
+compressed form in the account database) can be done asynchronously for
 performance:
 
-- compute the 10-byte `account_hash`
 - compute the 32-byte `data_hash`
-- assign `data_hash` to `CAM[account_hash]`
+- replace the account in account databse with a compressed account entry
+- (optional) emit a compression event for off-chain data archival
 
-#### `sol_decompress_account(original_data: *const u8, data_len: u64)`
+#### `sol_decompress_account(..)`
 
 **Purpose**: Recovers a compressed account by restoring its original data.
 
 **Parameters**:
 
-- `original_data`: Pointer to the bincode serialization of the original
-  `AccountSharedData` object, which includes the pubkey
-- `data_len`: Length of the original data in bytes
+- `account_pubkey`: 32-byte public key of the account to decompress
+- `lamports`: The lamport balance of the original account
+- `data`: Pointer to the original account data bytes
+- `data_len`: Length of the account data in bytes
+- `owner`: 32-byte public key of the account owner
+- `executable`: Whether the account is executable
+- `rent_epoch`: The rent epoch of the original account
 
 **Behavior**:
 
 - MUST verify the caller is the hardcoded compression system program
-- MUST verify the account is currently in compressed state by computing the
-  `account_hash` from the provided `original_data` and checking the `CAM`
-- MUST verify the `data_hash` computed from the provided `original_data`
-  matches `CAM[account_hash]`
+- MUST verify the account is currently in compressed state
+- MUST compute `lthash.out(Account)` from the provided parameters and verify
+  it matches the stored compressed account's data_hash
 - if verification succeeds, the original account MUST be restored to the active set
     - this is treated exactly like a new account allocation so rent
       requirements, load limits, etc all apply
-- if verification succeeds, the `pubkey_hash` must be removed from the `CAM`
+- if verification succeeds, the compressed account entry must be replaced
+  with the full account data
 
 ### Database and Snapshot Extensions
 
 #### Compressed Accounts Storage
 
-The data structure used for the `CAM` in the runtime is left as an
-implementation detail, but it MUST be stored in the snapshots as a
-`Vec<CompressedAccountEntry>`:
+Compressed accounts are stored directly in the account database like regular
+accounts, but with a special compressed account structure:
 
 ```rust
-pub struct CompressedAccountEntry {
-    pub account_hash: [u8; 10],
+pub struct CompressedAccount {
+    pub pubkey: Pubkey,
     pub data_hash: [u8; 32],
 }
 ```
 
-The `CAM` MUST be:
-
-- **Persisted**: Included in snapshots and incremental snapshots
-- **Versioned**: Track compression/decompression operations across slots
-- **Fork Aware**: Track compressed account data across different forks. 
-
 #### Bank Hash Integration
 
-The bank hash calculation MUST include the `CAM`.
+The bank hash calculation is updated to handle compressed accounts:
 
-- **Existing behavior**: All non-compressed accounts continue to contribute
-  to the bank hash via the accounts lattice hash or merkle root
-- **New behavior**: A new lattice hash, `compressed_lattice_hash_bytes`,
-  committing to the state of the `CAM` is maintained and also rolled into
-  the bank hash.
-- **Hash calculation (simplified)**: 
-    - current: `bank_hash = H(H(parent_hash, signature_count, last_blockhash),
-      accounts_lattice_hash_bytes)`
-    - new: `bank_hash = H(H(parent_hash, signature_count, last_blockhash),
-      accounts_lattice_hash_bytes, compressed_lattice_hash_bytes)`
-    - the important distinction here is that the compressed lattice hash
-      immediately follows the uncompressed lattice hash
+- **Existing behavior**: All accounts continue to contribute to the bank hash
+  via the accounts lattice hash
+- **New behavior**: Compressed accounts contribute to the lattice hash using
+  their compressed representation instead of full account data
+- **Hash calculation**: No changes to the overall bank hash structure, but
+  the lattice hash computation includes compressed accounts:
 
 ```
-compressed_lattice_hash_bytes = sum(lthash(entry) for entry in CAM)
-
-lthash(entry: CompressedAccountEntry) :=
+lthash(account: CompressedAccount) :=
     lthash.init()
-    lthash.append( entry.pubkey_hash )
-    lthash.append( entry.data_hash )
+    lthash.append( account.pubkey )
+    lthash.append( account.data_hash )
     return lthash.fini()
 ```
 
-#### Snapshot Format Changes
-
-Snapshots will include a new section `compressed_accounts` containing the
-full compressed account state as a `Vec<CompressedAccountEntry>`
-
 ### Account Creation Validation
 
-When creating new accounts, the runtime MUST verify the target pubkey is not
-in the `CAM`. Because the `CAM` will likely be stored on disk to limit memory
-usage, an efficient in-memory data structure should be used to verify
-non-membership. A counting bloom filter, cuckoo filter, or similar data
-structure that supports deletions can be used but must be machine-diversified
-to prevent a cluster-wide slow disk read.
+When creating new accounts, the runtime MUST verify the target pubkey does not
+already exist as a compressed account, just like with uncompressed accounts.
+
+#### Execution Error
+
+If an attempt is made to create an account at a pubkey that already exists as
+a compressed account, the transaction MUST fail with the `AccountAlreadyInUse`
+system error.
+
+This maintains consistency with existing Solana behavior where any attempt to
+create an account at an occupied address fails with the same error, regardless
+of whether the existing account is active or compressed.
+
+It may be worthwhile to introduce a new system error specific to collisions
+on compressed public keys only if that's more clearly actionable for users
+and developers.
+
+### Off-chain Data Storage
+
+Since compressed accounts only store the data hash on-chain, the original
+account data must be stored off-chain for recovery purposes. This system
+provides multiple mechanisms for data availability:
+
+#### RPC Provider Storage
+
+RPC providers can maintain archives of compressed account data to support
+client applications. When an account is compressed, the original data is made
+available through RPC endpoints for future recovery operations.
+
+#### Account Subscription for Compression Events
+
+The existing `accountSubscribe` RPC endpoint will be extended to notify
+subscribers when accounts are compressed. This provides real-time access to
+compression events through the established subscription mechanism.
+
+When an account is compressed, subscribers will receive:
+
+```typescript
+interface AccountNotification {
+  // ... existing fields
+  result: {
+    context: {
+      slot: number;
+    };
+    value: CompressedAccountInfo | ActiveAccountInfo;
+    originalAccount?: {  // Only included during compression events
+      pubkey: string;
+      lamports: number;
+      data: Uint8Array;
+      owner: string;
+      executable: boolean;
+      rentEpoch: number;
+    };
+  };
+}
+```
+
+**Critical Implementation Detail**: Validators MUST NOT delete the full account
+data until all `accountSubscribe` subscribers have been notified of the
+compression event. This ensures that off-chain services have the opportunity
+to archive the original account data before it is permanently removed.
+
+This approach enables:
+
+- **Archive services**: Third-party services can maintain comprehensive
+  compressed data archives using existing subscription infrastructure
+- **Application-specific storage**: DApps can store their own compressed
+  account data through established patterns
+- **Redundancy**: Multiple parties can maintain copies for data availability
+
+### RPC Handling for Compressed Accounts
+
+Existing RPC endpoints must be updated to handle compressed accounts properly.
+When a client requests account information for a compressed account, the
+response should clearly indicate the compression status and provide the
+available data.
+
+#### Updated `getAccountInfo` Response
+
+The existing `getAccountInfo` endpoint will return modified responses for
+compressed accounts:
+
+```typescript
+interface CompressedAccountInfo {
+  compressed: true;
+  pubkey: string;
+  dataHash: string;  // 32-byte hex-encoded lattice hash
+}
+
+interface ActiveAccountInfo {
+  compressed: false;
+  lamports: number;
+  data: [string, string];  // existing format [data, encoding]
+  owner: string;
+  executable: boolean;
+  rentEpoch: number;
+}
+
+type AccountInfo = CompressedAccountInfo | ActiveAccountInfo;
+```
+
+#### (optional) New `getCompressedAccountData` Endpoint
+
+A new RPC endpoint specifically for retrieving compressed account data.
+This is optional as it requires retaining data that isn't relevant to
+core validator operations.
+
+**Endpoint**: `getCompressedAccountData`
+**Method**: POST
+**Parameters**:
+
+- `pubkey`: string - Account public key
+- `commitment?`: Commitment level
+- `dataHash?`: string - Optional data hash for verification
+
+**Response**:
+
+```typescript
+interface CompressedAccountDataResponse {
+  pubkey: string;
+  dataHash: string;
+  originalAccount: {
+    pubkey: string;
+    lamports: number;
+    data: Uint8Array;
+    owner: string;
+    executable: boolean;
+    rentEpoch: number;
+  } | null;  // null if data not available
+}
+```
 
 ### Performance Considerations
 
 - **Recovery operations**: will require a disk-read so CU cost should be set
   accordingly.
+- **Off-chain storage**: Applications and RPC providers need sufficient
+  storage capacity for compressed account archives.
+- **RPC performance**: Compressed account queries may require additional
+  archive lookups, potentially increasing response times.
 
 ## Alternatives Considered
 
-### fully off-chain storage of compressed account data with only fixed-size
+### Fixed-size vector commitments
 
-vector commitments stored on-chain
+All compressed data is moved off-chain and replaced with a fixed size vector
+commitment. Membership/Non-membership proofs are used for account creation,
+compression, and decompression.
 
 **Pros**: Minimal on-chain storage
+
 **Cons**: Complex proof generation, proof availability concerns, complexity
 
 The next iteration of account compression will likely look similar to this
 but the complexity isn't currently necessary.
 
-### reduce and fix hot-set size with a chili peppers-like approach
+### Reduce and fix hot-set size with a chili peppers-like approach
 
 **Pros**: keeps all data on-chain, no need for users to manually recover old
 accounts
+
 **Cons**: doesn't reduce total state size so snapshots remain large and
 rent remains high
 
 Chili peppers has other applications but may not be necessary if account
-compression can reduce the global state size sufficiently.
+compression can reduce the global state size sufficiently to store the
+entire account state in memory.
 
 ### Conclusion
 
@@ -213,9 +329,10 @@ savings, performance predictability, and implementation complexity.
 - include checks for account compression status in program interaction
   workflow
 - add instructions to transactions for account recovery when appropriate
-- collisions on the `pubkey_hash` are extremely unlikely but not impossible
-  due to using 10-bytes. In this case, the user or developer will need to use
-  a different address.
+- additional regular programs can be deployed to wrap CPI calls to the
+  compression system program to improve UX. For example, a decompression
+  request program can allow users to submit accounts they would like to be
+  decompressed along with a tip to incentivize others to fulfill the request.
 
 ### Validators
 
@@ -236,17 +353,15 @@ savings, performance predictability, and implementation complexity.
 ### Data Integrity
 
 - **Hash verification**: All recovery operations verify data integrity via
-  hash comparison
+  lattice hash comparison
 - **Atomic operations**: Compression/recovery operations are atomic to
   ensure consistent state across the cluster
 
 ### Attack Vectors
 
 - **Hash collision attacks**: collisions on the `data_hash` would allow for
-  introducing arbitrary data into the account state. SHA-256 provides
-  sufficient collision resistance. Collisions on the `pubkey_hash` are not
-  concerning since they're extremely rare and only prevent the new account
-  from being created.
+  introducing arbitrary data into the account state. The lattice hash function
+  provides sufficient collision resistance.
 
 ## Backwards Compatibility
 
@@ -261,15 +376,14 @@ This feature introduces breaking changes:
 
 ### Snapshot Format
 
-- **Impact**: New snapshot format with compressed accounts section
+- **Impact**: New snapshot format including compressed accounts
 - **Mitigation**: Version-aware snapshot loading with backward compatibility
   for old snapshots
 
 ### Account Creation Behavior  
 
-- **Impact**: Account creation fails if `SHA_256(pubkey)[0:10]` exists in
-  compressed set
+- **Impact**: Account creation fails if pubkey already exists as a compressed
+  account
 - **Mitigation**: if the account corresponding to the pubkey was previously
-  compressed it must be recovered rather than recreated. if a collision has
-  occured a different pubkey must be used. RPCs and good errors can provide
-  the relevant info.
+  compressed it must be recovered rather than recreated. RPCs and good errors
+  can provide the relevant info.
