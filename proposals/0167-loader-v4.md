@@ -98,41 +98,49 @@ explicitly before the actual upload starts.
 
 The _current slot_ is as in the Clock sysvar.
 
+Delay visibility: The changed version of a program only becomes available after
+the current slot ends. Thus, the first transaction in the next slot can invoke
+it.
+
+Deployment cooldown: There can be at most one deployment per program in the
+same slot. Subsequent deployments have to wait for the next slot.
+
 ## Detailed Design
 
 The feature gate must enable loader-v4 program management and execution.
 
-### Owned Program Accounts
+### Program Account Layout
 
 Accounts of programs owned by loader-v4 must have the following layout:
 
 - Header (which is 48 bytes long):
   - `u64` status enum:
-    - Enum variant `0u64`: `Invalid`, account was zero-filled externally
+    - Enum variant `0u64`: `Uninitalized`, account was zero-filled externally
     - Enum variant `1u64`: `NeverBeenDeployed`, used as write buffer
     - Enum variant `2u64`: `Retracted`, program is in maintenance
     - Enum variant `3u64`: `Deployed`, program is ready to be executed
     - Enum variant `4u64`: `Finalized`, same as `Deployed`, but can not be
     modified anymore
-  - `u64` Slot in which the program was last deployed, retracted or
-  initialized.
+  - `u64` Slot in which the program was last deployed.
   - `[u8; 32]` Authority address which can send program management
   instructions.
 - Body:
   - `[u8]` The programs executable file
 
+### Program Account Header Verification
+
 Verification the program account checks in the following order that:
 
 - the owner of the program account is loader-v4,
 otherwise throw `InvalidAccountOwner`
-- the program account is at least as long enough for the header,
+- the program account is at least as long enough for the header (48 bytes),
 otherwise throw `AccountDataTooSmall`
 - the program account is writable, otherwise throw `InvalidArgument`
 - the provided authority (instruction account at index 1) signed,
 otherwise throw `MissingRequiredSignature`
 - the authority stored in the program account is the one provided,
 otherwise throw `IncorrectAuthority`
-- the status stored in the program account is not `Invalid`,
+- the status stored in the program account is not `Uninitalized`,
 otherwise throw `InvalidArgument`
 - the status stored in the program account is not `Finalized`,
 otherwise throw `Immutable`
@@ -153,44 +161,64 @@ failing any of the above checks must throw `UnsupportedProgramId`.
 
 ### Program Management Instructions
 
+The loader-v4 intructions Deploy and Retract are not authorized in CPI.
+
+#### Initialize
+
+- Instruction accounts:
+  - `[writable]` The account to initialize as program account.
+  - `[signer]` The new authority of the program.
+- Instruction data:
+  - Enum variant `0u32`
+- Behavior:
+  - Charge 32 CUs
+  - Check there are at least two instruction accounts,
+    otherwise throw `NotEnoughAccountKeys`
+  - Check that the owner of the program account is loader-v4,
+    otherwise throw `InvalidAccountOwner`
+  - Check that the program account is writable,
+    otherwise throw `InvalidArgument`
+  - Check that the new authority (instruction account at index 1) has signed,
+    otherwise throw `MissingRequiredSignature`
+  - Change the slot in the program account to the current slot
+  - Change the status stored in the program account to `NeverBeenDeployed`
+  - Copy the new authority address into the program account
+
 #### SetAuthority
 
 - Instruction accounts:
   - `[writable]` The program account to change the authority of.
   - `[signer]` The current authority of the program.
-  - `[optional(signer)]` The new authority of the program.
+  - `[signer]` The new authority of the program.
 - Instruction data:
-  - Enum variant `7u32`
+  - Enum variant `1u32`
 - Behavior:
   - Charge 32 CUs
   - Check there are at least three instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
-  - If this is an initialization (program account length is too short to
-  contain the header):
-    - the owner of the program account is loader-v4,
-    otherwise throw `InvalidAccountOwner`
-    - the program account is writable, otherwise throw `InvalidArgument`
-    - Check that there are enough funds in the program account for rent
-    exemption of the header,
-    otherwise throw `InsufficientFunds`
-  - otherwise, if this is not an initialization:
-    - Verify the program account
-  - Check that the new authority (instruction account at index 2)
-  is either the system program or has signed,
-  otherwise throw `MissingRequiredSignature`
-  - If this is an initialization:
-    - Set the length of the program account to the header size
-    - Set the slot to zero, **not** the current slot
-    - Set the status to `NeverBeenDeployed`
-  - otherwise, if it is not an initialization:
-    - Check that the authority stored in the program account is different
-    from the one provided, otherwise throw `InvalidArgument`
+  - Verify the program account header
+  - Check that the new authority (instruction account at index 2) has signed,
+    otherwise throw `MissingRequiredSignature`
+  - Check that the current authority is different from the new authority,
+    otherwise throw `InvalidArgument`
   - Copy the new authority address into the program account
-  - If the the new authority is the system program:
-    - Check that the status stored in the program account is `Deployed` or
-      that the status is `Retracted` and the program length is 0 (header only),
-      otherwise throw `InvalidArgument`
-    - Change the status stored in the program account to `Finalized`
+
+#### Finalize
+
+- Instruction accounts:
+  - `[writable]` The program account to finalize.
+  - `[signer]` The current authority of the program.
+- Instruction data:
+  - Enum variant `2u32`
+- Behavior:
+  - Charge 32 CUs
+  - Check there are at least two instruction accounts,
+    otherwise throw `NotEnoughAccountKeys`
+  - Verify the program account header
+  - Check that the status stored in the program account is `Deployed` or
+    that the status is `Retracted` and the program length is 0 (header only),
+    otherwise throw `InvalidArgument`
+  - Change the status stored in the program account to `Finalized`
 
 #### SetProgramLength
 
@@ -198,13 +226,13 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - `[writable]` The program account to change the size of.
   - `[signer]` The authority of the program.
 - Instruction data:
-  - Enum variant `2u32`
+  - Enum variant `3u32`
   - `u32` The new size after the operation.
 - Behavior:
   - Charge 32 + new_size_in_bytes / cpi_bytes_per_unit CUs
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
-  - Verify the program account
+  - Verify the program account header
   - Check that the status stored in the program account is
   `NeverBeenDeployed` or `Retracted`,
   otherwise throw `InvalidArgument`
@@ -213,6 +241,8 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   otherwise throw `InsufficientFunds`
   - Set the length of the program account to the requested new size plus
   the header size
+  - Note: In CPI the maximum growth is limited to 10 KiB in ABI v1 and
+  0 bytes in ABI v0.
 
 #### Write
 
@@ -220,14 +250,14 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - `[writable]` The program account to write to.
   - `[signer]` The authority of the program.
 - Instruction data:
-  - Enum variant `0u32`
+  - Enum variant `4u32`
   - `u32` Byte offset at which to write the given bytes
   - `[u8]` Chunk of the programs executable file
 - Behavior:
   - Charge 32 + chunk_length_in_bytes / cpi_bytes_per_unit CUs
   - Check there are at least two instruction accounts,
   otherwise throw `NotEnoughAccountKeys`
-  - Verify the program account
+  - Verify the program account header
   - Check the status stored in the program account is `NeverBeenDeployed` or
   `Retracted`,
   otherwise throw `InvalidArgument`
@@ -244,7 +274,7 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - `[signer]` The authority of the program.
   - `[]` The account to copy from.
 - Instruction data:
-  - Enum variant `1u32`
+  - Enum variant `5u32`
   - `u32` Byte offset at which to write
   - `u32` Byte offset at which to read
   - `u32` Length of the chunk to copy in bytes
@@ -254,17 +284,16 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   otherwise throw `NotEnoughAccountKeys`
   - Check that program account and source account do not alias,
   otherwise throw `AccountBorrowFailed`
-  - Verify the program account
+  - Verify the program account header
   - Check the status stored in the program account is `NeverBeenDeployed` or
   `Retracted`,
   otherwise throw `InvalidArgument`
-  - Check that the source account is owned by loader v2, v3 or v4,
-  otherwise throw `InvalidArgument`
-  - and look-up the source header size:
+  - Check that the source accounts owner and look-up the source header size:
     - loader-v2: 0 bytes
     - loader-v3 buffer: 37 bytes
     - loader-v3 programdata: 45 bytes
     - loader-v4: 48 bytes
+    - if none of the above matches throw `InvalidArgument`
   - Check that the source end offset (sum of source offset and length) does
   not exceed the maximum (source account length minus the source header size),
   otherwise throw `AccountDataTooSmall`
@@ -280,17 +309,18 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - `[writable]` The program account to deploy.
   - `[signer]` The authority of the program.
 - Instruction data:
-  - Enum variant `5u32`
+  - Enum variant `6u32`
 - Behavior:
   - Charge 32 CUs
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
-  - Verify the program account
-  - Check that the slot stored in the program account is not the current
-  (deployment cooldown), otherwise throw `InvalidArgument`
+  - Verify the program account header
   - Check that the status stored in the program account is `NeverBeenDeployed`
   or `Retracted`
     otherwise throw `InvalidArgument`
+  - If the status is `Retracted` then also check that the slot stored in the
+  program account is not the current (deployment cooldown),
+  otherwise throw `InvalidArgument`
   - Charge program_length_in_bytes / cpi_bytes_per_unit CUs
   - Check that the executable file stored in the program account passes
   executable verification
@@ -304,16 +334,16 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - `[writable]` The program account to retract.
   - `[signer]` The authority of the program.
 - Instruction data:
-  - Enum variant `6u32`
+  - Enum variant `7u32`
 - Behavior:
   - Charge 32 CUs
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
-  - Verify the program account
-  - Check that the slot stored in the program account is not the current
-  (deployment cooldown), otherwise throw `InvalidArgument`
+  - Verify the program account header
   - Check that the status stored in the program account is `Deployed`,
     otherwise throw `InvalidArgument`
+  - Check that the slot stored in the program account is not the current
+    (deployment cooldown), otherwise throw `InvalidArgument`
   - Note: The slot is **not** set to the current slot to allow a
   retract-modify-redeploy-sequence within the same slot or even within the
   same transaction.
@@ -327,7 +357,7 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - `[signer]` The authority of the program.
   - `[writable]` The recipient account.
 - Instruction data:
-  - Enum variant `3u32`
+  - Enum variant `8u32`
 - Behavior:
   - Charge 32 CUs
   - Check there are at least three instruction accounts,
@@ -336,7 +366,7 @@ failing any of the above checks must throw `UnsupportedProgramId`.
     otherwise throw `AccountBorrowFailed`
   - Check that the recipient account is writable,
   otherwise throw `InvalidArgument`
-  - Verify the program account
+  - Verify the program account header, but skip the `Finalized` check
   - Transfer lamports which are not needed for rent exemption from the
   program account to the recipient account
 
@@ -347,7 +377,7 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - `[signer]` The authority of the program.
   - `[writable]` The recipient account.
 - Instruction data:
-  - Enum variant `4u32`
+  - Enum variant `9u32`
 - Behavior:
   - Charge 32 CUs
   - Check there are at least three instruction accounts,
@@ -356,7 +386,7 @@ failing any of the above checks must throw `UnsupportedProgramId`.
     otherwise throw `AccountBorrowFailed`
   - Check that the recipient account is writable,
   otherwise throw `InvalidArgument`
-  - Verify the program account
+  - Verify the program account header
   - Check that the status stored in the program account is
   `NeverBeenDeployed` or `Retracted`,
   otherwise throw `InvalidArgument`
@@ -367,9 +397,9 @@ failing any of the above checks must throw `UnsupportedProgramId`.
 
 #### Inital deployment
 
+- Allocate an account to header plus ELF size
 - Assign account to loader-v4
-- SetAuthority to the new authority
-- SetProgramLength to ELF size
+- Initialize to the new authority
 - [Transaction boundary]
 - Write chunks repeatedly
 - [Transaction boundary]
@@ -377,9 +407,9 @@ failing any of the above checks must throw `UnsupportedProgramId`.
 
 #### Redeployment
 
+- Allocate an account to header plus ELF size
 - Assign buffer account to loader-v4
-- SetAuthority of the buffer to the new authority
-- SetProgramLength of buffer to ELF size
+- Initialize of the buffer to the new authority
 - [Transaction boundary]
 - Write chunks repeatedly
 - [Transaction boundary]
@@ -404,15 +434,11 @@ failing any of the above checks must throw `UnsupportedProgramId`.
 - Retract
 - SetProgramLength to 0
 - WithdrawLamports leaving enough for rent expemtion of the header
-- SetAuthority to the system program
+- Finalize
 
 #### Transfer authority
 
 - SetAuthority to the new authority
-
-#### Finalize
-
-- SetAuthority to the system program
 
 ## Impact
 
