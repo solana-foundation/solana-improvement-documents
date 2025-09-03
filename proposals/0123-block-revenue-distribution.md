@@ -146,9 +146,10 @@ distribution mechanism described in [SIMD-0118].
 
 #### Delegator Rewards Calculation
 
-Delegator rewards MUST be calculated during both the beginning of the first
-block of an epoch `N` and any time the node is restarted during the partitioned
-rewards distribution period.
+Delegator rewards MUST be calculated during the beginning of the first block of
+an epoch `N` where the first block is any block with a parent in the previous
+epoch. Rewards MUST be recalculated if a node is restarted during the partitioned
+rewards distribution period as described in [SIMD-0118].
 
 For each vote account, get its total active stake delegation
 during the reward epoch `N - 1`. Let this value be `A`.
@@ -181,10 +182,11 @@ reward distribution amount, truncating any sub-lamport portion.
 #### Delegator Rewards Distribution
 
 The reward distribution amounts for each stake account can then be used to
-construct a list of stake reward entries which MUST be partitioned and
-distributed according to [SIMD-0118].
+construct a list of stake reward entries which MUST be partitioned according to
+[SIMD-0118] which describes which stake rewards are distributed in each block
+during the partitioned rewards distribution period.
 
-During partitioned reward distribution in a given slot, when reward entries are
+During partitioned reward distribution for a given slot, when reward entries are
 used to distribute block revenue rewards, the epoch rewards sysvar account's
 lamport balance MUST be debited by the block revenue reward distribution amount
 to keep capitalization consistent.
