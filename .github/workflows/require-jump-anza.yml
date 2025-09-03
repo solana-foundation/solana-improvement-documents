@@ -17,6 +17,10 @@ permissions:
 
 jobs:
   check:
+    # Skip the job on pure "commented" review submissions to avoid noisy failures
+    if: >
+      github.event_name != 'pull_request_review' ||
+      (github.event.review.state != 'commented')
     runs-on: ubuntu-latest
     steps:
       - name: Verify Jump + Anza approvals
@@ -25,15 +29,17 @@ jobs:
           script: |
             // github, context, core are injected by github-script
 
-            // ──────────── 1. MANUAL ROSTERS ────────────
+            // ──────────── 1) MANUAL ROSTERS (update as needed) ────────────
             const jumpApprovers = ['ptaffet-jump', 'topointon-jump', '0x0ece', 'lidatong', 'ripatel-fd', 'benhawkins18', 'jacobcreech'];
             const anzaApprovers = ['t-nelson', 'sakridge', 'bw-solana', 'benhawkins18', 'jacobcreech'];
-            // ───────────────────────────────────────────
+            // If desired, exclude foundation names from error hints:
+            const hidden = new Set(['benhawkins18','jacobcreech']);
+            // ───────────────────────────────────────────────────────────────
 
             const pr = context.payload.pull_request;
             if (!pr) { core.setFailed('No pull_request context'); return; }
 
-            // 2. fetch *all* reviews on this PR
+            // 2) fetch all reviews
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -41,73 +47,96 @@ jobs:
               per_page: 100
             });
 
-            // DEBUG 1: raw events
+            // DEBUG: raw events
             core.info('=== Raw review events ===');
-            reviews.forEach(r =>
-              core.info(`${r.user.login} -> ${r.state} @ ${r.submitted_at}`));
+            reviews.forEach(r => core.info(`${r.user.login} -> ${r.state} @ ${r.submitted_at}`));
 
-            // 3. determine effective state per reviewer
-            //    We replay events chronologically so DISMISSED or REQUEST_CHANGES
-            //    can override an earlier APPROVED.
+            // 3) replay events in order to compute each reviewer's effective state
             reviews.sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
 
-            const status = {};   // login → {approved, blocked}
+            // login -> { approved, blocked }
+            const status = {};
             for (const r of reviews) {
               const u = r.user.login;
               status[u] = status[u] || { approved: false, blocked: false };
-
               switch (r.state) {
                 case 'APPROVED':
+                case 'approved':
                   status[u].approved = true;
-                  status[u].blocked  = false;
+                  status[u].blocked  = false;   // their own request-changes no longer blocks
                   break;
                 case 'REQUEST_CHANGES':
-                  status[u].approved = false;
-                  status[u].blocked  = true;   // blocks until new approval
+                case 'changes_requested':
+                  status[u].approved = false;   // their own approval no longer counts
+                  status[u].blocked  = true;    // this person is actively blocking
                   break;
                 case 'DISMISSED':
-                  status[u].approved = false;   // previous approval is now void
+                case 'dismissed':
+                  // Dismissals clear that reviewer's approval; do not change "blocked"
+                  status[u].approved = false;
                   break;
                 default:
-                  // COMMENTED etc – ignore
+                  // "commented" and other states: ignore
               }
             }
 
-            // DEBUG 2: effective map
+            // DEBUG: effective map
             core.info('=== Effective state per reviewer ===');
             Object.entries(status).forEach(([u, s]) =>
               core.info(`${u}: approved=${s.approved}, blocked=${s.blocked}`));
 
-            // 4. final approved list (approved && not blocked)
-            const approved = Object.entries(status)
-                                   .filter(([_, s]) => s.approved && !s.blocked)
-                                   .map(([u]) => u);
+            // 4) derive per-group results
+            const approvedUsers = Object.entries(status)
+              .filter(([, s]) => s.approved && !s.blocked)
+              .map(([u]) => u);
 
-            core.info(`Approved reviewers counted: ${approved.join(', ') || 'none'}`);
+            const jumpBlockedBy = jumpApprovers.filter(u => status[u]?.blocked);
+            const anzaBlockedBy = anzaApprovers.filter(u => status[u]?.blocked);
 
-            // 5. org-level checks
-            const hasJump = jumpApprovers.some(u => approved.includes(u));
-            const hasAnza = anzaApprovers.some(u => approved.includes(u));
+            // Group approval requires: at least one approver from the roster AND no blockers in that roster
+            const hasJumpApproval  = jumpApprovers.some(u => approvedUsers.includes(u));
+            const hasAnzaApproval  = anzaApprovers.some(u => approvedUsers.includes(u));
+            const jumpOk = hasJumpApproval && jumpBlockedBy.length === 0;
+            const anzaOk = hasAnzaApproval && anzaBlockedBy.length === 0;
 
-            // Filter out 'benhawkins18' and 'jacobcreech' from error messages
-            const jumpApproversForMsg = jumpApprovers.filter(u => u !== 'benhawkins18' && u !== 'jacobcreech');
-            const anzaApproversForMsg = anzaApprovers.filter(u => u !== 'benhawkins18' && u !== 'jacobcreech');
+            // DEBUG: rollups
+            core.info(`Approved reviewers counted: ${approvedUsers.join(', ') || 'none'}`);
+            if (jumpBlockedBy.length) core.info(`Jump group blocked by: ${jumpBlockedBy.join(', ')}`);
+            if (anzaBlockedBy.length) core.info(`Anza group blocked by: ${anzaBlockedBy.join(', ')}`);
 
-            // helpful failure message
+            // 5) Build helpful failure messages
+            const visible = list => list.filter(u => !hidden.has(u));
             const missingMsgs = [];
-            if (!hasJump)
-              missingMsgs.push(`Jump approval missing, need one of: ${jumpApproversForMsg.join(', ')}`);
-            if (!hasAnza)
-              missingMsgs.push(`Anza approval missing, need one of: ${anzaApproversForMsg.join(', ')}`);
 
-            // PR-check summary
+            if (!jumpOk) {
+              if (jumpBlockedBy.length) {
+                missingMsgs.push(`Jump blocked by: ${visible(jumpBlockedBy).join(', ') || '(hidden)'}`);
+              } else if (!hasJumpApproval) {
+                const candidates = visible(jumpApprovers);
+                missingMsgs.push(`Jump approval missing, need one of: ${candidates.join(', ') || '(none listed)'}`);
+              }
+            }
+
+            if (!anzaOk) {
+              if (anzaBlockedBy.length) {
+                missingMsgs.push(`Anza blocked by: ${visible(anzaBlockedBy).join(', ') || '(hidden)'}`);
+              } else if (!hasAnzaApproval) {
+                const candidates = visible(anzaApprovers);
+                missingMsgs.push(`Anza approval missing, need one of: ${candidates.join(', ') || '(none listed)'}`);
+              }
+            }
+
+            // 6) PR-check summary
+            const jumpCell = jumpOk ? '✅' : (jumpBlockedBy.length ? '⛔' : '❌');
+            const anzaCell = anzaOk ? '✅' : (anzaBlockedBy.length ? '⛔' : '❌');
+
             core.summary
-                .addHeading('Jump + Anza approval check')
-                .addTable([
-                  ['Jump approval', hasJump ? '✅' : '❌'],
-                  ['Anza approval', hasAnza ? '✅' : '❌']
-                ])
-                .write();
+              .addHeading('Jump + Anza approval check')
+              .addTable([
+                ['Jump status', jumpCell],
+                ['Anza status', anzaCell],
+              ])
+              .write();
 
             if (missingMsgs.length) {
               core.setFailed(missingMsgs.join(' | '));
