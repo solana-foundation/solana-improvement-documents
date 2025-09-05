@@ -70,7 +70,7 @@ A new transaction format, `v1`, is proposed to enable larger transaction sizes.
 The `v1` transaction format would be:
 
 ```
-VersionByte (u8) - >129 to distinguish from legacy/v0 formats
+VersionByte (u8) - =129 to distinguish from legacy/v0 formats
 LegacyHeader (u8, u8, u8) -- Required signatures from the current
 `MessageHeader` type
 NumInstructions (u8)
@@ -79,7 +79,7 @@ LifetimeSpecificier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Length matches NumAddresses
 ConfigRequests [u8] -- Array of request values. (section size is popcount 
-  TransactionConfigMask * 4). See section TransactionConfigMask for details.
+  TransactionConfigMask bytes). See section TransactionConfigMask for details.
 Ixs [(u8, u8, u16)] -- Number matches NumInstructions. Values are 
  (program_account_index, num_accounts, num_data_bytes)
 [TRAILING DATA SECTION] -- Length must be consistent with the sum of 
@@ -100,7 +100,7 @@ For example, if there are two instructions:
 The TRAILING DATA SECTION must look like this:
 
 ```
-[0, 1, 5, 6, 2, 3, 4, 7, 8]
+[0, 1, 2, 3, 4, 5, 6, 7, 8]
 ```
 
 Lengths are serialized in the earlier `Ixs` section, and so are not repeated in
@@ -120,11 +120,15 @@ place:
 | max num signatures per transaction | 42 |
 | max num accounts | 64 |
 | max num instructions | 64 |
-| max accounts/instruction | 128 |
-| max UDP packets (fragmentation) | 6 |
+| max accounts/instruction | 255 |
 
 The above limits are useful to spec, but not necessarily different than what is
-currently in place on the network.
+currently in place on the network. Any transaction violating these constraints
+will be considered invalid and will not be included in the chain. Violations are
+considered sanitization failures.
+
+While the above lists sanitization failures, we will keep the current runtime 
+max limit of 12 signatures per transaction.
 
 ### TransactionConfigMask
 
