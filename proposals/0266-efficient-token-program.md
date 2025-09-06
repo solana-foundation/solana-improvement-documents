@@ -199,7 +199,7 @@ verifying that the complete program output (i.e., both the program result
 and accounts' state) matches.
 
 - ⏳ *[IN PROGRESS]* Audits
-  * [Neodyme Audit (2025-06-12)](https://github.com/anza-xyz/security-audits/blob/master/spl/NeodymePTokenPinocchioAudit-2025-06-12.pdf)
+  - [Neodyme Audit (2025-06-12)](https://github.com/anza-xyz/security-audits/blob/master/spl/NeodymePTokenPinocchioAudit-2025-06-12.pdf)
 
 - ⏳ *[IN PROGRESS]* Formal Verification
 
@@ -218,5 +218,5 @@ N/A.
 
 Fully backwards compatible, no changes are required for users of the program.
 Note that we are proposing omitting instruction name logs
-(e.g., "Instruction: <name>") .
+(e.g., "Instruction: &#60;name&#62;") .
 ````
