@@ -47,7 +47,7 @@ for instruction and account data. Since it follows the same instructions and
 accounts layout, it does not require any changes to client code – it works as a
 drop-in replacement.
 
-Apart from the original SPL Token instructions, this proposal adds two
+Apart from the original SPL Token instructions, this proposal adds three
 additional instructions to the program:
 
 1. [`withdraw_excess_lamports`](https://github.com/solana-program/token/blob/main/p-token/src/processor/withdraw_excess_lamports.rs)
@@ -64,7 +64,7 @@ additional instructions to the program:
 
 2. [`batch`](https://github.com/solana-program/token/blob/main/p-token/src/processor/batch.rs)
     (instruction discriminator `255`): enable efficient CPI interaction with the
-    Token program. This is a new instruction that can execute a variable number on
+    Token program. This is a new instruction that can execute a variable number of
     Token instructions in a single invocation of the Token program. Therefore, the
     base CPI invoke units (currently `1000` CU) are only consumed once, instead of
     for each CPI instruction – this significantly improves the CUs required to
@@ -74,9 +74,16 @@ additional instructions to the program:
     mints others during an LP deposit. Programs can use the batch instruction for
     even more CU gains.
 
+3. [`unwrap_lamports`](https://github.com/solana-program/token/pull/87)
+    (instruction discriminator `45`): allows transferring out lamports from native
+    SOL token accounts directly to any destination account. This eliminates the
+    need for creating temporary native token accounts for the recipient. The
+    instruction supports transferring a specific amount or the entire amount of
+    the account.
+
 Note that `withdraw_excess_lamports` discriminator matches the value used in SPL
-Token-2022, while `batch` has a driscriminator value that is not used in either
-SPL Token nor Token-2022.
+Token-2022, while `batch` and `unwrap_lamports` have discriminator values that
+are not used in either SPL Token nor Token-2022.
 
 The program will be loaded into an account
 (`ptokNfvuU7terQ2r2452RzVXB3o4GT33yPWo1fUkkZ2`) prior to enabling the feature
@@ -86,7 +93,7 @@ When the feature gate `ptokSWRqZz5u2xdqMdstkMKpFurauUpVen7TZXgDpkQ` is enabled,
 the runtime needs to:
 
 - Replace `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` program with
-  `ptokNfvuU7terQ2r2452RzVXB3o4GT33yPWo1fUkkZ2` using the Upgradable Loader `v4`.
+  `ptokNfvuU7terQ2r2452RzVXB3o4GT33yPWo1fUkkZ2` using the Upgradable Loader `v3`.
 
 ## Alternatives Considered
 
@@ -101,23 +108,26 @@ not. Logs are limited to show the name of the instruction being executed, e.g.:
 ```
 Program Tokenkeg...623VQ5DA invoke [1]
 Program log: Instruction: Transfer
-Program Tokenkeg...623VQ5DA consumed 249 of 200000 compute units
+Program Tokenkeg...623VQ5DA consumed 192 of 200000 compute units
 Program Tokenkeg...623VQ5DA success
 ```
 
-Logging the instruction name consumes around `103` compute units, which in some
-cases reprensents almost the same amount required to execute the instruction,
-although removing the logs can be too disruptive to anyone relying on them.
+Logging the instruction name consumes more than `100` compute units, which in
+some cases reprensents almost the same amount required to execute the
+instruction. Since these logs are not necessarily very reliable &mdash; e.g.,
+they can be truncated, you could "log-inject" matching messages that can
+"confuse" parsers &mdash; we propose to omit logging.
 
 Sample CU consumption for `p-token` without logs:
 | Instruction          | `p-token` *- logs* (CU) | `p-token` (CU) |
 |----------------------|-----------------------|----------------------|
-| `InitializeMint`     | 118                   | 221                  |
-| `InitializeAccount`  | 170                   | 273                  |
-| `Transfer`           | 146                   | 249                  |
-| `MintTo`             | 144                   | 247                  |
-| `Burn`               | 202                   | 316                  |
-| `CloseAccount`       | 152                   | 255                  |
+| `InitializeMint`     | 105                   | 214                  |
+| `InitializeAccount`  | 155                   | 264                  |
+| `Transfer`           |  79                   | 192                  |
+| `TransferChecked`    | 111                   | 227                  |
+| `MintTo`             | 123                   | 230                  |
+| `Burn`               | 133                   | 250                  |
+| `CloseAccount`       | 125                   | 236                  |
 
 ## Impact
 
@@ -126,24 +136,50 @@ in a block; dapp developers benefit since interacting with the Token program
 will consume significantly less CUs.
 
 Below is a sample of the CUs efficiency gained by `p-token` compared to the
-current SPL Token program. In bracket is the percentage of CUs used in relation
+current SPL Token program, including the percentage of CUs used in relation
 to the current SPL Token consumption &mdash; the lower the percentage, the
 better the gains in CUs consumption.
 
-| Instruction          | `p-token` (CU) | `spl-token` (CU) |
-|----------------------|----------------|------------------| 
-| `InitializeMint`     | 221 (7%)       | 2967             |
-| `InitializeAccount`  | 273 (6%)       | 4527             |
-| `InitializeMultisig` | 348 (12%)      | 2973             |
-| `Transfer`           | 249 (5%)       | 4645             |
-| `Approve`            | 268 (9%)       | 2904             |
-| `Revoke`             | 237 (9%)       | 2677             |
-| `SetAuthority`       | 261 (8%)       | 3167             |
-| `MintTo`             | 247 (5%)       | 4538             |
-| `Burn`               | 316 (7%)       | 4753             |
-| `CloseAccount`       | 255 (9%)       | 2916             |
-| `FreezeAccount`      | 287 (7%)       | 4265             |
-| `ThawAccount`        | 283 (7%)       | 4267             |
+| Instruction                  | spl token | p-token | % of spl-token |
+| ---------------------------- | --------- | ------- | -------------- |
+| `Approve`                    | 2904      | 124     | 4.3%           |
+| `ApproveChecked`             | 4458      | 171     | 3.8%           |
+| `Burn`                       | 4753      | 133     | 2.8%           |
+| `BurnChecked`                | 4754      | 136     | 2.9%           |
+| `CloseAccount`               | 2916      | 125     | 4.3%           |
+| `FreezeAccount`              | 4265      | 149     | 3.5%           |
+| `InitializeAccount`          | 4527      | 155     | 3.4%           |
+| `InitializeAccount2`         | 4388      | 172     | 3.9%           |
+| `InitializeAccount3`         | 4240      | 248     | 5.8%           |
+| `InitializeImmutableOwner`   | 1404      | 38      | 2.7%           |
+| `InitializeMint`             | 2967      | 105     | 3.5%           |
+| `InitializeMint2`            | 2827      | 226     | 8.0%           |
+| `InitializeMultisig`         | 2973      | 193     | 6.5%           |
+| `InitializeMultisig2`        | 2826      | 319     | 11.3%          |
+| `MintTo`                     | 4538      | 123     | 2.7%           |
+| `MintToChecked`              | 4545      | 172     | 3.8%           |
+| `Revoke`                     | 2677      | 99      | 3.7%           |
+| `SetAuthority`               | 3167      | 136     | 4.3%           |
+| `SyncNative`                 | 3045      | 62      | 2.0%           |
+| `ThawAccount`                | 4267      | 146     | 3.4%           |
+| `Transfer`                   | 4645      | 79      | 1.7%           |
+| `TransferChecked`            | 6200      | 111     | 1.8%           |
+
+Considering the usage distribution of instructions (shown below), migrating
+to p-token will significantly reduce the block CUs currently consumed by the
+token program.
+
+| Instruction                 | Usage (%) |
+| --------------------------- | --------- |
+| `TransferChecked`           | `36.33%`  |
+| `Transfer`                  | `13.22%`  |
+| `CloseAccount`              | `12.23%`  |
+| `InitializeAccount3`        |  `9.98%`  |
+| `InitializeImmutableOwner`  |  `9.78%`  |
+| `SyncNative`                |  `4.53%`  |
+| `InitializeAccount`         |  `2.58%`  |
+
+Other instructions account for less than `1%` each.
 
 ## Security Considerations
 
@@ -162,9 +198,10 @@ modifications amounting to millions of individual instructions &mdash; and
 verifying that the complete program output (i.e., both the program result
 and accounts' state) matches.
 
-- ⏳ *[IN PROGRESS]* Formal Verification
-
 - ⏳ *[IN PROGRESS]* Audits
+  * [Neodyme Audit (2025-06-12)](https://github.com/anza-xyz/security-audits/blob/master/spl/NeodymePTokenPinocchioAudit-2025-06-12.pdf)
+
+- ⏳ *[IN PROGRESS]* Formal Verification
 
 Since there are potentially huge economic consequences of this change, the feature
 will be put to a validator vote.
@@ -180,4 +217,6 @@ N/A.
 ## Backwards Compatibility
 
 Fully backwards compatible, no changes are required for users of the program.
+Note that we are proposing omitting instruction name logs
+(e.g., "Instruction: <name>") .
 ````
