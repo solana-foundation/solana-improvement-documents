@@ -195,11 +195,15 @@ syscall `sol_invoke_signed_v2` must replace them. The parameters for
 `sol_invoke_signed_v2` are the following:
 
 - Index in transaction of program ID to be called: `u64`.
-- A slice `&[InstructionAccount]`, with each element `InstructionAccount` 
+- A pointer to a slice `&[InstructionAccount]`, with each element 
+  `InstructionAccount` 
   containing, as previously mentioned:
   - Index to transaction account: `u16`
     - Signer flag: `u8` (1 for signer, 0 for non-singer)
     - Writable flag: `u8` (1 for writable, 0 for readonly)
+- The length of the `&[InstructionAccount]` slice.
+- A pointer to the singer seeds of type `&[&[&[u8]]]`.
+- The length of the outer signer seeds slice in `&[&[&[u8]]]`.
 
 Programs using `sol_get_return_data` and `sol_set_return_data` must be 
 rejected by the verfier if ABI v2 is in use.
