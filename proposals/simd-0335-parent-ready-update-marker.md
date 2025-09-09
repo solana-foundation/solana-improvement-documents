@@ -326,9 +326,6 @@ grounds for slashing in the future.
 
 ## Backwards Compatibility
 
-This SIMD requires SIMD-0307 to be implemented first, as it depends on the
-`BlockMarker` framework.
-
 Blocks containing `ParentReadyUpdate` markers are **not** backward compatible
 with validators that do not support Alpenglow. Blocks will not disseminate
 `ParentReadyUpdate` markers until the Alpenglow feature flag has been
