@@ -133,9 +133,9 @@ implements may employ other languages:
 ```rust
 /// Versioned parent ready update for fast leader handover in Alpenglow.
 ///
-/// Used to signal when the parent changes due to ParentReady being triggered on an
-/// earlier parent in fast leader handover. Always deserializes to the `Current` variant
-/// for forward compatibility.
+/// Used to signal when the parent changes due to ParentReady being triggered
+/// on an earlier parent in fast leader handover. Always deserializes to the
+/// `Current` variant for forward compatibility.
 ///
 /// # Serialization Format
 ///
@@ -173,7 +173,8 @@ The `ParentReadyUpdate` marker integrates with the existing `BlockComponent` sys
 ```rust
 /// Version 2 block marker with extended functionality.
 ///
-/// Supports all V1 features plus ParentReadyUpdate for optimistic block packing in Alpenglow.
+/// Supports all V1 features plus ParentReadyUpdate for optimistic block
+/// packing in Alpenglow.
 ///
 /// # Serialization Format
 /// ┌─────────────────────────────────────────┐
@@ -281,6 +282,7 @@ validation:
   to Algorithm 3, Line 7-8 of the [Alpenglow whitepaper v1.1](https://www.anza.xyz/alpenglow-1-1)
 
 **State Transition Rules**:
+
 - State changes from transactions before the `ParentReadyUpdate` marker are discarded
 - The `ParentReadyUpdate` marker itself does not modify state
 - Post-`ParentReadyUpdate` marker transactions are built on the new parent's state
@@ -291,6 +293,7 @@ transactions themselves WILL be included in the constructed block.
 
 **Double-Parent Attack**: A malicious leader attempting to create blocks on
 multiple parents simultaneously:
+
 - **Mitigation**: Only a single `ParentReadyUpdate` marker per block is allowed.
   Upon witnessing two or more markers with different signatures, a receiving
   validator MUST report the block as invalid and vote skip
@@ -299,12 +302,14 @@ multiple parents simultaneously:
 
 **Invalid Parent Reference Attack**: Leader references a non-existent or
 invalid parent:
+
 - **Mitigation**: Invalid parent and/or slot fields in the `ParentReadyUpdate`
   will cause receiving validators to report the block invalid and vote skip
 - **Slashing**: Under certain circumstances, such activity may be slashable
   (details will be specified in a future proposal)
 
 **Arbitrary `ParentReadyUpdate`s**: Leader emits a spurious `ParentReadyUpdate`
+
 - **Mitigation**: Leaders cannot arbitrarily trigger parent switches, since
 the appropriate `ParentReady` event would not properly fire for receiving
 validators, causing receiving validators to report the block.
@@ -312,6 +317,7 @@ validators, causing receiving validators to report the block.
 grounds for slashing in the future.
 
 **Feature Flag Protection**:
+
 - `ParentReadyUpdate` markers will be processed if and only if the Alpenglow
   feature is activated
 - Validators must run with a client containing Alpenglow code to process blocks
