@@ -214,7 +214,7 @@ When serialized within a `BlockComponent`, the complete structure is:
 | Parent Block ID            (32 bytes) |
 +---------------------------------------+
 
-Total overhead: 54 bytes per marker
+Total size: 54 bytes per marker
 ```
 
 ## Alternatives Considered
@@ -280,6 +280,8 @@ validation:
   followed by skip certificates until slot `s`
 - The switch MUST occur only when a `ParentReady` event is triggered according
   to Algorithm 3, Line 7-8 of the [Alpenglow whitepaper v1.1](https://www.anza.xyz/alpenglow-1-1)
+- Ensure that transaction cost budgets are not exceeded for a block even in the
+  presence of a `ParentReadyUpdate` marker
 
 **State Transition Rules**:
 
