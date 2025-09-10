@@ -3,6 +3,7 @@ simd: '0337'
 title: ParentReadyUpdate Block Marker
 authors:
   - ksn6 (Anza)
+  - Kobi Sliwinski (Anza)
 category: Standard
 type: Core
 status: Review
