@@ -238,7 +238,8 @@ Total size: 54 bytes per marker
   Extending the block footer to include parent switch information was
   considered but is inadequate because:
   - Parent switches occur during block production, not at the end
-  - The footer appears only at block completion
+  - The footer appears only at block completion; e.g., in a future SIMD,
+  we plan on including details such as the bank hash in the block footer.
   - We cannot accurately represent the switch point within the block
 
 - **Shred Modification**.
@@ -272,7 +273,10 @@ Alpenglow, we make the following considerations:
 When a `ParentReadyUpdate` marker is present, validators MUST perform rigorous
 validation:
 
-- Validators MUST verify that the referenced parent block exists and is valid
+- Validators MUST verify that the reference parent block (1) exists and (2)
+  has been replayed. For avoidance of doubt - condition (2) ensures that the
+  state after processing the parent block is available for use in
+  optimistically constructing and disseminating transactions.
 - The certificate pool must have issued the event `ParentReady(s, hash(b))`,
   where `s` denotes the first slot of the leader window and `hash(b)` denotes
   the hash (Block ID) of the new parent
@@ -293,10 +297,20 @@ transactions themselves WILL be included in the constructed block.
 
 ### Attack Vectors and Mitigations
 
+**Surprise `ParentReadyUpdate` Attack**: A malicious leader attempting to
+include a `ParentReadyUpdate` in slots 2-4 of their leader window.
+
+- **Mitigation**: `ParentReadyUpdate` markers are only allowed in the first
+  slot of a leader window. Upon witnessing a `ParentReadyUpdate` marker on a
+  different block, a receiving validator MUST report the block as invalid and
+  vote skip
+- **Future Enhancement**: Slashing conditions will be specified for leaders who
+  disseminate `ParentReadyUpdate` markers on non-first slots of their leader window.
+
 **Double-Parent Attack**: A malicious leader attempting to create blocks on
 multiple parents simultaneously:
 
-- **Mitigation**: Only a single `ParentReadyUpdate` marker per block is allowed.
+- **Mitigation**: At most a single `ParentReadyUpdate` marker per block is allowed.
   Upon witnessing two or more markers with different signatures, a receiving
   validator MUST report the block as invalid and vote skip
 - **Future Enhancement**: Slashing conditions will be specified for leaders who
