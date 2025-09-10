@@ -173,8 +173,8 @@ The `ParentReadyUpdate` marker integrates with the existing `BlockComponent` sys
 ```rust
 /// Version 2 block marker with extended functionality.
 ///
-/// Supports all V1 features plus ParentReadyUpdate for optimistic block
-/// packing in Alpenglow.
+/// Supports all V1 features plus ParentReadyUpdate for fast leader
+/// handover in Alpenglow.
 ///
 /// # Serialization Format
 /// ┌─────────────────────────────────────────┐
