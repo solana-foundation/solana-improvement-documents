@@ -153,6 +153,67 @@ failing any of the above checks must throw `UnsupportedProgramId`.
 
 ### Program Management Instructions
 
+#### SetAuthority
+
+- Instruction accounts:
+  - `[writable]` The program account to change the authority of.
+  - `[signer]` The current authority of the program.
+  - `[optional(signer)]` The new authority of the program.
+- Instruction data:
+  - Enum variant `7u32`
+- Behavior:
+  - Charge 32 CUs
+  - Check there are at least three instruction accounts,
+    otherwise throw `NotEnoughAccountKeys`
+  - If this is an initialization (program account length is too short to
+  contain the header):
+    - the owner of the program account is loader-v4,
+    otherwise throw `InvalidAccountOwner`
+    - the program account is writable, otherwise throw `InvalidArgument`
+    - Check that there are enough funds in the program account for rent
+    exemption of the header,
+    otherwise throw `InsufficientFunds`
+  - otherwise, if this is not an initialization:
+    - Verify the program account
+  - Check that the new authority (instruction account at index 2)
+  is either the system program or has signed,
+  otherwise throw `MissingRequiredSignature`
+  - If this is an initialization:
+    - Set the length of the program account to the header size
+    - Set the slot to zero, **not** the current slot
+    - Set the status to `NeverBeenDeployed`
+  - otherwise, if it is not an initialization:
+    - Check that the authority stored in the program account is different
+    from the one provided, otherwise throw `InvalidArgument`
+  - Copy the new authority address into the program account
+  - If the the new authority is the system program:
+    - Check that the status stored in the program account is `Deployed` or
+      that the status is `Retracted` and the program length is 0 (header only),
+      otherwise throw `InvalidArgument`
+    - Change the status stored in the program account to `Finalized`
+
+#### SetProgramLength
+
+- Instruction accounts:
+  - `[writable]` The program account to change the size of.
+  - `[signer]` The authority of the program.
+- Instruction data:
+  - Enum variant `2u32`
+  - `u32` The new size after the operation.
+- Behavior:
+  - Charge 32 + new_size_in_bytes / cpi_bytes_per_unit CUs
+  - Check there are at least two instruction accounts,
+    otherwise throw `NotEnoughAccountKeys`
+  - Verify the program account
+  - Check that the status stored in the program account is
+  `NeverBeenDeployed` or `Retracted`,
+  otherwise throw `InvalidArgument`
+  - Check that there are enough funds in the program account for rent
+  exemption of the new length,
+  otherwise throw `InsufficientFunds`
+  - Set the length of the program account to the requested new size plus
+  the header size
+
 #### Write
 
 - Instruction accounts:
@@ -213,71 +274,6 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - Copy the chunk between the program accounts at the offsets, each shifted by
   the header size of their loader (account owner) respectively
 
-#### SetProgramLength
-
-- Instruction accounts:
-  - `[writable]` The program account to change the size of.
-  - `[signer]` The authority of the program.
-- Instruction data:
-  - Enum variant `2u32`
-  - `u32` The new size after the operation.
-- Behavior:
-  - Charge 32 + new_size_in_bytes / cpi_bytes_per_unit CUs
-  - Check there are at least two instruction accounts,
-    otherwise throw `NotEnoughAccountKeys`
-  - Verify the program account
-  - Check that the status stored in the program account is
-  `NeverBeenDeployed` or `Retracted`,
-  otherwise throw `InvalidArgument`
-  - Check that there are enough funds in the program account for rent
-  exemption of the new length,
-  otherwise throw `InsufficientFunds`
-  - Set the length of the program account to the requested new size plus
-  the header size
-
-#### WithdrawExcessLamports
-
-- Instruction accounts:
-  - `[writable]` The program account to withdraw from.
-  - `[signer]` The authority of the program.
-  - `[writable]` The recipient account.
-- Instruction data:
-  - Enum variant `3u32`
-- Behavior:
-  - Charge 32 CUs
-  - Check there are at least three instruction accounts,
-    otherwise throw `NotEnoughAccountKeys`
-  - Check that program account and recipient account do not alias,
-    otherwise throw `AccountBorrowFailed`
-  - Check that the recipient account is writable,
-  otherwise throw `InvalidArgument`
-  - Verify the program account
-  - Transfer lamports which are not needed for rent exemption from the
-  program account to the recipient account
-
-#### EraseAndWithdrawAllLamports
-
-- Instruction accounts:
-  - `[writable]` The program account to withdraw from.
-  - `[signer]` The authority of the program.
-  - `[writable]` The recipient account.
-- Instruction data:
-  - Enum variant `4u32`
-- Behavior:
-  - Charge 32 CUs
-  - Check there are at least three instruction accounts,
-    otherwise throw `NotEnoughAccountKeys`
-  - Check that program account and recipient account do not alias,
-    otherwise throw `AccountBorrowFailed`
-  - Check that the recipient account is writable,
-  otherwise throw `InvalidArgument`
-  - Verify the program account
-  - Check that the status stored in the program account is
-  `NeverBeenDeployed` or `Retracted`,
-  otherwise throw `InvalidArgument`
-  - Set the length of the program account to 0 (removing the header too)
-  - Transfer all lamports from the program account to the recipient account
-
 #### Deploy
 
 - Instruction accounts:
@@ -324,44 +320,48 @@ failing any of the above checks must throw `UnsupportedProgramId`.
   - Change the status stored in the program account to `Retracted`
   - Set the `is_executable` flag to `false`
 
-#### SetAuthority
+#### WithdrawExcessLamports
 
 - Instruction accounts:
-  - `[writable]` The program account to change the authority of.
-  - `[signer]` The current authority of the program.
-  - `[optional(signer)]` The new authority of the program.
+  - `[writable]` The program account to withdraw from.
+  - `[signer]` The authority of the program.
+  - `[writable]` The recipient account.
 - Instruction data:
-  - Enum variant `7u32`
+  - Enum variant `3u32`
 - Behavior:
   - Charge 32 CUs
   - Check there are at least three instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
-  - If this is an initialization (program account length is too short to
-  contain the header):
-    - the owner of the program account is loader-v4,
-    otherwise throw `InvalidAccountOwner`
-    - the program account is writable, otherwise throw `InvalidArgument`
-    - Check that there are enough funds in the program account for rent
-    exemption of the header,
-    otherwise throw `InsufficientFunds`
-  - otherwise, if this is not an initialization:
-    - Verify the program account
-  - Check that the new authority (instruction account at index 2)
-  is either the system program or has signed,
-  otherwise throw `MissingRequiredSignature`
-  - If this is an initialization:
-    - Set the length of the program account to the header size
-    - Set the slot to zero, **not** the current slot
-    - Set the status to `NeverBeenDeployed`
-  - otherwise, if it is not an initialization:
-    - Check that the authority stored in the program account is different
-    from the one provided, otherwise throw `InvalidArgument`
-  - Copy the new authority address into the program account
-  - If the the new authority is the system program:
-    - Check that the status stored in the program account is `Deployed` or
-      that the status is `Retracted` and the program length is 0 (header only),
-      otherwise throw `InvalidArgument`
-    - Change the status stored in the program account to `Finalized`
+  - Check that program account and recipient account do not alias,
+    otherwise throw `AccountBorrowFailed`
+  - Check that the recipient account is writable,
+  otherwise throw `InvalidArgument`
+  - Verify the program account
+  - Transfer lamports which are not needed for rent exemption from the
+  program account to the recipient account
+
+#### EraseAndWithdrawAllLamports
+
+- Instruction accounts:
+  - `[writable]` The program account to withdraw from.
+  - `[signer]` The authority of the program.
+  - `[writable]` The recipient account.
+- Instruction data:
+  - Enum variant `4u32`
+- Behavior:
+  - Charge 32 CUs
+  - Check there are at least three instruction accounts,
+    otherwise throw `NotEnoughAccountKeys`
+  - Check that program account and recipient account do not alias,
+    otherwise throw `AccountBorrowFailed`
+  - Check that the recipient account is writable,
+  otherwise throw `InvalidArgument`
+  - Verify the program account
+  - Check that the status stored in the program account is
+  `NeverBeenDeployed` or `Retracted`,
+  otherwise throw `InvalidArgument`
+  - Set the length of the program account to 0 (removing the header too)
+  - Transfer all lamports from the program account to the recipient account
 
 ### Workflows
 
