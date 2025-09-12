@@ -280,9 +280,9 @@ validation:
   optimistically constructing and disseminating transactions.
 - The certificate pool must have issued the event `ParentReady(s, hash(b))`,
   where `s` denotes the first slot of the leader window and `hash(b)` denotes
-  the hash (Block ID) of the new parent
-- The new parent MUST have either a `NotarizeFallback` or `Notarize` certificate,
-  followed by skip certificates until slot `s`
+  the hash (Block ID) of the new parent, which, as a result, must either have
+  a `NotarizeFallback` or `Notarize` certificate, followed by skip certificates
+  until slot `s`.
 - The switch MUST occur only when a `ParentReady` event is triggered according
   to Algorithm 3, Line 7-8 of the [Alpenglow whitepaper v1.1](https://www.anza.xyz/alpenglow-1-1)
 - Ensure that transaction cost budgets are not exceeded for a block even in the
