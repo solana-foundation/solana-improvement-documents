@@ -123,8 +123,8 @@ uint64_t sol_update_rent_controller(
     static int64_t accumulator = 0;  // Persistent across calls
     accumulator = max(0, accumulator + excess);
     
-    // Calculate new rent rate
-    uint64_t new_rate = current_rent_rate + (integral_gain * accumulator / 1e9);
+    // Calculate new rent rate (direct function of accumulator)
+    uint64_t new_rate = integral_gain * accumulator / 1e9;
     
     // Clamp result between min and max bounds
     if (new_rate < min_rent_rate) {
