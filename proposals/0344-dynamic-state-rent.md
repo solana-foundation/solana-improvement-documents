@@ -33,16 +33,16 @@ consists of 3 components:
 ## New Terminology
 
 - **Dynamic Rent Rate**: The current rent rate per byte per epoch
-- **Dynamic Rent Controller**: A PID controller that adjusts the Dynamic Rent
-  Rate based on how close the actual state size is to the target.
+- **Dynamic Rent Controller**: An integral controller that adjusts the Dynamic Rent
+  Rate based on accumulated excess state size over time.
 - **State Size Target**: The target active account state size
-- **PID Parameters**: Proportional (Kp), Integral (Ki), and Derivative (Kd)
-  gains for the rent controller
+- **Integral Gain**: The gain parameter (Ki) that controls how aggressively rent
+  increases with accumulated excess state
 - **Rent Paid**: A new data field containing the rent that has been paid in
   SOL
 - **Compression Eligibility**: A boolean that signals whether an account is
   eligible for compression
-- **Last Write Epoch**: Epoch when account was last written to (tracked per
+- **Last Write Slot**: Slot when account was last written to (tracked per
   account)
 - **Dynamic Rent History Sysvar**: A sysvar exposing the time series of
   dynamic rent rates per epoch
@@ -51,25 +51,25 @@ consists of 3 components:
 
 ## Informal Design Description
 
-The protocol maintains a dynamic rent rate based on how close the historical
-accounts state size has been to the state size target. This controller
-increases rent when account size is higher than the target and decreases it
-when it is lower. When an account is created, or decompressed, it pays at
+The protocol maintains a dynamic rent rate based on accumulated excess state
+size over time. The controller tracks the running sum of (actual_state -
+target_state) and increases rent as an increasing function of this accumulated
+excess. The accumulator never goes below zero, so rent only increases when
+state is above target. When an account is created, or decompressed, it pays at
 least 15 epochs worth of rent at the current rate. When an account is written
-for the first time in an epoch it pays at least 1 epoch worth of rent. If an
-account has not payed rent in a while, and the rent due is more than the rent
-paid, the account becomes eligible for compression at which point the leader
-can submit a transaction with compression instructions and earn a reward for
-decompressing the accounts. This reward is set such that it is never more than
-the sol burned in rent so no net new sol is created through this rent
-mechanism.
+to, it pays rent based on slots elapsed since its last write slot, with proper
+handling of partial epochs. When an account's size
+changes, it must also pay 15 epochs worth of rent upfront at the new account size.
+If an account has not paid sufficient rent, and the rent due is more than the rent
+paid, the account becomes eligible for compression at which point compression
+instructions can be submitted to compress the account.
 
 ## Detailed Design
 
 The proposal introduces two new system variables (Sysvars):
 
-- Dynamic Rent History (`sysvar: sol_get_dynamic_rent_history`, id TBD)
-- Epoch State Size History (`sysvar: sol_get_epoch_state_size_history`, id TBD)
+- Dynamic Rent History (`sysvar: dynamic_rent_history`, id TBD)
+- Epoch State Size History (`sysvar: epoch_state_size_history`, id TBD)
 
 Both sysvars share common design principles:
 
@@ -101,55 +101,121 @@ At each epoch boundary, the bank appends one `u64` value to each sysvar:
 - **Dynamic Rent History**: Appends the rent rate (lamports per byte) for the
   upcoming epoch by calling `sol_update_rent_controller()`
 
-### PID Controller Syscall
+### Integral Controller Syscall
 
 A new syscall `sol_update_rent_controller()` updates the dynamic rent rate
-using a PID controller:
-
-**Signature:**
+using an integral controller:
 
 ```c
+// Pseudocode for integral controller behavior
 uint64_t sol_update_rent_controller(
-    uint64_t current_state_size,  // Current total active account data size
-                                  // (bytes)
-    uint64_t target_state_size,      // Target state size (bytes) 
-    uint64_t current_rent_rate,   // Current rent rate (lamports per byte
-                                  // per epoch)
-    uint64_t kp,                     // Proportional gain (scaled by 1e9)
-    uint64_t ki,                     // Integral gain (scaled by 1e9)  
-    uint64_t kd,                     // Derivative gain (scaled by 1e9)
-    uint64_t min_rent_rate,          // Minimum allowed rent rate
-);
+    uint64_t current_state_size,
+    uint64_t target_state_size,
+    uint64_t current_rent_rate,
+    uint64_t integral_gain,
+    uint64_t min_rent_rate,
+    uint64_t max_rent_rate
+) {
+    // Calculate excess state (can be positive or negative)
+    int64_t excess = (int64_t)current_state_size - (int64_t)target_state_size;
+    
+    // Update running accumulator (clamped to never go below 0)
+    static int64_t accumulator = 0;  // Persistent across calls
+    accumulator = max(0, accumulator + excess);
+    
+    // Calculate new rent rate
+    uint64_t new_rate = current_rent_rate + (integral_gain * accumulator / 1e9);
+    
+    // Clamp result between min and max bounds
+    if (new_rate < min_rent_rate) {
+        new_rate = min_rent_rate;
+    }
+    if (new_rate > max_rent_rate) {
+        new_rate = max_rent_rate;
+    }
+    
+    return new_rate;
+}
 ```
-
-**Returns:** New rent rate (lamports per byte per epoch)
-
-**Behavior:**
-
-- Calculates error: `error = current_state_size - target_state_size`
-- Applies PID formula: `output = Kp*error + Ki*integral + Kd*derivative`
-- Updates rent rate: `new_rate = current_rent_rate + output`
-- Clamps result between `min_rent_rate` and `max_rent_rate`
-- Maintains internal state (integral, previous error) across calls
 
 **Access Control:** Only callable by the bank during epoch boundary processing
 
 ### Account Rent Paid Field
 
-Each account gets new fields:
+Each account gets new fields by repurposing existing unused bytes:
 
-- **rent_paid**: `u64` field storing total rent paid in lamports
-- **last_write_epoch**: `u64` field tracking when account was last written
-- Added to account metadata alongside existing fields (lamports, data, owner,
-  etc.)
+- **rent_paid**: `u64` field storing total rent paid in lamports (monotonically increasing)
+- **last_write_slot**: `u64` field tracking when account was last written to
+- **Repurposed from existing fields**:
+  - `rent_epoch` field (8 bytes) - replaced by slot-based tracking with `last_write_slot`
+- **No account size increase**: Fields fit within existing account metadata structure
 - **rent_paid** is set to zero when account is compressed (rent is "consumed"
   by the compression operation)
-
+- **last_write_slot** is updated on every write to the account
 
 ### Rent Collection Behavior
 
 The dynamic rent system integrates with account compression (SIMD-0341) to
-enforce rent payments at key lifecycle events:
+enforce rent payments at key lifecycle events. Rent calculation is slot-based
+(using `last_write_slot`) while the dynamic rent rate remains epoch-based:
+
+- **Dynamic Rent Rate**: Updated per epoch based on state size vs target
+- **Rent Calculation**: Based on slots elapsed since `last_write_slot`
+- **Rent Collection**: 
+  - **Any write**: Pay rent accumulated since last_write_slot
+  - **Account creation/decompression**: 15 epochs worth of rent upfront
+  - **Account size changes**: Pay rent since last write + 15 epochs upfront
+    at new size
+
+**Slot-Based Rent Calculation Helper:**
+
+```c
+uint64_t calculate_rent_owed_since_last_write_slot(
+    uint64_t last_write_slot, 
+    uint64_t current_slot,
+    uint64_t account_data_size,
+    uint64_t *rent_history,
+    uint64_t slots_per_epoch) {
+    uint64_t last_write_epoch = last_write_slot / slots_per_epoch;
+    uint64_t current_epoch = current_slot / slots_per_epoch;
+    uint64_t rent_owed = 0;
+    
+    // Handle partial epoch at the start (from last_write_slot to end of
+    // last_write epoch)
+    if (last_write_epoch == current_epoch) {
+        // Same epoch: only charge for slots between last_write_slot and
+        // current_slot
+        uint64_t slots_elapsed = current_slot - last_write_slot;
+        rent_owed = account_data_size * rent_history[last_write_epoch] * 
+                   slots_elapsed / slots_per_epoch;
+    } else {
+        // Different epochs: handle partial epoch at start
+        uint64_t slots_remaining_in_last_write_epoch = 
+            ((last_write_epoch + 1) * slots_per_epoch) - last_write_slot;
+        uint64_t partial_start_rent = account_data_size * 
+            rent_history[last_write_epoch] * 
+            slots_remaining_in_last_write_epoch / slots_per_epoch;
+        rent_owed += partial_start_rent;
+        
+        // Calculate rent for complete epochs
+        for (uint64_t epoch = last_write_epoch + 1; 
+             epoch < current_epoch; epoch++) {
+            rent_owed += account_data_size * rent_history[epoch];
+        }
+        
+        // Add rent for partial epoch at the end
+        uint64_t slots_in_partial_epoch = current_slot % slots_per_epoch;
+        if (slots_in_partial_epoch > 0) {
+            uint64_t partial_end_rent = account_data_size * 
+                rent_history[current_epoch] * 
+                slots_in_partial_epoch / slots_per_epoch;
+            rent_owed += partial_end_rent;
+        }
+    }
+    
+    return rent_owed;
+}
+```
 
 #### 1. Account Creation
 
@@ -157,12 +223,13 @@ When creating a new account:
 
 ```c
 // MUST pay at least 15 epochs worth of rent upfront
-required_rent = account_data_size * current_rent_rate * 15;
+SLOTS_PER_EPOCH = 432000
+required_rent = account_data_size * current_rent_rate * 15 * SLOTS_PER_EPOCH;
 if (transaction_rent_payment < required_rent) {
     return ERROR_INSUFFICIENT_RENT;
 }
 account.rent_paid = transaction_rent_payment;
-account.last_write_epoch = current_epoch;
+account.last_write_slot = current_slot;
 ```
 
 #### 2. Account Rehydration (Decompression)
@@ -171,34 +238,63 @@ When decompressing an account via `sol_decompress_account()`:
 
 ```c
 // MUST pay at least 15 epochs worth of rent to reactivate
-required_rent = account_data_size * current_rent_rate * 15;
+required_rent = account_data_size * current_rent_rate * 15 * SLOTS_PER_EPOCH;
 if (transaction_rent_payment < required_rent) {
     return ERROR_INSUFFICIENT_RENT;
 }
-account.rent_paid = restored_rent_paid + transaction_rent_payment;
-account.last_write_epoch = current_epoch;
+account.rent_paid = transaction_rent_payment;
+account.last_write_slot = current_slot;
 ```
 
-#### 3. First Write Per Epoch
+#### 3. Any Write to Account
 
-On the FIRST write to an account each epoch:
+On any write to an account:
 
 ```c
-// Calculate rent owed using historical rent rates since last write
-rent_owed = account_data_size * sum(rent_history[epoch] for epoch in
-                                    last_write_epoch..current_epoch);
+// Calculate rent owed using slot-based calculation since last_write_slot
+rent_owed = calculate_rent_owed_since_last_write_slot(
+    account.last_write_slot, 
+    current_slot, 
+    account_data_size, 
+    rent_history, 
+    slots_per_epoch
+);
 
 // Payment processing
 account.rent_paid += transaction_rent_payment;
 account.rent_paid -= rent_owed;
 
-// MUST pay at least 1 epoch's worth of rent ahead
-minimum_rent = account_data_size * current_rent_rate * 1;
-if (account.rent_paid < minimum_rent) {
-    return ERROR_INSUFFICIENT_FUTURE_RENT;
+// Update last_write_slot
+account.last_write_slot = current_slot;
+```
+
+#### 4. Account Size Changes
+
+When an account's data size changes:
+
+```c
+// Calculate rent owed using slot-based calculation since last_write_slot
+rent_owed = calculate_rent_owed_since_last_write_slot(
+    account.last_write_slot, 
+    current_slot, 
+    account_data_size, 
+    rent_history, 
+    slots_per_epoch
+);
+
+// Payment processing
+account.rent_paid += transaction_rent_payment;
+account.rent_paid -= rent_owed;
+
+// MUST pay at least 15 epochs worth of rent upfront at the NEW account size
+required_rent = new_account_data_size * current_rent_rate * 15;
+if (account.rent_paid < required_rent) {
+    return ERROR_INSUFFICIENT_RENT;
 }
 
-account.last_write_epoch = current_epoch;
+// Update last_write_slot and account size
+account.last_write_slot = current_slot;
+account.data_size = new_account_data_size;
 ```
 
 #### Compression Eligibility
@@ -227,8 +323,14 @@ bool sol_check_compression_eligibility(const uint8_t *account_pubkey) {
     uint64_t *rent_history = sol_get_sysvar(dynamic_rent_history_id);
     uint64_t required_rent = 0;
     
-    required_rent = account.data_size * sum(rent_history[epoch] for epoch in
-                                            account.last_write_epoch..current_epoch);
+    // Calculate rent owed since last_write_slot using slot-based calculation
+    required_rent = calculate_rent_owed_since_last_write_slot(
+        account.last_write_slot, 
+        current_slot, 
+        account.data_size, 
+        rent_history, 
+        slots_per_epoch
+    );
     
     return account.rent_paid >= required_rent; /// Returns true if account
                                                 /// is eligible for compression,
@@ -257,20 +359,6 @@ bool is_compressible_account_type(AccountData account) {
 }
 ```
 
-### Compression Reward
-
-When an account is successfully compressed, the entity performing the
-compression operation receives a reward:
-
-```c
-// Reward is capped at the minimum of one epoch's worth of current rent and
-// the account's rent_paid.
-// This second condition ensures that no new SOL is minted by this scheme.
-reward = min(account.rent_paid, account.data_size * current_rent_rate);
-compressor_account.lamports += reward;
-account.rent_paid = 0;
-```
-
 ### Integration with Existing Systems
 
 #### RPC Changes
@@ -291,7 +379,7 @@ getAccountInfo()      // Returns compression status in account metadata
 simulateTransaction() // Includes rent collection costs in simulation and fee
                       // payer validation
 sendTransaction()     // Validates fee payer has sufficient funds for rent
-                      // collection on first epoch access
+
 ```
 
 #### Wallet Integration
@@ -309,16 +397,38 @@ if (account_is_compressed(pubkey)) {
         show_error("Account compressed, decompression required");
     }
 } else {
-    // Check if first access this epoch requires rent collection
-    if (is_first_write_this_epoch(pubkey)) {
-        uint64_t rent_owed = calculate_rent_owed_since_last_write(pubkey);
-        uint64_t total_cost = transaction_fee + rent_owed;
-        if (fee_payer_balance < total_cost) {
-            show_error("Insufficient funds for transaction fee + rent"
-                       " collection");
-            return;
-        }
+    // Calculate rent requirements based on operation type
+    uint64_t rent_required = 0;
+    
+    if (account_size_changed(pubkey)) {
+        // Account size change: rent since last write + 15 epochs upfront at
+    // new size
+        uint64_t rent_owed = calculate_rent_owed_since_last_write_slot(
+            account.last_write_slot, 
+            current_slot, 
+            account_data_size, 
+            rent_history, 
+            slots_per_epoch
+        );
+        uint64_t upfront_rent = new_account_data_size * current_rent_rate * 15;
+        rent_required = rent_owed + upfront_rent;
+    } else {
+        // Regular write: just rent since last write
+        rent_required = calculate_rent_owed_since_last_write_slot(
+            account.last_write_slot, 
+            current_slot, 
+            account_data_size, 
+            rent_history, 
+            slots_per_epoch
+        );
     }
+    
+    uint64_t total_cost = transaction_fee + rent_required;
+    if (fee_payer_balance < total_cost) {
+        show_error("Insufficient funds for transaction fee + rent collection");
+        return;
+    }
+    
     proceed_with_transaction();
 }
 ```
@@ -342,8 +452,7 @@ display_cost_breakdown(transaction_fee, rent_collection_cost, total_cost);
 - Chili Peppers is a proposal that dealt only with the problem of
   differentiating disk and memory reads. This proposal hopes to eliminate the
   need for account data to be stored on disk through account compression.
-- Lowering rent without a plan for dealing with the ensuing state growth is
-  not a good idea.
+- Voluntary compression does not solve the problem of old/abandoned accounts
 
 ## Impact
 
@@ -373,8 +482,6 @@ display_cost_breakdown(transaction_fee, rent_collection_cost, total_cost);
   disk and memory usage
 - **Faster sync times**: Smaller snapshots improve bootstrap and catchup
   performance
-- **Economic incentives**: Validators can earn compression rewards by cleaning
-  up eligible accounts
 
 **Negative:**
 
@@ -402,7 +509,7 @@ display_cost_breakdown(transaction_fee, rent_collection_cost, total_cost);
 - **Sustainable scaling**: Economic incentives naturally control state growth
   without hard limits
 - **Market efficiency**: Dynamic Rent will find the market rate for time spent
-  in the active account state
+  in the active account state through integral control of excess state accumulation
 
 ## Security Considerations
 
@@ -411,15 +518,9 @@ display_cost_breakdown(transaction_fee, rent_collection_cost, total_cost);
 **Rent Rate Manipulation:**
 
 - **Attack**: Coordinated creation/deletion of large accounts to manipulate
-  PID controller
-- **Mitigation**: PID controller parameters tuned for stability; 15-epoch
-  upfront cost makes manipulation expensive
-
-**Compression Reward Exploitation:**
-
-- **Attack**: Creating accounts solely to compress them for rewards
-- **Mitigation**: Reward capped at `min(rent_paid, 1_epoch_rent)` ensures no
-  net SOL creation; 15-epoch upfront cost exceeds maximum reward
+  integral controller accumulator
+- **Mitigation**: Integral controller parameters tuned for stability; 15-epoch
+  upfront cost makes manipulation expensive; accumulator provides natural smoothing
 
 **State Size Attacks:**
 
@@ -427,43 +528,6 @@ display_cost_breakdown(transaction_fee, rent_collection_cost, total_cost);
 - **Mitigation**: High upfront costs (15 epochs) and ongoing rent collection
   make sustained attacks economically prohibitive
 
-### Technical Attack Vectors
-
-**Sysvar Data Integrity:**
-
-- **Attack**: Corrupting historical rent or state size data
-- **Mitigation**: Sysvars are write-protected from user programs; only bank
-  can update during epoch boundaries; deterministic across all validators
-
-**Compression Eligibility Bypass:**
-
-- **Attack**: Accessing compressed accounts without proper decompression
-- **Mitigation**: Runtime enforces compression status checks; compressed
-  account access returns specific error codes; syscalls validate account state
-
-**Fee Payer Bypass:**
-
-- **Attack**: Submitting transactions without sufficient funds for rent
-  collection
-- **Mitigation**: RPCs and runtime validate total cost (fees + rent) before
-  transaction execution; transactions fail atomically if insufficient funds
-
-### Consensus and Fork Safety
-
-**Historical Data Consistency:**
-
-- **Risk**: Forks could have different historical rent/state data
-- **Mitigation**: Sysvars follow bank state; fork resolution ensures
-  consistent history; bank hash includes compressed account state
-
-**Epoch Boundary Race Conditions:**
-
-- **Risk**: Rent collection and PID updates could be inconsistent across
-  validators
-- **Mitigation**: All epoch boundary operations are deterministic; rent rates
-  finalized before application; strict ordering of operations
-
-### DoS and Resource Exhaustion
 
 **Sysvar Size Growth:**
 
@@ -475,27 +539,27 @@ display_cost_breakdown(transaction_fee, rent_collection_cost, total_cost);
 - **Risk**: Excessive compression operations consuming compute resources
 - **Mitigation**: blocks have max account state delta capped at 100mb
 
-### Privacy and MEV Considerations
-
-**Compression Timing:**
-
-- **Risk**: MEV extraction from compression reward opportunities
-- **Mitigation**: Only the leader can compress transactions
-
 ## Backwards Compatibility
 
 ### Breaking Changes
 
 **Account Structure Changes:**
 
-- New `rent_paid` and `last_write_epoch` fields added to all accounts
+- New `rent_paid` and `last_write_slot` fields added by repurposing existing
+  unused bytes
+- `rent_epoch` field is removed/repurposed (it is no longer used now that all
+  accounts are rent exempt)
+- **No account size increase**: Fields fit within existing account metadata structure
 - Existing accounts will have these fields initialized to 0 during activation
 - Account serialization format changes require updated client libraries
 
 **Transaction Validation Changes:**
 
 - Account creation now requires 15 epochs of rent payment
-- First write per epoch triggers automatic rent collection
+- All account writes require rent payment as part of the fees paid based on
+  slots elapsed since last write
+- Account size changes require additional 15 epochs worth of rent upfront at
+  new size
 - Transactions may fail due to insufficient rent funds where they previously
   succeeded
 
@@ -516,28 +580,31 @@ display_cost_breakdown(transaction_fee, rent_collection_cost, total_cost);
 **Phase 1: Feature Activation (Epoch N)**
 
 ```c
-// Initialize new account fields for all existing accounts
+// Initialize new account fields for all existing accounts by repurposing
+// existing bytes
 for (account in all_accounts) {
-    account.rent_paid = 0;
-    account.last_write_epoch = current_epoch;
+    account.rent_paid = 0;  // Uses repurposed rent_epoch bytes
+    account.last_write_slot = current_slot;
+    // rent_epoch field is no longer accessible
 }
 
 // Activate sysvars with empty history
 dynamic_rent_history = [];
 epoch_state_size_history = [];
 
-// PID controller starts at current rent level, disabled until old state
+// Integral controller starts at current rent level, disabled until old state
 // evicted
 current_rent_rate = existing_rent_rate; // Maintain current pricing
-pid_controller_enabled = false;
+integral_controller_enabled = false;
+accumulator = 0; // Initialize excess state accumulator
 ```
 
 **Phase 2: Rent Collection (Epoch N+1)**
 
 ```c
-// Begin rent collection on first write
+// Begin rent collection on any write
 // Existing accounts get grace period - no historical rent owed initially
-if (account.last_write_epoch == activation_epoch) {
+if (account.last_write_slot == activation_slot) {
     rent_owed = 0; // Grace period for existing accounts
 } else {
     rent_owed = calculate_historical_rent(account);
@@ -553,15 +620,15 @@ if (current_epoch >= activation_epoch + 10) {
 }
 ```
 
-**Phase 4: PID Controller Activation (Epoch N+25)**
+**Phase 4: Integral Controller Activation (Epoch N+25)**
 
 ```c
 // Enable dynamic rent adjustment only after old account state has been
 // evicted
-// This ensures PID controller operates on accounts that have paid proper rent
+// This ensures integral controller operates on accounts that have paid proper rent
 if (current_epoch >= activation_epoch + 25) {
-    pid_controller_enabled = true;
-    // Begin adjusting rent rates based on actual vs target state size
+    integral_controller_enabled = true;
+    // Begin adjusting rent rates based on accumulated excess state size
 }
 ```
 
