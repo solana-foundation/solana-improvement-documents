@@ -67,7 +67,7 @@ validators, pick all of them.
 All validators must perform the same operation, or the resulting bankhash will
 be different.
 
-## New New Terminology
+## New Terminology
 
 - **Validator Admission Ticket**: The 1.6 SOL charged once per epoch to every
 validator eligible to participate in the next epoch
@@ -168,7 +168,7 @@ we also need to return the fee collected.
 Validators not providing BLS Pubkey or desired fee will not be able to
 participate in an Alpenglow epoch regardless of their stake.
 
-## Security Consideration
+## Security Considerations
 
 Validator operators need to ensure they have enough fund and correct BLS
 pubkey before end of epoch s to partipate in epoch s+2. This poses some new
