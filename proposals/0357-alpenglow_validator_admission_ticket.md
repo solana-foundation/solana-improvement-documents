@@ -107,7 +107,7 @@ for the new epoch
 
 3. The calculation goes through all vote accounts and filter the following:
 
-  = Contains at least 1.6 SOLs as balance in its corresponding identity account
+  - Contains at least 1.6 SOLs as balance in its corresponding identity account
 
   - Has a valid BLS Compressed Pubkey (can correctly decompress)
 
