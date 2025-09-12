@@ -1,6 +1,6 @@
 ---
 simd: '0337'
-title: ParentReadyUpdate Block Marker
+title: UpdateParent Block Marker
 authors:
   - ksn6 (Anza)
   - Kobi Sliwinski (Anza)
@@ -15,7 +15,7 @@ feature: TBD
 
 This SIMD proposes upgrading `BlockMarkerV1`, introduced in SIMD-0307, to
 `BlockMarkerV2` to support fast leader handover in the Alpenglow consensus
-protocol. In particular, `BlockMarkerV2` includes a new `ParentReadyUpdate`
+protocol. In particular, `BlockMarkerV2` includes a new `UpdateParent`
 variant to support fast leader handover. This marker signals when a leader
 has switched to a different parent block during fast leader handover
 due to a `ParentReady` event, providing critical metadata for consensus
@@ -60,7 +60,7 @@ events.
   all requirements to serve as a parent for new block production
 - **Parent Switch**: The action of changing from one parent block to another
   during fast leader handover
-- **ParentReadyUpdate**: A block marker that records when and to which parent
+- **UpdateParent**: A block marker that records when and to which parent
   a switch occurred during fast leader handover
 
 ## Detailed Design
@@ -85,17 +85,17 @@ BlockMarkerV2 Layout:
 
 Variants:
 - 0: BlockFooter (inherited from V1)
-- 1: ParentReadyUpdate (new in V2)
+- 1: UpdateParent (new in V2)
 ```
 
-### ParentReadyUpdate Specification
+### UpdateParent Specification
 
-The `ParentReadyUpdate` marker contains information about the new parent block
+The `UpdateParent` marker contains information about the new parent block
 that the leader switched to during fast leader handover. Each variant includes
 its own version field to support independent evolution:
 
 ```
-VersionedParentReadyUpdate Layout:
+VersionedUpdateParent Layout:
 +---------------------------------------+
 | Version                     (1 byte)  |
 +---------------------------------------+
@@ -106,7 +106,7 @@ VersionedParentReadyUpdate Layout:
 For Version 1:
 
 ```
-ParentReadyUpdateV1 Payload:
+UpdateParentV1 Payload:
 +---------------------------------------+
 | Parent Slot                (8 bytes)  |
 +---------------------------------------+
@@ -145,9 +145,9 @@ implements may employ other languages:
 /// ├─────────────────────────────────────────┤
 /// │ Update Data               (variable)    │
 /// └─────────────────────────────────────────┘
-pub enum VersionedParentReadyUpdate {
-    V1(ParentReadyUpdateV1),
-    Current(ParentReadyUpdateV1),
+pub enum VersionedUpdateParent {
+    V1(UpdateParentV1),
+    Current(UpdateParentV1),
 }
 
 /// Version 1 parent ready update data.
@@ -161,7 +161,7 @@ pub enum VersionedParentReadyUpdate {
 /// ├─────────────────────────────────────────┤
 /// │ Parent Block ID             (32 bytes)  │
 /// └─────────────────────────────────────────┘
-pub struct ParentReadyUpdateV1 {
+pub struct UpdateParentV1 {
     pub new_parent_slot: Slot,
     pub new_parent_block_id: Hash,
 }
@@ -169,12 +169,12 @@ pub struct ParentReadyUpdateV1 {
 
 ### Integration with BlockComponent
 
-The `ParentReadyUpdate` marker integrates with the existing `BlockComponent` system:
+The `UpdateParent` marker integrates with the existing `BlockComponent` system:
 
 ```rust
 /// Version 2 block marker with extended functionality.
 ///
-/// Supports all V1 features plus ParentReadyUpdate for fast leader
+/// Supports all V1 features plus UpdateParent for fast leader
 /// handover in Alpenglow.
 ///
 /// # Serialization Format
@@ -190,7 +190,7 @@ The `ParentReadyUpdate` marker integrates with the existing `BlockComponent` sys
 /// allowing for proper parsing even if unknown variants are encountered.
 pub enum BlockMarkerV2 {
     BlockFooter(VersionedBlockFooter),
-    ParentReadyUpdate(VersionedParentReadyUpdate),
+    UpdateParent(VersionedUpdateParent),
 }
 ```
 
@@ -271,7 +271,7 @@ Alpenglow, we make the following considerations:
 
 ### Parent Switch Validation
 
-When a `ParentReadyUpdate` marker is present, validators MUST perform rigorous
+When a `UpdateParent` marker is present, validators MUST perform rigorous
 validation:
 
 - Validators MUST verify that the reference parent block (1) exists and (2)
@@ -286,70 +286,70 @@ validation:
 - The switch MUST occur only when a `ParentReady` event is triggered according
   to Algorithm 3, Line 7-8 of the [Alpenglow whitepaper v1.1](https://www.anza.xyz/alpenglow-1-1)
 - Ensure that transaction cost budgets are not exceeded for a block even in the
-  presence of a `ParentReadyUpdate` marker
+  presence of a `UpdateParent` marker
 
 **State Transition Rules**:
 
-- State changes from transactions before the `ParentReadyUpdate` marker are discarded
-- The `ParentReadyUpdate` marker itself does not modify state
-- Post-`ParentReadyUpdate` marker transactions are built on the new parent's state
+- State changes from transactions before the `UpdateParent` marker are discarded
+- The `UpdateParent` marker itself does not modify state
+- Post-`UpdateParent` marker transactions are built on the new parent's state
 - Notably, despite pre-marker transaction state changes being discarded, the
 transactions themselves WILL be included in the constructed block.
 
 ### Attack Vectors and Mitigations
 
-**Surprise `ParentReadyUpdate` Attack**: A malicious leader attempting to
-include a `ParentReadyUpdate` in slots 2-4 of their leader window.
+**Surprise `UpdateParent` Attack**: A malicious leader attempting to
+include a `UpdateParent` in slots 2-4 of their leader window.
 
-- **Mitigation**: `ParentReadyUpdate` markers are only allowed in the first
-  slot of a leader window. Upon witnessing a `ParentReadyUpdate` marker on a
+- **Mitigation**: `UpdateParent` markers are only allowed in the first
+  slot of a leader window. Upon witnessing a `UpdateParent` marker on a
   different block, a receiving validator MUST report the block as invalid and
   vote skip
 - **Future Enhancement**: Slashing conditions will be specified for leaders who
-  disseminate `ParentReadyUpdate` markers on non-first slots of their leader window.
+  disseminate `UpdateParent` markers on non-first slots of their leader window.
 
 **Double-Parent Attack**: A malicious leader attempting to create blocks on
 multiple parents simultaneously:
 
-- **Mitigation**: At most a single `ParentReadyUpdate` marker per block is allowed.
+- **Mitigation**: At most a single `UpdateParent` marker per block is allowed.
   Upon witnessing two or more markers with different signatures, a receiving
   validator MUST report the block as invalid and vote skip
 - **Future Enhancement**: Slashing conditions will be specified for leaders who
-  disseminate multiple conflicting `ParentReadyUpdate` markers
+  disseminate multiple conflicting `UpdateParent` markers
 
 **Invalid Parent Reference Attack**: Leader references a non-existent or
 invalid parent:
 
-- **Mitigation**: Invalid parent and/or slot fields in the `ParentReadyUpdate`
+- **Mitigation**: Invalid parent and/or slot fields in the `UpdateParent`
   will cause receiving validators to report the block invalid and vote skip
 - **Slashing**: Under certain circumstances, such activity may be slashable
   (details will be specified in a future proposal)
 
-**Arbitrary `ParentReadyUpdate`s**: Leader emits a spurious `ParentReadyUpdate`
+**Arbitrary `UpdateParent`s**: Leader emits a spurious `UpdateParent`
 
 - **Mitigation**: Leaders cannot arbitrarily trigger parent switches, since
 the appropriate `ParentReady` event would not properly fire for receiving
 validators, causing receiving validators to report the block.
-- **Future Enhancement**: a spurious `ParentReadyUpdate` message may be
+- **Future Enhancement**: a spurious `UpdateParent` message may be
 grounds for slashing in the future.
 
 **Feature Flag Protection**:
 
-- `ParentReadyUpdate` markers will be processed if and only if the Alpenglow
+- `UpdateParent` markers will be processed if and only if the Alpenglow
   feature is activated
 - Validators must run with a client containing Alpenglow code to process blocks
-  with `ParentReadyUpdate` markers
+  with `UpdateParent` markers
 - Missing or malformed version fields will fail deserialization gracefully
 
 ## Backwards Compatibility
 
-Blocks containing `ParentReadyUpdate` markers are **not** backward compatible
+Blocks containing `UpdateParent` markers are **not** backward compatible
 with validators that do not support Alpenglow. Blocks will not disseminate
-`ParentReadyUpdate` markers until the Alpenglow feature flag has been
+`UpdateParent` markers until the Alpenglow feature flag has been
 activated.
 
 **Important**: This SIMD should be activated independently from the main
-Alpenglow SIMD. Validators must be prepared to handle `ParentReadyUpdate`
+Alpenglow SIMD. Validators must be prepared to handle `UpdateParent`
 markers even if full Alpenglow consensus is not yet active. The marker
 processing logic must be defensive and validate all parent references
 regardless of Alpenglow activation status.
