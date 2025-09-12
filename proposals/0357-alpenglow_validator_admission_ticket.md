@@ -122,8 +122,8 @@ following rules and pick the top 2,000, otherwise return the whole list:
 5. Subtract 1.6 SOL from the corresponding vote identity account in the list of
 accepted validators in the previous step
 
-6. Record the VAT fee subtraction in the bank to calculate inflation. Step 6
-happens before any transaction is processed in the bank for the new epoch
+6. Record the VAT fee subtraction in the bank, it reduces bank capitalization.
+This happens before any transaction is processed in the bank for the new epoch
 
 7. The epoch stakes for epoch (bank.epoch() + 1) is generated from the list
 generated in step 4. The epoch stakes are saved in bank snapshots, so if we
