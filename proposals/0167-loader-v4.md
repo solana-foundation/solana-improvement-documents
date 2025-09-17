@@ -176,10 +176,14 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
     otherwise throw `NotEnoughAccountKeys`
   - Check that the owner of the program account is loader-v4,
     otherwise throw `InvalidAccountOwner`
+  - Check that the program account is at least as long enough for the header
+    (48 bytes), otherwise throw `AccountDataTooSmall`
   - Check that the program account is writable,
     otherwise throw `InvalidArgument`
   - Check that the new authority (instruction account at index 1) has signed,
     otherwise throw `MissingRequiredSignature`
+  - Check that the status stored in the program account is `Uninitalized`,
+    otherwise throw `InvalidArgument`
   - Change the slot in the program account to the current slot
   - Change the status stored in the program account to `NeverBeenDeployed`
   - Copy the new authority address into the program account
@@ -236,9 +240,6 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
   - Check that the status stored in the program account is
   `NeverBeenDeployed` or `Retracted`,
   otherwise throw `InvalidArgument`
-  - Check that there are enough funds in the program account for rent
-  exemption of the new length,
-  otherwise throw `InsufficientFunds`
   - Set the length of the program account to the requested new size plus
   the header size
   - Note: In CPI the maximum growth is limited to 10 KiB in ABI v1 and
@@ -318,9 +319,6 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
   - Check that the status stored in the program account is `NeverBeenDeployed`
   or `Retracted`
     otherwise throw `InvalidArgument`
-  - If the status is `Retracted` then also check that the slot stored in the
-  program account is not the current (deployment cooldown),
-  otherwise throw `InvalidArgument`
   - Charge program_length_in_bytes / cpi_bytes_per_unit CUs
   - Check that the executable file stored in the program account passes
   executable verification
@@ -417,8 +415,8 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
 - SetProgramLength of program to ELF size
 - Copy from buffer to program
 - Deploy program
-- WithdrawLamports of buffer to program
-- WithdrawLamports of program
+- EraseAndWithdrawAllLamports of buffer to program
+- WithdrawExcessLamports of program
 
 #### Close: Temporary
 
@@ -427,13 +425,13 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
 #### Close: Recycle
 
 - Retract
-- WithdrawLamports all
+- EraseAndWithdrawAllLamports
 
 #### Close: Permanent
 
 - Retract
 - SetProgramLength to 0
-- WithdrawLamports leaving enough for rent expemtion of the header
+- WithdrawExcessLamports
 - Finalize
 
 #### Transfer authority
@@ -460,9 +458,6 @@ file relative to the beginning of the account.
 - An option to migrate programs from loader-v3 to loader-v4 without changing
 their program address will be available via a new loader-v3 instruction. (see
 SIMD-0315)
-
-Increases in size via `SetProgramLength` will remain limited to 10 KiB in CPI.
-Thus, it is reccomended to call `SetProgramLength` as a top-level instruction.
 
 ## Security Considerations
 
