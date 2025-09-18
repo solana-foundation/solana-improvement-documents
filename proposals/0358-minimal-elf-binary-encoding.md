@@ -31,10 +31,13 @@ Removing them enables:
 * **Deterministic layout** that simplifies the VM's memory scaffolding.
 * **Simpler, faster JIT** (no dynamic reloc ations, fewer failure modes).
 * **Safer memory access** (rigidly enforce `R^X` on `.text`, `R` on `.rodata`)
-* **Consistent data alignment** (all data in the binary is 8-byte aligned)
+* **Consistent data alignment** (all data segments are 8-byte aligned)
 
 This proposal standardizes a minimal format so toolchains and the validator 
 can interoperate consistently.
+
+| `e_entry`  | **points to start of `.text`**, first byte proceeding .rodata |
+
 
 ## New Terminology
 
