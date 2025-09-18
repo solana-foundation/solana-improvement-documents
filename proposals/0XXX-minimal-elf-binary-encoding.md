@@ -1,5 +1,5 @@
 ---
-simd: '0XXX'
+simd: '0358'
 title: Minimal ELF Binary Encoding for sBPF Programs
 authors:
   - Dean Little - Blueshift
