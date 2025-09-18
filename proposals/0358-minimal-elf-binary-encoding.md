@@ -36,9 +36,6 @@ Removing them enables:
 This proposal standardizes a minimal format so toolchains and the validator 
 can interoperate consistently.
 
-| `e_entry`  | **points to start of `.text`**, first byte proceeding .rodata |
-
-
 ## New Terminology
 
 N/A
@@ -69,8 +66,7 @@ The VM assumes contiguous placement in the above order.
 | ------------ | ----------------------------------------------------- |
 | `e_type`     | `ET_EXEC (0x0002)`                                    |
 | `e_machine`  | `BPF (0xF7)`                                          |
-| `e_entry`    | **pointing to `entrypoint` in `.text`**, which must  |
-|              | come **after** `.rodata`.                            |
+| `e_entry`    | **start of `.text`**, directly preceded by `.rodata`  |
 | `e_phnum`    | `0`                                                   |
 | `e_shnum`    | `0`                                                   |
 | `e_shstrndx` | `0`                                                   |
