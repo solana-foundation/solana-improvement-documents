@@ -165,11 +165,11 @@ ecosystem and further complicates tooling compatability.
 
 ## Impact
 
-Minimally encoded reduces program binary size and complexity, resulting in 
-cheaper program deployments, simpler tooling and more efficient execution. 
-This simplified format also makes it easier to maintain custom linker tooling 
-required to enable future upstream eBPF compatibility (in fact, in our above 
-example, they are already compatible.)
+Minimal encoding reduces program binary size and complexity, resulting in 
+cheaper program deployments, simpler tooling, fewer failure modes and more 
+efficient execution. These benefits carry on to building and maintaining
+custom linker tooling required to enable future upstream eBPF compatibility
+(in fact, in our above example, they are already compatible!)
 
 ## Security Considerations
 
