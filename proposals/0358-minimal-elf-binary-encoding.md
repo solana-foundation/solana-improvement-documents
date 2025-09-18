@@ -1,6 +1,6 @@
 ---
 simd: '0358'
-title: Minimal ELF Binary Encoding for sBPF Programs
+title: Minimal ELF Binary Encoding for Solana eBPF Programs
 authors:
   - Dean Little - Blueshift
   - Claire Fan - Blueshift
@@ -13,7 +13,7 @@ feature:
 
 ## Summary
 
-Define a **minimal ELF binary encoding** for Solana sBPF programs that statically links binaries into exactly three contiguous sections; ELF header, `.rodata`, and `.text`, and removes the need for program/section header tables. This eliminates relocation logic in the JIT path, reduces binary size compared to sBPF v0 style artifacts and reduces linker complexity, helping us to achieve future upstream BPF compatibility.
+Define a **minimal ELF binary encoding** for Solana eBPF programs that statically links binaries into exactly three contiguous sections; ELF header, `.rodata`, and `.text`, and removes the need for program/section header tables. This eliminates relocation logic in the JIT path, reduces binary size compared to sBPF v0 style artifacts and reduces linker complexity, helping us to achieve future upstream BPF compatibility.
 
 ## Motivation
 
