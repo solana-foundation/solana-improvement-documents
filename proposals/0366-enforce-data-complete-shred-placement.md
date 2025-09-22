@@ -3,6 +3,7 @@ simd: '0366'
 title: Enforce DATA_COMPLETE_SHRED Placement
 authors:
   - ksn6 (Anza)
+  - Ashwin Sekar (Anza)
 category: Standard
 type: Core
 status: Review
