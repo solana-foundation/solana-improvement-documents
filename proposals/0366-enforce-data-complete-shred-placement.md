@@ -38,7 +38,12 @@ ambiguity creates significant performance challenges:
 2. **Performance Impact**: alternative `BlockComponent` methods require either
    complex inference algorithms or expensive replay operations.
 
-3. **Security Vulnerabilities**: Malicious leaders could intentionally
+3. **Complexity**: there is extra code complexity in storing the data complete
+   ranges for deserialization in replay. With this change and SIMD-0317 (fixed
+   32:32 FEC sets), it becomes really easy to figure out the ranges
+   to deserialize for replay.
+
+4. **Security Vulnerabilities**: Malicious leaders could intentionally
    misplace `DATA_COMPLETE_SHRED` flags to force validators into expensive
    search operations, creating DoS attack vectors; for certain proposed
    `BlockComponent`s (specifically, `UpdateParent`), malicious leaders could
