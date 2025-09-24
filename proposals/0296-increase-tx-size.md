@@ -75,17 +75,17 @@ LegacyHeader (u8, u8, u8) -- Required signatures from the current
 `MessageHeader` type
 NumInstructions (u8)
 TransactionConfigMask (u32) -- Bitmask of which config requests are present.
-LifetimeSpecificier [u8; 32]
+LifetimeSpecifier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Length matches NumAddresses
 ConfigRequests [u8] -- Array of request values. (section size is popcount 
   TransactionConfigMask bytes). See section TransactionConfigMask for details.
-Ixs [(u8, u8, u16)] -- Number matches NumInstructions. Values are 
- (program_account_index, num_accounts, num_data_bytes)
-[TRAILING DATA SECTION] -- Length must be consistent with the sum of 
- num_accounts and num_data_bytes in `Ixs`
-Signatures [[u8; 64]] -- Length of `num_required_signatures` from
- `LegacyHeader`
+InstructionHeaders [(u8, u8, u16)] -- Length of NumInstructions. Values are 
+  (ProgramAccountIndex, NumInstructionAccounts, NumInstructionDataBytes)
+InstructionPayloads [InstructionPayload] -- Length = NumInstructions.
+  Each InstructionPayload is the concatenation of the following byte arrays:
+    InstructionAccountIndexes [u8] -- Length = NumInstructionAccounts from the corresponding InstructionHeader
+    InstructionData [u8] -- Length = NumInstructionDataBytes from the corresponding InstructionHeader```
 ```
 
 The [TRAILING DATA SECTION] contains instruction's serialized account indexes
@@ -118,7 +118,7 @@ place:
 | --- | --- |
 | max transaction size | 4096 |
 | max num signatures per transaction | 42 |
-| max num accounts | 64 |
+| max num accounts | 96 |
 | max num instructions | 64 |
 | max accounts/instruction | 255 |
 
@@ -153,7 +153,8 @@ the bits is set, the transaction is invalid and cannot be included in blocks.
 
 For TxV1 transactions, any ComputeBudgetProgram instructions are ignored for 
 configuration, even if they are invalid.
-The instructions will still consume compute-units if included.
+The instructions will still consume compute-units if included, like a successful
+no-op instruction.
 
 For the cost-model, all TxV1 transactions are treated as if requests are 
 present.
@@ -203,7 +204,7 @@ new transaction size limit of 4096 bytes is proposed. This new limit should
 cover a majority of use cases mentioned within the motivation section, as well
 as enable most of the developers using Jito bundles for larger transactions to
 migrate to the new transaction format. Similarly, since the new limit proposed
-can accomodate the max accounts used in ALTs directly in the transaction,
+can accommodate the max accounts used in ALTs directly in the transaction,
 developers are able to migrate from `v0` transactions to `v1` transactions.
 
 A number of changes are required to be made to the validator to support the new
