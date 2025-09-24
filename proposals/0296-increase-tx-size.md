@@ -111,23 +111,18 @@ the trailing data section.
 This new `v1` transaction format notably does not include address lookup
 tables.
 
-With the new transaction size limit, it is possible to go past some other 
-implicit limitations that are currently in place on the network. To avoid
-causing unintended issues, the following limitations are proposed to be in
-place:
+### Transaction Constraints
 
-| max | value |
-| --- | --- |
-| max transaction size | 4096 |
-| max num signatures per transaction | 42 |
-| max num accounts | 96 |
-| max num instructions | 64 |
-| max accounts/instruction | 255 |
+Any transaction violating these constraints will be considered invalid and will 
+not be included in the chain. Violations are considered sanitization failures:
 
-The above limits are useful to spec, but not necessarily different than what is
-currently in place on the network. Any transaction violating these constraints
-will be considered invalid and will not be included in the chain. Violations are
-considered sanitization failures.
+| max | value | new/existing |
+| --- | --- | --- |
+| max transaction size | 4096 | new |
+| max num signatures per transaction | 42 | new |
+| max num accounts | 96 | new |
+| max num instructions | 64 | old |
+| max accounts/instruction | 255 | new |
 
 While the above lists sanitization failures, we will keep the current runtime 
 max limit of 12 signatures per transaction.
