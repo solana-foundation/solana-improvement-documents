@@ -49,6 +49,7 @@ Update replay logic to treat invalid nonce transactions — those failing the
 checks above — as non-state-modifying and non-fee-charging failures, as follows:
 
 - The transaction is not executed.
+- The transaction is not included in status cache.
 - The transaction’s CU cost still applies to the block limit.
 - The transaction is not charged with fee.
 - The transaction is recorded in the block (marked as failed).
