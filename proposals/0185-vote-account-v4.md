@@ -4,9 +4,9 @@ title: Vote Account v4
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Review
+status: Accepted
 created: 2024-10-17
-feature: (fill in with feature tracking issues once accepted)
+feature: Gx4XFcrVMt4HUvPzTpTSVkdDVgcDSjKhDN1RqRS6KDuZ
 ---
 
 ## Summary
@@ -144,10 +144,9 @@ pub struct VoteStateV4 {
 
 All vote instructions MUST be updated to support deserializing v4 vote accounts.
 
-Whenever a vote account is initialized OR modified by the vote program in a
-transaction AND hasn't been updated to v4 yet, the account state MUST be saved
-in the new format with the following default values for the new fields described
-above:
+All vote instructions that previously converted deserialized vote state to v3
+MUST be updated to instead convert to v4 with the following default values for
+the new fields described above:
 
 ```rust
 VoteStateV4 {
@@ -184,13 +183,21 @@ other vote state versions, it's never stored with uninitialized state.
 
 #### `UpdateCommission`
 
-The existing `UpdateCommission` instruction will will continue to only update
-the inflation rewards commission in integer percentage values.
+The existing `UpdateCommission` instruction will continue to only update the
+inflation rewards commission in integer percentage values.
 
-When updating vote state v4 accounts, the new `inflation_rewards_commission_bps`
-field should be used instead of the old generic `commission` field.
-Additionally, the new commission value MUST be multiplied by `100` before being
-checked for commission or increases and before being stored in account data.
+The new commission value MUST be multiplied by `100` before being checked for
+commission or increases and before being stored in the new
+`inflation_rewards_commission_bps` field.
+
+#### `UpdateValidatorIdentity`
+
+The existing `UpdateValidatorIdentity` instruction MUST also set the
+`block_revenue_collector` field to the new node pubkey value in addition to the
+`node_pubkey` field to keep the fields in sync until [SIMD-0232] adds the
+ability to set the field explicitly.
+
+[SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
 
 #### `Authorize`, `AuthorizeChecked`, `AuthorizeWithSeed`, `AuthorizeCheckedWithSeed`
 
