@@ -78,8 +78,8 @@ TransactionConfigMask (u32) -- Bitmask of which config requests are present.
 LifetimeSpecifier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Length matches NumAddresses
-ConfigRequests [u8] -- Array of request values. (section size is popcount 
-  TransactionConfigMask bytes). See section TransactionConfigMask for details.
+ConfigValues [[u8; 4]] -- Length equal to the popcount (number of set bits) of
+  TransactionConfigMask. See section TransactionConfigMask for details.
 InstructionHeaders [(u8, u8, u16)] -- Length of NumInstructions. Values are 
   (ProgramAccountIndex, NumInstructionAccounts, NumInstructionDataBytes)
 InstructionPayloads [InstructionPayload] -- Length = NumInstructions.
