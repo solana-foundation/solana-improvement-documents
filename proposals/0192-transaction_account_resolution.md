@@ -60,6 +60,8 @@ need only to pay fees and advance the nonce.
 Such transactions must have transaction costs for block-limits applied only
 to the fee-payer and nonce accounts, since execution will not even be
 attempted.
+Transaction-cost calculation is unchanged, and calculated as if the transaction
+were a "fee-only" transaction.
 
 ## Alternatives Considered
 
