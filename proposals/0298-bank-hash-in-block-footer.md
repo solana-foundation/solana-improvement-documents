@@ -71,8 +71,8 @@ feature activation program. The activation will require:
 
 1. Implementation of the new block footer structure
 2. Updates to block production logic to include the `bank_hash`
-3. Updates to block replay logic to verify the `bank_hash` correctly corresponds to
-   the post execution bank state
+3. Updates to block replay logic to verify the `bank_hash` correctly
+   corresponds to the post execution bank state
 
 ## Alternatives Considered
 
