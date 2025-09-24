@@ -42,10 +42,7 @@ These terms are used elsewhere, but are defined here for clarity:
 The current protocol requires that the the account keys used in a transaction:
 
 1. Contain no duplicate account keys,
-2. Have no more than 64 account keys,
-    - The limit is subject to change to 128 with the activation of
-      `9LZdXeKGeBV6hRLdxS1rHbHoEUsKqesCC2ZAPTPKJAbK`.
-3. All address lookup tables must be resolvable:
+2. All address lookup tables must be resolvable:
     - The address lookup table account must exist.
     - The address lookup table account must be owned by the address lookup
       table program: `AddressLookupTab1e1111111111111111111111111`
