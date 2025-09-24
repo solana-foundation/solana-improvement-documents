@@ -1,6 +1,6 @@
 ---
 simd: '0298'
-title: Add Parent Bank Hash to Block Header
+title: Bank Hash in Block Footer
 authors:
   - Max Resnick
 category: Standard
@@ -29,10 +29,11 @@ on execution state.
 
 Block Footer: This is an umbrella term for information contained in the last
 FEC set.
+The exact structure is described in SIMD 0307.
 
 ## Detailed Design
 
-### Block Header Changes
+### Block Footer Changes
 
 The block footer structure outlined in SIMD 0307
 will be extended to include a new field:
@@ -70,8 +71,8 @@ feature activation program. The activation will require:
 
 1. Implementation of the new block footer structure
 2. Updates to block production logic to include the `bank_hash`
-3. Updates to block replay logic to verify the `bank_hash` correctly
-   corresponds to the post execution bank state
+3. Updates to block replay logic to verify the `bank_hash` correctly corresponds to
+   the post execution bank state
 
 ## Alternatives Considered
 
