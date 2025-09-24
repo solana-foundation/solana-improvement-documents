@@ -1,71 +1,62 @@
 ---
 simd: "0301"
-title: Remove BankHash from Votes
+title: Replace bank_hash with parent_bank_hash
 authors:
   - Max Resnick (Anza)
 category: Standard
 type: Core
-status: Draft
+status: Review
 created: 2025-06-10
-feature: (fill in with feature key and github tracking issues once accepted)
-supersedes: (optional - fill this in if the SIMD supersedes a previous SIMD)
+feature: 
+supersedes: SIMD 0298
 superseded-by:
-  (optional - fill this in if the SIMD is superseded by a subsequent SIMD)
 extends:
-  (optional - fill this in if the SIMD extends the design of a previous SIMD)
 ---
 
 ## Summary
 
-This proposal would remove BankHash from votes on Solana to allow voting before
-replay is complete. If all the prerequisites are satisfied before Alpenglow is
-ready to rollout then it can be activated with Alpenglow. Otherwise it must be a
-feature flag.
-
-This is a very long line of text that should be wrapped by Prettier at eighty
-characters if proseWrap is set to always and printWidth is set to eighty.
+This proposal would replace the `bank_hash` in the block footer introduced by
+SIMD 0298 with the `parent_bank_hash`.
 
 ## Motivation
 
-Currently, votes include the BankHash, which ties votes to a fully executed bank
-state. Removing BankHash from votes allows validators to vote before execution
-completes. This is also called Asynchronous Execution.
+Asynchronous execution would not require execution to verify the validity of
+the block. Enforcing the validity check of the current block's `bank_hash`
+against the post execution state is not compatible with asynchronous execution.
+This proposal moves consensus on bank state back one slot.
 
-The synchronous confirmation flow after Alpenglow looks like this:
+## New Terminology
 
-```text
-| ----- leader broadcasts the block through rotor -------|
-        |------------------ validator recieves block ------------|       |-- validator broadcasts votes--| <-  certificate is formed
-              |--------------- validator executes block -----------------|
-```
-
-After this feature flag activates validators will be able to vote before they
-finish executing the block:
-
-```text
-| ----- leader broadcasts the block through rotor -------|
-        |------------------ validator recieves block ------------||-- validator broadcasts votes--| <-  certificate is formed
-              |--------------- validator executes block -----------------|
-```
+- **parent_bank_hash**: The bank hash from the previous slot, replacing the
+  current slot's bank_hash in the block footer
 
 ## Detailed Design
 
-This proposal contains a single change:
+This proposal a simple change:
 
-1. Remove BankHash from votes. Validators will no longer include the BankHash in
-   their vote messages.
+1. Replace `bank_hash` in block footer with `parent_bank_hash`
+2. Replace the validity logic requires a valid `bank_hash` against the post
+   execution state of the block with a check that the pre execution state
+   matches the `parent_bank_hash`
 
 ## Dependencies
 
-| SIMD Number                                                                             | Description                                 | Status    |
-| --------------------------------------------------------------------------------------- | ------------------------------------------- | --------- |
-| [SIMD-0159](https://github.com/solana-foundation/solana-improvement-documents/pull/159) | Pre-compile Instruction Verification        | Activated |
-| [SIMD-0191](https://github.com/solana-foundation/solana-improvement-documents/pull/191) | Loaded Data Size and Program Account Checks | Activated |
-| [SIMD-0192](https://github.com/solana-foundation/solana-improvement-documents/pull/192) | Address Lookup Table Relaxation             | Review    |
-| [SIMD-0290](https://github.com/solana-foundation/solana-improvement-documents/pull/290) | Fee-payer Account Relaxation                | Review    |
-| [SIMD-0295](https://github.com/solana-foundation/solana-improvement-documents/pull/295) | Relax CU limit overage                      | Review    |
-| [SIMD-0297](https://github.com/solana-foundation/solana-improvement-documents/pull/297) | Durable Nonce Relaxation                    | Review    |
-| [SIMD-0298](https://github.com/solana-foundation/solana-improvement-documents/pull/298) | Add BankHash to Block Header                | Review    |
+| SIMD Number | Description | Status |  
+| ----------- | ----------- | ------ |
+| [SIMD-0159](../pull/159) | Pre-compile Instruction Verification | Activated |
+| [SIMD-0191](../pull/191) | Loaded Data Size and Program Account Checks | Activated |
+| [SIMD-0192](../pull/192) | Address Lookup Table Relaxation | Review |
+| [SIMD-0290](../pull/290) | Fee-payer Account Relaxation | Approved |
+| [SIMD-0295](../pull/295) | Relax CU limit overage | Review |
+| [SIMD-0297](../pull/297) | Durable Nonce Relaxation | Review |
+| [SIMD-0298](../pull/298) | Add bank_hash to block footer | Review |
+
+## Alternatives Considered
+
+1. **Keep current bank_hash**: Continue with the current design from SIMD 0298,
+   but this would not be compatible with asynchronous execution.
+2. **Remove bank_hash entirely**: Remove all execution state from consensus,
+   but this would make it harder to detect execution bugs.
 
 ## Impact
 
@@ -76,22 +67,14 @@ unable to participate in consensus once the feature flag is activated.
 
 ## Security Considerations
 
-Removing BankHash from votes does not introduce new security risks by itself
-when coupled with SIMD-0298 which adds the BankHash of the parent to each block,
-because the BankHash is still part of consensus.
+This would delay the detection of `bank_hash` mismatches due to bugs in
+execution client implementations by 1 block.
 
 ## Drawbacks
 
 ## Backwards Compatibility
 
-Either the prerequisites are all satisfied by the time Alpenglow is ready, in
-which case we can just launch alpenglow votes without the BankHash in them, or
-we will need a feature flag.
-
-This proposal requires a breaking change to the vote structure. All validators
-must implement the new vote format. The change will be gated behind a feature
-flag and activated in a coordinated manner. Validators running older versions
-will be unable to participate in consensus once the feature flag is activated.
-
-This is a very long line of text that should be wrapped by Prettier at eighty
-characters if proseWrap is set to always and printWidth is set to eighty.
+This proposal requires a breaking change to block validity. All validators
+the change. The change will be gated behind a feature
+flag and activated in a coordinated manner. May differ in their view of valid
+blocks until they upgrade.
