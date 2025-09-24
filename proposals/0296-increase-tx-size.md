@@ -84,8 +84,10 @@ InstructionHeaders [(u8, u8, u16)] -- Length of NumInstructions. Values are
   (ProgramAccountIndex, NumInstructionAccounts, NumInstructionDataBytes)
 InstructionPayloads [InstructionPayload] -- Length = NumInstructions.
   Each InstructionPayload is the concatenation of the following byte arrays:
-    InstructionAccountIndexes [u8] -- Length = NumInstructionAccounts from the corresponding InstructionHeader
-    InstructionData [u8] -- Length = NumInstructionDataBytes from the corresponding InstructionHeader```
+    InstructionAccountIndexes [u8] -- Length = NumInstructionAccounts from the 
+    corresponding InstructionHeader
+    InstructionData [u8] -- Length = NumInstructionDataBytes from the 
+    corresponding InstructionHeader
 ```
 
 The [TRAILING DATA SECTION] contains instruction's serialized account indexes
