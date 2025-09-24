@@ -90,24 +90,6 @@ InstructionPayloads [InstructionPayload] -- Length = NumInstructions.
     corresponding InstructionHeader
 ```
 
-The [TRAILING DATA SECTION] contains instruction's serialized account indexes
-and instruction data bytes,
-in the order they appear in the transaction. Each instruction's account indexes
-must appear before its data bytes.
-For example, if there are two instructions:
-
-1. `Instruction { account_indexes: [0, 1], data: [2, 3, 4] }`
-2. `Instruction { account_indexes: [5, 6], data: [7, 8] }`
-
-The TRAILING DATA SECTION must look like this:
-
-```
-[0, 1, 2, 3, 4, 5, 6, 7, 8]
-```
-
-Lengths are serialized in the earlier `Ixs` section, and so are not repeated in
-the trailing data section.
-
 This new `v1` transaction format notably does not include address lookup
 tables.
 
@@ -122,10 +104,12 @@ not be included in the chain. Violations are considered sanitization failures:
 | max num signatures per transaction | 42 | new |
 | max num accounts | 96 | new |
 | max num instructions | 64 | old |
-| max accounts/instruction | 255 | new |
+| max accounts/instruction | 255 | old |
 
-While the above lists sanitization failures, we will keep the current runtime 
-max limit of 12 signatures per transaction.
+While the above lists sanitization failures, we will add a runtime max limit of 
+12 signatures per transaction to be consistent with the current implicit limit.
+The runtime limit for the max number of accounts is not changed from the current
+64 as well.
 
 ### TransactionConfigMask
 
@@ -150,8 +134,8 @@ the bits is set, the transaction is invalid and cannot be included in blocks.
 
 For TxV1 transactions, any ComputeBudgetProgram instructions are ignored for 
 configuration, even if they are invalid.
-The instructions will still consume compute-units if included, like a successful
-no-op instruction.
+The instructions will still consume compute-units if included and be processed 
+as a successful no-op instruction.
 
 For the cost-model, all TxV1 transactions are treated as if requests are 
 present.
