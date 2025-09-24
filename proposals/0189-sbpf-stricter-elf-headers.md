@@ -58,7 +58,7 @@ see SIMD-0179 for details on how a function start is marked.
 - `e_shoff` is not checked
 - `e_flags` see SIMD-0161
 - `e_ehsize` must be `size_of::<Elf64Ehdr>()` (64 bytes)
-- `e_phnum` must be `0x0004`
+- `e_phnum` must be `0x0002`
 - `e_phoff + e_phnum * size_of::<Elf64Phdr>()` must be less than the file size
 - `e_phentsize` must be `size_of::<Elf64Phdr>()` (56 bytes)
 - `e_shnum` is not checked
@@ -71,10 +71,8 @@ If any check fails `ElfParserError::InvalidFileHeader` must be thrown.
 
 | index |  purpose  |   p_flags  | p_vaddr |
 | ----- | --------- | ---------- | ------- |
-| 0     | bytecode  | PF_X       | 0 << 32 |
-| 1     | ro data   | PF_R       | 1 << 32 |
-| 2     | stack     | PF_R, PF_W | 2 << 32 |
-| 3     | heap      | PF_R, PF_W | 3 << 32 |
+| 0     | ro data   | PF_R       | 0 << 32 |
+| 1     | bytecode  | PF_X       | 1 << 32 |
 
 For each of these predefined program headers:
 
@@ -85,9 +83,7 @@ For each of these predefined program headers:
 - `p_offset` must be evenly divisible by 8 bytes,
 - `p_vaddr` must match the `p_vaddr` of the entry in the table above
 - `p_paddr` must match the `p_vaddr` of the entry in the table above
-- `p_filesz` must be:
-  - `0` if the section is writable (the `PF_W` flag is set)
-  - `p_memsz` otherwise (the `PF_W` flag is clear)
+- `p_filesz` must be `p_memsz`
 - `p_filesz` must not be greater than `file.len() as u64 - p_offset`
 - `p_filesz` must be evenly divisible by 8 bytes,
 - `p_memsz` must fit in 32 bits / be less than `1 << 32`
