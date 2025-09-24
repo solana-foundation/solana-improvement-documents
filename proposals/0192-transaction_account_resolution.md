@@ -60,8 +60,8 @@ This means that transactions that break any of these constraints may be
 included in a block, if they are otherwise valid.
 Such transactions do not need to attempt any further loading or execution; they
 need only to pay fees and advance the nonce.
-Such transactions should have transaction costs for block-limits applied only
-to the fee-payer and nonce accounts, since exucution will not even be
+Such transactions must have transaction costs for block-limits applied only
+to the fee-payer and nonce accounts, since execution will not even be
 attempted.
 
 ## Alternatives Considered
