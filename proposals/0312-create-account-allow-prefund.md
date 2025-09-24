@@ -1,18 +1,18 @@
 ---
 simd: '0312'
-title: CreatePrefundedAccount
+title: CreateAccountAllowPrefund
 authors:
   - Peter Keay
 category: Standard
 type: Core
 status: Review
 created: 2025-06-27
-feature: create-account-prefunded
+feature: TBD
 ---
 
 ## Summary
 
-A `CreatePrefundedAccount` instruction added to the system program reduces
+A `CreateAccountAllowPrefund` instruction added to the system program reduces
 network overhead for applications that need to fund account rent (in whole
 or in part) in advance of account creation.
 
@@ -38,12 +38,12 @@ account copy, etc. - can make up the bulk of the computation done in the
 transaction. Each CPI incurs a minimum of 1_000 compute units, plus
 additional amounts depending on the instruction and account length.
 
-`CreatePrefundedAccount` performs `allocate`, `assign`, and `transfer`
+`CreateAccountAllowPrefund` performs `allocate`, `assign`, and `transfer`
 without asserting that the created account has zero lamports. Applications
 which do not need to `transfer` can specify 0 lamports, effectively providing
 them with an `AllocateAndAssign`.
 
-p-ATA program benchmarks demonstrate that use of `CreatePrefundedAccount`
+p-ATA program benchmarks demonstrate that use of `CreateAccountAllowPrefund`
 can save approximately 2_500 compute units:
 https://github.com/solana-program/associated-token-account/pull/102
 
@@ -51,7 +51,7 @@ This is a stopgap measure, as it extends the undesired interface sprawl of
 helper instructions such as `CreateAccount`. However, any redesign of
 Cross-Program Invocations to safely reduce overhead would be an extensive
 protocol upgrade and slow to land. In the meantime, the network will benefit
-from `CreatePrefundedAccount`.
+from `CreateAccountAllowPrefund`.
 
 ## New Terminology
 
@@ -61,7 +61,7 @@ instruction in which its space is `allocate`d and its owner is `assign`ed.
 
 ## Detailed Design
 
-`CreatePrefundedAccount` is added as a system program instruction, identical
+`CreateAccountAllowPrefund` is added as a system program instruction, identical
 to `CreateAccount` except for the following:
 
 1. The instruction has a new discriminant (13).
@@ -89,7 +89,7 @@ will pay for the lamport transfer. Required only when `lamports > 0`. |
 
 ### Behavior
 
-The `CreatePrefundedAccount` instruction performs the following actions:
+The `CreateAccountAllowPrefund` instruction performs the following actions:
 
 1. **Allocate**: As with `CreateAccount`, this instruction calls `allocate`,
 which will fail if the new account is non-empty.
@@ -122,19 +122,19 @@ after the transfer.
 ## Alternatives Considered
 
 * A separate `AllocateAndAssign` instruction. However, using
-`CreatePrefundedAccount` is appropriate for a caller needing to `allocate`
+`CreateAccountAllowPrefund` is appropriate for a caller needing to `allocate`
 and `assign`, as `transfer` is called to top up the storage rent
 requirement only if current lamports are insufficient (equivalent to how an
 instruction named `AllocateAndAssignAndMaybeTransfer` would function).
 A separate `AllocateAndAssign` would save one check, but the compute savings
-are not enough to justify the resulting interface sprawl.
+would be minimal and not enough to justify such interface sprawl.
 * Redesigning CPIs. The current CPI model spins up a new context for every
 invocation - re-copying and re-verifying account and signer data. A CPI
 redesign ​could slash this overhead for innumerable programs, but such a
 redesign would involve extensive implementation and audit time. By contrast,
-`CreatePrefundedAccount` delivers quick compute savings for a common pattern
+`CreateAccountAllowPrefund` delivers quick compute savings for a common pattern
 with minimal surface area. Instruction-batching helpers such as
-`CreatePrefundedAccount` and `CreateAccount` can be deprecated whenever
+`CreateAccountAllowPrefund` and `CreateAccount` can be deprecated whenever
 CPI improvements land, enabling such helpers to become library-level functions
 rather than system instructions.
 
@@ -150,17 +150,17 @@ which currently must perform these operations manually across 2 to 3
 CPIs.
 
 As mentioned previously, the p-ATA program takes advantage of
-`CreatePrefundedAccount` to save approximately 2_500 compute units:
+`CreateAccountAllowPrefund` to save approximately 2_500 compute units:
 https://github.com/solana-program/associated-token-account/pull/102
 
 ## Security Considerations
 
-Developers using `CreatePrefundedAccount` should ensure they are not passing
-an unintended wallet account with lamports. The usual checks of `allocate`
-and `assign` are still performed - an account with data or with an owner
-other than the system program will not be modified - but since the lamport
-check is removed, a wallet account with lamports can be bricked by this
-instruction.
+Developers using `CreateAccountAllowPrefund` should ensure they are not
+passing an unintended wallet account with lamports. The usual checks of
+`allocate` and `assign` are still performed - an account with data or with
+an owner other than the system program will not be modified - but since
+the lamport check is removed, a wallet account with lamports can be bricked
+by this instruction.
 
 ## Backwards Compatibility
 
