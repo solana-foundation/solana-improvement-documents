@@ -1,6 +1,6 @@
 ---
 simd: '0298'
-title: Bank Hash in Block Footer
+title: Add `bank_hash` to block footer.
 authors:
   - Max Resnick
 category: Standard
@@ -58,9 +58,15 @@ invalid if:
 1. The `bank_hash` will be computed at the end of packing each block.
 The validator proposing the block will include it in the block footer.
 2. Replaying validators will verify the `bank_hash` in the block footer
-matches their computed hash of the state after executing the block.
+exists and matches their computed hash of the state after executing the block.
 This is similar to what they do with the `bank_hash`
 contained in votes today.
+
+If the `bank_hash` does not match the post execution `bank_hash` then the block
+is marked invalid. Validators will treat this the same way they treat a
+protocol violatiing error. In particular, the block will be marked dead and
+the validator will not vote on it or any of its children. Post alpenglow
+the validator will vote skip on this block and any children.
 
 ### Feature Activation
 
@@ -85,10 +91,10 @@ feature activation program. The activation will require:
 
 2. **XOR bank_hash with block_id**: Instead of adding a separate
    bank_hash field to the footer, we could XOR the `bank_hash` with the `block_id`
-   to create a combined hash. This would save space but make verification more
-   complex and less transparent. This approach was rejected because it adds
-   unnecessary complexity to the validation process and makes debugging more
-difficult.
+   to create a combined hash in votes. This would save space but would
+   make verification more complex and less transparent.
+   This approach was rejected because it adds
+   unnecessary complexity to the validation process and makes debugging more difficult.
 
 ## Impact
 
