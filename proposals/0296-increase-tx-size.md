@@ -119,6 +119,9 @@ contraints either stay unchanged by making sure they are explicitly defined:
 | max num accounts | 64 | old |
 | max accounts/instruction | 255 | old |
 
+The runtime check for max number of signatures should be run immediately after
+fee payer validations and before other runtime checks.
+
 ### TransactionConfigMask
 
 The transaction config mask is used to configure specific fee and resource 
