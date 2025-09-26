@@ -51,10 +51,10 @@ checks above — as non-state-modifying and non-fee-charging failures, as follow
 - The transaction is not executed.
 - The transaction is not included in status cache.
 - The transaction’s CU cost still applies to the block limit.
-- The transaction is not charged with fee.
 - The transaction is recorded in the block (marked as failed).
 - No account state is modified, including the nonce account (i.e., nonce is
-  not advanced).
+  not advanced) and fee payer account (it is not charged with the transaction's
+  fee).
 - The block is not rejected as long as all other transactions replay
   successfully.
 
