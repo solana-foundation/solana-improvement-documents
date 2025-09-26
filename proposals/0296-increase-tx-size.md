@@ -104,12 +104,13 @@ not be included in the chain. Violations are considered sanitization failures:
 | max num signatures per transaction | 42 | new |
 | max num accounts | 96 | new |
 | max num instructions | 64 | old |
-| max accounts/instruction | 255 | old |
+| max accounts/instruction | 255 | new |
 
 While the above lists sanitization failures, we will add a runtime max limit of 
 12 signatures per transaction to be consistent with the current implicit limit.
 The runtime limit for the max number of accounts is not changed from the current
-64 as well.
+64, and the same goes for the max255 accounts per instruction also remaining 
+unchanged.
 
 ### TransactionConfigMask
 
