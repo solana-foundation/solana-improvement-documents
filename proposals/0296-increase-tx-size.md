@@ -88,6 +88,8 @@ InstructionPayloads [InstructionPayload] -- Length = NumInstructions.
     corresponding InstructionHeader
     InstructionData [u8] -- Length = NumInstructionDataBytes from the 
     corresponding InstructionHeader
+Signatures [[u8; 64]] -- Length of `num_required_signatures` from
+ `LegacyHeader`
 ```
 
 This new `v1` transaction format notably does not include address lookup
