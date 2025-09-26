@@ -108,7 +108,7 @@ not be included in the chain. Violations are considered sanitization failures:
 | max num instructions | 64 | old |
 | max accounts/instruction | 255 | new |
 
-### Runtime Contraints
+### Runtime Constraints
 
 While the above lists sanitization failures, we will have the following runtime
 contraints either stay unchanged by making sure they are explicitly defined:
