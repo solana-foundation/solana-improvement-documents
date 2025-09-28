@@ -63,8 +63,8 @@ Variants:
 ### Specification
 
 `BlockHeader` contains info about the parent block. `UpdateParent` marker
-contains info about the parent block that the leader switched to. Each variant
-includes its own version field:
+contains info about the new parent block that the leader switched to as a result
+of fast leader handoff. Each variant includes its own version field:
 
 ```
 VersionedBlockHeader Layout:
@@ -115,7 +115,7 @@ Fields:
 - **Version**: Versioning byte for forward compatibility (u8)
 - **Parent Slot**: The slot number of the (new) parent block (u64,
   little-endian)
-- **Parent Block ID**: The block ID identifying the new parent block (32-byte
+- **Parent Block ID**: The block ID identifying the (new) parent block (32-byte
   hash). The meaning of this field is left to specification in future
   Alpenglow-related SIMDs.
 
