@@ -15,10 +15,11 @@ feature: TBD
 ## Summary
 
 (This combines and replaces SIMDs 337 and 366.)
-Upgrade `BlockMarkerV1` from SIMD-0307 to `BlockMarkerV2`, introducing an
-`UpdateParent` variant. This variant signals that the intended parent for the
-block is different than initially indicated. This paves the way for Fast Leader
-Handoff support in Alpenglow (section 2.7 of
+Upgrade `BlockMarkerV1` from SIMD-0307 to `BlockMarkerV2`, introducing
+`BlockHeader` and `UpdateParent` variants. `BlockHeader` is placed at the
+beginning of block payload and indicates the parent of a block. `UpdateParent`
+signals that the intended parent is different than initially indicated. This
+paves the way for Fast Leader Handoff support in Alpenglow (section 2.7 of
 https://www.anza.xyz/alpenglow-1-1), increasing throughput.
 
 ## Motivation
@@ -33,7 +34,9 @@ the indicated parent while streaming the block.
 
 ## New Terminology
 
-- **UpdateParent**: A block marker variant indicating a changed block parent.
+- **BlockHeader**: Block marker variant indicating the block's parent. Placed in
+  the beginning of block data.
+- **UpdateParent**: Block marker variant indicating a changed parent.
 
 ## Detailed Design
 
@@ -53,13 +56,24 @@ BlockMarkerV2 Layout:
 
 Variants:
 - 0: BlockFooter (inherited from V1)
-- 1: UpdateParent (new in V2)
+- 1: BlockHeader (new in V2)
+- 2: UpdateParent (new in V2)
 ```
 
-### UpdateParent Specification
+### Specification
 
-The `UpdateParent` marker contains information about the parent block that the
-leader switched to. Each variant includes its own version field:
+`BlockHeader` contains info about the parent block. `UpdateParent` marker
+contains info about the parent block that the leader switched to. Each variant
+includes its own version field:
+
+```
+VersionedBlockHeader Layout:
++---------------------------------------+
+| Version                     (1 byte)  |
++---------------------------------------+
+| Payload (version-specific) (variable) |
++---------------------------------------+
+```
 
 ```
 VersionedUpdateParent Layout:
@@ -71,6 +85,18 @@ VersionedUpdateParent Layout:
 ```
 
 For Version 1:
+
+```
+BlockHeaderV1 Payload:
++---------------------------------------+
+| Parent Slot                (8 bytes)  |
++---------------------------------------+
+| Parent Block ID           (32 bytes)  |
++---------------------------------------+
+
+Total payload size: 40 bytes
+Total size with version: 41 bytes
+```
 
 ```
 UpdateParentV1 Payload:
@@ -87,14 +113,13 @@ Total size with version: 41 bytes
 Fields:
 
 - **Version**: Versioning byte for forward compatibility (u8)
-- **Parent Slot**: The slot number of the new parent block (u64,
+- **Parent Slot**: The slot number of the (new) parent block (u64,
   little-endian)
 - **Parent Block ID**: The block ID identifying the new parent block (32-byte
-  hash)
+  hash). The meaning of this field is left to specification in future
+  Alpenglow-related SIMDs.
 
-### Code Sample
-
-We illustrate code samples below in Rust. Implements may employ other languages.
+### `UpdateParent` Code Sample
 
 ```rust
 /// Always deserializes to the `Current` variant for forward compatibility.
@@ -126,7 +151,7 @@ The `UpdateParent` marker integrates with the existing `BlockComponent` system:
 
 ```rust
 /// Version 2 block marker.
-/// Supports V1 features plus UpdateParent.
+/// Supports V1 features plus BlockHeader and UpdateParent.
 /// ┌─────────────────────────────────────────┐
 /// │ Variant ID                   (1 byte)   │
 /// ├─────────────────────────────────────────┤
@@ -139,13 +164,15 @@ The `UpdateParent` marker integrates with the existing `BlockComponent` system:
 /// allowing for proper parsing even if unknown variants are encountered.
 pub enum BlockMarkerV2 {
     BlockFooter(VersionedBlockFooter),
+    BlockHeader(VersionedBlockHeader),
     UpdateParent(VersionedUpdateParent),
 }
 ```
 
 ### Serialization Format
 
-When serialized within a `BlockComponent`, the complete structure is:
+Both `BlockHeader` and `UpdateParent` (variant 1 and 2) have the following
+structure while serialized within a `BlockComponent` in the first version:
 
 ```
 +---------------------------------------+
@@ -153,7 +180,7 @@ When serialized within a `BlockComponent`, the complete structure is:
 +---------------------------------------+
 | Marker Version = 2          (2 bytes) |
 +---------------------------------------+
-| Variant ID = 1              (1 byte)  |
+| Variant ID = {1, 2}         (1 byte)  |
 +---------------------------------------+
 | Length = 41                 (2 bytes) |
 +---------------------------------------+
@@ -167,10 +194,21 @@ When serialized within a `BlockComponent`, the complete structure is:
 Total size: 54 bytes per marker
 ```
 
-## `DATA_COMPLETE_SHRED` Placement Rules
+### Marker Placement Rules
+
+`BlockHeader` must be placed at the beginning of shred data of the first FEC
+set of every block.
+
+At most one `UpdateParent` marker might be placed in a block, at the beginning
+of the shred data of one FEC set. Only the first block of a leader window can
+include the `UpdateParent` marker.
+
+Otherwise, the given block is invalid.
+
+### `DATA_COMPLETE_SHRED` Placement Rules
 
 Due to the logic of Alpenglow, validators need to be able to process the
-`UpdateParent` marker outside of replay, even without ever receiving the initial
+`UpdateParent` marker outside of replay, even without ever replaying the initial
 parent block. To make this possible, we introduce additional rules for the
 `DATA_COMPLETE_SHRED` flag in data shreds. Most implementations already follow
 this rule, but it's not yet enforced.
@@ -206,8 +244,8 @@ After Fast Leader Handoff is implemented, state transition will work as follows:
 - State changes from transactions before the `UpdateParent` marker are discarded
 - The `UpdateParent` marker itself does not modify state
 - Post-`UpdateParent` marker transactions are built on the new parent's state
-- Notably, despite pre-marker transaction state changes being discarded, the
-transactions themselves WILL be included in the constructed block.
+- Notably, despite pre-marker transaction state changes being discarded, all
+  pre-marker shred data WILL be included in the constructed block.
 
 ## Alternatives Considered
 
@@ -235,9 +273,7 @@ transactions themselves WILL be included in the constructed block.
 ## Security Considerations
 
 Upon launching Alpenglow, validators must validate blocks according to the
-Alpenglow protocol. At most one `UpdateParent` marker can be included in a
-block. Only the first block of a leader window can include the `UpdateParent`
-marker. Otherwise, the given block is invalid.
+Alpenglow protocol.
 
 ## Backwards Compatibility
 
