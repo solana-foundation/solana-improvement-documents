@@ -14,7 +14,7 @@ feature: TBD
 
 ## Summary
 
-(This combines and replaces SIMDs 337 and 366.)
+(This replaces and extends SIMDs 337 and 366.)
 Upgrade `BlockMarkerV1` from SIMD-0307 to `BlockMarkerV2`, introducing
 `BlockHeader` and `UpdateParent` variants. `BlockHeader` is placed at the
 beginning of block payload and indicates the parent of a block. `UpdateParent`
