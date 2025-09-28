@@ -1,5 +1,5 @@
 ---
-simd: 'xxxx'
+simd: '0371'
 title: Alpenglow Fast Handoff Marker
 authors:
   - ksn6 (Anza)
@@ -176,6 +176,7 @@ parent block. To make this possible, we introduce additional rules for the
 this rule, but it's not yet enforced.
 
 FEC sets in Alpenglow will follow a fixed structure:
+
 - Each FEC set contains exactly 32 data shreds (insufficient data is
   zero-padded)
 - Each FEC set contains exactly 32 coding shreds for error correction.
@@ -190,6 +191,7 @@ the beginning of an FEC set, AND the previous FEC set's last data shred shows
 
 With these rules, `UpdateParent` marker can be detected at shred ingestion,
 without replaying block contents up to this point, like so:
+
 - Check the 0th shred of the next FEC set when `DATA_COMPLETE_SHRED` is `true`
   in the current shred
 - Check the current shred when the `DATA_COMPLETE_SHRED` is `true` in the
@@ -200,6 +202,7 @@ See https://github.com/anza-xyz/alpenglow/pull/459 for an example implementation
 **State Transition Rules**:
 
 After Fast Leader Handoff is implemented, state transition will work as follows:
+
 - State changes from transactions before the `UpdateParent` marker are discarded
 - The `UpdateParent` marker itself does not modify state
 - Post-`UpdateParent` marker transactions are built on the new parent's state
