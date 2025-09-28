@@ -15,18 +15,18 @@ feature: TBD
 ## Summary
 
 We propose upgrading `BlockMarkerV1`, introduced in SIMD-0307, to
-`BlockMarkerV2` to support fast leader handover in Alpenglow. `BlockMarkerV2`
+`BlockMarkerV2` to support Fast Leader Handover in Alpenglow. `BlockMarkerV2`
 introduces `BlockHeader` and `UpdateParent` variants. `BlockHeader`, placed at
 the beginning of a block, indicates the parent of a block. `UpdateParent`
 signals that the intended parent is different than initially indicated. This
-paves the way for Fast Leader handover support in Alpenglow (section 2.7 of
+paves the way for Fast Leader Handover support in Alpenglow (section 2.7 of
 https://www.anza.xyz/alpenglow-1-1), increasing throughput.
 
 ## Motivation
 
 SIMD-0326 proposes Alpenglow, a consensus protocol specified in
-https://www.anza.xyz/alpenglow-1-1. Section 2.7 in the paper describes fast
-leader handover. This mechanism allows leaders to begin constructing blocks on
+https://www.anza.xyz/alpenglow-1-1. Section 2.7 in the paper describes Fast
+Leader Handover. This mechanism allows leaders to begin constructing blocks on
 tentative parent blocks before the parent is ensured to be correct. In the
 common case, this optimization increases throughput, by giving more time to the
 leader to stream the block. To ensure correctness, the leader may need to change
@@ -121,7 +121,8 @@ Fields:
 
 ### `UpdateParent` Code Sample
 
-NOTE: `BlockHeader` has nearly identical implementation. The markers are separate to allow future header extensions.
+NOTE: `BlockHeader` has nearly identical implementation. The markers are
+separate to allow future header extensions.
 
 ```rust
 /// Always deserializes to the `Current` variant for forward compatibility.
@@ -241,7 +242,7 @@ See https://github.com/anza-xyz/alpenglow/pull/459 for an example implementation
 
 **State Transition Rules**:
 
-After Fast Leader handover is implemented, state transition will work as follows:
+After Fast Leader Handover is implemented, state transition will work as follows:
 
 - State changes from transactions before the `UpdateParent` marker are discarded
 - The `UpdateParent` marker itself does not modify state
@@ -267,7 +268,7 @@ After Fast Leader handover is implemented, state transition will work as follows
 ## Impact
 
 - **Positive**:
-  - Paves the way for fast leader handover that will increase throughput.
+  - Paves the way for Fast Leader Handover that will increase throughput.
 
 - **Negative**:
   - Slight block size overhead.
