@@ -1,6 +1,6 @@
 ---
 simd: '0337'
-title: Block Markers for Alpenglow Fast Leader Handover
+title: Markers for Alpenglow Fast Leader Handover
 authors:
   - ksn6 (Anza)
   - Ashwin Sekar (Anza)
@@ -17,7 +17,7 @@ feature: TBD
 We propose upgrading `BlockMarkerV1`, introduced in SIMD-0307, to
 `BlockMarkerV2` to support Fast Leader Handover in Alpenglow. `BlockMarkerV2`
 introduces `BlockHeader` and `UpdateParent` variants. `BlockHeader`, placed at
-the beginning of a block, indicates the parent of a block. `UpdateParent`
+the beginning of a block, indicates the parent of the block. `UpdateParent`
 signals that the intended parent is different than initially indicated. This
 paves the way for Fast Leader Handover support in Alpenglow (section 2.7 of
 https://www.anza.xyz/alpenglow-1-1), increasing throughput.
@@ -63,8 +63,8 @@ Variants:
 ### Specification
 
 `BlockHeader` contains info about the parent block. `UpdateParent` marker
-contains info about the parent block that the leader switched to. Each variant
-includes its own version field:
+contains info about the parent block that the leader switched to as a result
+of Fast Leader Handover. Each variant includes its own version field:
 
 ```
 VersionedBlockHeader Layout:
@@ -115,7 +115,7 @@ Fields:
 - **Version**: Versioning byte for forward compatibility (u8)
 - **Parent Slot**: The slot number of the (new) parent block (u64,
   little-endian)
-- **Parent Block ID**: The block ID identifying the new parent block (32-byte
+- **Parent Block ID**: The block ID identifying the parent block (32-byte
   hash). The meaning of this field is left to specification in future
   Alpenglow-related SIMDs.
 
