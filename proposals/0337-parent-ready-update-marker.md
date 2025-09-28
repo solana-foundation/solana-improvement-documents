@@ -1,8 +1,9 @@
 ---
 simd: '0337'
-title: UpdateParent Block Marker
+title: Block Markers for Alpenglow Fast Leader Handover
 authors:
   - ksn6 (Anza)
+  - Ashwin Sekar (Anza)
   - Kobi Sliwinski (Anza)
 category: Standard
 type: Core
@@ -13,61 +14,31 @@ feature: TBD
 
 ## Summary
 
-This SIMD proposes upgrading `BlockMarkerV1`, introduced in SIMD-0307, to
-`BlockMarkerV2` to support fast leader handover in the Alpenglow consensus
-protocol. In particular, `BlockMarkerV2` includes a new `UpdateParent`
-variant to support fast leader handover. This marker signals when a leader
-has switched to a different parent block during fast leader handover
-due to a `ParentReady` event, providing critical metadata for consensus
-validation and block verification.
+We propose upgrading `BlockMarkerV1`, introduced in SIMD-0307, to
+`BlockMarkerV2` to support fast leader handover in Alpenglow. `BlockMarkerV2`
+introduces `BlockHeader` and `UpdateParent` variants. `BlockHeader`, placed at
+the beginning of a block, indicates the parent of a block. `UpdateParent`
+signals that the intended parent is different than initially indicated. This
+paves the way for Fast Leader handover support in Alpenglow (section 2.7 of
+https://www.anza.xyz/alpenglow-1-1), increasing throughput.
 
 ## Motivation
 
-The Alpenglow consensus protocol, as specified in SIMD-0326, introduces
-fast leader handover as a key performance optimization. This mechanism
-allows leaders to begin constructing blocks on tentative parent blocks before
-the actual parent is fully finalized through the notarization process. This
-optimization significantly reduces block production latency by enabling
-parallel processing of block construction and parent finalization.
-
-However, during fast leader handover, a leader may need to switch from
-their initially assumed parent to a different parent block when a
-`ParentReady` event occurs. This event indicates that:
-
-1. All necessary skip certificates have been collected for intervening slots
-2. A `NotarizeFallback` certificate exists for a valid parent block
-3. The leader must switch to this newly ready parent (as specified in
-   Algorithm 3, Line 7 of the
-   [Alpenglow whitepaper v1.1](https://www.anza.xyz/alpenglow-1-1))
-
-
-Currently, there is no standardized mechanism to signal these parent switches
-within the block structure. As such, without the capability that this SIMD
-details, leader validators cannot indicate that a parent switch has occurred
-during fast leader handover.
-
-This SIMD addresses these issues by leveraging the extensible `BlockMarker`
-framework introduced in SIMD-0307 to add a dedicated marker for parent switch
-events.
+SIMD-0326 proposes Alpenglow, a consensus protocol specified in
+https://www.anza.xyz/alpenglow-1-1. Section 2.7 in the paper describes fast
+leader handover. This mechanism allows leaders to begin constructing blocks on
+tentative parent blocks before the parent is ensured to be correct. In the
+common case, this optimization increases throughput, by giving more time to the
+leader to stream the block. To ensure correctness, the leader may need to change
+the indicated parent while streaming the block.
 
 ## New Terminology
 
-- **Block Marker**: A chunk of structured non-transaction data that can be
-  placed before, after, or in-between entry batches in a block.
-- **Fast Leader Handover**: A technique where leaders begin constructing
-  blocks on a tentative parent before the actual parent is finalized
-- **ParentReady Event**: A consensus event indicating that a block has met
-  all requirements to serve as a parent for new block production
-- **Parent Switch**: The action of changing from one parent block to another
-  during fast leader handover
-- **UpdateParent**: A block marker that records when and to which parent
-  a switch occurred during fast leader handover
+- **BlockHeader**: Block marker variant indicating the block's parent. Placed in
+  the beginning of block data.
+- **UpdateParent**: Block marker variant indicating a changed parent.
 
 ## Detailed Design
-
-This proposal extends the block marker system introduced in SIMD-0307 by
-adding a new variant specifically for Alpenglow's fast leader handover
-requirements.
 
 ### Block Marker Version 2
 
@@ -85,14 +56,24 @@ BlockMarkerV2 Layout:
 
 Variants:
 - 0: BlockFooter (inherited from V1)
-- 1: UpdateParent (new in V2)
+- 1: BlockHeader (new in V2)
+- 2: UpdateParent (new in V2)
 ```
 
-### UpdateParent Specification
+### Specification
 
-The `UpdateParent` marker contains information about the new parent block
-that the leader switched to during fast leader handover. Each variant includes
-its own version field to support independent evolution:
+`BlockHeader` contains info about the parent block. `UpdateParent` marker
+contains info about the parent block that the leader switched to. Each variant
+includes its own version field:
+
+```
+VersionedBlockHeader Layout:
++---------------------------------------+
+| Version                     (1 byte)  |
++---------------------------------------+
+| Payload (version-specific) (variable) |
++---------------------------------------+
+```
 
 ```
 VersionedUpdateParent Layout:
@@ -104,6 +85,18 @@ VersionedUpdateParent Layout:
 ```
 
 For Version 1:
+
+```
+BlockHeaderV1 Payload:
++---------------------------------------+
+| Parent Slot                (8 bytes)  |
++---------------------------------------+
+| Parent Block ID           (32 bytes)  |
++---------------------------------------+
+
+Total payload size: 40 bytes
+Total size with version: 41 bytes
+```
 
 ```
 UpdateParentV1 Payload:
@@ -120,26 +113,18 @@ Total size with version: 41 bytes
 Fields:
 
 - **Version**: Versioning byte for forward compatibility (u8)
-- **Parent Slot**: The slot number of the new parent block (u64,
+- **Parent Slot**: The slot number of the (new) parent block (u64,
   little-endian)
 - **Parent Block ID**: The block ID identifying the new parent block (32-byte
-  hash)
+  hash). The meaning of this field is left to specification in future
+  Alpenglow-related SIMDs.
 
-### Versioned Structure
+### `UpdateParent` Code Sample
 
-Following the pattern established in SIMD-0307, we use a versioned approach
-for future extensibility. We illustrate code samples below in Rust, although
-implements may employ other languages:
+NOTE: `BlockHeader` has nearly identical implementation. The markers are separate to allow future header extensions.
 
 ```rust
-/// Versioned parent ready update for fast leader handover in Alpenglow.
-///
-/// Used to signal when the parent changes due to ParentReady being triggered
-/// on an earlier parent in fast leader handover. Always deserializes to the
-/// `Current` variant for forward compatibility.
-///
-/// # Serialization Format
-///
+/// Always deserializes to the `Current` variant for forward compatibility.
 /// ┌─────────────────────────────────────────┐
 /// │ Version                      (1 byte)   │
 /// ├─────────────────────────────────────────┤
@@ -150,12 +135,7 @@ pub enum VersionedUpdateParent {
     Current(UpdateParentV1),
 }
 
-/// Version 1 parent ready update data.
-///
-/// Contains slot and block ID information for the new parent. Uses bincode
-/// serialization for all fields to maintain consistency with other network data.
-///
-/// # Serialization Format
+/// Version 1 parent update data.
 /// ┌─────────────────────────────────────────┐
 /// │ Parent Slot                  (8 bytes)  │
 /// ├─────────────────────────────────────────┤
@@ -172,12 +152,8 @@ pub struct UpdateParentV1 {
 The `UpdateParent` marker integrates with the existing `BlockComponent` system:
 
 ```rust
-/// Version 2 block marker with extended functionality.
-///
-/// Supports all V1 features plus UpdateParent for fast leader
-/// handover in Alpenglow.
-///
-/// # Serialization Format
+/// Version 2 block marker.
+/// Supports V1 features plus BlockHeader and UpdateParent.
 /// ┌─────────────────────────────────────────┐
 /// │ Variant ID                   (1 byte)   │
 /// ├─────────────────────────────────────────┤
@@ -190,13 +166,15 @@ The `UpdateParent` marker integrates with the existing `BlockComponent` system:
 /// allowing for proper parsing even if unknown variants are encountered.
 pub enum BlockMarkerV2 {
     BlockFooter(VersionedBlockFooter),
+    BlockHeader(VersionedBlockHeader),
     UpdateParent(VersionedUpdateParent),
 }
 ```
 
 ### Serialization Format
 
-When serialized within a `BlockComponent`, the complete structure is:
+Both `BlockHeader` and `UpdateParent` (variant 1 and 2) have the following
+structure while serialized within a `BlockComponent` in the first version:
 
 ```
 +---------------------------------------+
@@ -204,7 +182,7 @@ When serialized within a `BlockComponent`, the complete structure is:
 +---------------------------------------+
 | Marker Version = 2          (2 bytes) |
 +---------------------------------------+
-| Variant ID = 1              (1 byte)  |
+| Variant ID = {1, 2}         (1 byte)  |
 +---------------------------------------+
 | Length = 41                 (2 bytes) |
 +---------------------------------------+
@@ -218,147 +196,129 @@ When serialized within a `BlockComponent`, the complete structure is:
 Total size: 54 bytes per marker
 ```
 
-## Alternatives Considered
+### Marker Placement Rules
 
-- **No Explicit Marking / Do Nothing**.
-  Relying on implicit detection of parent switches was considered but rejected
-  because of:
-  - Ambiguity in determining whether a parent switch occurred vs. a duplicate
-    block was received
-  - Inability to validate leader behavior
-  - Lack of auditability for fast leader handover decisions
+`BlockHeader` must be placed at the beginning of shred data of the first FEC
+set of every block.
 
-- **Special Transaction Type**.
-  Using a special transaction to signal parent switches was considered but
-  rejected because:
-  - Higher overhead due to transaction processing requirements
-  - Having a transaction "undo" the state transitions induced by other
-    transactions is ill-advised
+At most one `UpdateParent` marker might be placed in a block, at the beginning
+of the shred data of one FEC set. Only the first block of a leader window can
+include the `UpdateParent` marker.
 
-- **Extended Block Footer**.
-  Extending the block footer to include parent switch information was
-  considered but is inadequate because:
-  - Parent switches occur during block production, not at the end
-  - The footer appears only at block completion; e.g., in a future SIMD,
-  we plan on including details such as the bank hash in the block footer.
-  - We cannot accurately represent the switch point within the block
+Otherwise, the given block is invalid.
 
-- **Shred Modification**.
-  Modifying the shred structure to include parent switch metadata was
-  considered but rejected due to:
-  - Significant protocol changes required
-  - Backward compatibility challenges
-  - Complexity of implementation
-  - Impact on existing shred processing infrastructure
+### `DATA_COMPLETE_SHRED` Placement Rules
 
-## Impact
+Due to the logic of Alpenglow, validators need to be able to process the
+`UpdateParent` marker outside of replay, even without ever replaying the initial
+parent block. To make this possible, we introduce additional rules for the
+`DATA_COMPLETE_SHRED` flag in data shreds. Most implementations already follow
+this rule, but it's not yet enforced.
 
-- **Positive**:
-  - Enables full implementation of Alpenglow's fast leader handover
-  - Fast leader handover, upon implementation, reduces block production
-    latency
-  - Minimal space overhead (54 bytes per switch event)
-  - Independent versioning allows evolution without affecting other variants
+FEC sets in Alpenglow will follow a fixed structure:
 
-- **Negative**:
-  - Slight increase in block size when parent switches occur
+- Each FEC set contains exactly 32 data shreds (insufficient data is
+  zero-padded)
+- Each FEC set contains exactly 32 coding shreds for error correction.
 
-## Security Considerations
+All implementations MUST enforce that the `DATA_COMPLETE_SHRED` flag can only
+appear as `true` on the final data shred within an FEC set (index position 31
+within the set). Otherwise, the block is invalid.
 
-The introduction of this marker does not introduce any new security risks
-until Alpenglow itself is fully implemented and launched. Upon launching
-Alpenglow, we make the following considerations:
+All implementations MUST enforce that `UpdateParent` marker can only start at
+the beginning of an FEC set, AND the previous FEC set's last data shred shows
+`DATA_COMPLETE_SHRED` as `true`. Otherwise, the block is invalid.
 
-### Parent Switch Validation
+With these rules, `UpdateParent` marker can be detected at shred ingestion,
+without replaying block contents up to this point, like so:
 
-When a `UpdateParent` marker is present, validators MUST perform rigorous
-validation:
+- Check the 0th shred of the next FEC set when `DATA_COMPLETE_SHRED` is `true`
+  in the current shred
+- Check the current shred when the `DATA_COMPLETE_SHRED` is `true` in the
+  previous shred.
 
-- Validators MUST verify that the reference parent block (1) exists and (2)
-  has been replayed. For avoidance of doubt - condition (2) ensures that the
-  state after processing the parent block is available for use in
-  optimistically constructing and disseminating transactions.
-- The certificate pool must have issued the event `ParentReady(s, hash(b))`,
-  where `s` denotes the first slot of the leader window and `hash(b)` denotes
-  the hash (Block ID) of the new parent, which, as a result, must either have
-  a `NotarizeFallback` or `Notarize` certificate, followed by skip certificates
-  until slot `s`.
-- The switch MUST occur only when a `ParentReady` event is triggered according
-  to Algorithm 3, Line 7-8 of the [Alpenglow whitepaper v1.1](https://www.anza.xyz/alpenglow-1-1)
-- Ensure that transaction cost budgets are not exceeded for a block even in the
-  presence of a `UpdateParent` marker
+See https://github.com/anza-xyz/alpenglow/pull/459 for an example implementation.
 
 **State Transition Rules**:
+
+After Fast Leader handover is implemented, state transition will work as follows:
 
 - State changes from transactions before the `UpdateParent` marker are discarded
 - The `UpdateParent` marker itself does not modify state
 - Post-`UpdateParent` marker transactions are built on the new parent's state
-- Notably, despite pre-marker transaction state changes being discarded, the
-transactions themselves WILL be included in the constructed block.
+- Notably, despite pre-marker transaction state changes being discarded, all
+  pre-marker shred data WILL be included in the constructed block.
 
-### Attack Vectors and Mitigations
+## Alternatives Considered
 
-**Surprise `UpdateParent` Attack**: A malicious leader attempting to
-include a `UpdateParent` in slots 2-4 of their leader window.
+- **Special Transaction Type**.
+  Rejected, because of overhead, and difficult and inconvenient implementation.
 
-- **Mitigation**: `UpdateParent` markers are only allowed in the first
-  slot of a leader window. Upon witnessing a `UpdateParent` marker on a
-  different block, a receiving validator MUST report the block as invalid and
-  vote skip
-- **Future Enhancement**: Slashing conditions will be specified for leaders who
-  disseminate `UpdateParent` markers on non-first slots of their leader window.
+- **Extended Block Footer**.
+  Rejected, because:
+  - Difficult to represent the switch point withing the block.
+  - The footer appears at the end of the block, delaying the parent switch
+    detection.
 
-**Double-Parent Attack**: A malicious leader attempting to create blocks on
-multiple parents simultaneously:
+- **Shred Modification**.
+  Rejected, due to significant protocol changes required, backward compatibility
+  challenges, complexity and impact on existing shred processing.
 
-- **Mitigation**: At most a single `UpdateParent` marker per block is allowed.
-  Upon witnessing two or more markers with different signatures, a receiving
-  validator MUST report the block as invalid and vote skip
-- **Future Enhancement**: Slashing conditions will be specified for leaders who
-  disseminate multiple conflicting `UpdateParent` markers
+## Impact
 
-**Invalid Parent Reference Attack**: Leader references a non-existent or
+- **Positive**:
+  - Paves the way for fast leader handover that will increase throughput.
+
+- **Negative**:
+  - Slight block size overhead.
+
+### Examples of Edge Cases
+
+**Unexpected `UpdateParent`**: A malicious leader attempting to
+include an `UpdateParent` in slots 2-4 of their leader window.
+
+`UpdateParent` markers are only allowed in the first
+slot of a leader window. Upon witnessing an `UpdateParent` marker on a
+different block, a receiving validator MUST deem the block invalid and
+invoke `TrySkipWindow(slot)` according to the protocol logic.
+
+**Multiple `UpdateParent`s in a Single Block**: A malicious leader attempting
+to create blocks on multiple parents simultaneously:
+
+At most a single `UpdateParent` marker per block is allowed.
+Upon witnessing two or more markers within a block, a receiving
+validator MUST deem the block invalid and invoke `TrySkipWindow(slot)`
+according to the protocol logic.
+
+**Invalid Parent Reference**: Leader references a non-existent or
 invalid parent:
 
-- **Mitigation**: Invalid parent and/or slot fields in the `UpdateParent`
-  will cause receiving validators to report the block invalid and vote skip
-- **Slashing**: Under certain circumstances, such activity may be slashable
-  (details will be specified in a future proposal)
+If the receiving validator cannot validate the parent block in time, the
+receiving validator will time out and invoke `TrySkipWindow(slot)`.
 
-**Arbitrary `UpdateParent`s**: Leader emits a spurious `UpdateParent`
-
-- **Mitigation**: Leaders cannot arbitrarily trigger parent switches, since
-the appropriate `ParentReady` event would not properly fire for receiving
-validators, causing receiving validators to report the block.
-- **Future Enhancement**: a spurious `UpdateParent` message may be
-grounds for slashing in the future.
+NOTE: in each of the above cases, `TrySkipWindow(slot)` is NOT the same as
+unconditionally issuing a skip vote.
 
 **Feature Flag Protection**:
 
-- `UpdateParent` markers will be processed if and only if the Alpenglow
-  feature is activated
+- `BlockHeader` and `UpdateParent` markers will be processed if and only if the
+  Alpenglow feature is activated
 - Validators must run with a client containing Alpenglow code to process blocks
-  with `UpdateParent` markers
+  with `UpdateParent` and/or `BlockHeader` markers
 - Missing or malformed version fields will fail deserialization gracefully
+
+## Security Considerations
+
+Upon launching Alpenglow, validators must validate blocks according to the
+Alpenglow protocol.
 
 ## Backwards Compatibility
 
-Blocks containing `UpdateParent` markers are **not** backward compatible
-with validators that do not support Alpenglow. Blocks will not disseminate
-`UpdateParent` markers until the Alpenglow feature flag has been
-activated.
-
-**Important**: This SIMD should be activated independently from the main
-Alpenglow SIMD. Validators must be prepared to handle `UpdateParent`
-markers even if full Alpenglow consensus is not yet active. The marker
-processing logic must be defensive and validate all parent references
-regardless of Alpenglow activation status.
+Blocks containing `UpdateParent` markers are **not** backward compatible with
+validators that do not support Alpenglow. Blocks will not include `UpdateParent`
+markers until the Alpenglow feature flag has been activated.
 
 ## Reference Implementation
 
-A reference implementation is available here: https://github.com/anza-xyz/alpenglow/pull/364
-
-This implementation includes:
-
-- Full `BlockComponent` enumeration with marker support
-- Serialization/deserialization logic
+A reference implementation is available here:
+https://github.com/anza-xyz/alpenglow/pull/364
