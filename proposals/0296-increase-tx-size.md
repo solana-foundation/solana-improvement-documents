@@ -111,7 +111,7 @@ not be included in the chain. Violations are considered sanitization failures:
 ### Runtime Constraints
 
 While the above lists sanitization failures, we will have the following runtime
-contraints either stay unchanged by making sure they are explicitly defined:
+constraints either stay unchanged by making sure they are explicitly defined:
 
 | max | value | new/existing |
 | --- | --- | --- |
@@ -135,7 +135,7 @@ use 2 bits in the mask.
 
 Initially supported fields and assigned bits:
 
-- [0, 1] - priority-fee. 8-byte LE u64.
+- [0, 1] - total lamports for transaction priority-fee. 8-byte LE u64.
 - [2] - compute-unit-limit. 4 byte LE u32.
 - [3] - requested loaded accounts data size limit. 4 byte LE u32.
 - [4] - requested heap size. 4 byte LE u32.
