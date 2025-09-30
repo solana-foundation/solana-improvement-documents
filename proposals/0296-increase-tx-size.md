@@ -107,20 +107,9 @@ not be included in the chain. Violations are considered sanitization failures:
 | max num accounts | 96 | new |
 | max num instructions | 64 | old |
 | max accounts/instruction | 255 | new |
-
-### Runtime Constraints
-
-While the above lists sanitization failures, we will have the following runtime
-constraints either stay unchanged by making sure they are explicitly defined:
-
-| max | value | new/existing |
-| --- | --- | --- |
 | max num signatures per transaction | 12 | new |
 | max num accounts | 64 | old |
 | max accounts/instruction | 255 | old |
-
-The runtime check for max number of signatures should be run immediately after
-fee payer validations and before other runtime checks.
 
 ### TransactionConfigMask
 
