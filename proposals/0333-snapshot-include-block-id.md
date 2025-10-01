@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-08-06
-feature:
+feature: 
 ---
 
 ## Summary
@@ -41,6 +41,12 @@ in Agave or `fd_snapshot_manifest_t` in Firedancer).
 
 Snapshot consumers may optionally read the block ID in the deserialized
 bank, and use it to validate as seen fit.
+
+In cases where an artificial bank is created (ex. via ledger tool during
+development or for a cluster restart), the block_id must also be
+populated.  If the artificial bank with bank hash `bank_hash` builds on
+slot S with block ID `parent_block_id`, the block ID value for the
+serialized bank will be a SHA256 `hash(parent_block_id, bank_hash)`
 
 ## Alternatives Considered
 
