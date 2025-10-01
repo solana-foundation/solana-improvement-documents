@@ -14,13 +14,12 @@ feature: TBD
 
 ## Summary
 
-We propose upgrading `BlockMarkerV1`, introduced in SIMD-0307, to
-`BlockMarkerV2` to support Fast Leader Handover in Alpenglow. `BlockMarkerV2`
-introduces `BlockHeader` and `UpdateParent` variants. `BlockHeader`, placed at
+We propose augmenting `BlockMarkerV1`, introduced in SIMD-0307, to include
+`BlockHeader` and `UpdateParent` variants. `BlockHeader`, placed at
 the beginning of a block, indicates the parent of the block. `UpdateParent`
-signals that the intended parent is different than initially indicated. This
-paves the way for Fast Leader Handover support in Alpenglow (section 2.7 of
-https://www.anza.xyz/alpenglow-1-1), increasing throughput.
+signals that the intended parent is different from what was initially indicated,
+paving the way for Fast Leader Handover support in Alpenglow (section 2.7 of
+https://www.anza.xyz/alpenglow-1-1).
 
 ## Motivation
 
@@ -39,26 +38,6 @@ the indicated parent while streaming the block.
 - **UpdateParent**: Block marker variant indicating a changed parent.
 
 ## Detailed Design
-
-### Block Marker Version 2
-
-We introduce `BlockMarkerV2` as an extension of the original `BlockMarkerV1`:
-
-```
-BlockMarkerV2 Layout:
-+---------------------------------------+
-| Variant ID                  (1 byte)  |
-+---------------------------------------+
-| Variant Data Byte Length   (2 bytes)  |
-+---------------------------------------+
-| Variant Data              (variable)  |
-+---------------------------------------+
-
-Variants:
-- 0: BlockFooter (inherited from V1)
-- 1: BlockHeader (new in V2)
-- 2: UpdateParent (new in V2)
-```
 
 ### Specification
 
@@ -121,7 +100,7 @@ Fields:
 
 ### `UpdateParent` Code Sample
 
-NOTE: `BlockHeader` has nearly identical implementation. The markers are
+NOTE: `BlockHeader` has a nearly identical implementation. The markers are
 separate to allow future header extensions.
 
 ```rust
@@ -153,7 +132,7 @@ pub struct UpdateParentV1 {
 The `UpdateParent` marker integrates with the existing `BlockComponent` system:
 
 ```rust
-/// Version 2 block marker.
+/// Updated BlockMarkerV1.
 /// Supports V1 features plus BlockHeader and UpdateParent.
 /// ┌─────────────────────────────────────────┐
 /// │ Variant ID                   (1 byte)   │
@@ -165,7 +144,7 @@ The `UpdateParent` marker integrates with the existing `BlockComponent` system:
 ///
 /// The byte length field indicates the size of the variant data that follows,
 /// allowing for proper parsing even if unknown variants are encountered.
-pub enum BlockMarkerV2 {
+pub enum BlockMarkerV1 {
     BlockFooter(VersionedBlockFooter),
     BlockHeader(VersionedBlockHeader),
     UpdateParent(VersionedUpdateParent),
