@@ -160,7 +160,7 @@ structure while serialized within a `BlockComponent` in the first version:
 +---------------------------------------+
 | Entry Count = 0             (8 bytes) |
 +---------------------------------------+
-| Marker Version = 2          (2 bytes) |
+| Marker Version = 1          (2 bytes) |
 +---------------------------------------+
 | Variant ID = {1, 2}         (1 byte)  |
 +---------------------------------------+
