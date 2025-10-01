@@ -100,16 +100,13 @@ tables.
 Any transaction violating these constraints will be considered invalid and will 
 not be included in the chain. Violations are considered sanitization failures:
 
-| max | value | new/existing |
-| --- | --- | --- |
-| max transaction size | 4096 | new |
-| max num signatures per transaction | 42 | new |
-| max num accounts | 96 | new |
-| max num instructions | 64 | old |
-| max accounts/instruction | 255 | new |
-| max num signatures per transaction | 12 | new |
-| max num accounts | 64 | old |
-| max accounts/instruction | 255 | old |
+| value | max specified by this SIMD | prior max | max implied by format |
+| --- | --- | --- | --- |
+| transaction size | 4096 | 1232 | 4096 |
+| signatures per transaction | 12 | 12 | 42 |
+| num accounts | 64 | 64 | 96 |
+| num instructions | 64 | 64 | 255 |
+| accounts/instruction | 255 | 255 | 255 |
 
 ### TransactionConfigMask
 
