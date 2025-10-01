@@ -101,10 +101,11 @@ legacy/v0 formats.
 The LegacyHeader is unchanged from prior transaction formats.
 For reference, it consists of three `u8` values with no padding. The values
 (in order) are:
-*   `num_required_signatures`: The number of requires signatures
-*   `num_readonly_signed_accounts`: The number of the accounts with
+
+-   `num_required_signatures`: The number of requires signatures
+-   `num_readonly_signed_accounts`: The number of the accounts with
     signatures that are loaded as read-only
-*   `num_readonly_unsigned_accounts`: The number of accounts without
+-   `num_readonly_unsigned_accounts`: The number of accounts without
     signatures that are loaded as read-only
 
 As in prior formats, the transaction fails sanitization if
@@ -118,7 +119,6 @@ this also implies `num_required_signatures >= 1`.
 NumInstructions is set to the number of instructions in the transaction. As
 explained in the Transaction Constraints section, the transaction fails
 sanitization if `NumInstructions > 64`.
-
 
 #### TransactionConfigMask
 
@@ -145,15 +145,16 @@ references. It is a sanitization failure for this array to contain any
 duplicates. This list has `NumAddresses` elements. The ordering of the
 addresses is unchanged from prior transaction formats.
 For reference, they are:
-* `num_required_signatures-num_readonly_signed_accounts` additional addresses
+
+- `num_required_signatures-num_readonly_signed_accounts` additional addresses
   for which the transaction contains signatures and are loaded as writable,
   of which the first is the fee payer
-* `num_readonly_signed_accounts` addresses for which the transaction contains
+- `num_readonly_signed_accounts` addresses for which the transaction contains
   signatures and are loaded as readonly
-* `num_addresses-num_required_signatures-num_readonly_unsigned_accounts`
+- `num_addresses-num_required_signatures-num_readonly_unsigned_accounts`
   addresses for which the transaction does not contain signatures and are
   loaded as writable
-* `num_readonly_unsigned_accounts` addresses for which the transaction does
+- `num_readonly_unsigned_accounts` addresses for which the transaction does
   not contain signatures and are loaded as readonly
 
 Any section with 0 addresses is skipped.
@@ -166,15 +167,16 @@ ConfigValues is explained below with TransactionConfigMask in detail.
 
 InstructionHeaders is an array with NumInstructions elements. Each element
 consists of three fields with no padding:
-* `ProgramAccountIndex: u8`: the index in the array of addresses of the
+
+- `ProgramAccountIndex: u8`: the index in the array of addresses of the
   address of the program to invoke for this instruction. This field was known
   as `program_id_index` in previous versions of the transaction format; it
   has been renamed to clarify its use without changing its meaning.
-* `NumInstructionAccounts: u8`: the number of addresses that will be passed
+- `NumInstructionAccounts: u8`: the number of addresses that will be passed
   to the program when it is invoked. This field was implicitly represented in
   a different encoding in a previous versions of the transaction format as
   the element count of the `accounts` vector.
-* `NumInstructionDataBytes: u16`: the size in bytes of the data that will be
+- `NumInstructionDataBytes: u16`: the size in bytes of the data that will be
   passed as input to the program when it is invoked. This field was
   implicitly represented in a different encoding in a previous versions of
   the transaction format as the element count of the `data` vector.
@@ -188,13 +190,14 @@ There is also no padding between each 4-byte element.
 of account indices followed by `NumInstructionDataBytes` of instruction data.
 For example, the InstructionPayloads for a two-instruction transaction looks
 like:
-* instruction 0's InstructionAccountIndices
+
+- instruction 0's InstructionAccountIndices
   (InstructionHeaders[0].NumInstructionAccounts bytes)
-* instruction 0's InstructionData
+- instruction 0's InstructionData
   (InstructionHeaders[0].NumInstructionDataBytes bytes)
-* instruction 1's InstructionAccountIndices
+- instruction 1's InstructionAccountIndices
   (InstructionHeaders[1].NumInstructionAccounts bytes)
-* instruction 1's InstructionData
+- instruction 1's InstructionData
   (InstructionHeaders[1].NumInstructionDataBytes bytes)
 
 The transaction fails sanitization if any element of
