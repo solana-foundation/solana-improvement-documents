@@ -21,6 +21,9 @@ signals that the intended parent is different from what was initially indicated,
 paving the way for Fast Leader Handover support in Alpenglow (section 2.7 of
 https://www.anza.xyz/alpenglow-1-1).
 
+Fast Leader Handover will minimize the synchronization delay between consecutive
+leaders, increasing throughput.
+
 ## Motivation
 
 SIMD-0326 proposes Alpenglow, a consensus protocol specified in
