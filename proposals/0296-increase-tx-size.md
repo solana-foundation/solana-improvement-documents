@@ -68,7 +68,9 @@ an explicit maximum stream size, allowing for larger transactions to be
 sent.
 
 A new transaction format, `v1`, is proposed to enable larger transaction
-sizes. The `v1` transaction format would be:
+sizes.
+
+### Transaction V1 Specification
 
 ```
 VersionByte (u8)
