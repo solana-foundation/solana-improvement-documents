@@ -63,34 +63,153 @@ unfeasible.
 ## Detailed Design
 
 Increasing the transaction size limit above the current MTU max size is
-possible with the use of QUIC. QUIC's RFC 9000 specification does not have an
-explicit maximum stream size, allowing for larger transactions to be sent.
+possible with the use of QUIC. QUIC's RFC 9000 specification does not have
+an explicit maximum stream size, allowing for larger transactions to be
+sent.
 
-A new transaction format, `v1`, is proposed to enable larger transaction sizes.
-The `v1` transaction format would be:
+A new transaction format, `v1`, is proposed to enable larger transaction
+sizes. The `v1` transaction format would be:
 
 ```
-VersionByte (u8) - =129 to distinguish from legacy/v0 formats
-LegacyHeader (u8, u8, u8) -- Required signatures from the current
-`MessageHeader` type
+VersionByte (u8)
+LegacyHeader (u8, u8, u8) 
 NumInstructions (u8)
 TransactionConfigMask (u32) -- Bitmask of which config requests are present.
 LifetimeSpecifier [u8; 32]
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Length matches NumAddresses
-ConfigValues [[u8; 4]] -- Length equal to the popcount (number of set bits) of
-  TransactionConfigMask. See section TransactionConfigMask for details.
-InstructionHeaders [(u8, u8, u16)] -- Length of NumInstructions. Values are 
+ConfigValues [[u8; 4]] -- Length equal to the popcount (number of set bits)
+  of TransactionConfigMask. See section TransactionConfigMask for details.
+InstructionHeaders [(u8, u8, u16)] -- Length of NumInstructions. Values are
   (ProgramAccountIndex, NumInstructionAccounts, NumInstructionDataBytes)
 InstructionPayloads [InstructionPayload] -- Length = NumInstructions.
   Each InstructionPayload is the concatenation of the following byte arrays:
-    InstructionAccountIndexes [u8] -- Length = NumInstructionAccounts from the 
+    InstructionAccountIndexes [u8] -- Length = NumInstructionAccounts from the
     corresponding InstructionHeader
-    InstructionData [u8] -- Length = NumInstructionDataBytes from the 
+    InstructionData [u8] -- Length = NumInstructionDataBytes from the
     corresponding InstructionHeader
-Signatures [[u8; 64]] -- Length of `num_required_signatures` from
- `LegacyHeader`
+Signatures [[u8; 64]]
 ```
+
+#### VersionByte
+
+The VersionByte MUST be set to `129` to distinguish v1 transactions from
+legacy/v0 formats.
+
+#### LegacyHeader
+
+The LegacyHeader is unchanged from prior transaction formats.
+For reference, it consists of three `u8` values with no padding. The values
+(in order) are:
+*   `num_required_signatures`: The number of requires signatures
+*   `num_readonly_signed_accounts`: The number of the accounts with
+    signatures that are loaded as read-only
+*   `num_readonly_unsigned_accounts`: The number of accounts without
+    signatures that are loaded as read-only
+
+As in prior formats, the transaction fails sanitization if
+`num_readonly_signed_accounts >= num_required_signatures`. Note that
+`num_readonly_signed_accounts == num_required_signatures` is a sanitization
+failure because it would imply the fee payer account is readonly. Note that
+this also implies `num_required_signatures >= 1`.
+
+#### NumInstructions
+
+NumInstructions is set to the number of instructions in the transaction. As
+explained in the Transaction Constraints section, the transaction fails
+sanitization if `NumInstructions > 64`.
+
+
+#### TransactionConfigMask
+
+TransactionConfigMask is explained below in detail.
+
+#### LifetimeSpecifier
+
+LifetimeSpecifier is the same as the Recent Blockhash field in prior
+transaction formats. It has been renamed to clarify its use without changing
+its meaning.
+
+#### NumAddresses
+
+NumAddresses is set to the number of account addresses the transaction
+references. The transaction fails sanitization if `num_addresses <
+num_required_signatures + num_readonly_unsigned_accounts`. The transaction
+also fails sanitization if `num_addresses > 64`, as explained in the
+Transaction Constraints section.
+
+#### Addresses
+
+Addresses is an array of all the account addresses that the transaction
+references. It is a sanitization failure for this array to contain any
+duplicates. This list has `NumAddresses` elements. The ordering of the
+addresses is unchanged from prior transaction formats.
+For reference, they are:
+* `num_required_signatures-num_readonly_signed_accounts` additional addresses
+  for which the transaction contains signatures and are loaded as writable,
+  of which the first is the fee payer
+* `num_readonly_signed_accounts` addresses for which the transaction contains
+  signatures and are loaded as readonly
+* `num_addresses-num_required_signatures-num_readonly_unsigned_accounts`
+  addresses for which the transaction does not contain signatures and are
+  loaded as writable
+* `num_readonly_unsigned_accounts` addresses for which the transaction does
+  not contain signatures and are loaded as readonly
+
+Any section with 0 addresses is skipped.
+
+#### ConfigValues
+
+ConfigValues is explained below with TransactionConfigMask in detail.
+
+#### InstructionHeaders
+
+InstructionHeaders is an array with NumInstructions elements. Each element
+consists of three fields with no padding:
+* `ProgramAccountIndex: u8`: the index in the array of addresses of the
+  address of the program to invoke for this instruction. This field was known
+  as `program_id_index` in previous versions of the transaction format; it
+  has been renamed to clarify its use without changing its meaning.
+* `NumInstructionAccounts: u8`: the number of addresses that will be passed
+  to the program when it is invoked. This field was implicitly represented in
+  a different encoding in a previous versions of the transaction format as
+  the element count of the `accounts` vector.
+* `NumInstructionDataBytes: u16`: the size in bytes of the data that will be
+  passed as input to the program when it is invoked. This field was
+  implicitly represented in a different encoding in a previous versions of
+  the transaction format as the element count of the `data` vector.
+
+There is also no padding between each 4-byte element.
+
+#### InstructionPayloads
+
+`InstructionPayloads` is a concatenation of byte arrays. For each of the
+`NumInstructions` instructions, it consists of `NumInstructionAccounts` bytes
+of account indices followed by `NumInstructionDataBytes` of instruction data.
+For example, the InstructionPayloads for a two-instruction transaction looks
+like:
+* instruction 0's InstructionAccountIndices
+  (InstructionHeaders[0].NumInstructionAccounts bytes)
+* instruction 0's InstructionData
+  (InstructionHeaders[0].NumInstructionDataBytes bytes)
+* instruction 1's InstructionAccountIndices
+  (InstructionHeaders[1].NumInstructionAccounts bytes)
+* instruction 1's InstructionData
+  (InstructionHeaders[1].NumInstructionDataBytes bytes)
+
+The transaction fails sanitization if any element of
+InstructionAccountIndices is greater than or equal to NumAddresses
+
+#### Signatures
+
+Signatures is an array with `num_required_signatures` elements, each
+consisting of a 64-byte Ed25519 signature. Specifically, `Signatures[i]` is
+the signature resulting from signing the portion of the transaction prior to
+the Signatures field with the keypair associated with the public key at
+`Addresses[i]`.
+
+The transaction must not contain trailing data after the signatures field.
+There are no padding fields.
 
 This new `v1` transaction format notably does not include address lookup
 tables.
