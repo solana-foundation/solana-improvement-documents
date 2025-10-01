@@ -104,10 +104,10 @@ The LegacyHeader is unchanged from prior transaction formats.
 For reference, it consists of three `u8` values with no padding. The values
 (in order) are:
 
--   `num_required_signatures`: The number of requires signatures
--   `num_readonly_signed_accounts`: The number of the accounts with
+- `num_required_signatures`: The number of requires signatures
+- `num_readonly_signed_accounts`: The number of the accounts with
     signatures that are loaded as read-only
--   `num_readonly_unsigned_accounts`: The number of accounts without
+- `num_readonly_unsigned_accounts`: The number of accounts without
     signatures that are loaded as read-only
 
 As in prior formats, the transaction fails sanitization if
