@@ -84,7 +84,7 @@ The cooldown enforces that each pair of an address and a slot can uniquely
 identify a version of a program, which simplifies caching logic. Thus this
 one slot cooldown will be kept in loader-v4.
 
-### Inferring the program length from the ELF header
+### Inferring the executable length from the ELF header
 
 There are two issues with that: First, a ELF header does not know how long
 its file is, it has to be parsed and calculated from offsets of various
@@ -114,13 +114,14 @@ The feature gate must enable loader-v4 program management and execution.
 Accounts of programs owned by loader-v4 must have the following layout:
 
 - Header (which is 48 bytes long):
-  - `u64` status enum:
+  - `u32` status enum:
     - Enum variant `0u64`: `Uninitalized`, account was zero-filled externally
     - Enum variant `1u64`: `NeverBeenDeployed`, used as write buffer
     - Enum variant `2u64`: `Retracted`, program is in maintenance
     - Enum variant `3u64`: `Deployed`, program is ready to be executed
     - Enum variant `4u64`: `Finalized`, same as `Deployed`, but can not be
     modified anymore
+  - `u32` Length of the executable in bytes (see "Body" of the account)
   - `u64` Slot in which the program was last deployed.
   - `[u8; 32]` Authority address which can send program management
   instructions.
@@ -155,7 +156,8 @@ Invoking programs owned by loader-v4 checks in the following order that:
 - the program account was not deployed within the current slot (delay
 visibility)
 - the executable file stored in the program account passes executable
-verification
+verification. The executable file starts after the 48 byte header and has the
+length defined in the header, which could be less than the account length.
 
 failing any of the above checks must throw `UnsupportedProgramId`.
 
@@ -220,11 +222,11 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
     otherwise throw `NotEnoughAccountKeys`
   - Verify the program account header
   - Check that the status stored in the program account is `Deployed` or
-    that the status is `Retracted` and the program length is 0 (header only),
+    that the status is `Retracted`,
     otherwise throw `InvalidArgument`
   - Change the status stored in the program account to `Finalized`
 
-#### SetProgramLength
+#### SetAccountLength
 
 - Instruction accounts:
   - `[writable]` The program account to change the size of.
@@ -236,14 +238,17 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
   - Charge 32 + new_size_in_bytes / cpi_bytes_per_unit CUs
   - Check there are at least two instruction accounts,
     otherwise throw `NotEnoughAccountKeys`
-  - Verify the program account header
+  - Verify the program account header,
+  but skip the signer check if the new size is greater than the current size
   - Check that the status stored in the program account is
   `NeverBeenDeployed` or `Retracted`,
   otherwise throw `InvalidArgument`
-  - Set the length of the program account to the requested new size plus
-  the header size
+  - Check that the new size in bytes is at least the header length (48 bytes),
+  otherwise throw `InvalidArgument`
+  - Set the length of the program account to the requested new size.
   - Note: In CPI the maximum growth is limited to 10 KiB in ABI v1 and
-  0 bytes in ABI v0.
+  0 bytes in ABI v0. Thus, this should be called from a top-level instruction.
+  For this purpose this operation does not check the signer when growing.
 
 #### Write
 
@@ -311,6 +316,7 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
   - `[signer]` The authority of the program.
 - Instruction data:
   - Enum variant `6u32`
+  - `u32` The executable length in bytes.
 - Behavior:
   - Charge 32 CUs
   - Check there are at least two instruction accounts,
@@ -319,9 +325,12 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
   - Check that the status stored in the program account is `NeverBeenDeployed`
   or `Retracted`
     otherwise throw `InvalidArgument`
+  - Check that the executable length is not longer than the program account,
+    otherwise throw `InvalidArgument`
   - Charge program_length_in_bytes / cpi_bytes_per_unit CUs
   - Check that the executable file stored in the program account passes
   executable verification
+  - Change the executable length in the program account header
   - Change the slot in the program account to the current slot
   - Change the status stored in the program account to `Deployed`
   - Set the `is_executable` flag to `true`
