@@ -93,6 +93,12 @@ unsigned little-endian 8-byte integer.
       return lthash.fini()
    ```
 
+9. **On-chain ABI exposure**: `last_accessed_slot` is runtime metadata only and
+   is NOT added to the on-chain `AccountInfo` ABI. It is not exposed to
+   programs, and no new syscalls are introduced by this SIMD. Any future
+   on-chain exposure (e.g., a syscall or ABI extension) will be proposed via a
+   separate SIMD and feature gate.
+
 #### Storage Considerations
 
 The additional 8 bytes per account may increase snapshot size if insufficient
@@ -138,3 +144,5 @@ This change is designed to be backwards compatible:
    metadata (e.g. in `AccountSharedData`). If the snapshot was created before
    feature activation, `last_accessed_slot` is initialized to the activation
    slot when loading.
+4. **ABI Compatibility**: No changes are made to the `AccountInfo` ABI; on-chain
+   program interfaces remain unchanged.
