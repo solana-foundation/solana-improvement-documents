@@ -45,24 +45,39 @@ block to be rejected) if any of the following occurs:
 
 ### Proposed Change
 
-Update replay logic to treat invalid nonce transactions — those failing the
-checks above — as non-state-modifying and non-fee-charging failures, as follows:
+Update replay logic to handle invalid nonce transactions differently:
 
-- The transaction is not executed.
-- The transaction is not included in status cache.
-- The transaction’s non-execution CU cost (i.e., transaction's static CUs, plus
-  actual CUs for loading accounts) still applies to the block limit.
-- The transaction is recorded in the block (marked as failed).
-- No account state is modified, including the nonce account (i.e., nonce is
-  not advanced) and fee payer account (it is not charged with the transaction's
-  fee).
-- The block is not rejected as long as all other transactions replay
-  successfully.
+1. For failure that can be checked without accessing account state, namely:
+
+   - The nonce account is not a statically included account.
+
+Replay logic remains unchanged - entire block is rejected;
+
+2. For failures require account state to verify, namely: 
+
+   - The nonce account does not exist.
+   - The nonce account is not properly initialized.
+   - The stored nonce does not match the transaction's recent blockhash.
+   - The transaction fails to advance the nonce.
+
+Replay treats these transactions as non-state-modifying and non-fee-charging
+failures, as follows:
+
+   - The transaction is not executed.
+   - The transaction is not included in status cache.
+   - The transaction’s non-execution CU cost (i.e., transaction's static CUs,
+     plus actual CUs for loading accounts) still applies to the block limit.
+   - The transaction is recorded in the block (marked as failed).
+   - No account state is modified, including the nonce account (i.e., nonce is
+     not advanced) and fee payer account (it is not charged with the
+     transaction's fee).
+   - The block is not rejected as long as all other transactions replay
+     successfully.
+
 
 ## Alternatives Considered
 
-- Only relax a subset of errors (e.g., missing nonce account but not mismatched
-  blockhash). Adds complexity and partial gains.
+N/A
 
 ## Impact
 
