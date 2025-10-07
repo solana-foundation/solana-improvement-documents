@@ -51,7 +51,7 @@ checks above — as non-state-modifying and non-fee-charging failures, as follow
 - The transaction is not executed.
 - The transaction is not included in status cache.
 - The transaction’s non-execution CU cost (i.e., transaction's static CUs, plus
-  CUs for loading accounts) still applies to the block limit.
+  actual CUs for loading accounts) still applies to the block limit.
 - The transaction is recorded in the block (marked as failed).
 - No account state is modified, including the nonce account (i.e., nonce is
   not advanced) and fee payer account (it is not charged with the transaction's
