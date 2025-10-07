@@ -81,8 +81,12 @@ N/A
 
 ## Impact
 
-- Invalid nonced transactions will be included in blocks but will not be charged
-  fees.
+- Invalid nonce transactions will be included in multiple blocks but will not be
+  charged fees.
+
+- The inclusion of the same nonce transaction in multiple blocks may affect RPC
+  behavior, such as querying a transaction by signature. The exact handling of
+  this is outside the scope of this proposal.
 
 ## Security Considerations
 
