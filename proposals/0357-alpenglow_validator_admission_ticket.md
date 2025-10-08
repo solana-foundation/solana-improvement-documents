@@ -41,7 +41,7 @@ The VAT discussion in SIMD 326 proposes:
 
 Another requirement (not explicitly mentioned in SIMD 326 but in the Alpenglow
 White Paper) is that Alpenglow uses BLS to aggregate signatures. So a future
-Alpenglow vote account must contain a valid BLS pubkey deducted from its
+Alpenglow vote account must contain a valid BLS pubkey deduced from its
 current vote authority ed25519 private key.
 
 In summary, a valid vote account in an Alpenglow epoch must contain:
