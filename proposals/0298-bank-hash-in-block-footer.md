@@ -27,22 +27,139 @@ on execution state.
 
 ## New Terminology
 
-Block Footer: This is an umbrella term for information contained in the last
-FEC set.
-The exact structure is described in SIMD 0307.
+No new terminology but we recall the Block Footer structure and `bank_hash`
+
+### Existing Block Footer Structure (SIMD 0307)
+
+The block footer is implemented as a block marker variant that must occur
+once after the last entry batch in a block. The footer contains general block
+and producer metadata, along with any metrics that must be computed after the
+block has been produced.
+
+#### Block Marker Header
+
+The block footer uses a block marker system to differentiate it from regular
+entry batches. Entry batch data starts with an 8-byte value representing the
+number of entries in the batch, which cannot be zero. The block marker header
+begins with 8 zero bytes (the `block_marker_flag`), allowing replay parsers to
+distinguish block markers from regular entry batches.
+
+The block marker header structure is:
+
+```
+        Block Marker Header Layout
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_marker_flag      (64 bits of 0) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| version=1                   (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| variant                      (8 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| length                      (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|              --payload--              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+The block footer follows this structure:
+
+```
+     Block Marker Variant -- Footer
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_marker_flag      (64 bits of 0) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| version=1                   (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| variant=0                    (8 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| length                      (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| footer_version=1            (16 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_producer_time_nanos   (64 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_user_agent_len         (8 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_user_agent        (0-255 bytes) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+**Existing Footer Fields:**
+
+- `footer_version: u16` - Version number for the footer structure (currently 1)
+- `block_producer_time_nanos: u64` - Nanosecond UNIX timestamp when the block
+  producer started constructing the block
+- `block_user_agent_len: u8` - Length of the user agent string in bytes
+- `block_user_agent: String` - Variable length UTF-8 encoded string (up to 255
+  bytes) identifying the block producer
+
+
+#### Bank Hash Structure
+
+The `bank_hash` represents the cryptographic hash of the bank state after
+executing all transactions in a block. It serves as a commitment to the
+complete execution state and is calculated from several components:
+
+```
+           Bank Hash Components
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| parent_bank_hash           (32 bytes) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| signature_count            (64 bits)  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| last_blockhash             (32 bytes) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| accounts_lt_hash_checksum  (32 bytes) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+```
+
+**Bank Hash Components:**
+
+- `parent_bank_hash` - Hash of the parent bank's state (32 bytes)
+- `signature_count` - Total number of signatures processed in the bank (64 bits)
+- `last_blockhash` - The blockhash used for transaction processing (32 bytes)
+- `accounts_lt_hash_checksum` - Checksum of the accounts ledger tree (32 bytes)
+- `accounts` - Detailed account state information (variable size)
+
+**Optional Component:**
+
+- **Hard Fork Data** (when applicable) - If the current slot is a hard fork
+  slot, additional hard fork data is hashed into the final result 
+
+The bank hash provides a cryptographic commitment to the complete execution
+state, ensuring that any change to the bank's state (accounts, balances,
+program state, etc.) will result in a different hash. This makes it a reliable
+mechanism for consensus on execution results.
 
 ## Detailed Design
 
 ### Block Footer Changes
 
 The block footer structure outlined in SIMD 0307
-will be extended to include a new field:
+will be extended to include a new field. The updated footer structure will be:
 
-```rust
-pub struct BlockFooter {
-    // ... existing fields ...
-    pub bank_hash: Hash,  // Hash of the block's bank state
-}
+```
+     Block Footer new variant
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_marker_flag      (64 bits of 0) |  
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| version=1                   (16 bits) | 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| variant=0                    (8 bits) |  
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| length                      (16 bits) | 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| footer_version=2          (16 bits)   |  ←UPDATED 1->2
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_producer_time_nanos   (64 bits) |  
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_user_agent_len         (8 bits) |  
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_user_agent        (0-255 bytes) |  
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| bank_hash                  (32 bytes) |  ←NEW
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
 ### Validity Constraints
@@ -70,7 +187,7 @@ the validator will vote skip on this block and any children.
 
 ### Feature Activation
 
-The feature can be activated at any time before or after the Alpenglow rollout.
+The feature MUST be actiavted before or the Alpenglow rollout.
 
 This change will be implemented behind a feature flag and activated through the
 feature activation program. The activation will require:
