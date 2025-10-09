@@ -1,6 +1,6 @@
 ---
 simd: '0296'
-title: Increase Transaction Size
+title: Transaction V1 Format with Higher Max Size
 authors:
   - jacobcreech
   - apfitzge
