@@ -291,7 +291,6 @@ and its indices.
 
 In consideration of what size the new transaction size limit should increase
 to, [Jito's bundle
-
 sizes](https://jitolabs.grafana.net/dashboard/snapshot/ISnwjbxw02UBLrj1xy4n4dFkAPyZ46ll?orgId=0&from=2025-05-30T18:45:00.000Z&to=2025-05-30T21:45:00.000Z&timezone=utc&var-cluster=mainnet&var-region=$__all&viewPanel=panel-40&inspect=panel-40&inspectTab=data)
 that were used to increase the overall transaction size should be considered.
 The following is the rough distribution of the transaction sizes:
