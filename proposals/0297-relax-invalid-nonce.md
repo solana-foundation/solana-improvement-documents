@@ -81,7 +81,7 @@ N/A
 
 ## Impact
 
-- Invalid nonce transactions will be included in multiple blocks but will not be
+- Invalid nonce transactions may be included in multiple blocks but will not be
   charged fees.
 
 - The inclusion of the same nonce transaction in multiple blocks may affect RPC
