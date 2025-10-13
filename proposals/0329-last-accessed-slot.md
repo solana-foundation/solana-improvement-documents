@@ -20,11 +20,10 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 Solana currently does not persistently record when an account was last
 write-locked by an included transaction. Capturing the most recent
-write-lock slot per account enables downstream features such as state
-compaction of stale accounts, rent or TTL-style policies, analytics, and
-operational tooling. This SIMD introduces a single metadata field with simple
-update semantics to make that signal universally available without introducing
-additional tracking structures.
+write-lock slot per account enables downstream features such as rent or
+TTL-style policies operational tooling. This SIMD introduces a single metadata
+field with simple update semantics to make that signal universally available
+without introducing additional tracking structures.
 
 Including this ahead of future features (e.g. a new rent system) allows for
 a more accurate view on historical account activity when those features are
