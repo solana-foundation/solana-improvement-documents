@@ -17,6 +17,12 @@ This SIMD describes how the validator admission ticket (VAT) collection
 described in SIMD 326 will be implemented. Specifically, how it affects
 validator operation procedures.
 
+Validator admission ticket is a mechanism translating the current cost of
+voting into a similar economic equilibrium for Alpenglow. By charging every
+voting validator 1.6 SOL per epoch, it replaces the current voting fee at ~2
+SOLs per epoch, and reduces the likelyhood there are too many voting validators
+immediately after Alpenglow launches.
+
 Everything specified below are protocol-level changes, they need to be
 implemented by all Solana clients. The client specific data structure
 changes are omitted.
@@ -29,6 +35,55 @@ The compressed BLS Pubkey in Vote Account is specified in SIMD 185 (Vote
 Account v4)
 
 ## Motivation
+
+Adding more voting validators to a blockchain does come with costs. At the
+very least, the votes and corresponding rewards need to be processed by
+every voting validator. Therefore, if an attacker can cheaply start a lot
+of voting validators, it will put more pressure on the chain.
+
+Right now every voting validator pays voting fee on any vote transaction
+it sends. The voting fee adds up to ~2 SOLs per epoch if the validator votes
+most of the time. It is a burden, yet at the same time it's an economic
+barrier to the above attacks.
+
+Of course, VAT is only a temporary solution to maintain the current economic
+equilibrium. Because Alpenglow is a revolutionary consensus redesign, we prefer
+to keep other things like economics unchanged for now. There will be future
+proposals for how to discourage the attackers while not putting too much burden
+on validator operators.
+
+## New Terminology
+
+- **Validator Admission Ticket**: The 1.6 SOL charged once per epoch to every
+validator eligible to participate in the next epoch
+
+## Different Vote Related Accounts
+
+Before Alpenglow, we have the following accounts related to voting (the
+identity account and vote authority account can be the same):
+
+- Vote account for saving all the vote states
+
+- Identity account for receiving block rewards and commission
+
+- Vote authority account for signing vote transactions
+
+After Alpenglow, we will still have roughly the same accounts serving the same
+purpose:
+
+- Vote account: This account must contain the correct BLS pubkey corresponding
+to vote authority keypair; it continues to keep all the vote credits and all
+validator identity/authority/commission information updates happen here, but
+it doesn’t contain vote information any more.
+
+- Identity account: This is the account for the 1.6 SOL VAT; it continues
+receiving block rewards and commissions.
+
+- Vote authority account: For signing BLS messages
+
+## Detailed Design
+
+### What is considered valid vote account
 
 The VAT discussion in SIMD 326 proposes:
 
@@ -67,36 +122,7 @@ validators, pick all of them.
 All validators must perform the same operation, or the resulting bankhash will
 be different.
 
-## New Terminology
-
-- **Validator Admission Ticket**: The 1.6 SOL charged once per epoch to every
-validator eligible to participate in the next epoch
-
-## Different Vote Related Accounts
-
-Before Alpenglow, we have the following accounts related to voting (the
-identity account and vote authority account can be the same):
-
-- Vote account for saving all the vote states
-
-- Identity account for receiving block rewards and commission
-
-- Vote authority account for signing vote transactions
-
-After Alpenglow, we will still have roughly the same accounts serving the same
-purpose:
-
-- Vote account: This account must contain the correct BLS pubkey corresponding
-to vote authority keypair; it continues to keep all the vote credits and all
-validator identity/authority/commission information updates happen here, but
-it doesn’t contain vote information any more.
-
-- Identity account: This is the account for the 1.6 SOL VAT; it continues
-receiving block rewards and commissions.
-
-- Vote authority account: For signing BLS messages
-
-## Detailed Design
+### How to implement the checks
 
 1. When a new bank crosses the epoch boundary (bank.epoch() >
 parent_bank.epoch()), we calculate the participating staked validators for the
@@ -166,7 +192,9 @@ we also need to return the fee collected.
 ## Impact
 
 Validators not providing BLS Pubkey or desired fee will not be able to
-participate in an Alpenglow epoch regardless of their stake.
+participate in an Alpenglow epoch regardless of their stake. Also, only the
+nodes selected by this process will receive votes or certificates from other
+selected validators in real time.
 
 ## Security Considerations
 
