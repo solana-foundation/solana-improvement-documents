@@ -87,9 +87,9 @@ All jump instructions, except for `call` (opcode `0x85`) and `callx` (opcode
 to arbitrary locations hinders a precise program verification. 
 `VerifierError::JumpOutOfCode` must be thrown for offending this rule.
 
-`call imm` (opcode `0x85`) must only be allowed to jump to a program counter 
-that points to an `add64 r10, imm` instruction. Otherwise 
-`VerifierError::InvalidFunction` must be thrown.
+`call imm` (opcode `0x85`, source field set to one) must only be allowed 
+to jump to a program counter that points to an `add64 r10, imm` instruction. 
+Otherwise `VerifierError::InvalidFunction` must be thrown.
 
 #### Runtime check for callx and jx
 
