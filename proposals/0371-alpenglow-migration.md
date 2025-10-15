@@ -33,46 +33,56 @@ N/A
 
 ## Detailed Design
 
-1. Pick a migration boundary slot N, preferably not at the beginning of an epoch. After slot N, we turn off all user transactions and enter vote-only mode.
+### Migration Handoff
 
-2. After this migration boundary slot, for every fork, if there's ever two earliest consecutive blocks `M`,`M+1`, where block `M+1` includes `>90%` of votes for `M`, then record `M+1` as a potential "transition block". Note these votes must be included in the block, detecting them in gossip is not sufficient!
+1. Pick a migration boundary slot `S`, preferably not at the beginning of an epoch. After slot `S`, we turn off all user transactions and enter vote-only mode, where the only votes being made are aggregatable BLS votes
 
-3. After a validator detects such a "transition block" `M+1`, they also cast a BLS finalization vote for `M+1`. Additionally, for all blocks `S` desecended from `M+1`, every time the validator casts a TowerBFT vote for `S` they also cast an additional BLS finalization vote for `S`.
+2. After this migration boundary slot, wait for some block `B` to be optimistically confirmed with >= 82% of the stake voting. These votes are
+aggregated into a migration certificate.
 
-4. If any block `F > T` receives a `>90%` certificate aggregated from votes in gossip or turbine, then `F` must be optimistically confirmed, and we call the certificate for this block `F` the "finalized migration certificate".
-
-5. Anytime a correct validator receives such a "finalized migration certificate" that they either constructed themselves or received from another validator, they:
+3. Anytime a correct validator receives such a migration certificate for a slot `B`( either constructed themselves or received from another validator), they:
  a. Broadcast the certificate to all other validators via the Alpenglow all-to-all mechanism, which guarantees delivery system via its retry mechanism.
- b. Rollback/delete all blocks after the `transition block` `M+1`,,
- c. Start Alpenglow using `M+1` as the initial Alpenglow genesis block
+ b. Find the latest ancestor `B' < S` of `B`. Delete all blocks with slot greater than `slot(B')`.
+ c. Start Alpenglow using `B'` as the initial Alpenglow genesis block, and packing the migration certificate in any direct children of `B'`.
 
-6. Alternatively, anytime a correct validator that has not yet detected a "finalized migration certificate" receives a "finalized Alpenglow certificate" for block `X`:
+6. Alternatively, anytime a correct validator that has not yet detected a a migration certificate receives a "finalized Alpenglow certificate" for some block `X`:
  a. Repair/replay all the ancestors of `X`
- b. Start Alpenglow after cathcing up to `X`
+ b. Start Alpenglow after catching up to `X`
 
-6. Once the first Alpenglow finalization certificate is detected, validators can stop broadcasting this "finalized migration certificate" as the Alpenglow finalization certificate is sufficent proof of the cluster's successful migration.
+6. Once the first Alpenglow finalization certificate is detected, validators can stop broadcasting the migration certificate as the Alpenglow finalization certificate is sufficent proof of the cluster's successful migration.
 
 
-Safety argument:
+Correctness argument:
 
-First note it's always safe to rollback to the "transition block" because we stopped packing user transactions after the migration slot boundary earlier.
+First note it's always safe to rollback a block greater after the migration slot boundary because we stopped packing user transactions.
 
-Next we show that if a "finalized migration certificate" exists, then all correct validators should pick the same "transition block" to start Alpenglow.
+Next we show that if two correct validators get migration certificates they should pick the same block to start Alpenglow.
 
-1. If two "finalized migration certificate"'s exist for different blocks `F` and `F'` where `F' > F`, then `F'` must descend from `F`. This is because all blocks that receive `90%` votes are optimistically confirmed, and thus must be on the same fork under the guarantees of optimistic confirmation (with 90% threshold that's safe assuming <28% malicious).
+Say two correct validators get migration certificates for some blocks `B` and `B'`. It's guaranteed by optimistic confirmation that `B` and `B'` are on the same fork, and must have the same ancestors. This means both will pick the same ancestor before the migraiton slot boundary as the Alpenglow genesis.
 
-This means any validators that vote for `F` or `F'` must observe the earlier blocks in the fork.
+Liveness argument
 
-2. For every fork, the "transition block" `T` is unique because 
- a. The votes to qualify for the 90% threshold must be observable/packed in the transition block
- b. For each fork, there can only be one such "earliest" block that passes this
- qualification, which everyone can observe
+We show that if a correct validator migrates, then all correct validators will migrate.
 
-From 1. and 2. together this means for any "finalized migration certificate" `F`, everybody who voted on `F` agrees on the transition block `T`
+If a `82%` migration certificate exists, and we assume at most `19%` of the cluster is Byzantine, then at least `63%` correct nodes will have observed the transition block `T` and will migrate to Alpenglow upon receiving the certificate via all-to-all broadcast which guaranteees delivery.
 
-This implies that if a `90%` "finalized migration certificate" exists, and we assume at most 20% of the cluster is malicious, then at least `70%` correct nodes will have observed the transition block `T` and will migrate to Alpenglow upon constructing the certificate or receiving the certificate via broadcast.
+This `63%` correct validators is then sufficient to run Alpenglow and produce a finalized Alpenglow block, which will induce a repair/transition from any other correct/lagging validators.
 
-This `70%` correct validators is then sufficient to run Alpenglow and produce a finalized Alpenglow block, which will induce a repair/transition from any other lagging validators.
+For paper, see here.
+
+### Poh Migration
+
+When switching to the first Alpenglow block, we want to deprecate Poh. This will
+be done in a few steps to mitigate the amount of code changes:
+
+1. Before the end of each Alpenglow block, set the bank tick height to `bank.max_tick_height() - 1`
+2. Change tick producer to only make 1 ending tick per block, so that each bank will still think it has reached `bank.max_tick_height()`. This last tick is necessary to coordinate with banking stage and broadcast to properly end the packing/dispersion of a block. Eliminating it is possible, but a load of risky work.
+3. Change `blockstore_processor::verify_ticks()` to turn off tick verification.
+
+### Duplicate block handling
+
+1. Turn off tower duplicate block handling
+2. Turn off epoch slots
 
 ## Alternatives Considered
 
@@ -81,7 +91,7 @@ of the transition back and forth between Alpenglow and TowerBFT
 
 ## Impact
 
-Clients will run Alpenglow after the migration boundary
+Validators will run Alpenglow after the migration boundary
 
 ## Security Considerations
 
