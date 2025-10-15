@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Review
 created: 2024-10-03
-feature: BUwGLeF3Lxyfv1J1wY8biFHBB2hrk2QhbNftQf3VV3cC
+extends: SIMD-0178, SIMD-0377
 ---
 
 ## Summary
@@ -61,12 +61,12 @@ start of another adjacent function.
 
 ### Restrict functions’ last instruction
 
-Functions must only end with the `ja` (opcode `0x05`) or the return (opcode 
-`0x9D` since SIMD-0178) instruction. Allowing calls to be the last instruction 
-of functions was inconvenient, because when the call returns, and there is no 
-other instruction to redirect the control flow, we will execute the very next 
-program counter, resulting in a fallthrough into another function's code. 
-Offending this new validation condition must throw an 
+Functions must only end with the `ja` (opcode `0x05`), the exit (opcode 
+`0x95`) instruction or the `jx` instruction (opcode `0x0D`). Allowing calls to 
+be the last instruction of functions was inconvenient, because when the call 
+returns, and there is no other instruction to redirect the control flow, we 
+will execute the very next program counter, resulting in a fallthrough into 
+another function's code. Offending this new validation condition must throw an 
 `VerifierError::InvalidFunction` error.
 
 ### Jump restrictions
@@ -91,12 +91,18 @@ to arbitrary locations hinders a precise program verification.
 that points to an `add64 r10, imm` instruction. Otherwise 
 `VerifierError::InvalidFunction` must be thrown.
 
-#### Runtime check for callx
+#### Runtime check for callx and jx
 
 The jump destination of `callx` (opcode `0x8D`) must be checked during 
 execution time to be an `add64 reg, imm` instruction. If this is not the case, 
 a `EbpfError::UnsupportedInstruction` must be thrown. This measure is supposed 
 to improve security of programs, disallowing the malicious use of callx.
+
+Likewise, the destination of a `jx` instruction (opcode `0x0D`) must be 
+checked during runtime to be within the function it is located. If this is not 
+the case, a `EbpfError::UnsupportedInstruction` must be thrown. Not only does 
+this measure prevents malicious usage of the indirect branch, but also does it 
+allow for tiered JITting.
 
 ### Prevent calls to middle of LLDW instruction
 
@@ -122,7 +128,7 @@ The changes proposed in this SIMD are transparent to dApp developers. The
 compiler toolchain will emit correct code for the specified SBPF version. The 
 enhanced verification restrictions will improve the security of programs 
 deployed to the blockchain, filtering out unwarranted behavior that could be 
-used with malicious intents.
+used with malicious intentions.
 
 ## Security Considerations
 
