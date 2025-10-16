@@ -144,9 +144,12 @@ pub struct VoteStateV4 {
 
 All vote instructions MUST be updated to support deserializing v4 vote accounts.
 
-All vote instructions that previously converted deserialized vote state to v3
-MUST be updated to instead convert to v4 with the following default values for
-the new fields described above:
+All vote instructions besides `InitializeAccount` MUST be updated to deserialize
+vote accounts in the following order:
+
+1. Deserialize versioned vote state
+1. Check for initialization or return `InstructionError::UninitializedAccount`
+2. Convert to v4 with the following default values for the new fields:
 
 ```rust
 VoteStateV4 {
