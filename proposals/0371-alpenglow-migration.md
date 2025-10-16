@@ -38,18 +38,22 @@ N/A
 1. Pick a migration boundary slot `S`, preferably not at the beginning of an epoch. After slot `S`, we turn off all user transactions and enter vote-only mode, where the only votes being made are aggregatable BLS votes
 
 2. After this migration boundary slot, wait for some block `B` to be optimistically confirmed with >= 82% of the stake voting. These votes are
-aggregated into a migration certificate.
+aggregated into a `migration certificate`.
 
-3. Anytime a correct validator receives such a migration certificate for a slot `B`( either constructed themselves or received from another validator), they:
+3. Find the latest ancestor block `B'` of `B` from before the migration boundary slot `S`. Delete all blocks with slot greater than `slot(B')`.
+
+4. Start Alpenglow using `B'` as the initial Alpenglow genesis block, and packing the `migration certificate` in the headers of any blocks that are children of `B'`. This means anybody replaying any of the initial Alpenglow blocks must see the `migration certificate`.
+
+5. Anytime a validator receives a `migration certificate` validated through *replaying* the header of a block, they store the certificate in an off-curve account if that account is empty. This means all snapshots descended from the block will contain this account and signal to validators that they should initiate Alpenglow after unpacking the snapshot.
+
+6. Anytime a correct validator receives a `migration certificate` for a slot `B`(either constructed themselves, received through replaying a block, or received from all-to-all broadcast), they:
  a. Broadcast the certificate to all other validators via the Alpenglow all-to-all mechanism, which guarantees delivery system via its retry mechanism.
  b. Find the latest ancestor `B' < S` of `B`. Delete all blocks with slot greater than `slot(B')`.
- c. Start Alpenglow using `B'` as the initial Alpenglow genesis block, and packing the migration certificate in any direct children of `B'`.
+ c. Start Alpenglow using `B'` as the initial Alpenglow genesis block, and packing the migration certificate in the headers of any blocks that are children of `B'`.
 
-6. Alternatively, anytime a correct validator that has not yet detected a a migration certificate receives a "finalized Alpenglow certificate" for some block `X`:
- a. Repair/replay all the ancestors of `X`
- b. Start Alpenglow after catching up to `X`
+4. Alternatively, anytime a correct validator that has not yet detected a migration certificate, but receives a finalized Alpenglow certificate for some block `X`, they should repair/replay all the ancestors of `X`
 
-6. Once the first Alpenglow finalization certificate is detected, validators can stop broadcasting the migration certificate as the Alpenglow finalization certificate is sufficent proof of the cluster's successful migration.
+5. Once an Alpenglow finalization certificate is received via all-to-all or via replaying a block, validators can stop broadcasting the migration certificate as the Alpenglow finalization certificate is sufficent proof of the cluster's successful migration.
 
 
 Correctness argument:
