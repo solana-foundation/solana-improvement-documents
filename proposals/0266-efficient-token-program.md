@@ -122,12 +122,12 @@ Sample CU consumption for `p-token` without logs:
 | Instruction          | `p-token` *- logs* (CU) | `p-token` (CU) |
 |----------------------|-----------------------|----------------------|
 | `InitializeMint`     | 105                   | 214                  |
-| `InitializeAccount`  | 155                   | 264                  |
-| `Transfer`           |  79                   | 192                  |
-| `TransferChecked`    | 111                   | 227                  |
-| `MintTo`             | 123                   | 230                  |
-| `Burn`               | 133                   | 250                  |
-| `CloseAccount`       | 125                   | 236                  |
+| `InitializeAccount`  | 154                   | 264                  |
+| `Transfer`           |  76                   | 186                  |
+| `TransferChecked`    | 105                   | 218                  |
+| `MintTo`             | 123                   | 231                  |
+| `Burn`               | 133                   | 237                  |
+| `CloseAccount`       | 125                   | 229                  |
 
 ## Impact
 
@@ -142,28 +142,28 @@ better the gains in CUs consumption.
 
 | Instruction                  | spl token | p-token | % of spl-token |
 | ---------------------------- | --------- | ------- | -------------- |
-| `Approve`                    | 2904      | 124     | 4.3%           |
-| `ApproveChecked`             | 4458      | 171     | 3.8%           |
-| `Burn`                       | 4753      | 133     | 2.8%           |
-| `BurnChecked`                | 4754      | 136     | 2.9%           |
-| `CloseAccount`               | 2916      | 125     | 4.3%           |
-| `FreezeAccount`              | 4265      | 149     | 3.5%           |
-| `InitializeAccount`          | 4527      | 155     | 3.4%           |
-| `InitializeAccount2`         | 4388      | 172     | 3.9%           |
+| `Approve`                    | 2904      | 124     | 4.2%           |
+| `ApproveChecked`             | 4458      | 164     | 3.6%           |
+| `Burn`                       | 4753      | 126     | 2.6%           |
+| `BurnChecked`                | 4754      | 129     | 2.7%           |
+| `CloseAccount`               | 2916      | 120     | 4.1%           |
+| `FreezeAccount`              | 4265      | 146     | 3.4%           |
+| `InitializeAccount`          | 4527      | 154     | 3.4%           |
+| `InitializeAccount2`         | 4388      | 171     | 3.8%           |
 | `InitializeAccount3`         | 4240      | 248     | 5.8%           |
 | `InitializeImmutableOwner`   | 1404      | 38      | 2.7%           |
 | `InitializeMint`             | 2967      | 105     | 3.5%           |
-| `InitializeMint2`            | 2827      | 226     | 8.0%           |
-| `InitializeMultisig`         | 2973      | 193     | 6.5%           |
-| `InitializeMultisig2`        | 2826      | 319     | 11.3%          |
-| `MintTo`                     | 4538      | 123     | 2.7%           |
-| `MintToChecked`              | 4545      | 172     | 3.8%           |
-| `Revoke`                     | 2677      | 99      | 3.7%           |
-| `SetAuthority`               | 3167      | 136     | 4.3%           |
-| `SyncNative`                 | 3045      | 62      | 2.0%           |
-| `ThawAccount`                | 4267      | 146     | 3.4%           |
-| `Transfer`                   | 4645      | 79      | 1.7%           |
-| `TransferChecked`            | 6200      | 111     | 1.8%           |
+| `InitializeMint2`            | 2827      | 228     | 8.0%           |
+| `InitializeMultisig`         | 2973      | 193     | 6.4%           |
+| `InitializeMultisig2`        | 2826      | 318     | 11.2%          |
+| `MintTo`                     | 4538      | 119     | 2.6%           |
+| `MintToChecked`              | 4545      | 169     | 3.7%           |
+| `Revoke`                     | 2677      | 97      | 3.6%           |
+| `SetAuthority`               | 3167      | 123     | 3.8%           |
+| `SyncNative`                 | 3045      | 61      | 2.0%           |
+| `ThawAccount`                | 4267      | 142     | 3.3%           |
+| `Transfer`                   | 4645      | 76      | 1.6%           |
+| `TransferChecked`            | 6200      | 105     | 1.6%           |
 
 Considering the usage distribution of instructions (shown below), migrating
 to p-token will significantly reduce the block CUs currently consumed by the
@@ -198,8 +198,10 @@ modifications amounting to millions of individual instructions &mdash; and
 verifying that the complete program output (i.e., both the program result
 and accounts' state) matches.
 
-- ⏳ *[IN PROGRESS]* Audits
+- ✅ **[COMPLETED]** Audits
   - [Neodyme Audit (2025-06-12)](https://github.com/anza-xyz/security-audits/blob/master/spl/NeodymePTokenPinocchioAudit-2025-06-12.pdf)
+  - [Zellic Audit (2025-06-30)](https://github.com/anza-xyz/security-audits/blob/master/spl/ZellicPTokenPinocchioAudit-2025-06-30.pdf)
+  - [Zellic Audit (2025-10-13)](https://github.com/anza-xyz/security-audits/blob/master/spl/ZellicPTokenAudit-2025-10-13.pdf)
 
 - ⏳ *[IN PROGRESS]* Formal Verification
 
