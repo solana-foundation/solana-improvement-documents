@@ -186,6 +186,15 @@ only for comparison.
 - `MOV32S16` -> opcode = `0xbc`, offset = `16` -> `dst = src as i16 as i32`
 
 
+Likewise, the verifier must accept the following instruction encoding for sign 
+extended load operations, and the virtual machine must implement the behavior 
+detailed below for them.
+
+- `ldxbs` -> opcode = `0x91` -> `dst = (load (src + offset)) as i8 as i64`
+- `ldxhs` -> opcode = `0x89` -> `dst = (load (src + offset)) as i16 as i64`
+- `ldxws` -> opcode = `0x81` -> `dst = (load (src + offset)) as i32 as i64`
+
+
 ### Indirect jump
 
 The indirect jump instruction `jx` jumps to the instruction pointed by the 
