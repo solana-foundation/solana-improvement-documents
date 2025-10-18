@@ -2,7 +2,7 @@
 simd: '0207'
 title: Raise Block Limits to 50M CUs
 authors:
-  - Andrew Fitzgerad (Anza)
+  - Andrew Fitzgerald (Anza)
 category: Standard
 type: Core
 status: Accepted
