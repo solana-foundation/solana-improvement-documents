@@ -2,11 +2,13 @@
 simd: '0371'
 title: Alpenglow migration
 authors:
-  - Carl Lin
+  - Kobi Sliwinski (Anza)
+  - Ashwin Sekar (Anza)
+  - Carl Lin (Anza)
 category: Standard
 type: Core
 status: Review
-created: 2025-10-05
+created: 2025-10-21
 feature: TBD
 ---
 
@@ -35,42 +37,64 @@ N/A
 
 ### Migration Handoff
 
-1. Pick a migration boundary slot `S`, preferably not at the beginning of an epoch. After slot `S`, we turn off all user transactions and enter vote-only mode, where the only votes being made are aggregatable BLS votes
+1. Pick a migration boundary slot `S`, preferably not at the beginning of an epoch. After slot `S`:
+a. Turn off packing user transactions in blocks and enter vote-only mode.
+b. Turn off optimistic confirmation/commitment reporting over RPC.
+c. Turn off rooting blocks in TowerBFT to prevent losing optimistically confirmed blocks that could qualify as the Alpenglow genesis blocks.
 
-2. After this migration boundary slot, wait for some block `B` to be optimistically confirmed with >= 82% of the stake voting. These votes are
-aggregated into a `migration certificate`.
+2. After this migration boundary slot, wait for some block `B` to be optimistically confirmed with >= 82% of the stake voting.
 
-3. Find the latest ancestor block `B'` of `B` from before the migration boundary slot `S`. Delete all blocks with slot greater than `slot(B')`.
+3. Find the latest ancestor block `G` of `B` from before the migration boundary slot `S`. Cast a BLS vote (the genesis vote) for `G` via all to all
 
-4. Start Alpenglow using `B'` as the initial Alpenglow genesis block, and packing the `migration certificate` in the headers of any blocks that are children of `B'`. This means anybody replaying any of the initial Alpenglow blocks must see the `migration certificate`.
+4. If we observe `> 82%` genesis votes for the ancestor block `G`, this consitutes the `genesis certificate`, and `G` is the genesis block for Alpenglow.
 
-5. Anytime a validator receives a `migration certificate` validated through *replaying* the header of a block, they store the certificate in an off-curve account if that account is empty. This means all snapshots descended from the block will contain this account and signal to validators that they should initiate Alpenglow after unpacking the snapshot.
-
-6. Anytime a correct validator receives a `migration certificate` for a slot `B`(either constructed themselves, received through replaying a block, or received from all-to-all broadcast), they:
+5. Anytime a correct validator receives a `genesis certificate` for a slot `B`(either constructed themselves, received through replaying a block, or received from all-to-all broadcast), they:
  a. Broadcast the certificate to all other validators via the Alpenglow all-to-all mechanism, which guarantees delivery system via its retry mechanism.
- b. Find the latest ancestor `B' < S` of `B`. Delete all blocks with slot greater than `slot(B')`.
- c. Start Alpenglow using `B'` as the initial Alpenglow genesis block, and packing the migration certificate in the headers of any blocks that are children of `B'`.
+ b. We initialize the alpenglow `votor` module with `G` as genesis, and disable TowerBFT for any slots past `G`
+ c. In block production pack the `genesis certificate` in the headers of any blocks that are children of `G`. This means anybody replaying any of the initial Alpenglow blocks must see the `genesis certificate`.
+ d. Delete all blocks with slot greater than `slot(G)`.
+ e. We exit vote only mode, enable Alpenglow rooting, and re-enable RPC commitment/confirmation reporting.
 
-4. Alternatively, anytime a correct validator that has not yet detected a migration certificate, but receives a finalized Alpenglow certificate for some block `X`, they should repair/replay all the ancestors of `X`
+6. Anytime a validator receives a `genesis certificate` validated through *replaying* the header of a block, they store the certificate in an off-curve account if that account is empty. This means all snapshots descended from the block will contain this account and signal to validators that they should initiate Alpenglow after unpacking the snapshot.
 
-5. Once an Alpenglow finalization certificate is received via all-to-all or via replaying a block, validators can stop broadcasting the migration certificate as the Alpenglow finalization certificate is sufficent proof of the cluster's successful migration.
+7. Alternatively, anytime a correct validator that has not yet detected a `genesis certificate`, but receives an Alpenglow finalization certificate for some block `X`, they should repair/replay all the ancestors of `X`
+
+8. Once an Alpenglow finalization certificate is received via all-to-all or via replaying a block, validators can stop broadcasting the genesis certificate as the Alpenglow finalization certificate is sufficent proof of the cluster's successful migration.
 
 
-Correctness argument:
+#### Correctness argument:
 
 First note it's always safe to rollback a block greater after the migration slot boundary because we stopped packing user transactions.
 
-Next we show that if two correct validators get migration certificates they should pick the same block to start Alpenglow.
+Next we show that if two correct validators switch to Alpenglow, they must pick the same genesis block `G`.
 
-Say two correct validators get migration certificates for some blocks `B` and `B'`. It's guaranteed by optimistic confirmation that `B` and `B'` are on the same fork, and must have the same ancestors. This means both will pick the same ancestor before the migraiton slot boundary as the Alpenglow genesis.
+To switch to Alpenglow, both correct validators must observe optimistic confirmation on some slots `B` and `B'` past the migration boundary. It's guaranteed by optimistic confirmation that `B` and `B'` are on the same fork, and must have the same ancestors. This means all correct validators must cast a genesis vote on the same ancestor block.
 
-Liveness argument
+Because there's at most `19%` malicious, it will be impossible to construct two `>82%` genesis certificates, so all correct validators that switch must have observed the same genesis certificate for the same block.
 
-We show that if a correct validator migrates, then all correct validators will migrate.
+#### Liveness argument
 
-If a `82%` migration certificate exists, and we assume at most `19%` of the cluster is Byzantine, then at least `63%` correct nodes will have observed the transition block `T` and will migrate to Alpenglow upon receiving the certificate via all-to-all broadcast which guaranteees delivery.
+1. First we show that eventually at least one correct validator should see an Alpenglow genesis certificate.
+
+We assume the the cluster must eventually run under normal network conditions, so blocks past the migration boundary slot `S` should be optimistically confirmed.
+
+Next, Until a migration certificate is observed, no correct validators will migrate, so all correct validators will vote as normal and contribute to optimistic confirmation. From the correctness argument, we know if a correct validator casts a genesis vote, they must vote for the same Alpenglow genesis block.
+
+This means that eventually 82% of validators will cast a genesis vote for the same genesis block. Because these genesis votes are reliably delivered via all-to-all, some correct validator will eventually get a genesis certificate.
+
+2. Next we show that once a correct validator migrates, then all correct validators will eventually migrate.
+
+There's two ways for correct validators to migrate:
+1. A genesis certificate
+2. An Alpenglow finalization certificate
+
+The first correct validator to migrate must have gotten a `82%` genesis certificate. We assume at most `19%` of the cluster is Byzantine, then at least this correct validator will continuosly broadcast the genesis certificate until they see an Alpenglow finalization certificate. 
+
+This means eventually `82% - 19% = 63%` correct nodes will eventually receive the genesis certificate and will migrate to Alpenglow upon receiving the certificate via all-to-all broadcast which guaranteees delivery.
 
 This `63%` correct validators is then sufficient to run Alpenglow and produce a finalized Alpenglow block, which will induce a repair/transition from any other correct/lagging validators.
+
+Thus from 1. we know some correct validator must eventually migrate because eventually they must receive a genesis certificate, then we know from 2 that eventually all correct validators must migrate.
 
 For paper, see here.
 
