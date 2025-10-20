@@ -14,7 +14,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 ## Summary
 
 This SIMD describes how the validator admission ticket (VAT) collection
-described in [SIMD 326] (https://github.com/solana-foundation/solana-improvement-documents/pull/326)
+described in [SIMD 326](https://github.com/solana-foundation/solana-improvement-documents/pull/326)
 will be implemented. Specifically, how it affects validator operation
 procedures.
 
@@ -33,7 +33,7 @@ changes are omitted.
 The Validator Admission Ticket is specified in SIMD 326 (Alpenglow).
 
 The compressed BLS Pubkey in Vote Account is specified in [SIMD 185 (Vote
-Account v4)] (https://github.com/solana-foundation/solana-improvement-documents/pull/185)
+Account v4)](https://github.com/solana-foundation/solana-improvement-documents/pull/185)
 
 ## Motivation
 
