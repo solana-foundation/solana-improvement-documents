@@ -86,7 +86,7 @@ packet signatures, and the Ed25519 precompile program.
 
 Section 3.2 of [Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf)
 explains the relationship between batched and single cofactored verifications,
-proving them to be compatible. As a result, they can be used interchangeable,
+proving them to be compatible. As a result, they can be used interchangeably,
 in use cases such as optimizing transaction signature verification.
 
 ## Alternatives Considered
