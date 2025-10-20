@@ -14,8 +14,9 @@ feature: (fill in with feature key and github tracking issues once accepted)
 ## Summary
 
 This SIMD describes how the validator admission ticket (VAT) collection
-described in SIMD 326 will be implemented. Specifically, how it affects
-validator operation procedures.
+described in [SIMD 326] (https://github.com/solana-foundation/solana-improvement-documents/pull/326)
+will be implemented. Specifically, how it affects validator operation
+procedures.
 
 Validator admission ticket is a mechanism translating the current cost of
 voting into a similar economic equilibrium for Alpenglow. By charging every
@@ -31,26 +32,24 @@ changes are omitted.
 
 The Validator Admission Ticket is specified in SIMD 326 (Alpenglow).
 
-The compressed BLS Pubkey in Vote Account is specified in SIMD 185 (Vote
-Account v4)
+The compressed BLS Pubkey in Vote Account is specified in [SIMD 185 (Vote
+Account v4)] (https://github.com/solana-foundation/solana-improvement-documents/pull/185)
 
 ## Motivation
 
-Adding more voting validators to a blockchain does come with costs. At the
+Adding more staked validators to a blockchain does come with costs. At the
 very least, the votes and corresponding rewards need to be processed by
-every voting validator. Therefore, if an attacker can cheaply start a lot
-of voting validators, it will put more pressure on the chain.
+every voting validator. Therefore, every additional staked validator will
+put a bit more pressure on the chain.
 
 Right now every voting validator pays voting fee on any vote transaction
-it sends. The voting fee adds up to ~2 SOLs per epoch if the validator votes
-most of the time. It is a burden, yet at the same time it's an economic
-barrier to the above attacks.
+included in a block. The voting fee adds up to ~2 SOLs per epoch if the
+validator votes most of the time. It is a burden, yet at the same time it's an
+economic barrier to having too many voting validators on the chain.
 
 Of course, VAT is only a temporary solution to maintain the current economic
-equilibrium. Because Alpenglow is a revolutionary consensus redesign, we prefer
-to keep other things like economics unchanged for now. There will be future
-proposals for how to discourage the attackers while not putting too much burden
-on validator operators.
+equilibrium. This proposal intentionally strives to keep voting validator
+protocol costs similar to pre-Alpenglow consensus.
 
 ## New Terminology
 
