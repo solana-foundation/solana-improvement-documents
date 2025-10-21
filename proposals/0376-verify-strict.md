@@ -137,10 +137,8 @@ verification.
 - A small class of signatures previously rejected may now be accepted.
 
 This upgrade will require one feature gate. Once this feature gate is active,
-ZIP-215 will be used instead of `verify_strict` for all EdDSA signature
-verifications. Even though the equation is theoretically backwards compatible,
-there could be unfoseen incompatibilities in the `ed25519-zebra` library,
-which is why it is important to have a feature gate.
+ZIP-215 will be the equation used for all EdDSA signature verifications,
+instead of `verify_strict`. 
 
 Here is a proof that any signature that `verify_strict` accepts would
 be accepted by the new verification equation as well:
