@@ -136,11 +136,11 @@ which ZIP-215 achieves by rejecting $S$ scalars which do not fit into $l$.
 verification.
 - A small class of signatures previously rejected may now be accepted.
 
-This upgrade should be possible to do with two seperate feature gates. The
-first one will be to use both verification equations, and once enough
-stake has migrated, we can then disable the `verify_strict` one through
-another feature gate. This is still up for discussion though, while it
-should definitely be doable, it will require a bit of careful thought on how.
+This upgrade will require one feature gate. Once this feature gate is active,
+ZIP-215 will be used instead of `verify_strict` for all EdDSA signature
+verifications. Even though the equation is theoretically backwards compatible,
+there could be unfoseen incompatibilities in the `ed25519-zebra` library,
+which is why it is important to have a feature gate.
 
 Here is a proof that any signature that `verify_strict` accepts would
 be accepted by the new verification equation as well:
