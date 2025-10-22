@@ -9,7 +9,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-10-21
-feature: TBD
+feature: a1penGLz8Vm2QHYB3JPefBiU4BY3Z6JkW2k3Scw5GWP
 ---
 
 ## Summary
@@ -37,30 +37,33 @@ N/A
 
 ### Migration Handoff
 
-1. Pick a migration boundary slot `S`, preferably not at the beginning of an epoch. After slot `S`:
-a. Turn off packing user transactions in blocks and enter vote-only mode.
-b. Turn off optimistic confirmation/commitment reporting over RPC.
-c. Turn off rooting blocks in TowerBFT to prevent losing optimistically confirmed blocks that could qualify as the Alpenglow genesis blocks.
+1. Pick a migration boundary slot `S` as follows. Let `X` be the rooted slot in which the feature flag is activated. Let the migration slot S be `X + 5000`, as to avoid the beginning of an epoch. After slot `S`:
+   - Turn off packing user transactions in blocks. Any transactions not belonging to the vote program will cause a block to be marked dead during replay by all correct validators.
+   - Turn off optimistic confirmation/commitment reporting over RPC.
+   - Turn off rooting blocks in TowerBFT to prevent losing optimistically confirmed blocks that could qualify as the Alpenglow genesis blocks.
 
-2. After this migration boundary slot, wait for some block `B` to be optimistically confirmed with >= 82% of the stake voting.
+2. After the migration boundary slot `S`, wait for some block `B > S` to be `strongly optimistically confirmed` with `>=82%` of the stake voting.
 
-3. Find the latest ancestor block `G` of `B` from before the migration boundary slot `S`. Cast a BLS vote (the genesis vote) for `G` via all to all
+3. Find the latest ancestor block `G` of `B` from before the migration boundary slot `S`. Cast a BLS vote (the genesis vote) for `G` via all to all. Note validators should have filled out their BLS keys prior to the feature flag activation, and will sign this genesis vote with this BLS key.
 
-4. If we observe `> 82%` genesis votes for the ancestor block `G`, this consitutes the `genesis certificate`, and `G` is the genesis block for Alpenglow.
+4. If we observe `>=82%` genesis votes for the ancestor block `G`, this consitutes the `genesis certificate`, and `G` is the genesis block for Alpenglow. Validators will periodically refresh genesis votes until this `genesis certificate` is observed.
 
 5. Anytime a correct validator receives a `genesis certificate` for a slot `B`(either constructed themselves, received through replaying a block, or received from all-to-all broadcast), they:
- a. Broadcast the certificate to all other validators via the Alpenglow all-to-all mechanism, which guarantees delivery system via its retry mechanism.
- b. We initialize the alpenglow `votor` module with `G` as genesis, and disable TowerBFT for any slots past `G`
- c. In block production pack the `genesis certificate` in the headers of any blocks that are children of `G`. This means anybody replaying any of the initial Alpenglow blocks must see the `genesis certificate`.
- d. Delete all blocks with slot greater than `slot(G)`.
- e. We exit vote only mode, enable Alpenglow rooting, and re-enable RPC commitment/confirmation reporting.
+   - Broadcast the certificate to all other validators via the Alpenglow all-to-all mechanism, which guarantees delivery system via its retry mechanism.
+   - We initialize the alpenglow `votor` module with `G` as genesis, and disable TowerBFT for any slots past `G`
+   - In block production pack the `genesis certificate` in the headers of any blocks that are *direct* children of `G`. This means anybody replaying any of the initial Alpenglow blocks must see the `genesis certificate`.
+   - Delete all blocks with slot greater than `slot(G)`.
+   - We exit vote only mode, enable Alpenglow rooting, and re-enable RPC commitment/confirmation reporting.
 
-6. Anytime a validator receives a `genesis certificate` validated through *replaying* the header of a block, they store the certificate in an off-curve account if that account is empty. This means all snapshots descended from the block will contain this account and signal to validators that they should initiate Alpenglow after unpacking the snapshot.
+6. Anytime a validator receives a `genesis certificate` validated through *replaying* the header of a block, they store the certificate in a `migration success` off-curve account `Pubkey::find_program_address(&["alpegration"], alpenglow::id())`. If that account is empty. This means all snapshots descended from the block will contain this account and signal to validators that they should initiate Alpenglow after unpacking the snapshot.
 
 7. Alternatively, anytime a correct validator that has not yet detected a `genesis certificate`, but receives an Alpenglow finalization certificate for some block `X`, they should repair/replay all the ancestors of `X`
 
 8. Once an Alpenglow finalization certificate is received via all-to-all or via replaying a block, validators can stop broadcasting the genesis certificate as the Alpenglow finalization certificate is sufficent proof of the cluster's successful migration.
 
+9. On validator restart from a snapshot, if the migration feature flag is active:
+   - If the off-curve `migration success` account is empty in the snapshot, we enter step 1.
+   - If the off-curve `migration success` account contains a certificate and the certificate is valid, immediately enter Alpenglow.
 
 #### Correctness argument:
 
@@ -76,7 +79,7 @@ Because there's at most `19%` malicious, it will be impossible to construct two 
 
 1. First we show that eventually at least one correct validator should see an Alpenglow genesis certificate.
 
-We assume the the cluster must eventually run under normal network conditions, so blocks past the migration boundary slot `S` should be optimistically confirmed.
+We assume the the cluster must eventually run under normal network conditions, so blocks past the migration boundary slot `S` should be `strongly optimistically confirmed`.
 
 Next, Until a migration certificate is observed, no correct validators will migrate, so all correct validators will vote as normal and contribute to optimistic confirmation. From the correctness argument, we know if a correct validator casts a genesis vote, they must vote for the same Alpenglow genesis block.
 
