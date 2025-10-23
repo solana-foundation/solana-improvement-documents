@@ -61,9 +61,9 @@ validator eligible to participate in the next epoch
 Before Alpenglow, we have the following accounts related to voting (the
 identity account and vote authority account can be the same):
 
-- Vote account for saving all the vote states
+- Vote account for saving all the vote states and receiving commission
 
-- Identity account for receiving block rewards and commission
+- Identity account for receiving block rewards
 
 - Vote authority account for signing vote transactions
 
