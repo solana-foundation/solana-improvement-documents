@@ -113,7 +113,8 @@ that would allow easier migration for Agave.
 valid.
 - Validators: Lower CPU usage, faster verification pipelines.
 - Core Contributors: A more clear, standardized implementation for new validator
-clients and other software potentially performing transaction
+clients and other software potentially performing signature
+verification.
 
 ## Security Considerations
 
