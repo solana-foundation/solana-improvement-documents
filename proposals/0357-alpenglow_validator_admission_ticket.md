@@ -18,11 +18,14 @@ described in [SIMD 326](https://github.com/solana-foundation/solana-improvement-
 will be implemented. Specifically, how it affects validator operation
 procedures.
 
-Validator admission ticket is a mechanism translating the current cost of
+The validator admission ticket is a mechanism translating the current cost of
 voting into a similar economic equilibrium for Alpenglow. By charging every
 voting validator 1.6 SOL per epoch, it replaces the current voting fee at ~2
-SOLs per epoch, and reduces the likelyhood there are too many voting validators
+SOL per epoch, and reduces the likelyhood there are too many voting validators
 immediately after Alpenglow launches.
+
+The general VAT concept has already been accepted with the governance vote on
+SIMD 326.
 
 Everything specified below are protocol-level changes, they need to be
 implemented by all Solana clients. The client specific data structure
@@ -39,21 +42,21 @@ Account v4)](https://github.com/solana-foundation/solana-improvement-documents/p
 
 Adding more staked validators to a blockchain does come with costs. At the
 very least, the votes and corresponding rewards need to be processed by
-every voting validator. Therefore, every additional staked validator will
-put a bit more pressure on the chain.
+every voting validator. Therefore, every additional staked validator increases
+the number of messages for every validator.
 
 Right now every voting validator pays voting fee on any vote transaction
-included in a block. The voting fee adds up to ~2 SOLs per epoch if the
+included in a block. The voting fee adds up to ~2 SOL per epoch if the
 validator votes most of the time. It is a burden, yet at the same time it's an
-economic barrier to having too many voting validators on the chain.
+economic barrier to having too many voting validators.
 
-Of course, VAT is only a temporary solution to maintain the current economic
-equilibrium. This proposal intentionally strives to keep voting validator
-protocol costs similar to pre-Alpenglow consensus.
+VAT is only a temporary solution to maintain the current economic equilibrium.
+This proposal intentionally strives to keep voting validator protocol costs
+similar to pre-Alpenglow consensus.
 
 ## New Terminology
 
-- **Validator Admission Ticket**: The 1.6 SOL charged once per epoch to every
+- **Validator Admission Ticket(VAT)**: The 1.6 SOL charged once per epoch to every
 validator eligible to participate in the next epoch
 
 ## Different Vote Related Accounts
@@ -71,7 +74,7 @@ After Alpenglow, we will still have roughly the same accounts serving the same
 purpose:
 
 - Vote account: This account must contain the correct BLS pubkey corresponding
-to vote authority keypair; it continues to keep all the vote credits and all
+to vote authority keypair. It continues to keep all the vote credits and all
 validator identity/authority/commission information updates happen here, but
 it doesn’t contain vote information any more.
 
@@ -82,7 +85,7 @@ receiving block rewards and commissions.
 
 ## Detailed Design
 
-### What is considered valid vote account
+### What is considered a valid vote account
 
 The VAT discussion in SIMD 326 proposes:
 
@@ -105,14 +108,13 @@ In summary, a valid vote account in an Alpenglow epoch must contain:
 - at least 1.6 SOL VAT fee plus the necessary storage rent amount for a new
 epoch in its corresponding identity account
 
-When the staked validators for a new epoch is calculated, the leader will
+When the staked validators for a new epoch are calculated, the leader will
 perform the following operations:
 
 - When there are more than 2,000 valid validators, sort all valid vote accounts
-by descending order of stake. We deterministically sort all validators by
-stake. If some validator with stake S is in position 2001, then we remove all
-validators with stake S and less. If there are fewer than 2,000 valid
-validators, pick all of them.
+by descending order of stake. If some validator with stake S is in position
+2001, then we remove all validators with stake S and less. If there are fewer
+than 2,000 valid validators, pick all of them.
 
 - Deduct 1.6 SOL VAT fee from each picked vote identity account once
 
@@ -123,37 +125,40 @@ be different.
 
 ### How to implement the checks
 
-1. When a new bank crosses the epoch boundary (bank.epoch() >
-parent_bank.epoch()), we calculate the participating staked validators for the
-next epoch (bank.epoch() + 1)
+1. When a new bank crosses an epoch boundary (bank.epoch() >
+parent_bank.epoch()), calculate the participating staked validators for the
+next epoch (bank.epoch() + 1).
 
-2. Perform stake activation and deactivation, so we will use the intended stake
-for the new epoch
+2. Perform stake activation and deactivation so that the intended stake values
+are used for the new epoch.
 
-3. The calculation goes through all vote accounts and filter the following:
+3. The calculation goes through all vote accounts and filters those that meet
+the following criteria:
 
-  - Contains at least 1.6 SOLs as balance in its corresponding identity account
+  - The corresponding identity account has a balance of at least 1.6 SOL
 
-  - Has a valid BLS Compressed Pubkey (can correctly decompress)
+  - The account has a valid BLS compressed public key (i.e., it can be correctly
+    decompressed)
 
-4. If the number of filtered accounts exceeds 2,000, then sort according to the
-following rules and pick the top 2,000, otherwise return the whole list:
+4. If the number of filtered accounts exceeds 2,000, sort them according to the
+following rules and select the top 2,000. Otherwise, return the entire list:
 
-  - Sort by descending order of stake (largest to smallest)
+  - Sort in descending order of stake (largest to smallest)
 
-  - If several validators have exactly the same amount of stake and including
-  all of them would exceed the 2,000 limit, then all of them are excluded
+  - If multiple validators have exactly the same amount of stake and including
+  all of them would exceed the 2,000 limit, then exclude all of them
 
-5. Subtract 1.6 SOL from the corresponding vote identity account in the list of
-accepted validators in the previous step
+5. Subtract 1.6 SOL from the corresponding vote identity account for each
+validator in the accepted list from the previous step
 
-6. Record the VAT fee subtraction in the bank, it reduces bank capitalization.
-This happens before any transaction is processed in the bank for the new epoch
+6. Record the VAT fee subtraction in the bank, which reduces the bank’s
+capitalization. This occurs before any transactions are processed in the new
+epoch’s bank
 
-7. The epoch stakes for epoch (bank.epoch() + 1) is generated from the list
-generated in step 4. The epoch stakes are saved in bank snapshots, so if we
-restart from a snapshot from any bank in the same epoch as bank.epoch(), the
-1.6 SOLs fee will not be charged again
+7. The epoch stakes for epoch bank.epoch() + 1 are generated from the list
+produced in step 4. These epoch stakes are saved in bank snapshots, so if the
+network restarts from a snapshot taken from any bank within the same epoch as
+bank.epoch(), the 1.6 SOL fee will not be charged again
 
 ## Operation Considerations
 
@@ -198,7 +203,7 @@ selected validators in real time.
 ## Security Considerations
 
 Validator operators need to ensure they have enough fund and correct BLS
-pubkey before end of epoch s to partipate in epoch s+2. This poses some new
+pubkey before end of epoch e to partipate in epoch e+2. This poses some new
 operation challenges.
 
 ## Backwards Compatibility
