@@ -21,7 +21,7 @@ procedures.
 The validator admission ticket is a mechanism translating the current cost of
 voting into a similar economic equilibrium for Alpenglow. By charging every
 voting validator 1.6 SOL per epoch, it replaces the current voting fee at ~2
-SOL per epoch, and reduces the likelyhood there are too many voting validators
+SOL per epoch, and reduces the likelihood there are too many voting validators
 immediately after Alpenglow launches.
 
 The general VAT concept has already been accepted with the governance vote on
@@ -203,7 +203,7 @@ selected validators in real time.
 ## Security Considerations
 
 Validator operators need to ensure they have enough fund and correct BLS
-pubkey before end of epoch e to partipate in epoch e+2. This poses some new
+pubkey before end of epoch e to participate in epoch e+2. This poses some new
 operation challenges.
 
 ## Backwards Compatibility
