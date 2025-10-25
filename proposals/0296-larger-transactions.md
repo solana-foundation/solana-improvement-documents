@@ -61,7 +61,7 @@ Increasing the transaction size limit above the current MTU max size is
 possible with the use of QUIC. QUIC's RFC 9000 specification does not have
 an explicit maximum stream size, allowing for larger transactions to be
 sent. The larger transaction size would only be supported by the v1 transaction
-format as described in SIMD XXXX. Clients will need to support accepting the
+format as described in SIMD-0385. Clients will need to support accepting the
 larger transaction sizes on their network ports and not rejest the larger size
 during replay.
 
@@ -82,10 +82,10 @@ the validator
 ## Impact
 
 Developers would have to update with applications to use the new transaction
-format designed in SIMD XXXX to take advantage of the larger transaction size. Those developers that
-had previously been using address lookup tables would be required to update the
-new transactions with the full address list instead of the address lookup table
-and its indices.
+format designed in SIMD-0385 to take advantage of the larger transaction size. 
+Those developers that had previously been using address lookup tables would be 
+required to update the new transactions with the full address list instead of 
+the address lookup table and its indices.
 
 In consideration of what size the new transaction size limit should increase
 to, [Jito's bundle
