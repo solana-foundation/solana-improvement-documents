@@ -78,14 +78,6 @@ will use the given vote authority keypair to generate and update the BLS public
 key in the vote account. When everyone has a proper BLS public key in their
 vote accounts this command can be removed.
 
-### Validator Operation Considerations
-
-When starting a validator, the users are supposed to provide all ed25519
-keypairs like before. The BLS keypair will automatically be derived from the
-vote authority keypair (if that’s missing, then the identity keypair is used
-like now). The operations needed to switch the keypair and the operations
-needed to switch to a standby node are the same as today.
-
 ### New instructions to vote programs
 
 In the following instructions, there is a proof_of_knowledge field associated
@@ -161,3 +153,19 @@ pub struct VoteAuthorizeCheckedWithSeedAndBLS {
     pub new_authority: Pubkey,
 }
 ```
+
+## Impact
+
+When starting a validator, the users are supposed to provide all ed25519
+keypairs like before. The BLS keypair will automatically be derived from the
+vote authority keypair (if that’s missing, then the identity keypair is used
+like now). The operations needed to switch the keypair and the operations
+needed to switch to a standby node are the same as today.
+
+## Security Considerations
+
+The safety of BLS votes in Alpenglow is still guarded by the ed25519 vote
+authority keypair, so users are supposed to safe guard it like before.
+
+## Alternatives Considered
+NA
