@@ -169,4 +169,6 @@ authority keypair, so users are supposed to safe guard it like before.
 
 ## Alternatives Considered
 
-NA
+We could randomly generate a new BLS keypair, it does mean users need to
+separately maintain another different format of keypair. So we are deriving
+the BLS keypair from the existing ed25519 keypair.
