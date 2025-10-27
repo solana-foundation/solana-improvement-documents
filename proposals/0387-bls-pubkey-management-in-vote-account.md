@@ -168,4 +168,5 @@ The safety of BLS votes in Alpenglow is still guarded by the ed25519 vote
 authority keypair, so users are supposed to safe guard it like before.
 
 ## Alternatives Considered
+
 NA
