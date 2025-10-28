@@ -80,7 +80,7 @@ vote accounts this command can be removed.
 
 ### New instructions to vote programs
 
-In the following instructions, there is a proof_of_knowledge field associated
+In the following instructions, there is a proof_of_possession field associated
 with the new BLS public key. Since we need to verify the caller really holds
 the BLS public key claimed, the caller needs to prove possession of the BLS
 keypair to the vote program by signing the BLS public key with the
@@ -119,11 +119,11 @@ pub struct VoteInitWithBLS {
     pub commission: u8,
     pub bls_pubkey_compressed: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
     // signing bls_pubkey with bls keypair
-    pub proof_of_knowledge: pub  [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+    pub proof_of_possession: pub  [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
 }
 ```
 
-In addition to the original checks, it also checks that proof of knowledge is
+In addition to the original checks, it also checks that proof of possession is
 correctly signed.
 
 - AuthorizeCheckedWithBLS(VoteAuthorizeWithBLS)
@@ -134,7 +134,7 @@ existing vote account, just check vote authority public key didn’t change)
 
 ```rust
 pub enum VoteAuthorizeWithBLS {
-    Voter(bls_pubkey_compressed, proof_of_knowledge),
+    Voter(bls_pubkey_compressed, proof_of_possession),
     Withdrawer,
 }
 ```
@@ -167,7 +167,7 @@ needed to switch to a standby node are the same as today.
 The safety of BLS votes in Alpenglow is still guarded by the ed25519 vote
 authority keypair, so users are supposed to safe guard it like before.
 
-We need to have the proof of knowledge in the instruction inputs so we can
+We need to have the proof of possession in the instruction inputs so we can
 guard against BLS rogue-key attack. If anyone is allowed to randomly choose a
 public key, then an attacker can select a particular public key which interacts
 with other participants' keys so a forged aggregate signature verifies even
