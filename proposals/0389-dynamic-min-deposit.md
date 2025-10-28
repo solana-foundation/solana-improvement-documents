@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0389'
 title: Dynamic minimum deposit for account creation
 authors:
   - Igor Durovic (anza)
