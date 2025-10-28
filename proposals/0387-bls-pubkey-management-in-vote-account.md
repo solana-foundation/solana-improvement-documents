@@ -167,6 +167,12 @@ needed to switch to a standby node are the same as today.
 The safety of BLS votes in Alpenglow is still guarded by the ed25519 vote
 authority keypair, so users are supposed to safe guard it like before.
 
+We need to have the proof of knowledge in the instruction inputs so we can
+guard against BLS rogue-key attack. If you allow anyone to randomly choose a
+public key, then the attacker can select a particular key which interacts with
+other participants' keys so a forged aggregate signature verifies even though
+not all honest parties actually signed.
+
 ## Alternatives Considered
 
 We could randomly generate a new BLS keypair, it does mean users need to
