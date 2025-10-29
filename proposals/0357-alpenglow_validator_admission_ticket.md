@@ -127,7 +127,7 @@ be different.
 
 1. When a new bank crosses an epoch boundary (bank.epoch() >
 parent_bank.epoch()), calculate the participating staked validators for the
-next epoch (bank.epoch() + 1).
+next epoch (bank.epoch() + 1). This is the same as now.
 
 2. Perform stake activation and deactivation so that the intended stake values
 are used for the new epoch.
