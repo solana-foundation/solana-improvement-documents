@@ -203,7 +203,7 @@ selected validators in real time.
 ## Security Considerations
 
 Validator operators need to ensure they have enough fund and correct BLS
-public key before end of epoch e to participate in epoch e+2. This poses some
+public key before end of epoch e-1 to participate in epoch e+1. This poses some
 new operation challenges.
 
 ## Backwards Compatibility
