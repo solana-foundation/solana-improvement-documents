@@ -96,19 +96,30 @@ multiplication in BLS12-381 G1. We propose adding new `curve_id` constants for
 BLS12-381. The syscall will interpret inputs differently based on the
 `curve_id`:
 
-- BLS12-381 inputs (using `BLS12_381_G1`) will be interpreted as points in
-  affine representation.
+- BLS12-381 inputs (using `BLS12_381_G1_{BE,LE}`) will be interpreted as points in
+  affine representation in either little-endian or big-endian.
 - Curve25519 inputs (using `CURVE25519_EDWARDS` or `CURVE25519_RISTRETTO`) are
-  interpreted as points in their respective Edwards or Ristretto representations.
+  interpreted as points in their respective Edwards or Ristretto representations
+  in compressed little-endian representations.
 
 ```rust
 pub const CURVE25519_EDWARDS: u64 = 0;
 pub const CURVE25519_RISTRETTO: u64 = 1;
 
+// Reserve indices 2 and 3 in case we want to support affine representations of
+// curve25519 points in the future
+// pub const CURVE25519_EDWARDS_AFFINE_LE: u64 = 2;
+// pub const CURVE25519_EDWARDS_AFFINE_BE: u64 = 2 | 0x80;
+// pub const CURVE25519_RISTRETTO_AFFINE_LE: u64 = 3;
+// pub const CURVE25519_RISTRETTO_AFFINE_BE: u64 = 3 | 0x80;
+
 // New Curve ID
-pub const BLS12_381: u64 = 2;
-pub const BLS12_381_G1: u64 = 3;
-pub const BLS12_381_G2: u64 = 3;
+pub const BLS12_381_LE: u64 = 4;
+pub const BLS12_381_BE: u64 = 4 | 0x80;
+pub const BLS12_381_G1_LE: u64 = 5;
+pub const BLS12_381_G1_BE: u64 = 5 | 0x80;
+pub const BLS12_381_G2_LE: u64 = 6;
+pub const BLS12_381_G2_BE: u64 = 6 | 0x80;
 
 pub const ADD: u64 = 0;
 pub const SUB: u64 = 1;
@@ -117,7 +128,7 @@ pub const MUL: u64 = 2;
 
 The `BLS12_381_G1` and `BLS12_381_G2` constants will be used for group
 operations and decompression on the respective groups. The `BLS12_381` constant
-will be used for the pairing operations which invovles both.
+will be used for the pairing operations which involves both.
 
 ### Pairing Operation
 
@@ -148,8 +159,8 @@ define_syscall!(fn sol_curve_pairing_map(
 The function would interpret `g1_points` as an array of BLS12-381 points in G1
 `[P1, ..., Pn]` and `g2_points` as an array of BLS12-381 points in G2
 `[Q1, ..., Qn]`. Both inputs are interpreted as affine representations
-encoded in little-endian. It should then compute the pairing product
-`e(P1, Q1) * ... * e(Pn, Qn)`.
+encoded in either little-endian or big-endian depending on the curve id. It
+should then compute the pairing product `e(P1, Q1) * ... * e(Pn, Qn)`.
 
 ### Decompression Operations in G1 and G2
 
@@ -165,8 +176,9 @@ define_syscall!(fn sol_curve_decompress(
 ```
 
 This function will take in a curve id and a point that is represented in its
-compressed representation (encoded in little-endian). It will decompress the
-compressed point into an affine representation and write the result.
+compressed representation (encoded in little-endian or big-endian). It will
+decompress the compressed point into an affine representation and write the
+result.
 
 ## Alternatives Considered
 
@@ -175,7 +187,7 @@ This proposal extends the existing `sol_curve_group_op` and
 alternative would be to add separate dedicated syscall functions for BLS12-381
 as was done for the BN254 curve.
 
-We chose to extend the existing syscalls for a few reasons:
+We chose to extend the existing syscalls for few reasons:
 
 1. It follows the established pattern. The `sol_curve_group_op` syscall was
    designed to be extensible, using a `curve_id` to handle different curves like
