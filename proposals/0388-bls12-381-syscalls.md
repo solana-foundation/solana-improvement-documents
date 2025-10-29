@@ -36,23 +36,37 @@ curve that achieves a 128-bit security level. It is adopted in other major
 ecosystems, such as Ethereum, which already supports it via a precompile.
 
 Adding support for the BLS12-381 curve is important for enabling Alpenglow consensus
-as well. Alpenglow intends to process standard vote transactions by verifying
-BLS signatures in a dedicated BLS sigverify stage within the validator logic, so
-a BLS12-381 syscall is not necessary for the vote transactions themselves.
+([SIMD 326](https://github.com/solana-foundation/solana-improvement-documents/pull/326))
+as well. Alpenglow consensus votes themselves do not require a BLS12-381
+syscall as they are processed differently than regular transactions.
 
-However, when a validator registers their BLS public key, it must do so using a
-regular on-chain transaction that will pass through the normal transaction
-pipeline. This transaction must contain a BLS Proof of Possession (PoP) to
-validate ownship of the BLS public key. This PoP is a cryptographic proof that
-is crucial to prevent a "rogue-key-attack", where a malicious validator could,
-roughly speaking, try to register another validator's public key as their own.
+However, when a validator registers their BLS public key, it must do
+so using a regular on-chain transaction that will pass through the normal
+transaction pipeline. This transaction must contain a BLS Proof of Possession
+(PoP) to validate ownership of the BLS public key. This PoP is a cryptographic
+proof that is crucial to prevent a "rogue-key-attack", where a malicious
+validator could try to register a a key that is an algebraic combination of
+their own key and a victim's key. This would allow the attacker to forge
+aggregate signatures that appear to come from the entire group, even without the
+victim's participation.
 
 By introducing syscalls for BLS12-381, a standard BPF program can efficiently
 verify these Proofs-of-Possessions.
 
 ## New Terminology
 
-NA
+- Proof of Possession (PoP): A cryptographic proof that an entity (e.g., a
+  validator) holds the secret private key corresponding to a public key that they
+  are attempting to register. In the context of BLS, this is typically a signature
+  created with the private key over a message derived from the public key itself.
+
+- Rogue-Key Attack: An attack against aggregate signature schemes (like BLS)
+  where a malicious user registers a "rogue" public key that is mathematically
+  constructed from their own key and one or more victim validators' public keys.
+  This allows the attacker to forge aggregate signatures that appear to be validly
+  signed by the entire group (including the victims), even without the victims'
+  participation. Requiring a PoP at registration prevents this attack because the
+  attacker cannot prove possession of the secret key for the rogue public key.
 
 ## Detailed Design
 
@@ -64,9 +78,9 @@ We propose the addition of the following operations on BLS12-381 as syscalls:
 
 These operations are sufficient to enable standard pairing-based cryptography
 applications, for example, Groth16 proof verifier on BLS12-381 and BLS signature
-or Proof Of Possession (PoP) verifier. Additional operations are needed to
+or Proof of Possession (PoP) verifier. Additional operations are needed to
 support more advanced ZK or cryptography applications, but these are outside the
-scope of this SIMD for now.
+scope of this SIMD.
 
 ### Addition and Scalar Multiplication on G1
 
@@ -79,8 +93,13 @@ edwards and ristretto representations.
 
 This function can be extended to support the addition, subtraction, and scalar
 multiplication in BLS12-381 G1. We propose adding new `curve_id` constants for
-BLS12-381. The BLS12-381 inputs should be interpreted as affine points unlike
-how Curve25519 points are currently interpreted by the syscall.
+BLS12-381. The syscall will interpret inputs differently based on the
+`curve_id`:
+
+- BLS12-381 inputs (using `BLS12_381_G1`) will be interpreted as points in
+  affine representation.
+- Curve25519 inputs (using `CURVE25519_EDWARDS` or `CURVE25519_RISTRETTO`) are
+  interpreted as points in their respective Edwards or Ristretto representations.
 
 ```rust
 pub const CURVE25519_EDWARDS: u64 = 0;
@@ -138,7 +157,7 @@ For the decompression operations in G1 and G2, we propose adding a dedicated
 syscall for general decompression `sol_curve_decompress`.
 
 ```rust
-define_syscall!(fn sol_curve_pairing_map(
+define_syscall!(fn sol_curve_decompress(
     curve_id: u64,
     point: *const u8,
     result: *mut u8
