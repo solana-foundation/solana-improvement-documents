@@ -200,11 +200,13 @@ participate in an Alpenglow epoch regardless of their stake. Also, only the
 nodes selected by this process will receive votes or certificates from other
 selected validators in real time.
 
-## Security Considerations
-
 Validator operators need to ensure they have enough fund and correct BLS
 public key before end of epoch e-1 to participate in epoch e+1. This poses some
 new operation challenges.
+
+## Security Considerations
+
+N/A
 
 ## Backwards Compatibility
 
