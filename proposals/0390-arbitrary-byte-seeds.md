@@ -96,12 +96,12 @@ Derivation logic and collision resistance are unchanged, and the seed remains
 limited to 32 bytes. Removing UTF-8 validation does not introduce new attack
 vectors because the runtime never required the seed to be human-readable.
 
-## Drawbacks *(Optional)*
+## Drawbacks
 
 Breaking API changes, while somewhat mitigated with clever
 type signatures, are still real.
 
-## Backwards Compatibility *(Optional)*
+## Backwards Compatibility
 
 The serialized instruction format is preserved, so existing transactions remain
 valid. While the feature gate is inactive, the runtime keeps enforcing UTF-8 to
