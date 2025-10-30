@@ -45,8 +45,6 @@ and it adds an optional BLS public key field
 
 - Requiring BLS public key for Alpenglow is specified in [SIMD 357](https://github.com/solana-foundation/solana-improvement-documents/pull/357)
 
-- The BLS verification syscall is specified in [SIMD 388](https://github.com/solana-foundation/solana-improvement-documents/pull/388)
-
 ## New Terminology
 
 - **BLS public key**: The compressed public key used in BLS signatures. It will
@@ -74,10 +72,10 @@ new vote account. The BLS public key is derived from the vote authority keypair
 
 2. Changing vote authority keypair on existing vote account
 
-After VoteStateV4 (SIMD 185) is enabled everywhere, when users use
-vote-authorize-voter-checked to update vote authority keypair, the correct BLS
-public key will be automatically updated in the vote account. The BLS public
-key rotation happens at the same time when a new vote authority switch happens.
+After VoteStateV4 (SIMD 185) is enabled everywhere, when users update the vote
+authority keypair, the correct BLS public key will be automatically updated in
+the vote account. The BLS public key rotation happens at the same time when a
+new vote authority switch happens.
 
 3. Updating missing BLS public key on existing vote account
 
@@ -87,83 +85,77 @@ will use the given vote authority keypair to generate and update the BLS public
 key in the vote account. When everyone has a proper BLS public key in their
 vote accounts this command can be removed.
 
-### New instructions to vote programs
+### Changes to vote program
 
-In the following instructions, there is a proof_of_possession field associated
-with the new BLS public key. Since we need to verify the caller really holds
-the BLS public key claimed, the caller needs to prove possession of the BLS
-keypair to the vote program by signing the BLS public key with the
-corresponding BLS keypair. Then the vote program can do a syscall to actually
-verify the validity of BLS public key. If the verification fails, the
-transaction will fail.
+Whenever a new BLS public key is being updated in the vote account, we need
+to perform BLS verification on its validity, see "Security Considerations"
+for details. We plan to implement this by calling BLS library from the vote
+program, see "Alternatives Considered" for details.
 
 Since BLS verification is expensive (in the order of ~1 millisecond), these
 operations changing BLS public key will need to have correct CU specified to
-succeed (actual numbers to be measured and published later). We will make
-the new instructions added below use different CU consumption amounts, detailed
-numbers will be updated in this SIMD after testing the new syscall.
+succeed (actual numbers to be measured and added to this PR).
 
-We will be adding the following three instructions:
+All of the changes below depend on the launch of VoteStateV4.
+
+#### Disallow change of vote authority by old instructions
+
+After the feature gate associated with this SIMD is activated, the previous
+instructions will be disallowed to change vote authority, they will result
+in transaction error. These include:
 
 ```rust
-pub enum VoteInstruction {
-  InitializeAccountWithBLS(VoteInitWithBLS),
-  AuthorizeCheckedWithBLS(VoteAuthorizeWithBLS),
-  AuthorizeCheckedWithSeedAndBLS(VoteAuthorizeCheckedWithSeedAndBLS)
-}
+InitializeAccount(VoteInit),  // Will be totally forbidden, use InitializeAccountV2
+AuthorizeChecked(VoteAuthorize),  // When VoteAuthorize is VoteAuthorize::Voter
+AuthorizeCheckedWithSeed(VoteAuthorizeWithSeedArgs),  // When authorization_type is VoteAuthorize::Voter
 ```
 
-- InitializeAccountWithBLS(VoteInitWithBLS)
-
-The main difference between this and InitializeAccount is that VoteInitWithBLS
-will contain a new field in addition to the ones in VoteInit:
+#### Add InitializeAccountV2
 
 ```rust
+InitializeAccountV2(VoteInitV2),
+```
 
-/// Size of a BLS signature in a compressed point representation
+```rust
+pub const BLS_PUBLIC_KEY_COMPRESSED_SIZE: usize = 48;
 pub const BLS_SIGNATURE_COMPRESSED_SIZE: usize = 96;
 
-pub struct VoteInitWithBLS {
-    pub node_pubkey: Pubkey,
-    pub authorized_voter: Pubkey,
-    pub authorized_withdrawer: Pubkey,
-    pub commission: u8,
-    pub bls_pubkey_compressed: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
-    // signing bls_pubkey with bls keypair
-    pub proof_of_possession: pub  [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+pub struct VoteInitV2 {
+  pub note_pubkey: Pubkey,
+  pub authorized_voter: Pubkey,
+  pub authorized_voter_bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+  pub authorized_voter_bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+  pub authorized_withdrawer: Pubkey,
+  pub inflation_rewards_commission_bps: u16,
+  pub inflation_rewards_collector: Pubkey,
+  pub block_revenue_commission_bps: u16,
+  pub block_revenue_collector: Pubkey,
 }
 ```
 
-In addition to the original checks, it also checks that proof of possession is
-correctly signed.
+Upon receiving the transaction, the vote program will perform a BLS
+verification on submitted BLS public key and associated proof of
+possession. The transaction will fail if the verification failed.
+Otherwise the new vote account is created with given parameters.
 
-- AuthorizeCheckedWithBLS(VoteAuthorizeWithBLS)
-
-Changing the vote authority public key and BLS public key for existing vote
-account without using seed: (we can also use it to add BLS public key to
-existing vote account, just check vote authority public key didn’t change)
+#### Add new variant of VoteAuthorize
 
 ```rust
-pub enum VoteAuthorizeWithBLS {
-    Voter(bls_pubkey_compressed, proof_of_possession),
+pub enum VoteAuthorize {
+    Voter,
     Withdrawer,
+    VoterWithBLS(
+      [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],  // BLS public key
+      [u8; BLS_SIGNATURE_COMPRESSED_SIZE],   // BLS Proof of Posession
+    ),
 }
 ```
 
-- AuthorizeCheckedWithSeedAndBLS(VoteAuthorizeCheckedWithSeedAndBLS)
-
-Changing the vote authority public key and BLS public key for existing vote
-account using seed: (we can also use it to add BLS public key to existing vote
-account, just check vote authority public key didn’t change)
-
-```rust
-pub struct VoteAuthorizeCheckedWithSeedAndBLS {
-    pub authorization_type: VoteAuthorizeWithBLS,
-    pub current_authority_derived_key_owner: Pubkey,
-    pub current_authority_derived_key_seed: String,
-    pub new_authority: Pubkey,
-}
-```
+We only allow the new variant in AuthorizeCheck instruction. Upon receiving the
+AuthorizeCheck transaction, if the parameter is of the new variant, the vote
+program will perform a BLS verification on submitted BLS public key and
+associated proof of possession. The transaction will fail if the verification
+failed. Otherwise the vote authority change will be recorded in vote account.
 
 ## Impact
 
@@ -186,6 +178,24 @@ though not all honest parties actually signed.
 
 ## Alternatives Considered
 
-We could randomly generate a new BLS keypair, it does mean users need to
-separately maintain another different format of keypair. So we are deriving
-the BLS keypair from the existing ed25519 keypair.
+### Moving BLS verification to a syscall and/or a different program
+
+The benefit of this approach is conceptually cleaner because vote program
+does not need to know about any BLS operation, also the BLS syscall and/or
+program can be generally used outside the vote program as well.
+
+However, before Alpenglow launches, we still want to keep the vote program
+native because it needs to process a lot of vote transactions. Performing
+a syscall from a native program adds quite some complexity. Also because it
+is a new syscall, we might need to frequently adjust the interface based on
+our findings.
+
+Therefore, the current plan is to perform these steps:
+
+1. Directly call the BLS library from the native vote program for the necessary
+BLS verification operations.
+
+2. Launch Alpenglow.
+
+3. After Alpenglow launches, add BLS syscall and/or program and move vote
+program to BPF.
