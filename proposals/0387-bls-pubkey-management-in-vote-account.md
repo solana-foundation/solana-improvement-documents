@@ -105,9 +105,12 @@ instructions will be disallowed to change vote authority, they will result
 in transaction error. These include:
 
 ```rust
-InitializeAccount(VoteInit),  // Will be totally forbidden, use InitializeAccountV2
-AuthorizeChecked(VoteAuthorize),  // When VoteAuthorize is VoteAuthorize::Voter
-AuthorizeCheckedWithSeed(VoteAuthorizeWithSeedArgs),  // When authorization_type is VoteAuthorize::Voter
+// Will be totally forbidden, use InitializeAccountV2
+InitializeAccount(VoteInit),
+// Forbidden when VoteAuthorize is VoteAuthorize::Voter
+AuthorizeChecked(VoteAuthorize),
+// Forbidden when authorization_type is VoteAuthorize::Voter
+AuthorizeCheckedWithSeed(VoteAuthorizeWithSeedArgs),
 ```
 
 #### Add InitializeAccountV2
