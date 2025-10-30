@@ -151,11 +151,12 @@ pub enum VoteAuthorize {
 }
 ```
 
-We only allow the new variant in AuthorizeCheck instruction. Upon receiving the
-AuthorizeCheck transaction, if the parameter is of the new variant, the vote
-program will perform a BLS verification on submitted BLS public key and
-associated proof of possession. The transaction will fail if the verification
-failed. Otherwise the vote authority change will be recorded in vote account.
+We only allow the new variant in AuthorizeCheck instruction. Calling the new
+variant in any other instruction will fail. Upon receiving the AuthorizeCheck
+transaction, if the parameter is of the new variant, the vote program will
+perform a BLS verification on submitted BLS public key and associated proof of
+possession. The transaction will fail if the verification failed. Otherwise the
+vote authority change will be recorded in vote account.
 
 ## Impact
 
