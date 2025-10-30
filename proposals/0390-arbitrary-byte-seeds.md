@@ -6,11 +6,7 @@ authors:
 category: Standard
 type: Core
 status: Idea
-created: 2025-10-28
-feature:
-supersedes:
-superseded-by:
-extends:
+created: 2025-10-30
 ---
 
 ## Summary
@@ -78,8 +74,8 @@ continue to reject non-UTF-8 seeds.
 ## Alternatives Considered
 
 - **Add parallel byte-oriented APIs:** Introducing `*_with_seed_bytes`
-  variants would retain the old string interfaces, but increases API surface area and preserves a "wrong way to do it". It also keeps the unwanted validation on
-  the original functions, meaning transactions must opt in to gain the benefit.
+  variants would retain the old string interfaces, but would increase API surface area and preserve a "wrong way to do it". It would also keep the unwanted validation on
+  the original functions, meaning transactions would have to opt in to gain the benefit.
 ## Impact
 
 - **Program developers:** Client-side code that already handled UTF-8 continues to
@@ -99,9 +95,7 @@ vectors because the runtime never required the seed to be human-readable.
 
 ## Drawbacks *(Optional)*
 
-Breaking API changes require downstream projects to recompile and adjust any
-custom wrappers that assumed string inputs. Providing ergonomic shims and clear
-migration guidance mitigates that cost.
+Breaking API changes, while somewhat mitigated with clever type signatures, are still real.
 
 ## Backwards Compatibility *(Optional)*
 
@@ -109,5 +103,4 @@ The serialized instruction format is preserved, so existing transactions remain
 valid. While the feature gate is inactive, the runtime keeps enforcing UTF-8 to
 match legacy nodes. Once the feature activates, validators must run versions
 that understand the new rules, otherwise they will reject transactions with
-non-UTF-8 seeds. The change is source-incompatible for applications but
-binary-compatible on the wire.
+non-UTF-8 seeds.
