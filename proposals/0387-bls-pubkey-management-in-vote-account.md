@@ -49,8 +49,8 @@ and it adds an optional BLS public key field
 
 ## New Terminology
 
-- **BLS public key**: The public key used in BLS signatures. It will be
-stored as a 48 bytes vector in vote account.
+- **BLS public key**: The compressed public key used in BLS signatures. It will
+be stored as a 48 bytes vector in vote account.
 
 ## Detailed Design
 
