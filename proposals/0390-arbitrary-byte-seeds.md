@@ -74,8 +74,11 @@ continue to reject non-UTF-8 seeds.
 ## Alternatives Considered
 
 - **Add parallel byte-oriented APIs:** Introducing `*_with_seed_bytes`
-  variants would retain the old string interfaces, but would increase API surface area and preserve a "wrong way to do it". It would also keep the unwanted validation on
-  the original functions, meaning transactions would have to opt in to gain the benefit.
+  variants would retain the old string interfaces, but would increase
+  API surface area and preserve a "wrong way to do it".
+  It would also keep the unwanted validation on the original functions,
+  meaning transactions would have to opt in to gain the benefit.
+
 ## Impact
 
 - **Program developers:** Client-side code that already handled UTF-8 continues to
@@ -95,7 +98,8 @@ vectors because the runtime never required the seed to be human-readable.
 
 ## Drawbacks *(Optional)*
 
-Breaking API changes, while somewhat mitigated with clever type signatures, are still real.
+Breaking API changes, while somewhat mitigated with clever
+type signatures, are still real.
 
 ## Backwards Compatibility *(Optional)*
 
