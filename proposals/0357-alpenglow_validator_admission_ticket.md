@@ -204,6 +204,12 @@ Validator operators need to ensure they have enough fund and correct BLS
 public key before end of epoch e-1 to participate in epoch e+1. This poses some
 new operation challenges.
 
+We are requiring correct setup of vote accounts at end of epoch e-1 for
+inclusion in epoch e+1 because of the following reason: We want to be
+absolutely sure that we have a finalized state before we enter epoch e+1.
+Specifically, if the last slots of epoch e-1 are not finalized at the end
+of the epoch, we have enough slots in epoch e to finalize epoch e-1's state.
+
 ## Security Considerations
 
 N/A
