@@ -1,6 +1,6 @@
 ---
 simd: '0390'
-title: Allow Arbitrary-Byte Seeds for Seeded Address Derivation
+title: Arbitrary-Byte Seeds for Seeded Addresses
 authors:
   - Kevin Heavey
 category: Standard
