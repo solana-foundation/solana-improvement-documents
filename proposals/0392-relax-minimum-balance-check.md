@@ -98,20 +98,25 @@ size:
 ### Edge cases
 
 **Account creation:**
+
 - Pre-execution: `pre_exec_balance = 0`
 - Post-execution: only `calculate_min_balance(post_exec_size)` is enforced
 - No change to existing behavior
 
 **Account closure:**
+
 - No change to existing behavior
 
 **Size increase (reallocation upward):**
+
 - No change to existing behavior
 
 **Size decrease (reallocation downward):**
+
 - No change to existing behavior
 
 **No size change:**
+
 - `post_exec_size == pre_exec_size`
 - The `min()` clause applies: `min_balance = min(calculate_min_balance(size),
   pre_exec_balance)`
