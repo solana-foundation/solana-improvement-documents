@@ -45,7 +45,7 @@ so using a regular on-chain transaction that will pass through the normal
 transaction pipeline. This transaction must contain a BLS Proof of Possession
 (PoP) to validate ownership of the BLS public key. This PoP is a cryptographic
 proof that is crucial to prevent a "rogue-key-attack", where a malicious
-validator could try to register a a key that is an algebraic combination of
+validator could try to register a key that is an algebraic combination of
 their own key and a victim's key. This would allow the attacker to forge
 aggregate signatures that appear to come from the entire group, even without the
 victim's participation.
@@ -81,6 +81,38 @@ applications, for example, Groth16 proof verifier on BLS12-381 and BLS signature
 or Proof of Possession (PoP) verifier. Additional operations are needed to
 support more advanced ZK or cryptography applications, but these are outside the
 scope of this SIMD.
+
+### Specification and Endianness (LE vs. BE)
+
+For the curve definition, the
+[IETF draft](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-11.html#name-bls-curves-for-the-128-bit-)
+should be used as reference. For the encoding, the
+[Zcash](https://github.com/zkcrypto/pairing/blob/34aa52b0f7bef705917252ea63e5a13fa01af551/src/bls12_381/README.md#serialization)
+specification should be used. We note that the Zcash specification defines a
+canonical big-endian (BE) encoding. To add the most flexibility, we also define
+a parallel little-endian (LE) variants.
+
+Our LE variants mirror the Zcash standard in structure, with the only change
+being the byte-ordering of the base field (Fq) elements themselves:
+
+1. Fq Elements: A 381-bit field element is encoded in 48 bytes.
+   - `_BE` variants expect this 48-byte array in big-endian.
+   - `_LE` variants expect this 48-byte array in little-endian.
+
+2. Fq^2 Element Ordering: An Fq2 element `(c0 + c1 * u)` is encoded as 96 bytes.
+   The standard's structural ordering is preserved: the 48-byte encoding of the
+   `c1` component (imaginary) comes first, followed by the 48-byte encoding of
+   the `c0` component (real). Each 48-byte component respects the `_LE` or `_BE`
+   flag.
+
+3. Compressed Point Control Bits: For compressed representations (used by
+   `sol_curve_decompress`), the Zcash standard uses the 3 most-significant-bits
+   of the entire byte string (e.g., the first bits of the 48-byte G1 array) for
+   flags (compression, infinity, and sign). This convention is retained for both
+   BE and LE variants to ensure a consistent encoding structure. The syscall
+   will always read these flags from the same most-significant bits of the byte
+   array, while the remaining bits will be interpreted as the field element
+   according to the specified endianness.
 
 ### Addition and Scalar Multiplication on G1
 
@@ -126,9 +158,9 @@ pub const SUB: u64 = 1;
 pub const MUL: u64 = 2;
 ```
 
-The `BLS12_381_G1` and `BLS12_381_G2` constants will be used for group
-operations and decompression on the respective groups. The `BLS12_381` constant
-will be used for the pairing operations which involves both.
+The `BLS12-381` constant will be used for the pairing operation.
+The `BLS12_381_G1` constant will be used for group operations and decompression.
+The `BLS12_381_G2` constant will be used for decompression.
 
 ### Pairing Operation
 
@@ -145,22 +177,44 @@ define_syscall!(fn sol_curve_pairing_map(
 
 This function is not actually instantiated at the moment. We propose updating
 this function's signature to take in an array of points in G1 and an array of
-pointst in G2 to support batch pairings.
+points in G2 to support batch pairings.
 
 ```rust
 define_syscall!(fn sol_curve_pairing_map(
     curve_id: u64,
     g1_points: *const u8,
+    g1_points_len: u64,
     g2_points: *const u8,
+    g2_points_len: u64,
     result: *mut u8
 ) -> u64);
 ```
+
+The `g1_points_len` and `g2_points_len` parameters specify the total byte-length
+of the G1 and G2 input arrays, respectively. The syscall must perform the
+following validation checks on these lengths before attempting the pairing:
+
+1. G1 Length Check: The `g1_points_len` must be a multiple of 96 (the byte-size
+   of an uncompressed affine G1 point).
+2. G2 Length Check: The `g2_points_len` must be a multiple of 192 (the byte-size
+   of an uncompressed affine G2 point).
+3. Pair Count Check: The number of pairs calculated from each array must be
+   equal.
+   - `num_g1 = g1_points_len / 96`
+   - `num_g2 = g2_points_len / 192`
+   - The syscall must verify that `num_g1 == num_g2`
+
+If any of these checks fail, the syscall must return an error. This ensures data
+is correctly formed and that there is a one-to-one correspondence for every
+point in the pairing.
 
 The function would interpret `g1_points` as an array of BLS12-381 points in G1
 `[P1, ..., Pn]` and `g2_points` as an array of BLS12-381 points in G2
 `[Q1, ..., Qn]`. Both inputs are interpreted as affine representations
 encoded in either little-endian or big-endian depending on the curve id. It
 should then compute the pairing product `e(P1, Q1) * ... * e(Pn, Qn)`.
+The result of the syscall will be the actual target group element from the
+product of pairings.
 
 ### Decompression Operations in G1 and G2
 
@@ -179,6 +233,19 @@ This function will take in a curve id and a point that is represented in its
 compressed representation (encoded in little-endian or big-endian). It will
 decompress the compressed point into an affine representation and write the
 result.
+
+This function must perform a full point validation as specified in the
+[Zcash](https://github.com/zkcrypto/pairing/blob/34aa52b0f7bef705917252ea63e5a13fa01af551/src/bls12_381/README.md#serialization)
+specification. For the operation to succeed, the input bytes must pass all of
+the following checks:
+
+1. Format Check: The control bits (compression, infinity, and sign) in the
+   most-significant bits are valid as per the Zcash standard.
+2. Field Check: The `x`-coordinate is a valid field element (i.e., less than the
+   modulus `p`).
+3. On-Curve Check: The point satisfies the curve equation.
+4. Subgroup Check: The resulting point is in the correct prime-order subgroup
+   `r`.
 
 ## Alternatives Considered
 
