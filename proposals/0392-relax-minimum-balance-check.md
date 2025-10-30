@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0392'
 title: Relax Post-Execution Minimum Balance Check
 authors:
   - Igor Durovic (anza)
