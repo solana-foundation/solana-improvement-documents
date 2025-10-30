@@ -17,8 +17,8 @@ extends:
 
 Replace the fixed minimum balance constant with a dynamic `min_deposit` per-byte
 rate adjusted every slot by a PI controller targeting 1 GB/epoch state growth.
-A 10% burn on allocations discourages churn. Requires account versioning to
-track cumulative deposits in account metadata.
+Balance checks enforce that accounts maintain the rent price from their creation
+time unless reallocated.
 
 ## Motivation
 
@@ -36,9 +36,9 @@ predictable.
   allocate account data. Determined dynamically by the PI controller and updated
   every slot. Used to compute the deposit required for new allocations.
 - `min_balance`: The minimum account balance required to pass runtime validity
-  checks. Set to `0.9 * min_deposit * data_size`, allowing accounts to pass
-  balance checks when only 90% of the deposit is transferred to the account
-  (with 10% burned at allocation time).
+  checks. Derived from the lesser of the account's current balance (preserving
+  the rent price at creation) or the current `min_deposit * data_size` (adopting
+  the new price after reallocation).
 
 ## Detailed Design
 
@@ -51,17 +51,10 @@ predictable.
   state growth rate of 1 GB per epoch.
 - The absolute `min_deposit` value is clamped to remain between 0.1x and 1.0x
   of the legacy `min_balance_legacy` constant.
-- For validity checks, `min_balance = 0.9 * min_deposit * data_size`. This
-  allows the 10% burn to occur at allocation time while still passing balance
-  checks.
 - When an account is allocated (either newly created or data size increased),
-  the funder pays `min_deposit * new_bytes`. At allocation time, 10% is burned
-  (removed from cluster capitalization) and 90% is deposited to the account.
-- Ephemeral accounts (opened and closed within the same transaction) still incur
-  the 10% burn cost.
-- Cumulative `min_deposit` paid over an account's lifetime is recorded in the
-  account's metadata and included in the accounts lattice hash (LTHash) input.
-  Any metadata change implies an LTHash update.
+  the funder pays `min_deposit * new_bytes` which is deposited to the account.
+- Balance checks ensure accounts never dip below the rent price paid at their
+  creation time, unless reallocated (which adopts the current rent price).
 
 ### PI controller
 
@@ -111,9 +104,9 @@ min_deposit_next = clamp(
 where `min_balance_legacy` is the fixed minimum balance constant used prior to
 this feature activation.
 
-### Allocation and deallocation
+### Allocation and balance checks
 
-**Upward reallocation (growth):**
+**Account creation and upward reallocation:**
 
 For any instruction that allocates account data (including system create,
 allocate, reallocate upward):
@@ -123,72 +116,50 @@ allocate, reallocate upward):
    
    ```
    incremental_deposit = min_deposit * new_bytes
-   burn_amount = incremental_deposit * 0.10
-   net_deposit = incremental_deposit - burn_amount
    ```
 
-2. **Transfer and burn:** Transfer `net_deposit` lamports from funder to the
-   account. Burn `burn_amount` (removed from cluster capitalization; never
-   enters any account balance).
+2. **Transfer:** Transfer `incremental_deposit` lamports from funder to the
+   account.
    
-   Update metadata:
-   
-   ```
-   account.min_deposit_lamports += incremental_deposit
-   ```
+3. **Mark reallocation:** Flag the account as having been reallocated in this
+   transaction (for post-execution checks).
 
-3. **Validity checks (post-execution):** Check that account balance satisfies:
-   
-   ```
-   account.lamports >= min_balance
-   where min_balance = 0.9 * account.min_deposit_lamports
-   ```
-   
-   This check passes because `net_deposit = 0.9 * incremental_deposit` was
-   transferred in step 2.
+**Downward reallocation:**
 
-**Ephemeral account cost:**
+- No lamports are refunded to the fee payer when shrinking.
+- Mark the account as having been reallocated in this transaction.
 
-Accounts that are allocated and deallocated within the same transaction still
-incur the 10% burn cost at allocation time. This is necessary because tracking
-whether an account was created in the current transaction to conditionally apply
-the burn adds significant implementation complexity. The burn acts as a fee for
-state growth, even if temporary.
+**Balance checks (pre-execution and post-execution):**
 
-Ephemeral accounts are important for many use-cases so it may be worthwhile to
-provide a separate burn-free allocation path for them.
+Before and after each transaction, validate account balance:
 
-**Downward reallocation (shrinking):**
+```
+min_balance = if account.was_reallocated_in_tx {
+    // Adopt current rent price
+    min_deposit * account.data_size
+} else {
+    // Preserve rent price from creation; never force adoption of new price
+    min(min_deposit * account.data_size, account.lamports)
+}
 
-- When an account's data size is reduced, the tracked `min_deposit_lamports` is
-  reduced proportionally to the size reduction:
-  
-  ```
-  bytes_removed = old_size - new_size
-  reduction = account.min_deposit_lamports * (bytes_removed / old_size)
-  account.min_deposit_lamports -= reduction
-  ```
-  
-- No lamports are burned on downward reallocation.
-- No lamports are refunded to the fee payer (previously burned amounts remain
-  burned).
+assert(account.lamports >= min_balance)
+```
 
-### Account metadata and hashing
+**Rationale:**
 
-- Extend account metadata to include `min_deposit_lamports`, the cumulative
-  `min_deposit` paid over all allocations for the account's data. This value
-  increases when data size grows and decreases proportionally when data size
-  shrinks.
-- This extension requires **account versioning** to safely add new fields to the
-  account structure without breaking existing snapshots or tooling.
-- For accounts created before feature activation, `min_deposit_lamports` is
-  initialized to `min_balance_legacy * account_data_size` on first access after
-  activation (e.g., during snapshot load or first reallocation).
-- Any change to this field updates the account's lattice hash input; therefore,
-  LTHash calculations MUST be updated to incorporate the new field
-  deterministically.
-- This metadata is runtime-only and not exposed to on-chain program ABIs beyond
-  its impact on hashing and rent/creation rules.
+The inductive proof: If an account is created with balance satisfying the
+current rent price (enforced at creation), it can never dip below that price
+unless explicitly reallocated. Reallocation adopts the new current rent price.
+This avoids tracking per-account metadata while still enforcing rent-like
+invariants.
+
+
+### Pre-activation account handling
+
+Accounts created before feature activation are treated as if they have always
+satisfied the rent price at creation. The `min` operator in the balance check
+ensures these accounts are never forced to adopt a higher rent price unless
+explicitly reallocated.
 
 ### Sysvar exposure
 
@@ -214,7 +185,6 @@ pub struct MinDeposit {
 - New constants:
   - `G_target = 1 GiB/epoch`
   - `Kp`, `Ki` controller gains
-  - `burn_ratio = 10%`
   - `min_deposit_lower_bound = 0.1 * min_balance_legacy`
   - `min_deposit_upper_bound = 1.0 * min_balance_legacy`
 
@@ -238,34 +208,28 @@ pub struct MinDeposit {
 - Validators: Minor overhead to track controller state (integral accumulator `I`,
   state growth measurements) and measure state growth per slot; predictable
   bounds via clamps. Fork-aware state management required.
-- Core contributors: Runtime changes to account allocation flows, allocation-time
-  burn accounting, account versioning for metadata schema extension, LTHash
-  inclusion, new sysvar.
+- Core contributors: Runtime changes to account allocation flows, modified
+  balance check logic with reallocation tracking, new sysvar.
 
 ## Security Considerations
 
 - Controller stability: Gains MUST be selected to avoid oscillation; clamps
   provide guardrails. Per-slot updates provide fine-grained reactivity.
 - Manipulation risk: Attempts to game measured growth by bursty allocations are
-  countered by the burn and proportional response; integral term prevents
-  sustained deviation.
+  countered by the proportional response; integral term prevents sustained
+  deviation.
 - Determinism: Controller updates MUST be deterministic across validators given
   identical inputs. Fork-aware state tracking ensures consistency.
-- Burn timing: The burn occurs at allocation time (before validity checks),
-  ensuring the account receives exactly 90% of the computed deposit. Validity
-  checks use `min_balance = 0.9 * min_deposit_lamports` to match this.
-- Ephemeral account impact: Accounts created and closed within the same
-  transaction incur the 10% burn cost. This is an intentional tradeoff to avoid
-  implementation complexity of tracking intra-transaction account lifecycles.
-  It may be worthwhile to provide an alternative creation path specifically for
-  ephemeral accounts.
+- Balance preservation: The balance check mechanism ensures accounts can never be
+  forced to adopt a higher rent price unless explicitly reallocated, protecting
+  existing accounts from retroactive rent increases.
 
 ## Backwards Compatibility *(Optional)*
 
-- Requires account versioning to extend the account metadata structure with
-  `min_deposit_lamports` field.
-- New sysvar and syscall are additions; existing programs unaffected.
-- The shift from fixed `min_balance` to dynamic `min_deposit` with 0.9x factor
-  for balance checks is a breaking change to account validity semantics, gated
-  behind feature activation.
+- New sysvar is an addition; existing programs unaffected.
+- The shift from fixed `min_balance` to dynamic `min_deposit` with balance-based
+  checks is a breaking change to account validity semantics, gated behind feature
+  activation.
+- No account metadata changes required; backwards compatible with existing account
+  structures and snapshots.
 
