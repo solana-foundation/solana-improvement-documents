@@ -156,14 +156,27 @@ must implement the behavior described below for each one of them.
 The following opcodes must be allowed in the verifier for a sBPFv3 program and 
 the following behavior must occur in the virtual machine.
 
-- `SMOD64_IMM` -> opcode = `0x97` -> `dst = dst as i64 % imm as i64`
-- `SMOD64_REG` -> opcode = `0x9f` -> `dst = dst as i64 % src as i64`
-- `SMOD32_IMM` -> opcode = `0x94` -> `dst = dst as i32 % imm as i32`
-- `SMOD32_REG` -> opcode = `0x9c` -> `dst = dst as i32 % src as i32`
-- `SDIV64_IMM` -> opcode = `0x37` -> `dst = dst as i64 / imm as i64`
-- `SDIV64_REG` -> opcode = `0x3f` -> `dst = dst as i64 / src as i64`
-- `SDIV32_IMM` -> opcode = `0x34` -> `dst = dst as i32 / imm as i32`
-- `SDIV32_REG` -> opcode = `0x3c` -> `dst = dst as i32 / src as i32`
+- `SMOD64_IMM` -> opcode = `0x97`, offset = `1` -> 
+                                    `dst = dst as i64 % imm as i64`
+- `SMOD64_REG` -> opcode = `0x9f`, offset = `1` -> 
+                                    `dst = dst as i64 % src as i64`
+- `SMOD32_IMM` -> opcode = `0x94`, offset = `1` -> 
+                                    `dst = dst as i32 % imm as i32`
+- `SMOD32_REG` -> opcode = `0x9c`, offset = `1` -> 
+                                    `dst = dst as i32 % src as i32`
+- `SDIV64_IMM` -> opcode = `0x37`, offset = `1` -> 
+                                    `dst = dst as i64 / imm as i64`
+- `SDIV64_REG` -> opcode = `0x3f`, offset = `1` -> 
+                                    `dst = dst as i64 / src as i64`
+- `SDIV32_IMM` -> opcode = `0x34`, offset = `1` -> 
+                                    `dst = dst as i32 / imm as i32`
+- `SDIV32_REG` -> opcode = `0x3c`, offset = `1` -> 
+                                    `dst = dst as i32 / src as i32`
+
+It is worth mentioning that `sdiv` and `smod` have the same opcodes as the 
+existing `mod` and `div` instructions. The difference between them is the 
+offset field. While `mod` and `div` contain offset = `0`, `smod` and `sdiv` 
+use offset = `1`.
 
 ### Sign extended mov and sign extended load
 
