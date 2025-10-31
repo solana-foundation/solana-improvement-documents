@@ -15,9 +15,11 @@ This proposal introduces a new family of syscalls to provide native support for
 cryptographic operations on the BLS12-381 elliptic curve. These syscalls will
 expose:
 
-1. The addition, subtraction (negation) and scalar multiplication in G1 and G2
-2. The pairing operation
-3. The decompression operations in G1 and G2
+1. **Group operations** (addition, subtraction/negation, and scalar multiplication)
+   in G1 and G2
+2. **Point validation** in G1 and G2
+3. **Pairing operation**
+4. **Decompression operations** in G1 and G2
 
 Poseidon hash support is outside the scope of this SIMD.
 
@@ -74,9 +76,11 @@ for BLS12-381, a standard BPF program can efficiently verify these PoPs.
 
 We propose the addition of the following operations on BLS12-381 as syscalls:
 
-1. The addition, subtraction (negation) and scalar multiplication in G1 and G2
-2. The pairing operation
-3. The decompression operations in G1 and G2
+1. **Group operations** (addition, subtraction/negation, and scalar multiplication)
+   in G1 and G2
+2. **Point validation** in G1 and G2
+3. **Pairing operation**
+4. **Decompression operations** in G1 and G2
 
 These operations are sufficient to enable standard pairing-based cryptography
 applications, for example, Groth16 proof verifier on BLS12-381 and BLS signature
@@ -116,26 +120,12 @@ being the byte-ordering of the base field (Fq) elements themselves:
    array, while the remaining bits will be interpreted as the field element
    according to the specified endianness.
 
-### Addition and Scalar Multiplication on G1 and G2
+### New Curve ID Constants
 
-There is already a dedicated `sol_curve_group_op` syscall function for general
-elliptic curve group operations. This function takes in a `curve_id`, `group_op`,
-and two scalar/points that are encoded in little-endian. It interprets the
-curve points according to the curve id, and applies the group operations
-specified by the `group_op`. Currently, the syscall supports the curve25519
-edwards and ristretto representations.
-
-This function can be extended to support the addition, subtraction, and scalar
-multiplication in BLS12-381 G1 and G2. We propose adding new `curve_id` constants
-for BLS12-381. The syscall will interpret inputs differently based on the
-`curve_id`:
-
-- BLS12-381 inputs (using `BLS12_381_G1_{BE,LE}`, `BLS12_381_G2_{BE,LE}`)
-  will be interpreted as points in affine representation in either little-endian
-  or big-endian.
-- Curve25519 inputs (using `CURVE25519_EDWARDS` or `CURVE25519_RISTRETTO`) are
-  interpreted as points in their respective Edwards or Ristretto representations
-  in compressed little-endian representations.
+We propose using new `curve_id` constants for BLS12-381. These IDs will be used
+across across the new and extended syscalls (`sol_curve_group_op`,
+`sol_curve_validate_point`, `sol_curve_pairing_map`, and `sol_curve_decompress`)
+to specify the curve and endianness.
 
 ```rust
 pub const CURVE25519_EDWARDS: u64 = 0;
@@ -155,15 +145,85 @@ pub const BLS12_381_G1_LE: u64 = 5;
 pub const BLS12_381_G1_BE: u64 = 5 | 0x80;
 pub const BLS12_381_G2_LE: u64 = 6;
 pub const BLS12_381_G2_BE: u64 = 6 | 0x80;
+```
 
+The `BLS12-381_{LE,BE}` constants will be used for the pairing operation.
+The `BLS12_381_G1_{LE,BE}` and `BLS12_381_G2_{LE,BE}` constants will be used for
+group operations and decompression.
+
+### Addition and Scalar Multiplication on G1 and G2
+
+There is already a dedicated `sol_curve_group_op` syscall function for general
+elliptic curve group operations. This function takes in a `curve_id`, `group_op`,
+and two scalar/points that are encoded in little-endian. It interprets the
+curve points according to the curve id, and applies the group operations
+specified by the `group_op`. Currently, the syscall supports the curve25519
+edwards and ristretto representations.
+
+This function can be extended to support the addition, subtraction, and scalar
+multiplication in BLS12-381 G1 and G2. The syscall will use the newly defined
+`BLS12_381_G1_{BE,LE}` and `BLS12_381_G2_{BE,LE}` curve IDs. The syscall will
+interpret inputs differently based on the `curve_id`:
+
+- BLS12-381 inputs (using `BLS12_381_G1_{BE,LE}`, `BLS12_381_G2_{BE,LE}`)
+  will be interpreted as points in affine representation in either little-endian
+  or big-endian.
+- Curve25519 inputs (using `CURVE25519_EDWARDS` or `CURVE25519_RISTRETTO`) are
+  interpreted as points in their respective Edwards or Ristretto representations
+  in compressed little-endian representations.
+
+For clarity, the `group_op` parameter uses the following existing constants,
+which will now also apply to the BLS12-381 curve IDs:
+
+```rust
 pub const ADD: u64 = 0;
 pub const SUB: u64 = 1;
 pub const MUL: u64 = 2;
 ```
 
-The `BLS12-381` constant will be used for the pairing operation.
-The `BLS12_381_G1` and `BLS12_381_G2` constants will be used for group operations
-and decompression.
+### Point Validation in G1 and G2
+
+There is an existing definition for a `sol_curve_validate_point` syscall
+function for point validation, which currently supports Curve25519 Edwards and
+Ristretto points. We propose extending this syscall to also support validation
+for BLS12-381 G1 and G2 points.
+
+```rust
+define_syscall!(fn sol_curve_validate_point(
+    curve_id: u64,
+    point_addr: *const u8,
+    result: *mut u8
+) -> u64)
+```
+
+When called with `BLS12_381_G1_{LE,BE}` or `BLS12_381_G2_{LE,BE}` curve IDs,
+this function will perform a full validation on the input point, which is
+interpreted as an uncompressed affine point (96 bytes for G1, 192 bytes
+for G2). The endianness flag (`_LE` or `_BE`) dictates how the underlying
+field elements are read.
+
+For the operation to succeed (return 0), the input bytes must pass all of the
+following checks:
+
+1. Field Check: The coordinate(s) are valid field elements (i.e., less than the
+   modulus `p`).
+2. On-Curve Check: The point satisfies the curve equation.
+3. Subgroup Check: The point is in the correct prime-order subgroup `r`.
+
+This syscall is specifically for uncompressed affine points. To validate a
+compressed point, programs can use the `sol_curve_decompress` syscall, which
+performs identical validation checks as part of its decompression process.
+
+While it is possible to validate an uncompressed affine poinnt `(x, y)` by using
+the `sol_curve_decompress` function (e.g., by manually setting the control bits
+based on `y` and feeding the `x` coordinate to the decompressor, then comparing
+the result `y'` with `y`), this approach is inefficient. It would require the
+syscall to perform a costly square root operation to find `y'`.
+
+The `sol_curve_validate_point` syscall is more efficient as it can directly
+check the curve equation and perform the subgroup check without computing a
+square root, making it a cheaper, dedicated operation for on-chain programs that
+only need to validate existing affine points.
 
 ### Pairing Operation
 
