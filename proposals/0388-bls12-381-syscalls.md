@@ -15,12 +15,11 @@ This proposal introduces a new family of syscalls to provide native support for
 cryptographic operations on the BLS12-381 elliptic curve. These syscalls will
 expose:
 
-1. The addition, subtraction (negation) and scalar multiplication in G1
+1. The addition, subtraction (negation) and scalar multiplication in G1 and G2
 2. The pairing operation
 3. The decompression operations in G1 and G2
 
-Group operations on G2 and Poseidon hash support is outside the scope of this
-SIMD for now.
+Poseidon hash support is outside the scope of this SIMD.
 
 ## Motivation
 
@@ -50,8 +49,11 @@ their own key and a victim's key. This would allow the attacker to forge
 aggregate signatures that appear to come from the entire group, even without the
 victim's participation.
 
-By introducing syscalls for BLS12-381, a standard BPF program can efficiently
-verify these Proofs-of-Possessions.
+Initially, the vote program will natively execute PoP verification (see
+[SIMD-0387](https://github.com/solana-foundation/solana-improvement-documents/pull/387)).
+However, when the vote program eventually transitions to BPF, it will require a
+way to efficiently verify PoP inside a BPF program. By introducing syscalls
+for BLS12-381, a standard BPF program can efficiently verify these PoPs.
 
 ## New Terminology
 
@@ -72,7 +74,7 @@ verify these Proofs-of-Possessions.
 
 We propose the addition of the following operations on BLS12-381 as syscalls:
 
-1. The addition, subtraction (negation) and scalar multiplication in G1
+1. The addition, subtraction (negation) and scalar multiplication in G1 and G2
 2. The pairing operation
 3. The decompression operations in G1 and G2
 
@@ -82,7 +84,7 @@ or Proof of Possession (PoP) verifier. Additional operations are needed to
 support more advanced ZK or cryptography applications, but these are outside the
 scope of this SIMD.
 
-### Specification and Endianness (LE vs. BE)
+### Curve Specification and Endianness (LE vs. BE)
 
 For the curve definition, the
 [IETF draft](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-11.html#name-bls-curves-for-the-128-bit-)
@@ -90,7 +92,7 @@ should be used as reference. For the encoding, the
 [Zcash](https://github.com/zkcrypto/pairing/blob/34aa52b0f7bef705917252ea63e5a13fa01af551/src/bls12_381/README.md#serialization)
 specification should be used. We note that the Zcash specification defines a
 canonical big-endian (BE) encoding. To add the most flexibility, we also define
-a parallel little-endian (LE) variants.
+parallel little-endian (LE) variants.
 
 Our LE variants mirror the Zcash standard in structure, with the only change
 being the byte-ordering of the base field (Fq) elements themselves:
@@ -114,7 +116,7 @@ being the byte-ordering of the base field (Fq) elements themselves:
    array, while the remaining bits will be interpreted as the field element
    according to the specified endianness.
 
-### Addition and Scalar Multiplication on G1
+### Addition and Scalar Multiplication on G1 and G2
 
 There is already a dedicated `sol_curve_group_op` syscall function for general
 elliptic curve group operations. This function takes in a `curve_id`, `group_op`,
@@ -124,12 +126,13 @@ specified by the `group_op`. Currently, the syscall supports the curve25519
 edwards and ristretto representations.
 
 This function can be extended to support the addition, subtraction, and scalar
-multiplication in BLS12-381 G1. We propose adding new `curve_id` constants for
-BLS12-381. The syscall will interpret inputs differently based on the
+multiplication in BLS12-381 G1 and G2. We propose adding new `curve_id` constants
+for BLS12-381. The syscall will interpret inputs differently based on the
 `curve_id`:
 
-- BLS12-381 inputs (using `BLS12_381_G1_{BE,LE}`) will be interpreted as points in
-  affine representation in either little-endian or big-endian.
+- BLS12-381 inputs (using `BLS12_381_G1_{BE,LE}`, `BLS12_381_G2_{BE,LE}`)
+  will be interpreted as points in affine representation in either little-endian
+  or big-endian.
 - Curve25519 inputs (using `CURVE25519_EDWARDS` or `CURVE25519_RISTRETTO`) are
   interpreted as points in their respective Edwards or Ristretto representations
   in compressed little-endian representations.
@@ -159,8 +162,8 @@ pub const MUL: u64 = 2;
 ```
 
 The `BLS12-381` constant will be used for the pairing operation.
-The `BLS12_381_G1` constant will be used for group operations and decompression.
-The `BLS12_381_G2` constant will be used for decompression.
+The `BLS12_381_G1` and `BLS12_381_G2` constants will be used for group operations
+and decompression.
 
 ### Pairing Operation
 
@@ -182,31 +185,29 @@ points in G2 to support batch pairings.
 ```rust
 define_syscall!(fn sol_curve_pairing_map(
     curve_id: u64,
+    num_pairs: u64,
     g1_points: *const u8,
-    g1_points_len: u64,
     g2_points: *const u8,
-    g2_points_len: u64,
     result: *mut u8
 ) -> u64);
 ```
 
-The `g1_points_len` and `g2_points_len` parameters specify the total byte-length
-of the G1 and G2 input arrays, respectively. The syscall must perform the
-following validation checks on these lengths before attempting the pairing:
+The `num_pairs` parameter specifies the number of G1/G2 pairs to be processed.
+The `g1_points` and `g2_points` parameters are pointers to memory buffers.
 
-1. G1 Length Check: The `g1_points_len` must be a multiple of 96 (the byte-size
-   of an uncompressed affine G1 point).
-2. G2 Length Check: The `g2_points_len` must be a multiple of 192 (the byte-size
-   of an uncompressed affine G2 point).
-3. Pair Count Check: The number of pairs calculated from each array must be
-   equal.
-   - `num_g1 = g1_points_len / 96`
-   - `num_g2 = g2_points_len / 192`
-   - The syscall must verify that `num_g1 == num_g2`
+The syscall will read `num_pairs` from each buffer. It must read:
 
-If any of these checks fail, the syscall must return an error. This ensures data
-is correctly formed and that there is a one-to-one correspondence for every
-point in the pairing.
+1. `num_pairs * 96` bytes from the `g1_points` buffer (96 bytes per uncompressed
+   affine G1 point).
+2. `num_pairs * 192` bytes from the `g2_points` buffer (192 bytes per
+   uncompressed affine G2 point).
+   If the `num_pairs` is 0, the syscall should return success with the identity
+   element of the target group.
+
+The runtime must safely handle memory accesses. If reading the required number
+of bytes from either buffer results in an out-of-bounds memory access (e.g., the
+buffers are smaller than implied by `num_pairs`), the syscall must return an
+error.
 
 The function would interpret `g1_points` as an array of BLS12-381 points in G1
 `[P1, ..., Pn]` and `g2_points` as an array of BLS12-381 points in G2
@@ -276,4 +277,5 @@ to be built on Solana based on a more secure and modern curve.
 
 ## Security Considerations
 
-NA
+The necessary security considerations such as point validation, memory safety,
+etc. are detailed in the Detailed Design section.
