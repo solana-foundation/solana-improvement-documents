@@ -17,8 +17,9 @@ extends:
 
 Replace the fixed minimum balance constant with a dynamic `min_deposit` per-byte
 rate adjusted every slot by a PI controller targeting 1 GB/epoch state growth.
-Balance checks enforce that accounts maintain the rent price from their creation
-time unless reallocated.
+
+Depends on SIMD-0392 or another protocol change to allow for non-disruptive rent
+increases.
 
 ## Motivation
 
@@ -35,10 +36,6 @@ predictable.
 - `min_deposit`: The protocol-defined minimum lamports per byte required to
   allocate account data. Determined dynamically by the PI controller and updated
   every slot. Used to compute the deposit required for new allocations.
-- `min_balance`: The minimum account balance required to pass runtime validity
-  checks. Derived from the lesser of the account's current balance (preserving
-  the rent price at creation) or the current `min_deposit * data_size` (adopting
-  the new price after reallocation).
 
 ## Detailed Design
 
@@ -51,10 +48,10 @@ predictable.
   state growth rate of 1 GB per epoch.
 - The absolute `min_deposit` value is clamped to remain between 0.1x and 1.0x
   of the legacy `min_balance_legacy` constant.
-- When an account is allocated (either newly created or data size increased),
-  the funder pays `min_deposit * new_bytes` which is deposited to the account.
-- Balance checks ensure accounts never dip below the rent price paid at their
-  creation time, unless reallocated (which adopts the current rent price).
+- When an account is allocated (either newly created or data size changed),
+  the funder deposits `min_deposit * new_bytes` into the account.
+- Post-execution min_balance checks must be relaxed so that rent increases do not
+  affect existing accounts. SIMD-0392 proposes such a change.
 
 ### PI controller
 
@@ -83,11 +80,14 @@ The exponential form ensures `min_deposit` remains positive and provides
 multiplicative (percentage-based) adjustments rather than additive changes.
 
 - Gains `Kp`, `Ki` are protocol constants used by the proportional and integral
-  components of the controller, respectively.
+  components of the controller, respectively. These coefficients essentially
+  represent the 'weight' assigned to each component.
 - `I` is the integral accumulator, steering controller output based on
   longer-term trends. A large positive `I` indicates consistent overshooting of
   the target, while a large negative value indicates slack available for future
   state growth.
+- The proportional component is intended for immediate response to above target
+  growth.
 
 **Clamps:**
 
@@ -101,84 +101,13 @@ min_deposit_next = clamp(
 )
 ```
 
-where `min_balance_legacy` is the fixed minimum balance constant used prior to
+where `min_balance_legacy` is the fixed minimum-balance constant used prior to
 this feature activation.
-
-### Allocation and balance checks
-
-**Account creation and upward reallocation:**
-
-For any instruction that allocates account data (including system create,
-allocate, reallocate upward):
-
-1. **Compute deposit:** The runtime computes the required deposit for the
-   **incremental bytes only** using the current `min_deposit`:
-   
-   ```
-   incremental_deposit = min_deposit * new_bytes
-   ```
-
-2. **Transfer:** Transfer `incremental_deposit` lamports from funder to the
-   account.
-   
-3. **Mark reallocation:** Flag the account as having been reallocated in this
-   transaction (for post-execution checks).
-
-**Downward reallocation:**
-
-- No lamports are refunded to the fee payer when shrinking.
-- Mark the account as having been reallocated in this transaction.
-
-**Balance checks (pre-execution and post-execution):**
-
-Before and after each transaction, validate account balance:
-
-```
-min_balance = if account.was_reallocated_in_tx {
-    // Adopt current rent price
-    min_deposit * account.data_size
-} else {
-    // Preserve rent price from creation; never force adoption of new price
-    min(min_deposit * account.data_size, account.lamports)
-}
-
-assert(account.lamports >= min_balance)
-```
-
-**Rationale:**
-
-The inductive proof: If an account is created with balance satisfying the
-current rent price (enforced at creation), it can never dip below that price
-unless explicitly reallocated. Reallocation adopts the new current rent price.
-This avoids tracking per-account metadata while still enforcing rent-like
-invariants.
-
-
-### Pre-activation account handling
-
-Accounts created before feature activation are treated as if they have always
-satisfied the rent price at creation. The `min` operator in the balance check
-ensures these accounts are never forced to adopt a higher rent price unless
-explicitly reallocated.
 
 ### Sysvar exposure
 
-A new sysvar `MinDeposit` MUST be added to expose the current `min_deposit`
-value to on-chain programs.
-
-**Sysvar ID:** `SysvarMinDeposit111111111111111111111111111`
-
-```rust
-pub struct MinDeposit {
-    pub lamports_per_byte: u64,
-}
-```
-
-- The sysvar is updated every slot after the controller computes `min_deposit_next`.
-- Programs can read this sysvar to query the current deposit rate for allocation
-  cost estimation.
-- Accessible via the unified `sol_get_sysvar` syscall (SIMD-0127) using the
-  sysvar ID above.
+Expose `min_deposit` via the existing Rent sysvar to avoid introducing a new
+sysvar and to preserve compatibility with existing on-chain programs.
 
 ### Protocol constants and feature gates
 
@@ -202,14 +131,14 @@ pub struct MinDeposit {
 ## Impact
 
 - Dapp developers: Creation and reallocation costs vary over time; programs can
-  query the `MinDeposit` sysvar for current rates. Tooling SHOULD surface
-  current `min_deposit` estimates. Expected rent reductions due to lower average
-  state growth target.
+  query the Rent sysvar (via the unified sysvar API) for current rates.
+  Significant rent reduction is expected.
 - Validators: Minor overhead to track controller state (integral accumulator `I`,
   state growth measurements) and measure state growth per slot; predictable
   bounds via clamps. Fork-aware state management required.
 - Core contributors: Runtime changes to account allocation flows, modified
-  balance check logic with reallocation tracking, new sysvar.
+  validity check logic with reallocation tracking; Rent sysvar exposure via the
+  unified sysvar API.
 
 ## Security Considerations
 
@@ -226,10 +155,18 @@ pub struct MinDeposit {
 
 ## Backwards Compatibility *(Optional)*
 
-- New sysvar is an addition; existing programs unaffected.
-- The shift from fixed `min_balance` to dynamic `min_deposit` with balance-based
+- The shift from a fixed minimum-balance constant to dynamic `min_deposit` with
   checks is a breaking change to account validity semantics, gated behind feature
   activation.
 - No account metadata changes required; backwards compatible with existing account
   structures and snapshots.
+
+## Dependencies *(Optional)*
+
+This proposal depends on the following previously accepted or pending proposals:
+
+- [SIMD-0392]: Relaxation of post-execution min_balance check — enables
+  non-disruptive increases without per-account metadata.
+
+[SIMD-0392]: https://github.com/solana-foundation/solana-improvement-documents/pull/392
 
