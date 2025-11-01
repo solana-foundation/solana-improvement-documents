@@ -164,7 +164,7 @@ will be extended to include a new field. The updated footer structure will be:
 
 **Note on Versioning**: While adding a field to the footer would typically warrant
 a version increment, we maintain `footer_version=1` for simplicity. As of November
-2024, clients do not yet disseminate block footers or block markers, making this
+2025, clients do not yet disseminate block footers or block markers, making this
 an appropriate time to extend the version 1 format before widespread adoption.
 
 ### Validity Constraints
