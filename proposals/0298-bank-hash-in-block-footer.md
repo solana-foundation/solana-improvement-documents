@@ -152,20 +152,25 @@ will be extended to include a new field. The updated footer structure will be:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | footer_version=1            (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| bank_hash                  (32 bytes) |  ←NEW
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | block_producer_time_nanos   (64 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | block_user_agent_len         (8 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | block_user_agent        (0-255 bytes) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| bank_hash                  (32 bytes) |  ←NEW
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
-**Note on Versioning**: While adding a field to the footer would typically warrant
-a version increment, we maintain `footer_version=1` for simplicity. As of November
-2025, clients do not yet disseminate block footers or block markers, making this
-an appropriate time to extend the version 1 format before widespread adoption.
+**Note on Versioning and Field Ordering**: While adding a field to the footer
+would typically warrant a version increment, we maintain `footer_version=1` for
+simplicity. Rather than appending `bank_hash` to the end of the footer, which
+would be the typical approach, we insert `bank_hash` towards the beginning to
+give it a fixed offset within the footer.
+
+We only make these atypical changes in light of the fact that, as of November 2025,
+clients do not yet disseminate block footers or block markers, making this an
+appropriate time to modify the version 1 format before widespread adoption.
 
 ### Validity Constraints
 
