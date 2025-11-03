@@ -29,10 +29,6 @@ consumption, we want to be compatible with at least the current eBPF version
 (v3), which brings in new instructions. In order for that to be possible, we 
 must modify our virtual machine to support eBPF integrally.
 
-Additionally, we are going to anticipate some eBPF v4 instructions that are 
-beneficial for Solana and would decrease the update burden in case v4 becomes 
-the new default configuration for the eBPF upstream LLVM target.
-
 ## New Terminology
 
 The set containing these new instructions will form an sBPFv3 program.
@@ -151,71 +147,6 @@ must implement the behavior described below for each one of them.
 - `JSLT32_REG` -> opcode = `0xc6` -> `pc += offset if dst as i32 <  src as i32`
 - `JSLE32_REG` -> opcode = `0xd6` -> `pc += offset if dst as i32 <= src as i32`
 
-### SMOD and SDIV instructions
-
-The following opcodes must be allowed in the verifier for a sBPFv3 program and 
-the following behavior must occur in the virtual machine.
-
-- `SMOD64_IMM` -> opcode = `0x97`, offset = `1` -> 
-                                    `dst = dst as i64 % imm as i64`
-- `SMOD64_REG` -> opcode = `0x9f`, offset = `1` -> 
-                                    `dst = dst as i64 % src as i64`
-- `SMOD32_IMM` -> opcode = `0x94`, offset = `1` -> 
-                                    `dst = dst as i32 % imm as i32`
-- `SMOD32_REG` -> opcode = `0x9c`, offset = `1` -> 
-                                    `dst = dst as i32 % src as i32`
-- `SDIV64_IMM` -> opcode = `0x37`, offset = `1` -> 
-                                    `dst = dst as i64 / imm as i64`
-- `SDIV64_REG` -> opcode = `0x3f`, offset = `1` -> 
-                                    `dst = dst as i64 / src as i64`
-- `SDIV32_IMM` -> opcode = `0x34`, offset = `1` -> 
-                                    `dst = dst as i32 / imm as i32`
-- `SDIV32_REG` -> opcode = `0x3c`, offset = `1` -> 
-                                    `dst = dst as i32 / src as i32`
-
-It is worth mentioning that `sdiv` and `smod` have the same opcodes as the 
-existing `mod` and `div` instructions. The difference between them is the 
-offset field. While `mod` and `div` contain offset = `0`, `smod` and `sdiv` 
-use offset = `1`.
-
-### Sign extended mov and sign extended load
-
-The verifier must accept the following instruction encodings for sign extended 
-`mov` operations, and the virtual machine must implement the behavior detailed 
-below for them.
-
-The existing `MOV64` and `MOV32` instructions were included in the list below 
-only for comparison.
-
-- `MOV64`    -> opcode = `0xbf`, offset = `0` -> `dst = src as i64` 
-                     (existing instruction - only here for comparison)
-- `MOV64S8`  -> opcode = `0xbf`, offset = `8`  -> `dst = src as i8 as i64`
-- `MOV64S16` -> opcode = `0xbf`, offset = `16` -> `dst = src as i16 as i64`
-- `MOV64S32` -> opcode = `0xbf`, offset = `32` -> `dst = src as i32 as i64`
-
-- `MOV32`    -> opcode = `0xbc`, offset = `0`  -> `dst = src as u32` 
-                     (existing instruction - only here for comparison)
-- `MOV32S8`  -> opcode = `0xbc`, offset = `8`  -> `dst = src as i8 as i32`
-- `MOV32S16` -> opcode = `0xbc`, offset = `16` -> `dst = src as i16 as i32`
-
-
-Likewise, the verifier must accept the following instruction encoding for sign 
-extended load operations, and the virtual machine must implement the behavior 
-detailed below for them.
-
-- `ldxbs` -> opcode = `0x91` -> `dst = (load (src + offset)) as i8 as i64`
-- `ldxhs` -> opcode = `0x89` -> `dst = (load (src + offset)) as i16 as i64`
-- `ldxws` -> opcode = `0x81` -> `dst = (load (src + offset)) as i32 as i64`
-
-
-### Indirect jump
-
-The indirect jump instruction `jx` jumps to the instruction pointed by the 
-address in the source register. In sum, the verifier must allow the following 
-opcode and the runtime must implement the following behavior.
-
-- `jx` -> opcode = `0x0d` -> pc = `dst`
-
 ### callx encoding
 
 The encoding of callx must change so that the register containing the address 
@@ -223,57 +154,20 @@ to jump to is in the destination register.
 
 - `callx` -> opcode = `0x9d` -> pc = `dst`
 
-
-### Reinterpretation of LDDW as MOV and HOR
-
-The LDDW instruction consists of two 8-byte instruction frames, but consumes 
-only one CU in the virtual machine.
-
-The virtual machine must now interpret the first half of LLDW as the opcode 
-`0x18`, with the same behavior as `mov32 reg, imm` zero extending the 
-immediate value.
-
-Likewise, the second half of LDDW must be interpreted as the opcode `0x00`, 
-being a bitwise OR operation of the MSBs in the destination register. This 
-instruction must be called `hor64 reg, imm`.
-
-The HOR instruction, however, must encode a destination register on which to 
-operate. The encoding is as follows.
-
-- `HOR64` -> opcode = `0x00` -> `dst = dst | (imm << 32)`
-
-Consequently, we must charge two CUs for an LDDW execution.
-
 ## Alternatives Considered
 
 We have considered diverging from the eBPF standard by introducing new opcodes 
 and creating specific instructions to the Solana environment. We discarded 
 such an approach to be compatible with the existing LLVM eBPF code generation.
 
-We are not adding `may_goto`, since it has an implicit condition implemented 
-in the kernel, and does not yet have any path for code generation. We are also 
-not supporting any of the eBPF atomic instructions, since the Solana virtual 
-machine is single threaded.
-
-In eBPFv4, there are two other instructions that could be part of the Solana 
-vendored virtual machine, but are not included in the proposal: `gotol` 
-(opcode `0x06`) and `bswap` (opcode `0xd7`).
-
-`gotol` is an unconditional jump with a 32 bit offset. It does not replace the 
-existing JA instruction (opcode 0x05), and is used only when the 16-bit offset 
-from the JA can't be used for a jump. This situation appears only in very 
-large functions, or in environments with aggressive inlining, and has not so 
-far represented a problem for smart contracts.
-
-`bswap` supersedes LE (opcode 0xd4) and BE (opcode 0xdc) in eBPFv4, but 
-otherwise behaves similarly. Byte swap is rarely used as an instruction in 
-smart contracts, and so far the existing opcodes already fill up any needs.
+Another consideration was bringing new eBPFv4 instructions to the Solana 
+environment. They are a superset of eBPFv3 and does not conflict with it, 
+however they are not yet stabilized, so they can change in future LLVM releaes.
 
 ## Impact
 
-With these changes, and a patch to the aya bpf-linker, developers will be able 
-to install the bpf-linker and use the existing rustup/cargo/rustc 
-infrastructure to build their programs.
+These changes permit a straightforward management of the compiler toolchain, 
+permitting the usage of most of existing upstream tooling.
 
 ## Security Considerations
 
