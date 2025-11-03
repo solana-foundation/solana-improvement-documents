@@ -1,6 +1,6 @@
 ---
 simd: '0389'
-title: Dynamic minimum deposit for account creation
+title: Reduce account creation constant
 authors:
   - Igor Durovic (anza)
 category: Standard
@@ -15,47 +15,57 @@ extends:
 
 ## Summary
 
-Replace the fixed minimum balance constant with a dynamic `min_deposit` per-byte
-rate adjusted every slot by a PI controller targeting 1 GB/epoch state growth.
+Reduce the minimum deposit rate by 10x (set baseline
+`min_deposit = 0.1 * min_balance_legacy`) and make this the new floor.
 
-Depends on SIMD-0392 or another protocol change to allow for non-disruptive rent
-increases.
+Introduce a supervisory integral controller targeting 1 GB/epoch state growth
+as the safety threshold. Under normal conditions, `min_deposit` remains pinned
+at the 0.1x floor.
+
+Depends on SIMD-0392 or another protocol change to allow for non-disruptive
+minimum deposit increases.
 
 ## Motivation
 
 Introduce a real-time price signal for state demand and apply back pressure to
 prevent runaway state growth. The proposal gives the protocol more tuning knobs
-(PI gains, clamps, target growth) than a single fixed constant, enabling
-better behavior targeting. With an
+(controller parameters such as deadband H, bounds, step sizes, clamps, target growth)
+than a single fixed constant, enabling better behavior targeting. With an
 average on-chain state growth currently around ~200 MB per epoch, targeting 1
-GB per epoch allows significant rent reductions while keeping growth bounded and
-predictable.
+GB per epoch allows significant minimum-deposit reductions while keeping growth
+bounded and predictable.
 
 ## New Terminology
 
 - `min_deposit`: The protocol-defined minimum lamports per byte required to
-  allocate account data. Determined dynamically by the PI controller and updated
-  every slot. Used to compute the deposit required for new allocations.
+  allocate account data. Baseline is 0.1x the legacy minimum-balance constant
+  (the floor). A supervisory integral controller MAY adjust it above the floor
+  only when safety thresholds are exceeded.
 
 ## Detailed Design
 
 ### High level
 
-- Replace the current fixed minimum balance constant (legacy `min_balance_legacy`)
-  used in account creation with a dynamic `min_deposit` per-byte rate maintained
-  by the runtime.
-- The `min_deposit` is adjusted every slot by a PI controller that targets a
-  state growth rate of 1 GB per epoch.
+- Upon activation, set `min_deposit = 0.1 * min_balance_legacy` (a 10x
+  reduction) and treat this as the floor.
+- Replace the current fixed minimum balance constant (legacy
+  `min_balance_legacy`) used in account creation with a runtime-maintained
+  `min_deposit` per-byte rate.
+- A supervisory integral controller targets 1 GB/epoch state growth as the safety
+  threshold. The controller remains inactive unless the threshold is breached, in
+  which case it engages through discrete adjustments of the `min_deposit` value.
 - The absolute `min_deposit` value is clamped to remain between 0.1x and 1.0x
   of the legacy `min_balance_legacy` constant.
-- When an account is allocated (either newly created or data size changed),
-  the funder deposits `min_deposit * new_bytes` into the account.
-- Post-execution min_balance checks must be relaxed so that rent increases do not
-  affect existing accounts. SIMD-0392 proposes such a change.
+- When an account is allocated (either newly created or data size changed), the
+  funder deposits `min_deposit * new_bytes` into the account.
+- Post-execution min_balance checks must be relaxed so that minimum-deposit
+  increases do not affect existing accounts. SIMD-0392 proposes such a change.
 
-### PI controller
+### Supervisory integral controller
 
-The controller updates `min_deposit` every slot based on measured state growth.
+The controller updates `min_deposit` every slot based on measured state growth
+but is intended to be inactive during normal conditions (holding at the 0.1x
+floor) and only engage when sustained growth exceeds a safety threshold.
 
 **State tracking:**
 
@@ -69,25 +79,44 @@ Let target growth per slot be `G_target = 1 GiB/epoch / slots_per_epoch`.
 
 Compute error: `e = G_slot - G_target` (positive if growth exceeds target).
 
-Update `min_deposit`:
+Integrate with asymmetric bounds:
 
 ```
-min_deposit_next = min_deposit_current * exp( Kp * e / G_target + Ki * I )
-I_next = I + e / G_target
+I_next = clamp( I + e, I_min = -4_000_000_000, I_max = +2_000_000_000 )
 ```
 
-The exponential form ensures `min_deposit` remains positive and provides
-multiplicative (percentage-based) adjustments rather than additive changes.
+Deadband and discrete asymmetric steps:
 
-- Gains `Kp`, `Ki` are protocol constants used by the proportional and integral
-  components of the controller, respectively. These coefficients essentially
-  represent the 'weight' assigned to each component.
-- `I` is the integral accumulator, steering controller output based on
-  longer-term trends. A large positive `I` indicates consistent overshooting of
-  the target, while a large negative value indicates slack available for future
-  state growth.
-- The proportional component is intended for immediate response to above target
-  growth.
+```
+if I_next >= H:                    # above-band (sustained over-target)
+    min_deposit_next = min_deposit_current * 1.10   # +10%
+elif I_next <= -H:                 # below-band (sustained under-target)
+    min_deposit_next = min_deposit_current * 0.95   # -5%
+else:
+    min_deposit_next = min_deposit_current          # hold
+```
+
+Notes:
+
+- No proportional term; the controller is integral-only with a deadband. The
+  goal is to keep price pinned at the floor (0.1x) under normal conditions and
+  react only to pronounced spikes.
+- `H` (deadband threshold) is a protocol constant (see Protocol constants).
+- `I` is the integral accumulator over error; large positive values indicate
+  sustained overshoot; large negative values indicate sustained slack.
+
+Rationale: the main goal of the controller is to supervise state growth and
+engage effectively and predictably when the safety threshold is violated.
+
+- Asymmetric updates: bias towards upwards adjustments after engagement is
+  triggered allows a faster response to excessive state growth and a more
+  gradual return to baseline when conditions normalize.
+- Asymmetric integral bounds: the absolute value of `I_min` being larger than
+  `I_max` allows for the accumulation of a buffer to prevent smaller spikes
+  from causing a `min_deposit` adjustment, thereby increasing stability of the
+  0.1x floor price. A return to baseline can happen faster after a high
+  allocation event has passed, with the lower `I_max` value.
+- Deadband: avoids oscillations around the safety threshold.
 
 **Clamps:**
 
@@ -113,7 +142,9 @@ sysvar and to preserve compatibility with existing on-chain programs.
 
 - New constants:
   - `G_target = 1 GiB/epoch`
-  - `Kp`, `Ki` controller gains
+  - `H` deadband threshold for integral accumulator (tunable)
+  - `I_min = -4_000_000_000`, `I_max = +2_000_000_000`
+  - `down_step = -5%`, `up_step = +10%`
   - `min_deposit_lower_bound = 0.1 * min_balance_legacy`
   - `min_deposit_upper_bound = 1.0 * min_balance_legacy`
 
@@ -125,39 +156,35 @@ sysvar and to preserve compatibility with existing on-chain programs.
   integral term addresses bias and long-term trends.
 - Hard step adjustments per epoch: simpler but introduces large
   discontinuities and gaming incentives.
-- Dynamic rent w/ eviction: more complete but controversial and complicated.
-  This proposal will allow a reduction in rent sooner.
+- Dynamic rent w/ eviction: more complete but controversial and
+  complicated. This proposal will allow a reduction in state allocation cost
+  sooner.
 
 ## Impact
 
 - Dapp developers: Creation and reallocation costs vary over time; programs can
-  query the Rent sysvar (via the unified sysvar API) for current rates.
-  Significant rent reduction is expected.
-- Validators: Minor overhead to track controller state (integral accumulator `I`,
-  state growth measurements) and measure state growth per slot; predictable
-  bounds via clamps. Fork-aware state management required.
+  query the Rent sysvar for current rates. Significant minimum-deposit
+  reduction is expected.
+- Validators: Minor overhead to track controller state (integral accumulator
+  `I`, state growth measurements) and measure state growth per slot;
+  predictable bounds via clamps. Fork-aware state management required.
 - Core contributors: Runtime changes to account allocation flows, modified
-  validity check logic with reallocation tracking; Rent sysvar exposure via the
-  unified sysvar API.
+  validity check logic with reallocation tracking; Rent sysvar exposure.
 
 ## Security Considerations
 
-- Controller stability: Gains MUST be selected to avoid oscillation; clamps
-  provide guardrails. Per-slot updates provide fine-grained reactivity.
-- Manipulation risk: Attempts to game measured growth by bursty allocations are
-  countered by the proportional response; integral term prevents sustained
-  deviation.
+- Controller stability: Controller parameters (H, bounds, step sizes) MUST be
+  selected to avoid oscillation; clamps provide guardrails. Per-slot updates
+  provide fine-grained reactivity.
+- Manipulation risk: integral term prevents sustained deviation.
 - Determinism: Controller updates MUST be deterministic across validators given
   identical inputs. Fork-aware state tracking ensures consistency.
-- Balance preservation: The balance check mechanism ensures accounts can never be
-  forced to adopt a higher rent price unless explicitly reallocated, protecting
-  existing accounts from retroactive rent increases.
 
 ## Backwards Compatibility *(Optional)*
 
 - The shift from a fixed minimum-balance constant to dynamic `min_deposit` with
-  checks is a breaking change to account validity semantics, gated behind feature
-  activation.
+  checks is a breaking change to account validity semantics, gated behind
+  feature activation.
 - No account metadata changes required; backwards compatible with existing account
   structures and snapshots.
 
