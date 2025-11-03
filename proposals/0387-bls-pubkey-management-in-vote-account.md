@@ -47,8 +47,8 @@ and it adds an optional BLS public key field
 
 ## New Terminology
 
-- **BLS public key**: The compressed public key used in BLS signatures. It will
-be stored as a 48 bytes vector in vote account.
+- **BLS public key**: The public key used in BLS signatures. It will be
+compressed and stored as a 48 bytes vector in vote account.
 
 ## Detailed Design
 
@@ -61,26 +61,27 @@ associated BLS keypair on demand.
 ### User Operations Support
 
 Since a user’s BLS keypair always changes with the vote authority keypair, we
-list three different scenarios below.
+list three different scenarios below. The following are all dependent on the
+feature associated with this SIMD being rolled out, the operations will not
+change before the feature is active.
 
 1. Creating a new vote account
 
-After VoteStateV4 (SIMD 185) is enabled everywhere, when users create a new
-vote account, the correct BLS public key will be automatically added to the
-new vote account. The BLS public key is derived from the vote authority keypair
-(if authorized voter is not specified, identity keypair is used).
+When users create a new vote account, the correct BLS public key will be
+automatically added to the new vote account. The BLS public key is derived
+from the vote authority keypair (if authorized voter is not specified, identity
+keypair is used).
 
 2. Changing vote authority keypair on existing vote account
 
-After VoteStateV4 (SIMD 185) is enabled everywhere, when users update the vote
-authority keypair, the correct BLS public key will be automatically updated in
-the vote account. The BLS public key rotation happens at the same time when a
-new vote authority switch happens.
+When users update the vote authority keypair, the correct BLS public key will
+be automatically updated in the vote account. The BLS public key rotation
+happens at the same time when a new vote authority switch happens.
 
 3. Updating missing BLS public key on existing vote account
 
 This is a temporary work-around before all existing staked vote accounts have
-proper BLS public keys specified. We will add update-bls-pubkey command so it
+proper BLS public keys specified. We will add `update-bls-pubkey` command so it
 will use the given vote authority keypair to generate and update the BLS public
 key in the vote account. When everyone has a proper BLS public key in their
 vote accounts this command can be removed.
@@ -90,19 +91,17 @@ vote accounts this command can be removed.
 Whenever a new BLS public key is being updated in the vote account, we need
 to perform BLS verification on its validity, see "Security Considerations"
 for details. We plan to implement this by calling BLS library from the vote
-program, see "Alternatives Considered" for details.
+program, see "Alternatives Considered" for comparison with other solutions.
 
 Since BLS verification is expensive (in the order of ~1 millisecond), these
 operations changing BLS public key will need to have correct CU specified to
 succeed (actual numbers to be measured and added to this PR).
 
-All of the changes below depend on the launch of VoteStateV4.
-
 #### Disallow change of vote authority by old instructions
 
 After the feature gate associated with this SIMD is activated, the previous
 instructions will be disallowed to change vote authority, they will result
-in transaction error. These include:
+in transaction errors. These include:
 
 ```rust
 // Will be totally forbidden, use InitializeAccountV2
@@ -137,9 +136,9 @@ pub struct VoteInitV2 {
 ```
 
 Upon receiving the transaction, the vote program will perform a BLS
-verification on submitted BLS public key and associated proof of
-possession. The transaction will fail if the verification failed.
-Otherwise the new vote account is created with given parameters.
+verification on submitted BLS public key and associated proof of possession.
+The transaction will fail if the verification failed. Otherwise the new vote
+account is created with given parameters.
 
 #### Add new variant of VoteAuthorize
 
@@ -184,7 +183,7 @@ though not all honest parties actually signed.
 
 ### Moving BLS verification to a syscall and/or a different program
 
-The benefit of this approach is conceptually cleaner because vote program
+The benefit is that it is conceptually cleaner because vote program
 does not need to know about any BLS operation, also the BLS syscall and/or
 program can be generally used outside the vote program as well.
 
