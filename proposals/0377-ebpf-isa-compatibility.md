@@ -214,7 +214,7 @@ The indirect jump instruction `jx` jumps to the instruction pointed by the
 address in the source register. In sum, the verifier must allow the following 
 opcode and the runtime must implement the following behavior.
 
-- `jx` -> opcode = `0x0d` -> pc = `src`
+- `jx` -> opcode = `0x0d` -> pc = `dst`
 
 ### callx encoding
 
