@@ -115,11 +115,11 @@ Accounts of programs owned by loader-v4 must have the following layout:
 
 - Header (which is 48 bytes long):
   - `u32` status enum:
-    - Enum variant `0u64`: `Uninitalized`, account was zero-filled externally
-    - Enum variant `1u64`: `NeverBeenDeployed`, used as write buffer
-    - Enum variant `2u64`: `Retracted`, program is in maintenance
-    - Enum variant `3u64`: `Deployed`, program is ready to be executed
-    - Enum variant `4u64`: `Finalized`, same as `Deployed`, but can not be
+    - Enum variant `0u32`: `Uninitialized`, account was zero-filled externally
+    - Enum variant `1u32`: `NeverBeenDeployed`, used as write buffer
+    - Enum variant `2u32`: `Retracted`, program is in maintenance
+    - Enum variant `3u32`: `Deployed`, program is ready to be executed
+    - Enum variant `4u32`: `Finalized`, same as `Deployed`, but can not be
     modified anymore
   - `u32` Length of the executable in bytes (see "Body" of the account)
   - `u64` Slot in which the program was last deployed.
@@ -130,18 +130,18 @@ Accounts of programs owned by loader-v4 must have the following layout:
 
 ### Program Account Header Verification
 
-Verification the program account checks in the following order that:
+Verification of the program account checks the following in order:
 
 - the owner of the program account is loader-v4,
 otherwise throw `InvalidAccountOwner`
-- the program account is at least as long enough for the header (48 bytes),
+- the program account is at least long enough for the header (48 bytes),
 otherwise throw `AccountDataTooSmall`
 - the program account is writable, otherwise throw `InvalidArgument`
 - the provided authority (instruction account at index 1) signed,
 otherwise throw `MissingRequiredSignature`
 - the authority stored in the program account is the one provided,
 otherwise throw `IncorrectAuthority`
-- the status stored in the program account is not `Uninitalized`,
+- the status stored in the program account is not `Uninitialized`,
 otherwise throw `InvalidArgument`
 - the status stored in the program account is not `Finalized`,
 otherwise throw `Immutable`
@@ -163,7 +163,9 @@ failing any of the above checks must throw `UnsupportedProgramId`.
 
 ### Program Management Instructions
 
-The loader-v4 intructions Deploy and Retract are not authorized in CPI.
+The loader-v4 instructions Deploy and Retract are not authorized in CPI. If
+these instructions are invoked from another program, throw
+`ProgramFailedToComplete`.
 
 #### Initialize
 
@@ -184,7 +186,7 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
     otherwise throw `InvalidArgument`
   - Check that the new authority (instruction account at index 1) has signed,
     otherwise throw `MissingRequiredSignature`
-  - Check that the status stored in the program account is `Uninitalized`,
+  - Check that the status stored in the program account is `Uninitialized`,
     otherwise throw `InvalidArgument`
   - Change the slot in the program account to the current slot
   - Change the status stored in the program account to `NeverBeenDeployed`
@@ -245,6 +247,8 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
   otherwise throw `InvalidArgument`
   - Check that the new size in bytes is at least the header length (48 bytes),
   otherwise throw `InvalidArgument`
+  - Check that the new size in bytes is at most the max account data size,
+  otherwise throw `InvalidRealloc`
   - Set the length of the program account to the requested new size.
   - Note: In CPI the maximum growth is limited to 10 KiB in ABI v1 and
   0 bytes in ABI v0. Thus, this should be called from a top-level instruction.
@@ -327,10 +331,11 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
     otherwise throw `InvalidArgument`
   - Check that the executable length is not longer than the program account,
     otherwise throw `InvalidArgument`
-  - Charge program_length_in_bytes / cpi_bytes_per_unit CUs
+  - Charge executable_length / cpi_bytes_per_unit CUs
   - Check that the executable file stored in the program account passes
   executable verification
-  - Change the executable length in the program account header
+  - Change the executable length in the program account header to the specified
+    value.
   - Change the slot in the program account to the current slot
   - Change the status stored in the program account to `Deployed`
   - Set the `is_executable` flag to `true`
@@ -402,7 +407,7 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
 
 ### Workflows
 
-#### Inital deployment
+#### Initial deployment
 
 - Allocate an account to header plus ELF size
 - Assign account to loader-v4
@@ -421,7 +426,7 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
 - Write chunks repeatedly
 - [Transaction boundary]
 - Retract program
-- SetProgramLength of program to ELF size
+- SetAccountLength of program to header plus ELF size
 - Copy from buffer to program
 - Deploy program
 - EraseAndWithdrawAllLamports of buffer to program
@@ -439,7 +444,7 @@ The loader-v4 intructions Deploy and Retract are not authorized in CPI.
 #### Close: Permanent
 
 - Retract
-- SetProgramLength to 0
+- SetAccountLength to header size
 - WithdrawExcessLamports
 - Finalize
 
