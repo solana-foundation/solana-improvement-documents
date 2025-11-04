@@ -24,7 +24,7 @@ and more to speed up transaction ingestion and processing.
 ## Motivation
 
 The current live transaction formats, v0 and legacy, have a number of 
-inefficiencies and limitations that adversely impace the performance of the 
+inefficiencies and limitations that adversely impact the performance of the 
 cluster. Ingestion is slowed down when trying to prioritize transactions by 
 their Compute Budget instructions. Address lookup tables currently supported by 
 transaction format v0 are also a significant source of complexity for 
