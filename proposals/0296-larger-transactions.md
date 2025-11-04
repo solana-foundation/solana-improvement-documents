@@ -62,7 +62,7 @@ possible with the use of QUIC. QUIC's RFC 9000 specification does not have
 an explicit maximum stream size, allowing for larger transactions to be
 sent. The larger transaction size would only be supported by the v1 transaction
 format as described in SIMD-0385. Clients will need to support accepting the
-larger transaction sizes on their network ports and not rejest the larger size
+larger transaction sizes on their network ports and not reject the larger size
 during replay.
 
 ## Alternatives Considered
