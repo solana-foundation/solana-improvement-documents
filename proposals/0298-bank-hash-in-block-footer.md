@@ -125,7 +125,7 @@ complete execution state and is calculated from several components:
 **Optional Component:**
 
 - **Hard Fork Data** (when applicable) - If the current slot is a hard fork
-  slot, additional hard fork data is hashed into the final result 
+  slot, additional hard fork data is hashed into the final result
 
 The bank hash provides a cryptographic commitment to the complete execution
 state, ensuring that any change to the bank's state (accounts, balances,
@@ -140,27 +140,37 @@ The block footer structure outlined in SIMD 0307
 will be extended to include a new field. The updated footer structure will be:
 
 ```
-     Block Footer new variant
+     Block Footer (Extended)
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_marker_flag      (64 bits of 0) |  
+| block_marker_flag      (64 bits of 0) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| version=1                   (16 bits) | 
+| version=1                   (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| variant=0                    (8 bits) |  
+| variant=0                    (8 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| length                      (16 bits) | 
+| length                      (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| footer_version=2          (16 bits)   |  ←UPDATED 1->2
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_producer_time_nanos   (64 bits) |  
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_user_agent_len         (8 bits) |  
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| block_user_agent        (0-255 bytes) |  
+| footer_version=1            (16 bits) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | bank_hash                  (32 bytes) |  ←NEW
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_producer_time_nanos   (64 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_user_agent_len         (8 bits) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| block_user_agent        (0-255 bytes) |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
+
+**Note on Versioning and Field Ordering**: While adding a field to the footer
+would typically warrant a version increment, we maintain `footer_version=1` for
+simplicity. Rather than appending `bank_hash` to the end of the footer, which
+would be the typical approach, we insert `bank_hash` towards the beginning to
+give it a fixed offset within the footer.
+
+We only make these atypical changes in light of the fact that, as of November 2025,
+clients do not yet disseminate block footers or block markers, making this an
+appropriate time to modify the version 1 format before widespread adoption.
 
 ### Validity Constraints
 
