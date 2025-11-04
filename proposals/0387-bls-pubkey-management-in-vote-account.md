@@ -143,13 +143,15 @@ account is created with given parameters.
 #### Add new variant of VoteAuthorize
 
 ```rust
+pub struct VoterWithBLSArgs {
+    bls_pub_key: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+    bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+}
+
 pub enum VoteAuthorize {
     Voter,
     Withdrawer,
-    VoterWithBLS(
-      [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],  // BLS public key
-      [u8; BLS_SIGNATURE_COMPRESSED_SIZE],   // BLS Proof of Posession
-    ),
+    VoterWithBLS(VoterWithBLSArgs),
 }
 ```
 
