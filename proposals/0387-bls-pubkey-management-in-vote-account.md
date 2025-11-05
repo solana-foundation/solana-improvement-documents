@@ -93,23 +93,31 @@ to perform BLS verification on its validity, see "Security Considerations"
 for details. We plan to implement this by calling BLS library from the vote
 program, see "Alternatives Considered" for comparison with other solutions.
 
-Since BLS verification is expensive (in the order of ~1 millisecond), these
-operations changing BLS public key will need to have correct CU specified to
-succeed (actual numbers to be measured and added to this PR).
+Since BLS verification is expensive (around 1.15ms), these operations changing
+BLS public key will need to have consume 34,500 CU right before BLS signature
+verification happens.
 
 #### Disallow change of vote authority by old instructions
 
 After the feature gate associated with this SIMD is activated, the previous
-instructions will be disallowed to change vote authority, they will result
-in transaction errors. These include:
+instructions will be disallowed to change vote authority after off-chain tools
+are upgraded, they will result in transaction errors. These include:
 
 ```rust
-// Will be totally forbidden, use InitializeAccountV2
+// Will be forbidden after off-chain tools are upgraded, use InitializeAccountV2
 InitializeAccount(VoteInit),
-// Forbidden when VoteAuthorize is VoteAuthorize::Voter
+// Forbidden when VoteAuthorize is VoteAuthorize::Voter and the account has BLS
+// public key
+Authorize(Pubkey, VoteAuthorize),
+// Forbidden when authorization_type is VoteAuthorize::Voter and the account has
+// BLS public key
+AuthorizeWithSeed(VoteAuthorizeWithSeedArgs),
+// Forbidden when VoteAuthorize is VoteAuthorize::Voter and the account has BLS
+// public key
 AuthorizeChecked(VoteAuthorize),
-// Forbidden when authorization_type is VoteAuthorize::Voter
-AuthorizeCheckedWithSeed(VoteAuthorizeWithSeedArgs),
+// Forbidden when authorization_type is VoteAuthorize::Voter and the account has
+// BLS public key
+AuthorizeCheckedWithSeed(VoteAuthorizeCheckedWithSeedArgs),
 ```
 
 #### Add InitializeAccountV2
