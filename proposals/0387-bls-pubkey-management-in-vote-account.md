@@ -97,6 +97,13 @@ Since BLS verification is expensive (around 1.15ms), these operations changing
 BLS public key will need to have consume 34,500 CU right before BLS signature
 verification happens.
 
+Currently the vote program is still using the builtin CU, and each instruction
+consumes 3,000 CU. We propose to completely remove the vote program from using
+the built in CU. Because simple vote transactions do not use the code path
+where the CU limit matters, and there are very few other transactions executed
+in the vote program. We can make those transactions consume correct CU based
+on the amount of CPU they would consume.
+
 #### Disallow change of vote authority by old instructions
 
 After the feature gate associated with this SIMD is activated, the previous
