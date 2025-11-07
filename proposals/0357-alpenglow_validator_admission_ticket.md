@@ -158,10 +158,7 @@ identity account has at least 1.6 SOL before epoch e-1 ends
 - Validator operators must ensure they have valid BLS public key specified in
 their vote account
 
-  - The ledger tools will be updated to verify validity of the BLS public key
-when performing updates
-
-  - We will not allow removing the BLS public key
+- We will not allow removing the BLS public key
 
 ## Alternatives Considered
 
