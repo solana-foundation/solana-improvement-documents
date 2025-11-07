@@ -62,16 +62,15 @@ For all write-locked accounts, post-execution account balance checks MUST
 verify:
 
 ```
-min_balance = calculate_min_balance(acc.post_exec_size)
+rent_exempt_min_balance = calculate_min_balance(acc.post_exec_size)
 if acc.pre_exec_balance > 0 and acc.post_exec_size == acc.pre_exec_size:
-    min_balance = min(min_balance, acc.pre_exec_balance)
+    min_allowed_balance = min(rent_exempt_min_balance, acc.pre_exec_balance)
 
-assert(acc.post_exec_balance == 0 or acc.post_exec_balance >= min_balance)
+assert(acc.post_exec_balance == 0 or acc.post_exec_balance >= min_allowed_balance)
 ```
 
-The check ensures that an account's balance is always at least the minimum
-rent_per_byte price since the last allocation multiplied by the account
-size:
+The check ensures that an account's balance is always rent-exempt as of
+the last (re)allocation of its data:
 
 - As the base case, it's clear this holds
   for new account creations or re-allocations: the post-execution rent price
@@ -85,8 +84,8 @@ size:
 
 ### Implementation details
 
-- The pre-execution balance MUST be captured before any instruction execution
-  begins, based on the account's loaded state.
+- The pre-execution balance MUST be captured before any state is modified
+  (e.g. before fee collection, instruction execution, etc).
 - The pre and post-execution sizes are compared to determine if reallocation
   occurred.
 - The `calculate_min_balance()` function uses the current rent_per_byte value,
