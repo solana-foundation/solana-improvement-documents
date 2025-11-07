@@ -114,7 +114,7 @@ by descending order of stake. If some validator with stake S is in position
 2001, then we remove all validators with stake S and less. If there are fewer
 than 2,000 valid validators, pick all of them.
 
-- Deduct 1.6 SOL VAT fee from each picked vote identity account once
+- Deduct 1.6 SOL VAT fee from each picked gossip identity account once
 
 - Mark the fee burned and write the result into the bank
 
