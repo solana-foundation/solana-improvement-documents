@@ -106,7 +106,7 @@ In summary, a valid vote account in an Alpenglow epoch must contain:
 - at least 1.6 SOL VAT fee plus the necessary storage rent amount for a new
 epoch in its corresponding identity account
 
-When the staked validators for a new epoch are calculated, the leader will
+When the staked validators for a new epoch are calculated, all validators must
 perform the following operations:
 
 - When there are more than 2,000 valid validators, sort all valid vote accounts
@@ -117,9 +117,6 @@ than 2,000 valid validators, pick all of them.
 - Deduct 1.6 SOL VAT fee from each picked vote identity account once
 
 - Mark the fee burned and write the result into the bank
-
-All validators must perform the same operation, or the resulting bankhash will
-be different.
 
 ### How to implement the checks
 
@@ -189,7 +186,7 @@ participate in an Alpenglow epoch regardless of their stake. Also, only the
 nodes selected by this process will receive votes or certificates from other
 selected validators in real time.
 
-Validator operators need to ensure they have enough fund and correct BLS
+Validator operators need to ensure they have enough funds and correct BLS
 public key before end of epoch e-1 to participate in epoch e+1. This poses some
 new operation challenges.
 
