@@ -125,7 +125,8 @@ parent_bank.epoch()), calculate the participating staked validators for the
 next epoch (bank.epoch() + 1). This is the same as now.
 
 2. Perform stake activation and deactivation so that the intended stake values
-are used for the new epoch.
+are used for the new epoch. This operation occurs before any transactions are
+processed in the new epoch’s bank.
 
 3. The calculation iterates all vote accounts and filters those that meet
 the following criteria:
@@ -147,8 +148,9 @@ following rules and select the top 2,000. Otherwise, return the entire list:
 validator in the accepted list from the previous step
 
 6. Record the VAT fee subtraction in the bank, which reduces the bank’s
-capitalization. This occurs before any transactions are processed in the new
-epoch’s bank
+capitalization. The recording of fee subtraction occurs when the bank is
+frozen even though fee reduction happens before any transaction in the
+bank is executed.
 
 ## Operation Considerations
 
