@@ -120,9 +120,6 @@ than 2,000 valid validators, pick all of them.
 
 - Mark the fee burned and write the result into the bank
 
-All validators must perform the same operation, or the resulting bankhash will
-be different.
-
 ### How to implement the checks
 
 1. When a new bank crosses an epoch boundary (bank.epoch() >
