@@ -108,7 +108,7 @@ In summary, a valid vote account in an Alpenglow epoch must contain:
 - at least 1.6 SOL VAT fee plus the necessary storage rent amount for a new
 epoch in its corresponding identity account
 
-When the staked validators for a new epoch are calculated, the leader will
+When the staked validators for a new epoch are calculated, all validators must
 perform the following operations:
 
 - When there are more than 2,000 valid validators, sort all valid vote accounts
