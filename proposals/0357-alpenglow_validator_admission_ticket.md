@@ -144,7 +144,7 @@ following rules and select the top 2,000. Otherwise, return the entire list:
   - If multiple validators have exactly the same amount of stake and including
   all of them would exceed the 2,000 limit, then exclude all of them
 
-5. Subtract 1.6 SOL from the corresponding vote identity account for each
+5. Subtract 1.6 SOL from the corresponding gossip identity account for each
 validator in the accepted list from the previous step
 
 6. Record the VAT fee subtraction in the bank, which reduces the bank’s
