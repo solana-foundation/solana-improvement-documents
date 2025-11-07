@@ -127,7 +127,7 @@ next epoch (bank.epoch() + 1). This is the same as now.
 2. Perform stake activation and deactivation so that the intended stake values
 are used for the new epoch.
 
-3. The calculation goes through all vote accounts and filters those that meet
+3. The calculation iterates all vote accounts and filters those that meet
 the following criteria:
 
   - The corresponding identity account has a balance of at least 1.6 SOL
