@@ -87,19 +87,7 @@ receiving block rewards and commissions.
 
 ### What is considered a valid vote account
 
-The VAT discussion in SIMD 326 proposes:
-
-- There is a strict limit of the 2,000 highest staked validators
-
-- Before being admitted to an epoch, the 1.6 SOL per epoch VAT fee is deducted
-  from each validator and burned
-
-Another requirement (not explicitly mentioned in SIMD 326 but in the Alpenglow
-White Paper) is that Alpenglow uses BLS to aggregate signatures. So a future
-Alpenglow vote account must contain a valid BLS public key deduced from its
-current vote authority ed25519 private key.
-
-In summary, a valid vote account in an Alpenglow epoch must contain:
+A valid vote account in an Alpenglow epoch must contain:
 
 - a BLS public key
 
