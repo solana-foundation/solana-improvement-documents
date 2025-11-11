@@ -76,10 +76,11 @@ purpose:
 - Vote account: This account must contain the correct BLS public key
 corresponding to vote authority keypair. It continues to keep all the vote
 credits and all validator identity/authority/commission information updates
-happen here, but it doesn’t contain vote information any more.
+happen here, but it doesn’t contain vote information any more. This will be
+the account where the 1.6 SOL VAT is deducted from.
 
-- Identity account: This is the account for the 1.6 SOL VAT; it continues
-receiving block rewards and commissions.
+- Identity account: It continues receiving block rewards and commissions. But
+we may change that in a separate SIMD.
 
 - Vote authority account: For signing BLS messages
 
@@ -92,7 +93,7 @@ A valid vote account in an Alpenglow epoch must contain:
 - a BLS public key
 
 - at least 1.6 SOL VAT fee plus the necessary storage rent amount for a new
-epoch in its corresponding identity account
+epoch in the vote account
 
 When the staked validators for a new epoch are calculated, all validators must
 perform the following operations:
@@ -102,7 +103,7 @@ by descending order of stake. If some validator with stake S is in position
 2001, then we remove all validators with stake S and less. If there are fewer
 than 2,000 valid validators, pick all of them.
 
-- Deduct 1.6 SOL VAT fee from each picked gossip identity account once
+- Deduct 1.6 SOL VAT fee from each picked vote account once
 
 - Mark the fee burned and write the result into the bank
 
@@ -119,7 +120,7 @@ processed in the new epoch’s bank.
 3. The calculation iterates all vote accounts and filters those that meet
 the following criteria:
 
-  - The corresponding identity account has a balance of at least 1.6 SOL
+  - The account has a balance of at least 1.6 SOL
 
   - The account has a valid BLS compressed public key (i.e., it can be
     correctly decompressed)
@@ -132,8 +133,8 @@ following rules and select the top 2,000. Otherwise, return the entire list:
   - If multiple validators have exactly the same amount of stake and including
   all of them would exceed the 2,000 limit, then exclude all of them
 
-5. Subtract 1.6 SOL from the corresponding gossip identity account for each
-validator in the accepted list from the previous step
+5. Subtract 1.6 SOL from the vote account for each validator in the accepted
+list from the previous step
 
 6. Record the VAT fee subtraction in the bank, which reduces the bank’s
 capitalization. The recording of fee subtraction occurs when the bank is
@@ -143,7 +144,7 @@ bank is executed.
 ## Operation Considerations
 
 - To be included in epoch e+1, validator operators must ensure the vote
-identity account has at least 1.6 SOL before epoch e-1 ends
+account has at least 1.6 SOL before epoch e-1 ends
 
 - Validator operators must ensure they have valid BLS public key specified in
 their vote account
