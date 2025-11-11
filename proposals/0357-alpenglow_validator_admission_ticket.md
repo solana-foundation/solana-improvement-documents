@@ -66,7 +66,7 @@ identity account and vote authority account can be the same):
 
 - Vote account for saving all the vote states and receiving commission
 
-- Identity account for receiving block rewards
+- Identity account for receiving block rewards and priority fees
 
 - Vote authority account for signing vote transactions
 
@@ -79,8 +79,8 @@ credits and all validator identity/authority/commission information updates
 happen here, but it doesn’t contain vote information any more. This will be
 the account where the 1.6 SOL VAT is deducted from.
 
-- Identity account: It continues receiving block rewards and commissions. But
-we may change that in a separate SIMD.
+- Identity account: It continues receiving block rewards and priority fees.
+But we may change that in a separate SIMD.
 
 - Vote authority account: For signing BLS messages
 
