@@ -186,7 +186,10 @@ of the epoch, we have enough slots in epoch e to finalize epoch e-1's state.
 
 ## Security Considerations
 
-N/A
+Keeping funds in vote accounts for VAT is safer than keeping funds in identity
+accounts. Because the keypair for identity account needs to be in a hot wallet
+to support real-time validator operations, while the vote authority keypair
+does not need to be in a hot wallet.
 
 ## Backwards Compatibility
 
