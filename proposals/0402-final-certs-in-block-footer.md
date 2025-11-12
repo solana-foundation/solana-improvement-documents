@@ -126,7 +126,9 @@ The extended block footer serializes within a `BlockComponent` as follows:
 ```
 
 The `Option<FinalCerticate>` is serialized as:
+
 - 1 byte: 0 for `None`, 1 for `Some`
+
 - If `Some`: certificate data follows
 
 #### FinalCertificate Serialization
@@ -209,9 +211,13 @@ too high.
 the new format it's easier to enforce the rule that `FinalizationCertificate`
 contains either fast or slow finalization certificates.
 
-## Security Considerations
+## Impact
 
 Invalid certificates will cause the block to be marked dead.
+
+## Security Considerations
+
+N/A
 
 ## Backwards Compatibility
 
