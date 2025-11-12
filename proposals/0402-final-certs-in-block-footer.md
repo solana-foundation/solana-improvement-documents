@@ -58,7 +58,7 @@ Observability data structure*.
 ```rust
 pub struct CertificateInner {
     bitmap: Vec<u8>,
-    signature: BLSSignature,
+    signature: BLSSignatureCompressed,
 }
 
 pub struct FinalCertificate {
@@ -69,7 +69,8 @@ pub struct FinalCertificate {
 }
 ```
 
-Where `Slot` is u64, `Hash` is [u8; 32], and `BLSSignature` is [u8; 192].
+Where `Slot` is u64, `Hash` is [u8; 32], and `BLSSignatureCompressed` is
+[u8; 96].
 
 Please refer to `solana-signer-store` for bitmap format. We expect to be using
 `solana-signer-store 0.1.0` for the Alpenglow launch. Only base2-encoding
@@ -210,6 +211,12 @@ too high.
 **Directly using Certificate format in Consensus Pool**: Rejected because under
 the new format it's easier to enforce the rule that `FinalizationCertificate`
 contains either fast or slow finalization certificates.
+
+**Use base-3 encoding in Certificate**: We can use base-3 encoding in `Skip` or
+`NotarizeFallback` certs in Alpenglow consensus pool because the pool checks to
+make sure there will never be a `(true, true)` combination where two different
+votes are presented for any validator. This is not true in this case. In most
+of the cases, validators will send both `Notarize` and `Finalize` for a block.
 
 ## Impact
 
