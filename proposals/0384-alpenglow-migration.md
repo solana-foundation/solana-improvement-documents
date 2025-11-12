@@ -1,5 +1,5 @@
 ---
-simd: '0371'
+simd: '0384'
 title: Alpenglow migration
 authors:
   - Kobi Sliwinski (Anza)
@@ -29,10 +29,18 @@ This proposal depends on the following accepted proposal:
 
     Requires Alpenglow to be implemented in order to migrate
 
+- **[SIMD-0307]: Add Block Footer**
+
+    Specifies `BlockMarker`, an means of disseminating metadata in a block
+
 
 ## New Terminology
 
-N/A
+Strong optimistic confirmation:
+
+- A block `B` is strong OC if there exists a block `T` such that `B` is the parent
+  of `T` and `slot(B) + 1 = slot(T)` and `T` contains vote transactions for `B` from
+  at least `82%` of stake.
 
 ## Detailed Design
 
@@ -48,8 +56,8 @@ N/A
    - Turn off rooting blocks in TowerBFT to prevent losing optimistically
      confirmed blocks that could qualify as the Alpenglow genesis blocks.
 
-2. After the migration boundary slot `S`, wait for some block `B > S` to be
-   `strongly optimistically confirmed` with `>=82%` of the stake voting.
+2. After the migration boundary slot `S`, wait for some block `B > S` to reach
+   strong optimistic confirmation.
 
 3. Find the latest ancestor block `G` of `B` from before the migration boundary
    slot `S`. Cast a BLS vote (the genesis vote) for `G` via all to all. Note
@@ -59,9 +67,10 @@ N/A
 4. If we observe `>=82%` genesis votes for the ancestor block `G`, this
    consitutes the `genesis certificate`, and `G` is the genesis block for
    Alpenglow. Validators will periodically refresh genesis votes until this
-   `genesis certificate` is observed.
+   `genesis certificate` is observed. During this period they perform regular
+   TowerBFT consensus for all blocks.
 
-5. Anytime a correct validator receives a `genesis certificate` for a slot `B`
+5. Anytime a correct validator receives a `genesis certificate` for a slot `G`
    (either constructed themselves, received through replaying a block, or received
    from all-to-all broadcast), they:
    - Broadcast the certificate to all other validators via the Alpenglow
@@ -69,20 +78,20 @@ N/A
      mechanism.
    - We initialize the alpenglow `votor` module with `G` as genesis, and disable
      TowerBFT for any slots past `G`
-   - In block production pack the `genesis certificate` in the headers of any
-     blocks that are *direct* children of `G`. This means anybody replaying any
-     of the initial Alpenglow blocks must see the `genesis certificate`.
-   - Delete all blocks with slot greater than `slot(G)`.
+   - In block production pack the `genesis certificate` as a `GenesisBlockMarker`
+     for any blocks that are *direct* children of `G`. This means anybody 
+     replaying any of the initial Alpenglow blocks must see the `genesis certificate`.
+   - Delete all blocks and shreds with slot greater than `slot(G)`.
    - We exit vote only mode, enable Alpenglow rooting, and re-enable RPC
      commitment/confirmation reporting.
 
 6. Anytime a validator receives a `genesis certificate` validated through
    *replaying* the header of a block, they store the certificate in a
-   `migration success` off-curve account
-   `Pubkey::find_program_address(&["alpegration"], alpenglow::id())`. If that
-   account is empty. This means all snapshots descended from the block will
-   contain this account and signal to validators that they should initiate
-   Alpenglow after unpacking the snapshot.
+   `migration success` off-curve account 
+   `Pubkey::find_program_address(&["carlgration"], alpenglow::id())`. 
+   This means all snapshots descended from the block will contain this account 
+   and signal to validators that they should initiate Alpenglow after unpacking 
+   the snapshot.
 
 7. Alternatively, anytime a correct validator that has not yet detected a
    `genesis certificate`, but receives an Alpenglow finalization certificate for
@@ -99,6 +108,55 @@ N/A
      enter step 1.
    - If the off-curve `migration success` account contains a certificate and the
      certificate is valid, immediately enter Alpenglow.
+
+### GenesisBlockMarker
+
+In order to disseminate the `genesis certificate` in the initial Alpenglow block
+we add a new `BlockMarker` to the specification of SIMD-0307 with variant ID `3`:
+
+```
+GenesisBlockMarker:
++---------------------------------------+
+| Genesis Slot                (8 bytes) |
++---------------------------------------+
+| Genesis Block ID           (32 bytes) |
++---------------------------------------+
+| BLS Signature             (192 bytes) |
++---------------------------------------+
+| Validator bitmap length     (8 bytes) |
++---------------------------------------+
+| Validator bitmap      (max 512 bytes) |
++---------------------------------------+
+
+Total size: max 752 bytes
+```
+
+The full serialization of this component is:
+
+```
++---------------------------------------+
+| Entry Count = 0             (8 bytes) |
++---------------------------------------+
+| Marker Version = 1          (2 bytes) |
++---------------------------------------+
+| Variant ID = 3              (1 byte)  |
++---------------------------------------+
+| Length = max 752            (2 bytes) |
++---------------------------------------+
+| Genesis Slot                (8 bytes) |
++---------------------------------------+
+| Genesis Block ID           (32 bytes) |
++---------------------------------------+
+| BLS Signature             (192 bytes) |
++---------------------------------------+
+| Bitmap length (max 512)     (8 bytes) |
++---------------------------------------+
+| Validator bitmap      (max 512 bytes) |
++---------------------------------------+
+
+Total size: max 765 bytes
+```
+
 
 #### Correctness argument:
 
