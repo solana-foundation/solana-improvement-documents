@@ -1,0 +1,218 @@
+---
+simd: '0402'
+title: Finalization Certificate in Block Footer
+authors:
+  - To be filled
+category: Standard
+type: Core
+status: Review
+created: 2025-11-11
+feature: (fill in with feature key and github tracking issues once accepted)
+---
+
+## Summary
+
+This SIMD introduces addition of an Alpenglow finalization certificate to the
+Block Footer for enhanced observability. Alongside documenting the required
+data structure changes, we outline some use-cases for these certificates.
+
+## Motivation
+
+Before Alpenglow, validator votes were expressed as on-chain transactions that
+updated vote accounts, each functioning as a state machine tracking the voting
+activity of a staked validator. Alpenglow (SIMD-0326) moves away from this
+model by having validators send vote messages directly to one another,
+improving the speed and efficiency of consensus.
+
+This shift removes the on-chain visibility previously provided by vote
+transactions and vote account state, which zero-staked validators currently
+rely on to infer validator delinquency. It also affects any party that depends
+on the ability to observe votes on-chain. To address this, Alpenglow SIMD
+proposed adding finalization certificate to the block footer. This certificate
+consists of BLS-aggregated signatures representing votes from validators
+collectively controlling a significant amount of stake. They offer a concise,
+verifiable record that blocks have been finalized correctly, enabling reliable
+RPC status reporting and supporting a broad range of downstream uses.
+
+## Dependencies
+
+- Alpenglow is specified in [SIMD 326](https://github.com/solana-foundation/solana-improvement-documents/pull/326)
+
+- Block footer is specified in [SIMD 307](https://github.com/solana-foundation/solana-improvement-documents/pull/307)
+
+## New Terminology
+
+- **Finalization Certificate for Observability**: is a proof that a specified
+block is finalized by aggregating specific types of votes. Note that the data
+format is slightly different from Certificate in SIMD 326, because we are
+combining *slow-finalization* and *notarization* certificates into one data
+structure when necessary. See details in *Finalization Certificate for
+Observability data structure*.
+
+## Detailed Design
+
+### Data Layout in Block Footer
+
+#### Finalization Certificate for Observability data structure
+
+```rust
+pub struct CertificateInner {
+    bitmap: Vec<u8>,
+    signature: BLSSignature,
+}
+
+pub struct FinalCertificate {
+    pub slot: Slot,
+    pub hash: Hash,
+    pub final: CertificateInner,
+    pub notar: Option<CertificateInner>,
+}
+```
+
+Where `Slot` is u64, `Hash` is [u8; 32], and `BLSSignature` is [u8; 192].
+
+Please refer to `solana-signer-store` for bitmap format. We expect to be using
+`solana-signer-store 0.1.0` for the Alpenglow launch. Only base2-encoding
+will be used in either bitmap. When `notar` is `None`, this is a fast
+finalization cert. Otherwise it’s a slow finalization cert.
+
+Block Footer Extension
+
+```rust
+
+pub struct BlockFooterV1 {
+    pub bank_hash: Hash,                               // Introduced in V1 (SIMD-0298)
+    pub block_producer_time_nanos: u64,                // Introduced in V1 (SIMD-0307)
+    pub block_user_agent: Vec<u8>,                     // Introduced in V1 (SIMD-0307)
+    pub final_cert: Option<FinalCertificate>,          // New, in this SIMD
+}
+```
+
+**Note on Versioning and Field Ordering**: While adding fields to the footer
+would typically warrant a version increment, we maintain `footer_version=1`
+for simplicity.
+
+We only make these atypical changes in light of the fact that, as of November
+2025, clients do not yet disseminate block footers or block markers, making
+this an appropriate time to modify the version 1 format before widespread
+adoption.
+
+#### Serialization Format
+
+The extended block footer serializes within a `BlockComponent` as follows:
+
+```
++---------------------------------------+
+| Entry Count = 0             (8 bytes) |
++---------------------------------------+
+| Marker Version = 1          (2 bytes) |
++---------------------------------------+
+| Variant ID = 0              (1 byte)  |
++---------------------------------------+
+| Length                      (2 bytes) |
++---------------------------------------+
+| Version = 1                 (1 byte)  |
++---------------------------------------+
+| bank_hash                  (32 bytes) |
++---------------------------------------+
+| block_producer_time_nanos   (8 bytes) |
++---------------------------------------+
+| final_cert                 (variable) | ← NEW
++---------------------------------------+
+| block_user_agent_len         (1 byte) |
++---------------------------------------+
+| block_user_agent        (0-255 bytes) |
++---------------------------------------+
+```
+
+The `Option<FinalCerticate>` is serialized as:
+- 1 byte: 0 for `None`, 1 for `Some`
+- If `Some`: certificate data follows
+
+#### FinalCertificate Serialization
+
+Each `CertificateInner` is serialized as follows:
+
+```
++---------------------------------------+
+| bitmap_len                  (8 bytes) |
++---------------------------------------+
+| bitmap                     (variable) |
++---------------------------------------+
+| signature                 (192 bytes) |
++---------------------------------------+
+```
+
+Each `FinalizationCertificate` is serialized as follows: If `notar` does not
+exist, there will be 8 bytes of 0.
+
+```
++---------------------------------------+
+| slot                        (8 bytes) |
++---------------------------------------+
+| hash                       (32 bytes) |
++---------------------------------------+
+| final                      (variable) |
++---------------------------------------+
+| notar                      (variable) |
++---------------------------------------+
+```
+
+### Field Population by leader
+
+While producing a block at slot `s`, the leader should include the finalization
+certificate corresponding to the highest slot available `t < s`. In the usual
+case with no skipped slots, this will be the certificate for `s − 1`, though
+the leader ultimately decides which certificates to include.
+
+If a fast finalization certificate is available, the leader should include only
+fast finalization cert in the `final` field. Otherwise, the leader should
+include the slow finalization cert in the `final` field and the notarization
+cert in the `notar` field.
+
+### Field Validation by non-leaders
+
+Validators MUST enforce the following rules:
+
+1. Type Constraints: When `notar` field is `None`, `final` field must be an
+aggregate of notarization votes. Otherwise the `final` field must be an
+aggregate of finalization votes, and the `notar` field must be an aggregate of
+notarization votes.
+
+2. BLS Validity: All certificates provided must pass BLS signature verification.
+
+3. Consensus Thresholds: Each certificate must meet the consensus thresholds
+specified by the Alpenglow protocol (SIMD-0326, https://www.anza.xyz/alpenglow-1-1).
+
+Any violation should cause the slot to be marked dead, and the remainder of the
+leader window should be skipped.
+
+### RPC change to Validator Delinquent status
+
+The RPC layer will read the parsed certificates from bank replay and use the
+bitmaps embedded in those certificates to update each validator’s voting
+status.
+
+To interpret the bitmaps, RPC can pull the BLS public keys from vote
+accounts and retrieve each account’s stake from the bank. Validators are then
+ranked by sorting first by stake in descending order, and breaking ties by
+public keys in ascending order. This deterministic ordering maps cleanly onto 
+the bitmap positions, allowing the RPC code to identify exactly which staked
+validators participated in a given vote.
+
+## Alternatives Considered
+
+**Transaction-Based Distribution**: Rejected because the execution overhead was
+too high.
+
+**Directly using Certificate format in Consensus Pool**: Rejected because under
+the new format it's easier to enforce the rule that `FinalizationCertificate`
+contains either fast or slow finalization certificates.
+
+## Security Considerations
+
+Invalid certificates will cause the block to be marked dead.
+
+## Backwards Compatibility
+
+Not backward compatible.
