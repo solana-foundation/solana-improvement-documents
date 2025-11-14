@@ -56,7 +56,7 @@ Observability data structure*.
 #### Finalization Certificate for Observability data structure
 
 ```rust
-pub struct CertificateInner {
+pub struct VotesAggregate {
     bitmap: Vec<u8>,
     signature: BLSSignatureCompressed,
 }
@@ -64,8 +64,8 @@ pub struct CertificateInner {
 pub struct FinalCertificate {
     pub slot: Slot,
     pub hash: Hash,
-    pub final: CertificateInner,
-    pub notar: Option<CertificateInner>,
+    pub final_aggregate: VotesAggregate,
+    pub notar_aggregate: Option<VotesAggregate>,
 }
 ```
 
@@ -118,11 +118,11 @@ The extended block footer serializes within a `BlockComponent` as follows:
 +---------------------------------------+
 | block_producer_time_nanos   (8 bytes) |
 +---------------------------------------+
-| final_cert                 (variable) | ← NEW
-+---------------------------------------+
 | block_user_agent_len         (1 byte) |
 +---------------------------------------+
 | block_user_agent        (0-255 bytes) |
++---------------------------------------+
+| final_cert                 (variable) | ← NEW
 +---------------------------------------+
 ```
 
@@ -155,9 +155,9 @@ exist, there will be 8 bytes of 0.
 +---------------------------------------+
 | hash                       (32 bytes) |
 +---------------------------------------+
-| final                      (variable) |
+| final_aggregate            (variable) |
 +---------------------------------------+
-| notar                      (variable) |
+| notar_aggregate            (variable) |
 +---------------------------------------+
 ```
 
