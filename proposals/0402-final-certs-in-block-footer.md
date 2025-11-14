@@ -57,8 +57,8 @@ Observability data structure*.
 
 ```rust
 pub struct VotesAggregate {
-    bitmap: Vec<u8>,
     signature: BLSSignatureCompressed,
+    bitmap: Vec<u8>,
 }
 
 pub struct FinalCertificate {
@@ -70,7 +70,7 @@ pub struct FinalCertificate {
 ```
 
 Where `Slot` is u64, `Hash` is [u8; 32], and `BLSSignatureCompressed` is
-[u8; 96].
+specified in `bls-signatures`, it is a 96 byte array.
 
 Please refer to `solana-signer-store` for bitmap format. We expect to be using
 `solana-signer-store 0.1.0` for the Alpenglow launch. Only base2-encoding
@@ -122,44 +122,19 @@ The extended block footer serializes within a `BlockComponent` as follows:
 +---------------------------------------+
 | block_user_agent        (0-255 bytes) |
 +---------------------------------------+
+| final_cert_len              (2 bytes) | ← NEW
++---------------------------------------+
 | final_cert                 (variable) | ← NEW
 +---------------------------------------+
 ```
 
-The `Option<FinalCerticate>` is serialized as:
-
-- 1 byte: 0 for `None`, 1 for `Some`
-
-- If `Some`: certificate data follows
+If the `final_cert_len` is 0, then there is no `final_cert` following it,
+otherwise it specifies the length of `final_cert`.
 
 #### FinalCertificate Serialization
 
-Each `CertificateInner` is serialized as follows:
-
-```
-+---------------------------------------+
-| bitmap_len                  (8 bytes) |
-+---------------------------------------+
-| bitmap                     (variable) |
-+---------------------------------------+
-| signature                 (192 bytes) |
-+---------------------------------------+
-```
-
-Each `FinalizationCertificate` is serialized as follows: If `notar` does not
-exist, there will be 8 bytes of 0.
-
-```
-+---------------------------------------+
-| slot                        (8 bytes) |
-+---------------------------------------+
-| hash                       (32 bytes) |
-+---------------------------------------+
-| final_aggregate            (variable) |
-+---------------------------------------+
-| notar_aggregate            (variable) |
-+---------------------------------------+
-```
+If `final_cert` is present, it is serialized as a whole using
+`wincode::serialize`.
 
 ### Field Population by leader
 
