@@ -36,6 +36,25 @@ This proposal depends on the following accepted proposal:
 
 ## New Terminology
 
+Migration boundary slot:
+
+- Slot at which Alpenglow migration begins
+- After slot this boundary slot:
+   - Turn off packing anything other than simple vote transactions in blocks.
+   Any transactions not
+     belonging to the vote program will cause a block to be marked dead during
+     replay by all correct validators.
+   - Core code will stop notifying RPC services of any optimistic confirmation/
+   commitment updates.
+   - TowerBFT will stop rooting blocks to prevent losing optimistically
+     confirmed blocks that could qualify as the Alpenglow genesis blocks.
+
+Alpenglow genesis block:
+
+- The last TowerBFT block before the "migration boundary slot" which is the
+parent of the first Alpenglow block. This is picked via the process described in
+the "Detailed Design" section below
+
 Strong optimistic confirmation:
 
 - A block `B` is strong OC if there exists a block `T` such that `B` is the parent
@@ -46,27 +65,24 @@ Strong optimistic confirmation:
 
 ### Migration Handoff
 
-1. Pick a migration boundary slot `S` as follows. Let `X` be the rooted slot in
+1. Pick a "migration boundary slot" (defined above) `S` as follows. Let `X` be
+the rooted slot in
    which the feature flag is activated. Let the migration slot S be `X + 5000`,
-   as to avoid the beginning of an epoch. After slot `S`:
-   - Turn off packing user transactions in blocks. Any transactions not
-     belonging to the vote program will cause a block to be marked dead during
-     replay by all correct validators.
-   - Turn off optimistic confirmation/commitment reporting over RPC.
-   - Turn off rooting blocks in TowerBFT to prevent losing optimistically
-     confirmed blocks that could qualify as the Alpenglow genesis blocks.
+   as to avoid the beginning of an epoch.
 
 2. After the migration boundary slot `S`, wait for some block `B > S` to reach
    strong optimistic confirmation.
 
 3. Find the latest ancestor block `G` of `B` from before the migration boundary
-   slot `S`. Cast a BLS vote (the genesis vote) for `G` via all to all. Note
-   validators should have filled out their BLS keys prior to the feature flag
-   activation, and will sign this genesis vote with this BLS key.
+   slot `S`. This is the Alpenglow genesis block. Cast a BLS vote, the "genesis
+   vote", for `G` via all to all. Note validators should have filled out
+   their BLS keys prior to the feature flag activation, and will sign this
+   genesis vote with this BLS key.
 
 4. If we observe `>=82%` genesis votes for the ancestor block `G`, this
    consitutes the `genesis certificate`, and `G` is the genesis block for
-   Alpenglow. Validators will periodically refresh genesis votes until this
+   Alpenglow. Validators will periodically refresh genesis votes every
+   `GENESIS_VOTE_REFRESH` = 400ms (i.e. once a slot) until this
    `genesis certificate` is observed. During this period they perform regular
    TowerBFT consensus for all blocks.
 
@@ -74,16 +90,20 @@ Strong optimistic confirmation:
    (either constructed themselves, received through replaying a block, or received
    from all-to-all broadcast), they:
    - Broadcast the certificate to all other validators via the Alpenglow
-     all-to-all mechanism, which guarantees delivery system via its retry
-     mechanism.
+     all-to-all mechanism. Validators will continually retry broadcasting this
+     certificate every 10 seconds via the certificate pool standstill timer so
+     long as a finalized Alpenglow certificate for a higher slot isn't detected.
    - We initialize the alpenglow `votor` module with `G` as genesis, and disable
      TowerBFT for any slots past `G`
    - In block production pack the `genesis certificate` as a `GenesisBlockMarker`
-     for any blocks that are *direct* children of `G`. This means anybody 
-     replaying any of the initial Alpenglow blocks must see the `genesis certificate`.
-   - Delete all blocks and shreds with slot greater than `slot(G)`.
-   - We exit vote only mode, enable Alpenglow rooting, and re-enable RPC
-     commitment/confirmation reporting.
+     for any blocks that are *direct* children of `G`. This means anybody
+     replaying any of the initial Alpenglow blocks must see the
+     `genesis certificate`.
+   - Delete all blocks and shreds with slot greater than `slot(G)` from
+   blockstore, and reset all associated state (replay, AccountsDB) to block
+   `G`, as is currently done when we rollback duplicate blocks.
+   - We re-enable packing non-vote transactions, enable Alpenglow rooting, and
+   re-enable RPC commitment/confirmation reporting.
 
 6. Anytime a validator receives a `genesis certificate` validated through
    *replaying* the header of a block, they store the certificate in a
@@ -95,7 +115,8 @@ Strong optimistic confirmation:
 
 7. Alternatively, anytime a correct validator that has not yet detected a
    `genesis certificate`, but receives an Alpenglow finalization certificate for
-   some block `X`, they should repair/replay all the ancestors of `X`
+   some block `X` that they can verify, they should repair/replay all the
+   ancestors of `X`
 
 8. Once an Alpenglow finalization certificate is received via all-to-all or via
    replaying a block, validators can stop broadcasting the genesis certificate
@@ -198,7 +219,7 @@ all-to-all, some correct validator will eventually get a genesis certificate.
 2. Next we show that once a correct validator migrates, then all correct
    validators will eventually migrate.
 
-There's two ways for correct validators to migrate:
+There are two ways for correct validators to migrate:
 
 1. A genesis certificate
 2. An Alpenglow finalization certificate
@@ -208,7 +229,7 @@ certificate. We assume at most `19%` of the cluster is Byzantine, then at least
 this correct validator will continuosly broadcast the genesis certificate until
 they see an Alpenglow finalization certificate. 
 
-This means eventually `82% - 19% = 63%` correct nodes will eventually receive
+This means `82% - 19% = 63%` correct nodes will eventually receive
 the genesis certificate and will migrate to Alpenglow upon receiving the
 certificate via all-to-all broadcast which guaranteees delivery.
 
@@ -219,8 +240,6 @@ other correct/lagging validators.
 Thus from 1. we know some correct validator must eventually migrate because
 eventually they must receive a genesis certificate, then we know from 2 that
 eventually all correct validators must migrate.
-
-For paper, see here.
 
 ### Poh Migration
 
@@ -237,6 +256,8 @@ be done in a few steps to mitigate the amount of code changes:
 3. Change `blockstore_processor::verify_ticks()` to turn off tick verification.
 
 ### Duplicate block handling
+
+On all blocks descended from the Alpenglow genesis block:
 
 1. Turn off tower duplicate block handling
 2. Turn off epoch slots
