@@ -214,7 +214,7 @@ This syscall is specifically for uncompressed affine points. To validate a
 compressed point, programs can use the `sol_curve_decompress` syscall, which
 performs identical validation checks as part of its decompression process.
 
-While it is possible to validate an uncompressed affine poinnt `(x, y)` by using
+While it is possible to validate an uncompressed affine point `(x, y)` by using
 the `sol_curve_decompress` function (e.g., by manually setting the control bits
 based on `y` and feeding the `x` coordinate to the decompressor, then comparing
 the result `y'` with `y`), this approach is inefficient. It would require the
