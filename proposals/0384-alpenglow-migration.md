@@ -39,7 +39,7 @@ This proposal depends on the following accepted proposal:
 Migration boundary slot:
 
 - Slot at which Alpenglow migration begins
-- After slot this boundary slot:
+- After this boundary slot:
    - Turn off packing anything other than simple vote transactions in blocks.
    Any transactions not
      belonging to the vote program will cause a block to be marked dead during
@@ -89,6 +89,7 @@ the rooted slot in
 5. Anytime a correct validator receives a `genesis certificate` for a slot `G`
    (either constructed themselves, received through replaying a block, or received
    from all-to-all broadcast), they:
+   - Verify the certificate against the BLS keys fr the epoch.
    - Broadcast the certificate to all other validators via the Alpenglow
      all-to-all mechanism. Validators will continually retry broadcasting this
      certificate every 10 seconds via the certificate pool standstill timer so
@@ -206,7 +207,7 @@ We assume the the cluster must eventually run under normal network conditions,
 so blocks past the migration boundary slot `S` should be `strongly optimistically
 confirmed`.
 
-Next, Until a migration certificate is observed, no correct validators will
+Next, until a migration certificate is observed, no correct validators will
 migrate, so all correct validators will vote as normal and contribute to
 optimistic confirmation. From the correctness argument, we know if a correct
 validator casts a genesis vote, they must vote for the same Alpenglow genesis
