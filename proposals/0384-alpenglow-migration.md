@@ -89,7 +89,7 @@ the rooted slot in
 5. Anytime a correct validator receives a `genesis certificate` for a slot `G`
    (either constructed themselves, received through replaying a block, or received
    from all-to-all broadcast), they:
-   - Verify the certificate against the BLS keys fr the epoch.
+   - Verify the certificate against the BLS keys for the epoch.
    - Broadcast the certificate to all other validators via the Alpenglow
      all-to-all mechanism. Validators will continually retry broadcasting this
      certificate every 10 seconds via the certificate pool standstill timer so
