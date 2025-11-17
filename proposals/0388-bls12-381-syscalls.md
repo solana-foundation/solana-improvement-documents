@@ -105,20 +105,23 @@ being the byte-ordering of the base field (Fq) elements themselves:
    - `_BE` variants expect this 48-byte array in big-endian.
    - `_LE` variants expect this 48-byte array in little-endian.
 
-2. Fq^2 Element Ordering: An Fq2 element `(c0 + c1 * u)` is encoded as 96 bytes.
-   The standard's structural ordering is preserved: the 48-byte encoding of the
-   `c1` component (imaginary) comes first, followed by the 48-byte encoding of
-   the `c0` component (real). Each 48-byte component respects the `_LE` or `_BE`
-   flag.
+2. Fq^2 Element Ordering: An Fq^2 element `(c0 + c1 * u)` is encoded as 96 bytes.
+   - `_BE` variants: The Zcash standard's structural ordering is preserved. The
+     48-byte encoding of the `c1` component (imaginary) comes first, followed by
+     the 48-byte encoding of the `c0` component (real).
+   - `_LE` variants: The structural ordering follows the canonical memory layout
+     of Rust structs and Little-Endian polynomial representation. The 48-byte
+     encoding of the `c0` component (real) comes first, followed by the 48-byte
+     encoding of the `c1` component (imaginary).
 
 3. Compressed Point Control Bits: For compressed representations (used by
    `sol_curve_decompress`), the Zcash standard uses the 3 most-significant-bits
    of the entire byte string (e.g., the first bits of the 48-byte G1 array) for
-   flags (compression, infinity, and sign). This convention is retained for both
-   BE and LE variants to ensure a consistent encoding structure. The syscall
-   will always read these flags from the same most-significant bits of the byte
-   array, while the remaining bits will be interpreted as the field element
-   according to the specified endianness.
+   flags (compression, infinity, and sign).
+   - `_BE` variants: The flags are located in the 3 most significant-bits of the
+     first byte (offset 0) of the 48-byte array.
+   - `_LE` variants: The flags are located in the 3 most-significant-bits of the
+     last byte (offset 47) of the 48-byte array.
 
 ### New Curve ID Constants
 
