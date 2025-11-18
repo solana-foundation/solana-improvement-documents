@@ -63,7 +63,7 @@ pub struct VotesAggregate {
 
 pub struct FinalCertificate {
     pub slot: Slot,
-    pub hash: Hash,
+    pub block_id: Hash,
     pub final_aggregate: VotesAggregate,
     pub notar_aggregate: Option<VotesAggregate>,
 }
@@ -122,19 +122,47 @@ The extended block footer serializes within a `BlockComponent` as follows:
 +---------------------------------------+
 | block_user_agent        (0-255 bytes) |
 +---------------------------------------+
-| final_cert_len              (2 bytes) | ← NEW
+| final_cert_present           (1 byte) | ← NEW
 +---------------------------------------+
 | final_cert                 (variable) | ← NEW
 +---------------------------------------+
 ```
 
-If the `final_cert_len` is 0, then there is no `final_cert` following it,
-otherwise it specifies the length of `final_cert`.
+If the `final_cert_present` is 0, then there is no `final_cert` following it,
+otherwise it is 1.
 
 #### FinalCertificate Serialization
 
-If `final_cert` is present, it is serialized as a whole using
-`wincode::serialize`.
+If `final_cert` is present, it is serialized as follows:
+
+```
++---------------------------------------+
+| slot                        (8 bytes) |
++---------------------------------------+
+| block_id                   (32 bytes) |
++---------------------------------------+
+| final_aggregate_signature  (96 bytes) |
++---------------------------------------+
+| final_aggregate_bitmap_len  (2 bytes) |
++---------------------------------------+
+| final_aggregate_bitmap     (variable) |
++---------------------------------------+
+| notar_aggregate_present      (1 byte) |
++---------------------------------------+
+| notar_aggregate_signature  (variable) |
++---------------------------------------+
+| notar_aggregate_bitmap_len (variable) |
++---------------------------------------+
+| notar_aggregate_bitmap     (variable) |
++---------------------------------------+
+```
+
+If the `notar_aggregate_present` is 0, then there are no
+`notar_aggregate_signature`, `notar_aggregate_bitmap_len`, and
+`notar_aggregate_bitmap` following it. Otherwise, we will have
+`notar_aggregate_signature` as 96 bytes array,
+`notar_aggregate_bitmap_len` as u16 in little endian, and
+`notar_aggregate_bitmap` following that.
 
 ### Field Population by leader
 
