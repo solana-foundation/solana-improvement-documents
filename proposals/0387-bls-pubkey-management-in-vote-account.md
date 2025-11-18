@@ -106,8 +106,8 @@ the verification is performed.
 Currently the vote program is allocated a budget of 3,000 CUs in the validator's
 builtin program cost modeling mechanism. Simple vote transactions (containing a
 `Vote` instruction) already bypass this mechanism, and other Vote program
-instructions that may use BLS verification are fairly infrequent. As a result, the Vote
-program will be removed from builtin program cost modeling.
+instructions that may use BLS verification are fairly infrequent. As a result,
+the Vote program will be removed from builtin program cost modeling.
 
 #### Disallow change of vote authority by old instructions
 
