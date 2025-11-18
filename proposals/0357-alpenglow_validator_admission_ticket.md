@@ -61,14 +61,12 @@ every validator eligible to participate in the next epoch
 
 ## Different Vote Related Accounts
 
-Before Alpenglow, we have the following accounts related to voting (the
-identity account and vote authority account can be the same):
+Before Alpenglow, we have the following accounts related to voting:
 
 - Vote account for saving all the vote states and receiving commission
 
-- Identity account for receiving block rewards and priority fees
-
-- Vote authority account for signing vote transactions
+- Identity account for receiving block rewards and priority fees, the vote
+transaction fees are currently paid out of this account
 
 After Alpenglow, we will still have roughly the same accounts serving the same
 purpose:
@@ -81,8 +79,6 @@ the account where the 1.6 SOL VAT is deducted from.
 
 - Identity account: It continues receiving block rewards and priority fees.
 But we may change that in a separate SIMD.
-
-- Vote authority account: For signing BLS messages
 
 ## Detailed Design
 
