@@ -175,8 +175,8 @@ though not all honest parties actually signed.
 
 ### Moving BLS verification to a syscall and/or a different program
 
-Another option is we can put BLS verification into a separate program or
-into a syscall.
+We can put BLS verification into a separate program or into a syscall, this is
+conceptually cleaner.
 
 We choose not to do this now because currently vote program needs to handle
 a lot of vote transactions so it's a native program. We may explore this
