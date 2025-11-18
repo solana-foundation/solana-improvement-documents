@@ -93,9 +93,15 @@ to perform BLS verification on its validity, see "Security Considerations"
 for details. We plan to implement this by calling BLS library from the vote
 program, see "Alternatives Considered" for comparison with other solutions.
 
-Since BLS verification is expensive (around 1.15ms), these operations changing
-BLS public key will need to have consume 34,500 CU right before BLS signature
-verification happens.
+Since BLS verification is expensive (around 1.15ms), each verification will cost
+34,500 CUs. Any Vote program instruction that performs a BLS verification will
+therefore add 34,500 CUs per verification on top of its baseline cost. As a result,
+Vote program instructions - which currently all cost 2,100 CUs - will have
+differentiated CU costs depending on whether they include BLS verification. The
+updated CU values are detailed in later sections.
+
+Note the 34,500 CUs for BLS verification will be consumed immediately before
+the verification is performed.
 
 Currently the vote program is still using the builtin CU, and each instruction
 consumes 3,000 CU. We propose to completely remove the vote program from using
