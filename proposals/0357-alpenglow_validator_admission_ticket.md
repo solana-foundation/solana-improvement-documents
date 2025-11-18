@@ -74,7 +74,7 @@ purpose:
 - Vote account: This account must contain the correct BLS public key
 corresponding to vote authority keypair. It continues to keep all the vote
 credits and all validator identity/authority/commission information updates
-happen here, but it doesn’t contain vote information any more. This will be
+happen here, but the `votes` list in vote state will be empty. This will be
 the account where the 1.6 SOL VAT is deducted from.
 
 - Identity account: It continues receiving block rewards and priority fees.
