@@ -58,33 +58,9 @@ used in Alpenglow votes based on their ed25519 vote keypair. In other words,
 with an existing ed25519 vote keypair, the users can safely regenerate the
 associated BLS keypair on demand.
 
-### User Operations Support
-
-Since a user’s BLS keypair always changes with the vote authority keypair, we
-list three different scenarios below. The following are all dependent on the
-feature associated with this SIMD being rolled out, the operations will not
-change before the feature is active.
-
-1. Creating a new vote account
-
-When users create a new vote account, the correct BLS public key will be
-automatically added to the new vote account. The BLS public key is derived
-from the vote authority keypair (if authorized voter is not specified, identity
-keypair is used).
-
-2. Changing vote authority keypair on existing vote account
-
-When users update the vote authority keypair, the correct BLS public key will
-be automatically updated in the vote account. The BLS public key rotation
-happens at the same time when a new vote authority switch happens.
-
-3. Updating missing BLS public key on existing vote account
-
-This is a temporary work-around before all existing staked vote accounts have
-proper BLS public keys specified. We will add `update-bls-pubkey` command so it
-will use the given vote authority keypair to generate and update the BLS public
-key in the vote account. When everyone has a proper BLS public key in their
-vote accounts this command can be removed.
+When users create vote accounts, they must register their BLS public key by
+storing it in the newly created vote account. When they modify their vote
+authority, they must re-register the new corresponding BLS key.
 
 ### Changes to vote program
 
@@ -205,22 +181,10 @@ though not all honest parties actually signed.
 
 ### Moving BLS verification to a syscall and/or a different program
 
-The benefit is that it is conceptually cleaner because vote program
-does not need to know about any BLS operation, also the BLS syscall and/or
-program can be generally used outside the vote program as well.
+Another option is we can put BLS verification into a separate program or
+into a syscall.
 
-However, before Alpenglow launches, we still want to keep the vote program
-native because it needs to process a lot of vote transactions. Performing
-a syscall from a native program adds quite some complexity. Also because it
-is a new syscall, we might need to frequently adjust the interface based on
-our findings.
-
-Therefore, the current plan is to perform these steps:
-
-1. Directly call the BLS library from the native vote program for the necessary
-BLS verification operations.
-
-2. Launch Alpenglow.
-
-3. After Alpenglow launches, add BLS syscall and/or program and move vote
-program to BPF.
+We choose not to do this now because currently vote program needs to handle
+a lot of vote transactions so it's a native program. We may explore this
+option later if the vote program is migrated to an on-chain BPF program after
+Alpenglow launches.
