@@ -91,22 +91,18 @@ After the feature gate associated with this SIMD is activated, the previous
 instructions will be disallowed to change vote authority after off-chain tools
 are upgraded, they will result in transaction errors. These include:
 
-```rust
-// Will be forbidden after off-chain tools are upgraded, use InitializeAccountV2
-InitializeAccount(VoteInit),
-// Forbidden when VoteAuthorize is VoteAuthorize::Voter and the account has BLS
-// public key
-Authorize(Pubkey, VoteAuthorize),
-// Forbidden when authorization_type is VoteAuthorize::Voter and the account has
-// BLS public key
-AuthorizeWithSeed(VoteAuthorizeWithSeedArgs),
-// Forbidden when VoteAuthorize is VoteAuthorize::Voter and the account has BLS
-// public key
-AuthorizeChecked(VoteAuthorize),
-// Forbidden when authorization_type is VoteAuthorize::Voter and the account has
-// BLS public key
-AuthorizeCheckedWithSeed(VoteAuthorizeCheckedWithSeedArgs),
-```
+- Authorize(Pubkey, VoteAuthorize): when VoteAuthorize is VoteAuthorize::Voter
+and the account has BLS public key it will fail
+
+- AuthorizeWithSeed(VoteAuthorizeWithSeedArgs): when authorization_type is
+VoteAuthorize::Voter and the account has BLS public key it will fail
+
+- AuthorizeChecked(VoteAuthorize): when VoteAuthorize is VoteAuthorize::Voter
+and the account has BLS public key it will fail
+
+- AuthorizeCheckedWithSeed(VoteAuthorizeCheckedWithSeedArgs): when
+authorization_type is VoteAuthorize::Voter and the account has BLS public key
+it will fail
 
 #### Add InitializeAccountV2
 
@@ -151,12 +147,10 @@ pub enum VoteAuthorize {
 }
 ```
 
-We only allow the new variant in AuthorizeCheck instruction. Calling the new
-variant in any other instruction will fail. Upon receiving the AuthorizeCheck
-transaction, if the parameter is of the new variant, the vote program will
-perform a BLS verification on submitted BLS public key and associated proof of
-possession. The transaction will fail if the verification failed. Otherwise the
-vote authority change will be recorded in vote account.
+Upon receiving the transaction, if the parameter is of the new variant, the
+vote program will perform a BLS verification on submitted BLS public key and
+associated proof of possession. The transaction will fail if the verification
+failed. Otherwise the vote authority change will be recorded in vote account.
 
 ## Impact
 
