@@ -11,6 +11,7 @@ governs the SIMD process.
 
 SIMDs can be divided into the following categories:
 
+
 - **Standard SIMDs**:
   Describe changes that affect most or all Solana implementations, such as:
   - **Core**:
