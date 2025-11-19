@@ -193,6 +193,16 @@ public key, then an attacker can select a particular public key which interacts
 with other participants' keys so a forged aggregate signature verifies even
 though not all honest parties actually signed.
 
+We also need to put ed25519 public key in Proof of Possession calculation
+because a replay attack exists:
+
+- User A wants to update vote authority, calculates PoP signature
+
+- The attacker sees this PoP signature in the transaction and sends in another
+transaction grabbing the BLS public key before user A
+
+- Now user A cannot use the BLS public key generated for his own vote account
+
 ## Alternatives Considered
 
 ### Moving BLS verification to a syscall and/or a different program
