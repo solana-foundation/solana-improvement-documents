@@ -115,13 +115,13 @@ message binding the key to its specific context.
 The signature verification must use the following message structure:
 
 ```rust
-message=label ∣∣ vote_account_address ∣∣ chain_id ∣∣ bls_pubkey_bytes
+message=label ∣∣ chain_id ∣∣ authorized_voter_pubkey ∣∣ bls_pubkey_bytes
 ```
 
 Where:
-`label` is a constant string (e.g., "SOL_BLS_POP_V1").
-`vote_account_address` is the authorized_voter Ed25519 public key.
-`chain_id` is the genesis hash or chain identifier.
+`label` is a constant string, we will make it "Alpenglow" here.
+`chain_id` is the genesis hash of the chain.
+`authorized_voter_pubkey` is the authorized_voter Ed25519 public key.
 
 #### Add InitializeAccountV2
 
