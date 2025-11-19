@@ -126,6 +126,8 @@ Where:
 
 - `authorized_voter_pubkey` is the authorized_voter Ed25519 public key.
 
+See "Security Considerations" for why the fields are needed.
+
 #### Add InitializeAccountV2
 
 ```rust
@@ -202,6 +204,9 @@ because a replay attack exists:
 transaction grabbing the BLS public key before user A
 
 - Now user A cannot use the BLS public key generated for his own vote account
+
+We also add a label so in the future we can update the version, and add a
+`chain_id` so attackers can't do cross-chain replay attack.
 
 ## Alternatives Considered
 
