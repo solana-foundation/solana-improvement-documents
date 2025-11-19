@@ -63,8 +63,10 @@ verify:
 
 ```
 rent_exempt_min_balance = calculate_min_balance(acc.post_exec_size)
-if acc.pre_exec_balance > 0 and acc.post_exec_size == acc.pre_exec_size:
+if acc.pre_exec_balance > 0 and acc.post_exec_size <= acc.pre_exec_size:
     min_allowed_balance = min(rent_exempt_min_balance, acc.pre_exec_balance)
+else:
+    min_allowed_balance = rent_exempt_min_balance
 
 assert(acc.post_exec_balance == 0 or acc.post_exec_balance >= min_allowed_balance)
 ```
@@ -77,7 +79,7 @@ the last (re)allocation of its data:
   and account size is used to determine the minimum balance.
 - The first subsequent transaction write-locking the same account but not
   performing any reallocations can either have (1) a balance higher than the
-  original min_balance or (2) a lower balance that's bounded below by a reduce
+  original min_balance or (2) a lower balance that's bounded below by a reduced
   rent price.
 - With this, we can inductively prove that the post-execution balance of
   every account is bounded below by the lowest rent since the last allocation.
@@ -110,17 +112,17 @@ the last (re)allocation of its data:
 
 - No change to existing behavior
 
-**Size decrease (reallocation downward):**
+**No net size increase:**
 
-- No change to existing behavior
-
-**No size change:**
-
-- `post_exec_size == pre_exec_size`
+- `post_exec_size <= pre_exec_size`
 - The `min()` clause applies: `min_balance = min(calculate_min_balance(size),
   pre_exec_balance)`
 - **This is the key behavioral change**: allows accounts to retain their
   original rent price even if current rent increases
+- Note that if the balance increases but is still below the current rent price,
+  the new balance becomes the effective minimum balance for the given account.
+  This means that the balance can no longer be reduced back to the original
+  rent price.
 
 ## Alternatives Considered
 
@@ -165,6 +167,10 @@ the last allocation.
 - It's essentially free to adopt a new rent rate that's lower than the rent rate
   an account was subject to at allocation time. This isn't problematic in itself
   but it may cause users to be less sensitive to rent increases.
+- For similar reasons, there's potential for a secondary state market to develop,
+  leading to an additional sudden increase in state allocation in anticipation of
+  a future rent hike. This can further exacerbate an excessive state growth event.
+
 
 ## Backwards Compatibility
 
