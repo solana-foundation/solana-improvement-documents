@@ -12,9 +12,10 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-This SIMD introduces addition of an Alpenglow finalization certificate to the
-Block Footer for enhanced observability. Alongside documenting the required
-data structure changes, we outline some use-cases for these certificates.
+This SIMD proposes adding an Alpenglow finalization certificate to the
+Block Footer for enhanced observability. This way anyone who only observes
+blocks can understand that the blocks are finalized without knowing the details
+of all-to-all communication between the validators.
 
 ## Motivation
 
@@ -27,7 +28,7 @@ improving the speed and efficiency of consensus.
 This shift removes the on-chain visibility previously provided by vote
 transactions and vote account state, which zero-staked validators currently
 rely on to infer validator delinquency. It also affects any party that depends
-on the ability to observe votes on-chain. To address this, Alpenglow SIMD
+on the ability to observe votes on-chain. To address this, Alpenglow
 proposed adding finalization certificate to the block footer. This certificate
 consists of BLS-aggregated signatures representing votes from validators
 collectively controlling a significant amount of stake. They offer a concise,
