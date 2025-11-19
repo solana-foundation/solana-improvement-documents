@@ -107,12 +107,13 @@ it will fail
 #### Proof of Possession Calculation
 
 While a standard Proof of Possession (PoP) is simply a signature over the
-public key itself (σ=Signsk​(pk)), this can leave room for "binding theft"
+public key itself (`σ=Signsk​(pk)`), this can leave room for "binding theft"
 where a valid PoP is intercepted and registered to an attacker's vote account.
 To prevent this and cross-chain replay, the PoP must sign a domain-separated
 message binding the key to its specific context.
 
 The signature verification must use the following message structure:
+
 ```rust
 message=label ∣∣ vote_account_address ∣∣ chain_id ∣∣ bls_pubkey_bytes
 ```
