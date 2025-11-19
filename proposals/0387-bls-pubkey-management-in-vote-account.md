@@ -120,7 +120,8 @@ message=label ∣∣ chain_id ∣∣ authorized_voter_pubkey ∣∣ bls_pubkey_b
 
 Where:
 
-- `label` is a constant string, we will make it "Alpenglow" here.
+- `label` is a constant string, we will make it "ALPENGLOW" here (all upper
+case).
 
 - `chain_id` is the genesis hash of the chain.
 
