@@ -8,7 +8,6 @@ ongoing improvements to Solana in the form of Solana Improvement Documents
 governs the SIMD process.
 
 ## SIMD Types
-
 SIMDs can be divided into the following categories:
 
 - **Standard SIMDs**:
