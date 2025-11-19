@@ -113,9 +113,9 @@ To prevent this and cross-chain replay, the PoP must sign a domain-separated
 message binding the key to its specific context.
 
 The signature verification must use the following message structure:
-```
-message=label ∣∣ vote_account_address ∣∣ chain_id ∣∣ bls_pubkey_bytes
 ```rust
+message=label ∣∣ vote_account_address ∣∣ chain_id ∣∣ bls_pubkey_bytes
+```
 
 Where:
 `label` is a constant string (e.g., "SOL_BLS_POP_V1").
