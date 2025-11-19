@@ -12,10 +12,11 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-This SIMD proposes adding an Alpenglow finalization certificate to the
-Block Footer for enhanced observability. This way anyone who only observes
-blocks can understand that the blocks are finalized without knowing the details
-of all-to-all communication between the validators.
+This SIMD proposes giving each leader the option to add an Alpenglow
+finalization certificate to the Block Footer for enhanced observability. This
+way anyone who only observes blocks can understand that the blocks are
+finalized without knowing the details of all-to-all communication between the
+validators.
 
 ## Motivation
 
@@ -45,10 +46,10 @@ RPC status reporting and supporting a broad range of downstream uses.
 
 - **Finalization Certificate for Observability**: is a proof that a specified
 block is finalized by aggregating specific types of votes. Note that the data
-format is slightly different from Certificate in SIMD 326, because we are
-combining *slow-finalization* and *notarization* certificates into one data
-structure when necessary. See details in *Finalization Certificate for
-Observability data structure*.
+format is slightly different from certificates in SIMD 326, because we are
+combining a *slow-finalization* and corresponding *notarization* certificates
+into one data structure when necessary. See details in *Finalization
+Certificate for Observability data structure*.
 
 ## Detailed Design
 
@@ -181,36 +182,40 @@ cert in the `notar` field.
 
 Validators MUST enforce the following rules:
 
-1. Type Constraints: When `notar` field is `None`, `final` field must be an
-aggregate of notarization votes. Otherwise the `final` field must be an
-aggregate of finalization votes, and the `notar` field must be an aggregate of
-notarization votes.
+1. Type Constraints: If the `notar` field is `None`, `final` field must be an
+aggregate of notarization votes for `(slot, hash)`. Otherwise the `final` field
+must be an aggregate of finalization votes for `slot`, and the `notar` field
+must be an aggregate of notarization votes for `(slot, hash)`.
 
 2. BLS Validity: All certificates provided must pass BLS signature verification.
 
 3. Consensus Thresholds: Each certificate must meet the consensus thresholds
 specified by the Alpenglow protocol (SIMD-0326, https://www.anza.xyz/alpenglow-1-1).
+For a fast finalization certificate, the limit is 80%. For a slow finalization
+certificate, the limit is 60% for both `final` and `notar` aggregates.
 
-Any violation should cause the slot to be marked dead, and the remainder of the
+Any violation should cause the block to be invalidated, and the remainder of the
 leader window should be skipped.
 
 ### RPC change to Validator Delinquent status
 
-The RPC layer will read the parsed certificates from bank replay and use the
+The RPC layer will read the parsed certificates from the bank and use the
 bitmaps embedded in those certificates to update each validator’s voting
 status.
 
-To interpret the bitmaps, RPC can pull the BLS public keys from vote
-accounts and retrieve each account’s stake from the bank. Validators are then
-ranked by sorting first by stake in descending order, and breaking ties by
-public keys in ascending order. This deterministic ordering maps cleanly onto 
-the bitmap positions, allowing the RPC code to identify exactly which staked
-validators participated in a given vote.
+To interpret the bitmaps, the RPC can pull the BLS public keys from their vote
+accounts and retrieve each account’s stake from the bank for the corresponding
+epoch. Validators are then ranked by sorting first by stake in descending
+order, and breaking ties by public keys in ascending order. See SIMD 357 for
+how we pick staked validators if there are more than 2000 of them. This
+deterministic ordering maps cleanly onto the bitmap positions, allowing the RPC
+code to identify exactly which staked validators participated in a given vote.
 
 ## Alternatives Considered
 
 **Transaction-Based Distribution**: Rejected because the execution overhead was
-too high.
+too high. It may also increase consensus latency, bandwidth usage, and would
+make the consensus implementation more complex and error prone.
 
 **Directly using Certificate format in Consensus Pool**: Rejected because under
 the new format it's easier to enforce the rule that `FinalizationCertificate`
@@ -224,7 +229,7 @@ of the cases, validators will send both `Notarize` and `Finalize` for a block.
 
 ## Impact
 
-Invalid certificates will cause the block to be marked dead.
+Invalid certificates will cause the block to be marked invalid.
 
 ## Security Considerations
 
