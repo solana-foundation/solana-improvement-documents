@@ -195,7 +195,7 @@ public key, then an attacker can select a particular public key which interacts
 with other participants' keys so a forged aggregate signature verifies even
 though not all honest parties actually signed.
 
-We also need to put ed25519 public key in Proof of Possession calculation
+We need to put `authorized_voter_pubkey` in Proof of Possession calculation
 because a replay attack exists:
 
 - User A wants to update vote authority, calculates PoP signature
@@ -205,7 +205,7 @@ transaction grabbing the BLS public key before user A
 
 - Now user A cannot use the BLS public key generated for his own vote account
 
-We also add a label so in the future we can update the version, and add a
+We also add a `label` so in the future we can update the version, and add a
 `chain_id` so attackers can't do cross-chain replay attack.
 
 ## Alternatives Considered
