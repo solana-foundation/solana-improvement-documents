@@ -135,8 +135,8 @@ to generate the signature, compress it, and save in
 `authorized_voter_bls_proof_of_possession`.
 
 During PoP verification, the validator will construct the same message, then
-check that the expected signature matches the given one under given BLS public
-key.
+check that the `authorized_voter_bls_proof_of_possession` is the correct
+signature.
 
 #### Add InitializeAccountV2
 
