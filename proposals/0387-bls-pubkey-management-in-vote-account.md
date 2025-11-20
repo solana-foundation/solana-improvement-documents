@@ -52,13 +52,13 @@ and it adds an optional BLS public key field
 ## Detailed Design
 
 BLS keypairs can be generated randomly like ed25519 keypairs. But to save the
-users some trouble on keypair management, we chose to initially derive their
-BLS keypair used in Alpenglow votes based on their ed25519 vote keypair. In
-other words, with an existing ed25519 vote keypair, the operators can safely
-regenerate the associated BLS keypair on demand. Also during validator
-operations, the users still only need to supply the vote keypair as before.
-After Alpenglow launches we may get rid of ed25519 vote keypair and allow users
-to randomly generate BLS keypairs.
+users some trouble on keypair management, the current plan is to initially
+derive their BLS keypair used in Alpenglow votes based on their ed25519 vote
+keypair. In other words, with an existing ed25519 vote keypair, the operators
+can safely regenerate the associated BLS keypair on demand. Also during
+validator operations, the users still only need to supply the vote keypair as
+before. After Alpenglow launches we may get rid of ed25519 vote keypair and
+allow users to randomly generate BLS keypairs.
 
 When users create vote accounts, they must register their BLS public key by
 storing it in the newly created vote account. When they modify their vote
