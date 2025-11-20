@@ -24,13 +24,14 @@ Although there can only be a maximum of 35 account keys in the legacy message
 format and 256 in the v0 format, instructions can have up to 65535 (`u16::MAX`) 
 accounts, each being a `u8` index referencing a transaction account.
 
-Allowing instructions to reference more accounts than those contained in the 
-transaction is pointless, because it entails some accounts will be aliased, 
-and the validator will need to deduplicate them.
+Allowing instructions to reference more accounts than what the message format 
+allows is not necessary. On one hand there is a limit of 255 accounts for CPI 
+and user deployed program, on the other, builtins and precompiles do not need 
+as many accounts as the message format allows. 
 
-Furthermore, since both user deployed programs and CPIs only allow 255 
-accounts, such a case can only occur for builtins and precompiles, none of 
-which require as many accounts.
+Furthermore, since there can only be 256 unique pubkeys in a transaction, any 
+instruction referencing more than 256 will have aliased references, requiring 
+the validator to deduplicate them, even though they are unused.
 
 ## New Terminology
 
