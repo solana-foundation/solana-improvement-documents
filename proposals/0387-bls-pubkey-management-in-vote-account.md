@@ -103,7 +103,7 @@ and the account has BLS public key it will fail
 authorization_type is VoteAuthorize::Voter and the account has BLS public key
 it will fail
 
-#### Proof of Possession Calculation
+#### Proof of Possession calculation and verification
 
 While a standard Proof of Possession (PoP) is simply a signature over the
 public key itself (`σ=Signsk​(pk)`), this can leave room for "binding theft"
@@ -111,7 +111,7 @@ where a valid PoP is intercepted and registered to an attacker's vote account.
 To prevent this and cross-chain replay, the PoP must sign a domain-separated
 message binding the key to its specific context.
 
-The signature verification must use the following message structure:
+The PoP calculation and verification must use the following message structure:
 
 ```rust
 message=label ∣∣ chain_id ∣∣ authorized_voter_pubkey ∣∣ bls_pubkey_bytes
@@ -126,7 +126,17 @@ case).
 
 - `authorized_voter_pubkey` is the authorized_voter Ed25519 public key.
 
+- `bls_pubkey_bytes` is the compressed new BLS public key (48 bytes).
+
 See "Security Considerations" for why the fields are needed.
+
+During PoP calculation, the user uses the BLS private key to sign this message
+to generate the signature, compress it, and save in
+`authorized_voter_bls_proof_of_possession`.
+
+During PoP verification, the validator will construct the same message, then
+check that the expected signature matches the given one under given BLS public
+key.
 
 #### Add InitializeAccountV2
 
