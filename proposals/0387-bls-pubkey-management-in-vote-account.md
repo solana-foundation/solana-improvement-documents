@@ -32,9 +32,9 @@ sign Alpenglow votes.
 
 However, the BLS public key is entirely different from an ed25519 public key
 (as BLS operates over a different elliptic curve), so we can’t naively reuse
-the current ed25519 public keys in vote accounts either. We have to add a BLS
-public key into each vote account and make that a requirement a little before
-Alpenglow launches.
+the current ed25519 public keys in vote accounts either. Each validator must
+add a BLS public into their vote account before the network enables Alpenglow
+in order to vote.
 
 ## Dependencies
 
@@ -45,17 +45,12 @@ and it adds an optional BLS public key field
 
 - Requiring BLS public key for Alpenglow is specified in [SIMD 357](https://github.com/solana-foundation/solana-improvement-documents/pull/357)
 
-## New Terminology
-
-- **BLS public key**: The public key used in BLS signatures. It will be
-compressed and stored as a 48-byte array in vote account.
-
 ## Detailed Design
 
 BLS keypairs can be generated randomly like ed25519 keypairs. But to save the
 users some trouble on keypair management, we chose to derive their BLS keypair
 used in Alpenglow votes based on their ed25519 vote keypair. In other words,
-with an existing ed25519 vote keypair, the users can safely regenerate the
+with an existing ed25519 vote keypair, the operators can safely regenerate the
 associated BLS keypair on demand.
 
 When users create vote accounts, they must register their BLS public key by
@@ -179,7 +174,7 @@ failed. Otherwise the vote authority change will be recorded in vote account.
 
 ## Impact
 
-When starting a validator, the users are supposed to provide all ed25519
+When starting a validator, the operators are supposed to provide all ed25519
 keypairs like before. The BLS keypair will automatically be derived from the
 vote authority keypair (if that’s missing, then the identity keypair is used
 like now). The operations needed to switch the keypair and the operations
