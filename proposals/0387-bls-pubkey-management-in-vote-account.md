@@ -52,10 +52,13 @@ and it adds an optional BLS public key field
 ## Detailed Design
 
 BLS keypairs can be generated randomly like ed25519 keypairs. But to save the
-users some trouble on keypair management, we chose to derive their BLS keypair
-used in Alpenglow votes based on their ed25519 vote keypair. In other words,
-with an existing ed25519 vote keypair, the operators can safely regenerate the
-associated BLS keypair on demand.
+users some trouble on keypair management, we chose to initially derive their
+BLS keypair used in Alpenglow votes based on their ed25519 vote keypair. In
+other words, with an existing ed25519 vote keypair, the operators can safely
+regenerate the associated BLS keypair on demand. Also during validator
+operations, the users still only need to supply the vote keypair as before.
+After Alpenglow launches we may get rid of ed25519 vote keypair and allow users
+to randomly generate BLS keypairs.
 
 When users create vote accounts, they must register their BLS public key by
 storing it in the newly created vote account. When they modify their vote
@@ -187,6 +190,19 @@ associated proof of possession. The transaction will fail if the verification
 failed. Otherwise the vote authority change will be recorded in vote account.
 
 ## Impact
+
+### Before feature gate in this SIMD is activated
+
+There is no change, users cannot update their BLS public key in vote account.
+
+### After the feature gate in this SIMD is activated but before Alpenglow launch
+
+Users can update their BLS public key in the vote account.
+
+### After Alpenglow launch
+
+Per SIMD 357, only vote accounts with updated BLS public key can participate
+in the voting process.
 
 When starting a validator, the operators are supposed to provide all ed25519
 keypairs like before. The BLS keypair will automatically be derived from the
