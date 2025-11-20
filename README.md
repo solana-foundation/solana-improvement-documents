@@ -9,6 +9,7 @@ governs the SIMD process.
 
 ## SIMD Types
 
+
 SIMDs can be divided into the following categories:
 
 - **Standard SIMDs**:
