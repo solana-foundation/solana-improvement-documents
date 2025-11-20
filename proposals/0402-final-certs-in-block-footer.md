@@ -3,7 +3,7 @@ simd: '0402'
 title: Finalization Certificate in Block Footer
 authors:
   - Quentin Kniep (Anza)
-  - Karthik Narayan (Anza)
+  - ksn6 (Anza)
   - Wen Xu (Anza)
 category: Standard
 type: Core
