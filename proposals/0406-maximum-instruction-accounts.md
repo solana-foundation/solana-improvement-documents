@@ -40,7 +40,7 @@ None.
 
 For every instruction that goes through program runtime (CPI, user deployed 
 program invocation, builtin invocation or precompiles), program runtime must 
-check if it references more than 256 accounts, and must throw 
+check if it references more than 255 accounts, and must throw 
 `InstructionError::MaxAccountsExceeded` when that is the case.
 
 ## Alternatives Considered
@@ -53,7 +53,7 @@ Calls to user deployed programs from top level instructions and CPIs will not
 be impacted, since there is already a limit in place.
 
 Instructions that invoke builtin programs or precompiles will error out if 
-they have more than 256 accounts.
+they have more than 255 accounts.
 
 ## Security Considerations
 
