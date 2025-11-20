@@ -57,8 +57,12 @@ derive their BLS keypair used in Alpenglow votes based on their ed25519 vote
 keypair. In other words, with an existing ed25519 vote keypair, the operators
 can safely regenerate the associated BLS keypair on demand. Also during
 validator operations, the users still only need to supply the vote keypair as
-before. After Alpenglow launches we may get rid of ed25519 vote keypair and
-allow users to randomly generate BLS keypairs.
+before.
+
+The association of BLS keypair with vote authority ed25519 keypair is the
+default client behavior to simplify Alpenglow launch. After Alpenglow launches
+we may get rid of ed25519 vote keypair and allow users to randomly generate BLS
+keypairs.
 
 When users create vote accounts, they must register their BLS public key by
 storing it in the newly created vote account. When they modify their vote
