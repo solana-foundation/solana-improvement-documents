@@ -133,9 +133,9 @@ case).
 
 See "Security Considerations" for why the fields are needed.
 
-During PoP calculation, the user uses the BLS private key to sign this message
-to generate the signature, compress it, and save in
-`authorized_voter_bls_proof_of_possession`.
+During PoP calculation, the cli will generate the BLS keypair, then use the BLS
+private key to sign this message to generate the signature, compress it, and
+save it in `authorized_voter_bls_proof_of_possession`.
 
 During PoP verification, the validator will construct the same message, then
 check that the `authorized_voter_bls_proof_of_possession` is the correct
