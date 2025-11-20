@@ -117,7 +117,7 @@ The PoP calculation and verification must use the following message structure:
 message=label ∣∣ chain_id ∣∣ authorized_voter_pubkey ∣∣ bls_pubkey_bytes
 ```
 
-Where:
+Where: (|| above is concatenation)
 
 - `label` is a constant string, we will make it "ALPENGLOW" here (all upper
 case).
