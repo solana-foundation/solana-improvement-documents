@@ -36,6 +36,10 @@ the current ed25519 public keys in vote accounts either. Each validator must
 add a BLS public into their vote account before the network enables Alpenglow
 in order to vote.
 
+## New Terminology
+
+N/A
+
 ## Dependencies
 
 - Alpenglow is specified in [SIMD 326](https://github.com/solana-foundation/solana-improvement-documents/pull/326)
