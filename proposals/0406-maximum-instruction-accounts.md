@@ -13,10 +13,10 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-This SIMD imposes a hard restriction on the maximum number of accounts an 
-instruction may refer to. There is already a limit of 255 accounts during 
-serialization in ABI v0 and v1, but it does not apply to builtin invocations 
-or precompiles.
+This SIMD imposes a hard restriction on the maximum number of account 
+references that an instruction may declare. There is already a limit of 255 
+account references imposed during serialization in ABI v0 and v1, but it does 
+not currently apply to builtin invocations or precompiles.
 
 ## Motivation
 
