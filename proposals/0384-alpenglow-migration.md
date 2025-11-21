@@ -31,7 +31,7 @@ This proposal depends on the following accepted proposal:
 
 - **[SIMD-0307]: Add Block Footer**
 
-    Specifies `BlockMarker`, an means of disseminating metadata in a block
+    Specifies `BlockMarker`, a means of disseminating metadata in a block
 
 
 ## New Terminology
@@ -39,7 +39,7 @@ This proposal depends on the following accepted proposal:
 Migration boundary slot:
 
 - Slot at which Alpenglow migration begins
-- After this boundary slot:
+- For all slots after and inclusive of this boundary slot:
    - Turn off packing anything other than simple vote transactions in blocks.
    Any transactions not
      belonging to the vote program will cause a block to be marked dead during
@@ -66,18 +66,17 @@ Strong optimistic confirmation:
 ### Migration Handoff
 
 1. Pick a "migration boundary slot" (defined above) `S` as follows. Let `X` be
-the rooted slot in
-   which the feature flag is activated. Let the migration slot S be `X + 5000`,
-   as to avoid the beginning of an epoch.
+   the feature activation slot. Let the migration slot S be `X + 5000`, as to
+   avoid the beginning of an epoch.
 
-2. After the migration boundary slot `S`, wait for some block `B > S` to reach
+2. After the migration boundary slot `S`, wait for some block `B >= S` to reach
    strong optimistic confirmation.
 
-3. Find the latest ancestor block `G` of `B` from before the migration boundary
-   slot `S`. This is the Alpenglow genesis block. Cast a BLS vote, the "genesis
-   vote", for `G` via all to all. Note validators should have filled out
-   their BLS keys prior to the feature flag activation, and will sign this
-   genesis vote with this BLS key.
+3. Find the most recent ancestor block `G` of `B` from before the migration
+   boundary slot `S`. This is the Alpenglow genesis block. Cast a BLS vote,
+   the "genesis vote", for `G` via all to all. Note validators should have
+   filled out their BLS keys prior to the feature flag activation, and will
+   sign this genesis vote with this BLS key.
 
 4. If we observe `>=82%` genesis votes for the ancestor block `G`, this
    consitutes the `genesis certificate`, and `G` is the genesis block for
@@ -249,11 +248,13 @@ be done in a few steps to mitigate the amount of code changes:
 
 1. Before the end of each Alpenglow block, set the bank tick height to
    `bank.max_tick_height() - 1`
-2. Change tick producer to only make 1 ending tick per block, so that each bank
-   will still think it has reached `bank.max_tick_height()`. This last tick is
-   necessary to coordinate with banking stage and broadcast to properly end the
-   packing/dispersion of a block. Eliminating it is possible, but a load of
-   risky work.
+2. Set tick producer to low power mode, which only has one hash per tick.
+   We then call `tick_alpenglow()` at the end of every alpenglow block which
+   makes 1 ending tick per block. Because of 1. above, this gaurantees that
+   each bank will still think it has reached `bank.max_tick_height()`. This
+   last tick is necessary to coordinate with banking stage and broadcast to
+   properly end the packing/dispersion of a block. Eliminating it is possible,
+   but a load of risky work.
 3. Change `blockstore_processor::verify_ticks()` to turn off tick verification.
 
 ### Duplicate block handling
@@ -272,7 +273,12 @@ of the transition back and forth between Alpenglow and TowerBFT
 
 ## Impact
 
-Validators will run Alpenglow after the migration boundary
+During the migration process, there will be a liveness impact for the duration
+of the migration, which is optimistically only one slot past the migration
+boundary slot.
+
+Validators will run Alpenglow after discovering the genesis block after the
+migration boundary.
 
 ## Security Considerations
 
