@@ -49,7 +49,7 @@ otherwise `ElfParserError::OutOfBounds` must be thrown.
 - `e_ident.ei_osabi` must be `ELFOSABI_NONE` (`0x00`)
 - `e_ident.ei_abiversion` must be `0x00`
 - `e_ident.ei_pad` must be `[0x00; 7]`
-- `e_type` must be `ET_REL` (`0x0001`)
+- `e_type` is not checked
 - `e_machine` must be `EM_BPF` (`0x00F7`)
 - `e_version` must be `EV_CURRENT` (`0x00000001`)
 - `e_entry` must be within the bounds of the second program header
