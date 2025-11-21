@@ -58,7 +58,8 @@ otherwise `ElfParserError::OutOfBounds` must be thrown.
 - `e_flags` see SIMD-0161
 - `e_ehsize` must be `size_of::<Elf64Ehdr>()` (64 bytes)
 - `e_phnum` must be greater than or equal `0x0002`
-- `e_phoff + e_phnum * size_of::<Elf64Phdr>()` must be less than the file size
+- `e_phoff + e_phnum * size_of::<Elf64Phdr>()` must be
+  less than or equal the file size
 - `e_phentsize` must be `size_of::<Elf64Phdr>()` (56 bytes)
 - `e_shnum` is not checked
 - `e_shentsize` must be `size_of::<Elf64Shdr>()` (64 bytes)
@@ -78,7 +79,7 @@ For each of these predefined program headers:
 - `p_type` must be `PT_LOAD`
 - `p_flags` must match the `p_flags` of the entry in the table above
 - `p_offset` must not be less than `e_phoff + e_phnum * size_of::<Elf64Phdr>()`
-- `p_offset` must be less than `file.len() as u64`
+- `p_offset` must be less than or equal `file.len() as u64`
 - `p_offset` must be evenly divisible by 8 bytes,
 - `p_vaddr` must match the `p_vaddr` of the entry in the table above
 - `p_paddr` must match the `p_vaddr` of the entry in the table above
