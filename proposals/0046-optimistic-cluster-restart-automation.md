@@ -381,7 +381,7 @@ file for later slashing.
 
 Even though it's not very common that an outage happens across an epoch
 boundary, we do need to prepare for this rare case. Because the main purpose
-of `wen restart` is to make everyone reach aggrement, the following choices
+of `wen restart` is to make everyone reach agreement, the following choices
 are made:
 
 * Every validator only handles 2 epochs, any validator will discard slots
