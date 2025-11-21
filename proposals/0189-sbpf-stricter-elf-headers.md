@@ -8,7 +8,7 @@ type: Core
 status: Idea
 created: 2024-10-21
 feature: GJav1vwg2etvSWraPT96QvYuQJswJTJwtcyARrvkhuV9
-extends: SIMD-0178, SIMD-0179
+extends: SIMD-0178
 ---
 
 ## Summary
@@ -52,8 +52,7 @@ otherwise `ElfParserError::OutOfBounds` must be thrown.
 - `e_type` must be `ET_REL` (`0x0001`)
 - `e_machine` must be `EM_BPF` (`0x00F7`)
 - `e_version` must be `EV_CURRENT` (`0x00000001`)
-- `e_entry` must point to a function start marker in the text section,
-see SIMD-0179 for details on how a function start is marked.
+- `e_entry` must be within the bounds of the second program header
 - `e_phoff` must be `size_of::<Elf64Ehdr>()` (64 bytes)
 - `e_shoff` is not checked
 - `e_flags` see SIMD-0161
