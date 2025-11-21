@@ -127,7 +127,7 @@ Yearly comparisons are provided below, with full numbers in
 | After 5 years | 1.84%                        | 1.50%                       |
 | After 6 years | 1.56%                        | 1.50%                       |
 
-![Inflation Rate Comparison](../supporting_images/0411-double-disinflation-rate/inflation-rate-comparison.PNG)
+![Inflation Rate Comparison](../assets/simd411/inflation-rate-comparison.PNG)
 
 ### Implementation
 
@@ -198,7 +198,7 @@ Full numbers in [this sheet][modeling-sheet].
 | After 5 years         | 20,571,879.01    | 2.99%            |
 | After 6 years         | 22,299,369.53    | 3.2%             |
 
-![Total Supply Growth](../supporting_images/0411-double-disinflation-rate/total-supply-growth-comparison.PNG)
+![Total Supply Growth](../assets/simd411/total-supply-growth-comparison.PNG)
 
 ### Nominal Staking Yields
 
@@ -232,7 +232,7 @@ comparisons. Full numbers in [this sheet][modeling-sheet].
 | After 6 years         | 2.20% / 2.41%    | 2.13% / 2.32%     |
 |                       | / 2.65%          | / 2.56%           |
 
-![Nominal Staking Yields](../supporting_images/0411-double-disinflation-rate/nominal-staking-yield-comparison.PNG)
+![Nominal Staking Yields](../assets/simd411/nominal-staking-yield-comparison.PNG)
 
 ### Validator Break-Even Stake Requirement
 
