@@ -33,7 +33,7 @@ sign Alpenglow votes.
 However, the BLS public key is entirely different from an ed25519 public key
 (as BLS operates over a different elliptic curve), so we can’t naively reuse
 the current ed25519 public keys in vote accounts either. Each validator must
-add a BLS public into their vote account before the network enables Alpenglow
+add a BLS public key into their vote account before the network enables Alpenglow
 in order to vote.
 
 ## New Terminology
