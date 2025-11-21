@@ -33,7 +33,7 @@ unprofitable in year one, 28 in year two, and 44 in year three.
 ## Motivation
 
 The core motivation for this proposal is to materially reduce Solana’s
-emissions schedule. Unlike [SIMD-228](https://github.com/solana-foundation/solana-improvement-documents/pull/228/files), doubling the disinflation rate takes a
+emissions schedule. Unlike SIMD-228, doubling the disinflation rate takes a
 fundamentally different approach to emissions reduction, with the following
 benefits:
 
@@ -65,7 +65,8 @@ comparison.
 
 **Plugging the Leaky Bucket**: High token inflation increases sell pressure, as
 some stakers, especially in certain jurisdictions, treat staking rewards as
-ordinary income and need to sell a portion to cover taxes. [Max Resnick’s analysis](https://x.com/MaxResnick1/status/1896316441869381914?s=20) 
+ordinary income and need to sell a portion to cover taxes. 
+[Max Resnick’s analysis](https://x.com/MaxResnick1/status/1896316441869381914?s=20) 
 outlined a 17% “leaky bucket” tax on inflation (i.e., the gap between
 ordinary income and the 20% long-term capital gains rate). Combined with
 governments, centralized exchanges, and custody providers taking significant
@@ -90,11 +91,15 @@ to the system. Doubling the disinflation rate is a straightforward, balanced
 way to achieve these goals.
 
 The idea itself is not novel, having been independently proposed multiple times
-(e.g., [1](https://github.com/solana-foundation/solana-improvement-documents/discussions/261), [2](https://x.com/kdipep/status/1897722476940976183?s=20), [3](https://x.com/jon_charb/status/1855958290980839432), [4](https://www.helius.dev/blog/solana-issuance-inflation-schedule#modelling-inflation-schedule-modifications)).
+(e.g., [1](https://github.com/solana-foundation/solana-improvement-documents/discussions/261), 
+[2](https://x.com/kdipep/status/1897722476940976183?s=20), 
+[3](https://x.com/jon_charb/status/1855958290980839432), 
+[4](https://www.helius.dev/blog/solana-issuance-inflation-schedule#modelling-inflation-schedule-modifications)).
 
 ## Detailed Design
 
 Three parameters define Solana’s current inflation schedule:
+
 - Initial Inflation Rate: 8%
 - Disinflation Rate: -15%
 - Long-term Inflation Rate: 1.5%
@@ -111,15 +116,15 @@ already shrinking validator set.
 
 Yearly comparisons are provided below, with full numbers in [this sheet](https://docs.google.com/spreadsheets/d/1eVV-1HF4oyrlXmMzV64Nfifj8lpsb0Yl-bRXemF0TpE/edit?usp=sharing).
 
-| Period                     | Current Disinflation (-15%) | Proposed Disinflation (-30%) |
-|---------------------------|------------------------------|-------------------------------|
-| Current (mid Nov 2025, epoch 878) | 4.18%                   | 4.18%                        |
-| After 1 year              | 3.55%                        | 3.21%                        |
-| After 2 years             | 3.01%                        | 2.24%                        |
-| After 3 years             | 2.55%                        | 1.56%                        |
-| After 4 years             | 2.16%                        | 1.50%                        |
-| After 5 years             | 1.84%                        | 1.50%                        |
-| After 6 years             | 1.56%                        | 1.50%                        |
+| Period        | Current Disinflation (-15%) | Proposed Disinflation (-30%) |
+|---------------|------------------------------|-----------------------------|
+| Current       | 4.18%                        | 4.18%                       |
+| After 1 year  | 3.55%                        | 3.21%                       |
+| After 2 years | 3.01%                        | 2.24%                       |
+| After 3 years | 2.55%                        | 1.56%                       |
+| After 4 years | 2.16%                        | 1.50%                       |
+| After 5 years | 1.84%                        | 1.50%                       |
+| After 6 years | 1.56%                        | 1.50%                       |
 
 ![Inflation Rate Comparison](../supporting_images/0408-double-disinflation-rate/inflation-rate-comparison.PNG)
 
