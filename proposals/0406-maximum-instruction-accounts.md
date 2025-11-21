@@ -39,10 +39,12 @@ None.
 
 ## Detailed Design
 
-For every instruction that goes through program runtime (CPI, user deployed 
-program invocation, builtin invocation or precompiles), program runtime must 
-check if it references more than 255 accounts, and must throw 
-`InstructionError::MaxAccountsExceeded` when that is the case.
+A check must be inclided for every instruction that goes through program 
+runtime (CPI, user deployed program invocation, builtin invocation or 
+precompiles) to ensure it does not reference more than 255 accounts, and 
+throw `InstructionError::MaxAccountsExceeded` when that is the case. Such 
+verification must happend right before account deduplication for instruction 
+execution.
 
 ## Alternatives Considered
 
