@@ -1,5 +1,5 @@
 ---
-simd: '0408'
+simd: '0411'
 title: Double Disinflation Rate
 authors: Lostin & 0xIchigo (Helius)
 category: Standard
