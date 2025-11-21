@@ -78,7 +78,9 @@ For each of these predefined program headers:
 
 - `p_type` must be `PT_LOAD`
 - `p_flags` must match the `p_flags` of the entry in the table above
-- `p_offset` must not be less than `e_phoff + e_phnum * size_of::<Elf64Phdr>()`
+- `p_offset` be `e_phoff + e_phnum * size_of::<Elf64Phdr>()` for the first
+  entry and be `p_offset + p_filesz` of the previous entry for all
+  subsequent entries
 - `p_offset` must be less than or equal `file.len() as u64`
 - `p_offset` must be evenly divisible by 8 bytes,
 - `p_vaddr` must match the `p_vaddr` of the entry in the table above
