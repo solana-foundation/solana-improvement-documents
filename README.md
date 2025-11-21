@@ -47,4 +47,4 @@ The SIMD repository has three levels of access, as detailed in
 3. Maintain
 
 To request access or report misuse, please follow the procedures outlined in
-SIMD-0007.
+[SIMD-0007](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0007-access-policy.md).
