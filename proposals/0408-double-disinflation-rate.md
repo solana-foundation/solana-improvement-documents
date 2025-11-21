@@ -65,8 +65,8 @@ comparison.
 
 **Plugging the Leaky Bucket**: High token inflation increases sell pressure, as
 some stakers, especially in certain jurisdictions, treat staking rewards as
-ordinary income and need to sell a portion to cover taxes. 
-[Max Resnick’s analysis](https://x.com/MaxResnick1/status/1896316441869381914?s=20) 
+ordinary income and need to sell a portion to cover taxes. Max Resnick’s 
+[analysis](https://x.com/MaxResnick1/status/1896316441869381914?s=20) 
 outlined a 17% “leaky bucket” tax on inflation (i.e., the gap between
 ordinary income and the 20% long-term capital gains rate). Combined with
 governments, centralized exchanges, and custody providers taking significant
@@ -91,10 +91,9 @@ to the system. Doubling the disinflation rate is a straightforward, balanced
 way to achieve these goals.
 
 The idea itself is not novel, having been independently proposed multiple times
-(e.g., [1](https://github.com/solana-foundation/solana-improvement-documents/discussions/261), 
-[2](https://x.com/kdipep/status/1897722476940976183?s=20), 
-[3](https://x.com/jon_charb/status/1855958290980839432), 
-[4](https://www.helius.dev/blog/solana-issuance-inflation-schedule#modelling-inflation-schedule-modifications)).
+[1](https://github.com/solana-foundation/solana-improvement-documents/discussions/261) 
+[2](https://x.com/kdipep/status/1897722476940976183?s=20) 
+[3](https://x.com/jon_charb/status/1855958290980839432)
 
 ## Detailed Design
 
@@ -114,7 +113,8 @@ process and Alpenglow update. This provides a reasonable timeline that
 addresses concerns about inflation, without introducing systemic shock to an
 already shrinking validator set.
 
-Yearly comparisons are provided below, with full numbers in [this sheet](https://docs.google.com/spreadsheets/d/1eVV-1HF4oyrlXmMzV64Nfifj8lpsb0Yl-bRXemF0TpE/edit?usp=sharing).
+Yearly comparisons are provided below, with full numbers in 
+[this sheet](https://docs.google.com/spreadsheets/d/1eVV-1HF4oyrlXmMzV64Nfifj8lpsb0Yl-bRXemF0TpE/edit?usp=sharing)
 
 | Period        | Current Disinflation (-15%) | Proposed Disinflation (-30%) |
 |---------------|------------------------------|-----------------------------|
@@ -131,7 +131,8 @@ Yearly comparisons are provided below, with full numbers in [this sheet](https:/
 ### Implementation
 
 We can implement the following proposal by adding a new implementation method
-to `Inflation` in the [`solana-inflation` crate](https://github.com/anza-xyz/solana-sdk/tree/master/inflation):
+to `Inflation` in the 
+[`solana-inflation` crate](https://github.com/anza-xyz/solana-sdk/tree/master/inflation)
 
 ```rust
 impl Inflation {
@@ -150,8 +151,8 @@ impl Inflation {
 }
 ```
 
-We would also need to [add a new feature set](https://github.com/anza-xyz/agave/blob/43ac2f39d7a57d927433e621173d2e8b7be6a209/feature-set/src/lib.rs#L1206), which would then be used in
-[Agave’s bank.rs](https://github.com/anza-xyz/agave/blob/master/runtime/src/bank.rs) to overwrite the current inflation schedule with the latest
+We would also need to add a new feature set, which would then be used in 
+Agave’s bank.rs to overwrite the current inflation schedule with the latest
 change, which would look like:
 
 ```rust
@@ -173,18 +174,21 @@ Doubling the disinflation rate results in an estimated total supply of
 699.19 million SOL after six years, 22.3 million SOL lower (3.2%) than under
 the current inflation path. At current SOL prices, this is a $2.9 billion
 reduction in emissions. Following the implementation of SIMD-0096, the share
-of issuance offset by burned transaction base fees is negligible ([see chart](https://blockworks.com/analytics/solana/solana-financials/solana-burn-rate))
-and has been excluded from this analysis. Full numbers in [this sheet](https://docs.google.com/spreadsheets/d/1eVV-1HF4oyrlXmMzV64Nfifj8lpsb0Yl-bRXemF0TpE/edit?usp=sharing).
+of issuance offset by burned transaction base fees is negligible see 
+[chart](https://blockworks.com/analytics/solana/solana-financials/solana-burn-rate)
+and has been excluded from this analysis. 
+Full numbers in 
+[this sheet](https://docs.google.com/spreadsheets/d/1eVV-1HF4oyrlXmMzV64Nfifj8lpsb0Yl-bRXemF0TpE/edit?usp=sharing)
 
-| Period                | Current -15% Disinflation | Proposed -30% Disinflation | Difference (% difference)        |
-|-----------------------|----------------------------|-----------------------------|----------------------------------|
-| Current (mid Nov 2025) | 613,823,198.44            | 613,823,198.44             | 0 (0%)                           |
-| After 1 year          | 638,226,790.18             | 637,661,546.20             | 565,243.98 (0.09%)               |
-| After 2 years         | 659,812,163.04             | 655,389,899.68             | 4,422,263.36 (0.67%)             |
-| After 3 years         | 678,584,933.17             | 667,958,800.10             | 10,626,133.08 (1.6%)             |
-| After 4 years         | 695,015,050.65             | 678,245,313.10             | 16,769,737.54 (2.47%)            |
-| After 5 years         | 709,181,881.06             | 688,610,002.05             | 20,571,879.01 (2.99%)            |
-| After 6 years         | 721,490,710.88             | 699,191,341.35             | 22,299,369.53 (3.2%)             |
+| Period        | Current Disinflation | Proposed -30%  | Difference (%)        |
+|---------------|----------------------|----------------|-----------------------|
+| Current       | 613,823,198.44       | 613,823,198.44 | 0 (0%)                |
+| After 1 year  | 638,226,790.18       | 637,661,546.20 | 565,243.98 (0.09%)    |
+| After 2 years | 659,812,163.04       | 655,389,899.68 | 4,422,263.36 (0.67%)  |
+| After 3 years | 678,584,933.17       | 667,958,800.10 | 10,626,133.08 (1.6%)  |
+| After 4 years | 695,015,050.65       | 678,245,313.10 | 16,769,737.54 (2.47%) |
+| After 5 years | 709,181,881.06       | 688,610,002.05 | 20,571,879.01 (2.99%) |
+| After 6 years | 721,490,710.88       | 699,191,341.35 | 22,299,369.53 (3.2%)  |
 
 ![Total Supply Growth](../supporting_images/0408-double-disinflation-rate/total-supply-growth-comparison.PNG)
 
@@ -192,7 +196,8 @@ and has been excluded from this analysis. Full numbers in [this sheet](https://d
 
 Nominal staking yields were modeled under three plausible staking
 participation scenarios, 60%, 66%, and 72%, which reflect historical staking
-ranges ([see chart](https://blockworks.com/analytics/solana/solana-supply-staking-and-validators/solana-staking-rate)). 
+ranges 
+[see chart](https://blockworks.com/analytics/solana/solana-supply-staking-and-validators/solana-staking-rate) 
 These modeled yields represent the baseline nominal returns
 of staking, excluding commissions or additional yield sources such as MEV and
 block rewards. They can be considered a worst-case scenario for staking yield
@@ -202,27 +207,29 @@ At the mid-range assumption of a 66% staking rate (which closely reflects
 current conditions), nominal staking yields decline by roughly 0.8% after one
 year under a -15% disinflation scenario, and by about 1.4% under a -30%
 disinflation scenario. The table and chart below provide full year-over-year
-comparisons. Full numbers in [this sheet](https://docs.google.com/spreadsheets/d/1eVV-1HF4oyrlXmMzV64Nfifj8lpsb0Yl-bRXemF0TpE/edit?usp=sharing).
+comparisons. Full numbers in 
+[this sheet](https://docs.google.com/spreadsheets/d/1eVV-1HF4oyrlXmMzV64Nfifj8lpsb0Yl-bRXemF0TpE/edit?usp=sharing)
 
-| Period                | Current Schedule (72% / 66% / 60%) | Proposed Schedule (72% / 66% / 60%) |
-|-----------------------|-------------------------------------|--------------------------------------|
-| Current (mid Nov 2025) | 6.41%                              | 6.41%                                |
-| After 1 year          | 5.11% / 5.59% / 6.16%               | 4.61% / 5.04% / 5.56%                 |
-| After 2 years         | 4.31% / 4.72% / 5.20%               | 3.19% / 3.48% / 3.84%                 |
-| After 3 years         | 3.65% / 3.99% / 4.39%               | 2.21% / 2.42% / 2.66%                 |
-| After 4 years         | 3.08% / 3.37% / 3.71%               | 2.13% / 2.32% / 2.56%                 |
-| After 5 years         | 2.61% / 2.85% / 3.14%               | 2.13% / 2.32% / 2.56%                 |
-| After 6 years         | 2.20% / 2.41% / 2.65%               | 2.13% / 2.32% / 2.56%                 |
+| Period        | Current (72%/66%/60%) | Proposed (72%/66%/60%) |
+|---------------|-----------------------|------------------------|
+| Current       | 6.41%                 | 6.41%                  |
+| After 1 year  | 5.11% / 5.59% / 6.16% | 4.61% / 5.04% / 5.56%  |
+| After 2 years | 4.31% / 4.72% / 5.20% | 3.19% / 3.48% / 3.84%  |
+| After 3 years | 3.65% / 3.99% / 4.39% | 2.21% / 2.42% / 2.66%  |
+| After 4 years | 3.08% / 3.37% / 3.71% | 2.13% / 2.32% / 2.56%  |
+| After 5 years | 2.61% / 2.85% / 3.14% | 2.13% / 2.32% / 2.56%  |
+| After 6 years | 2.20% / 2.41% / 2.65% | 2.13% / 2.32% / 2.56%  |
 
 ![Nominal Staking Yields](../supporting_images/0408-double-disinflation-rate/nominal-staking-yield-comparison.PNG)
 
 ### Validator Break-Even Stake Requirement
 
-Using the [following code](https://gist.github.com/0xIchigo/a387c324e48941ac2e301a2843579a18), 
+Using the 
+[following code](https://gist.github.com/0xIchigo/a387c324e48941ac2e301a2843579a18) 
 we can model the effect of this proposal on validator profitability. We 
 assume $5,000 USD/year—based on a slightly higher estimate than the one 
-provided by [Cogent’s validator profit calculator](https://cogentcrypto.io/ValidatorProfitCalculator)
-—in server costs, an average commission of 2.75%, a SOL price of $130 USD, 
+provided by Cogent’s validator profit calculator in server costs, 
+an average commission of 2.75%, a SOL price of $130 USD, 
 and annual voting costs of 201 SOL (i.e., Alpenglow’s VAT * 182.5 epochs, 
 rounded to the nearest whole number). Using the current inflation rate 
 (i.e., 4.185%), we can make a simple model of this proposal’s effects 
@@ -253,9 +260,11 @@ three-year period, yield similar results.
 
 ### Validator Set Profitability
 
-In [this spreadsheet](https://docs.google.com/spreadsheets/d/1oZxtwGVjQecyGCe2ezKSkt275lQ9r5PViaMGMXHaQ84/edit?usp=sharing), we captured real mainnet rewards data from a recent epoch
-(878) via the [Trillium API](https://trillium.so/pages/trillium-api-documentation.html), then evaluated validator profitability by
-estimating operational costs and totaling revenue across three sources: Jito
+In 
+[this spreadsheet](https://docs.google.com/spreadsheets/d/1oZxtwGVjQecyGCe2ezKSkt275lQ9r5PViaMGMXHaQ84/edit?usp=sharing) 
+we captured real mainnet rewards data from a recent epoch (878) via the 
+Trillium API, then evaluated validator profitability by estimating 
+operational costs and totaling revenue across three sources: Jito
 MEV tip commissions, block rewards, and inflation reward commissions.
 
 We compared how the number of profitable validators would change as inflation
@@ -271,25 +280,25 @@ breakeven to unprofitable was 18 in year one, 28 in year two, and 44 in year
 three. After year three, the terminal rate is met, with no further changes in
 profitability.
 
-Profitability at -15% disinflation
+Validator profitability at -15% disinflation
 
-| Category                           | Current | Year 1 | Year 2 | Year 3 | Year 4 | Year 5 | Year 6 |
-|------------------------------------|---------|--------|--------|--------|--------|--------|--------|
-| Profitable validators              | 551     | 545    | 536    | 528    | 522    | 512    | 504    |
-| Breakeven validators               | 45      | 40     | 40     | 45     | 45     | 45     | 48     |
-| Unprofitable validators            | 249     | 260    | 269    | 272    | 278    | 288    | 293    |
-| Total Validators                   | 845     | 845    | 845    | 845    | 845    | 845    | 845    |
-| Increase in unprofitable validators | 0       | 11     | 20     | 23     | 29     | 39     | 44     |
+| Category  | Current | Year1 | Year2 | Year3 | Year4 | Year5 | Year6 |
+|--------------|------|-------|-------|-------|-------|-------|-------|
+| Profitable   | 551  | 545   | 536   | 528   | 522   | 512   | 504   |
+| Breakeven    | 45   | 40    | 40    | 45    | 45    | 45    | 48    |
+| Unprofitable | 249  | 260   | 269   | 272   | 278   | 288   | 293   |
+| Total        | 845  | 845   | 845   | 845   | 845   | 845   | 845   |
+| Increase     | 0    | 11    | 20    | 23    | 29    | 39    | 44    |
 
-Profitability at -30% disinflation
+Validator profitability at -30% disinflation
 
-| Category                            | Current | Year 1 | Year 2 | Year 3 | Year 4 | Year 5 | Year 6 |
-|-------------------------------------|---------|--------|--------|--------|--------|--------|--------|
-| Profitable validators               | 551     | 541    | 523    | 504    | 503    | 503    | 503    |
-| Breakeven validators                | 45      | 37     | 45     | 48     | 49     | 49     | 49     |
-| Unprofitable validators             | 249     | 267    | 277    | 293    | 293    | 293    | 293    |
-| Total Validators                    | 845     | 845    | 845    | 845    | 845    | 845    | 845    |
-| Increase in unprofitable validators | 0       | 18     | 28     | 44     | 44     | 44     | 44     |
+| Category    | Current | Year1 | Year2 | Year3 | Year4 | Year5 | Year6 |
+|-------------|---------|-------|-------|-------|-------|-------|-------|
+| Profitable  | 551     | 541   | 523   | 504   | 503   | 503   | 503   |
+| Breakeven   | 45      | 37    | 45    | 48    | 49    | 49    | 49    |
+| Unprofitable| 249     | 267   | 277   | 293   | 293   | 293   | 293   |
+| Total       | 845     | 845   | 845   | 845   | 845   | 845   | 845   |
+| Increase    | 0       | 18    | 28    | 44    | 44    | 44    | 44    |
 
 ## Security Considerations
 
