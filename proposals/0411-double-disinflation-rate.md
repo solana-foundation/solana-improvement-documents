@@ -25,9 +25,9 @@ instead of 6.2 years (early 2032)
 - Bring nominal staking yields from the current 6.41% to 5.04% in year
 one, 3.48% in year two, and 2.42% in year three.
 
-- Have a muted impact on the number of profitable validators, with 18
+- Have a muted impact on the number of profitable validators, with 10
 validators out of 845 transitioning from profitable/breakeven to
-unprofitable in year one, 28 in year two, and 44 in year three.
+unprofitable in year one, 27 in year two, and 47 in year three.
 
 ## New Terminology
 
@@ -237,30 +237,29 @@ comparisons. Full numbers in [this sheet][modeling-sheet].
 ### Validator Break-Even Stake Requirement
 
 Using the [following code][breakeven-code], we can model the effect of this
-proposal on validator profitability. We assume $5,000 USD/year—based on a
-slightly higher estimate than the one provided by
-[Cogent's validator profit calculator][cogent-calculator]—in server costs, an
-average commission of 2.75%, a SOL price of $130 USD, and annual voting costs
-of 201 SOL (i.e., Alpenglow's VAT * 182.5 epochs, rounded to the nearest
-whole number). Using the current inflation rate (i.e., 4.185%), we can make a
-simple model of this proposal's effects on validator profitability.
+proposal on validator profitability. We assume $18,000 USD/year—based in 
+server costs, an average commission of 2.75%, a SOL price of $130 USD, 
+and annual voting costs of 201 SOL (i.e., Alpenglow's VAT * 182.5 epochs, 
+rounded to the nearest whole number). Using the current inflation rate 
+(i.e., 4.185%), we can make a simple model of this proposal's effects on 
+validator profitability.
 
 Ceteris paribus, we find the following for the amount of SOL a validator needs
 to stake to break even under the following scenarios:
 
 | Year | Current -15% | 6mo Grace + -30% |
 |------|--------------|------------------|
-| 0    | 141,000      | 141,000          |
-| 1    | 165,000      | 165,000          |
-| 2    | 195,000      | 236,000          |
-| 3    | 229,000      | 338,000          |
-| 4    | 269,000      | 392,000          |
-| 5    | 317,000      | 392,000          |
-| 6    | 373,000      | 392,000          |
-| 7    | 392,000      | 392,000          |
+| 0    | 199,000      | 199,000          |
+| 1    | 234,000      | 234,000          |
+| 2    | 276,000      | 335,000          |
+| 3    | 325,000      | 479,000          |
+| 4    | 382,000      | 556,000          |
+| 5    | 449,000      | 556,000          |
+| 6    | 528,000      | 556,000          |
+| 7    | 556,000      | 556,000          |
 
 Eventually, according to our assumptions outlined above, all validators would
-need at least 392,000 SOL to break even in the long term due to the 1.5%
+need at least 556,000 SOL to break even in the long term due to the 1.5%
 inflation floor. The 6-month grace period before doubling the disinflation rate
 to -30% attains this break-even amount in 3.1 years, compared to the current
 schedule’s six, without introducing the same intensity of shocks as immediately
@@ -285,7 +284,7 @@ for 30% or less of their income, with 49.3% having inflation commissions set to
 0%.
 
 With -30% disinflation, the number of validators who went from profitable or
-breakeven to unprofitable was 18 in year one, 28 in year two, and 44 in year
+breakeven to unprofitable was 10 in year one, 27 in year two, and 47 in year
 three. After year three, the terminal rate is met, with no further changes in
 profitability.
 
@@ -293,37 +292,37 @@ Profitability at -15% disinflation
 
 | Category                 | Current | Year 1 | Year 2 | Year 3 |
 |--------------------------|---------|--------|--------|--------|
-| Profitable validators    | 551     | 545    | 536    | 528    |
-| Breakeven validators     | 45      | 40     | 40     | 45     |
-| Unprofitable validators  | 249     | 260    | 269    | 272    |
+| Profitable validators    | 508     | 498    | 489    | 478    |
+| Breakeven validators     | 32      | 38     | 35     | 41     |
+| Unprofitable validators  | 305     | 309    | 321    | 326    |
 | Total Validators         | 845     | 845    | 845    | 845    |
-| Increase unprofitable    | 0       | 11     | 20     | 23     |
+| Increase unprofitable    | 0       | 4      | 16     | 21     |
 
 | Category                 | Year 4 | Year 5 | Year 6 |
 |--------------------------|--------|--------|--------|
-| Profitable validators    | 522    | 512    | 504    |
-| Breakeven validators     | 45     | 45     | 48     |
-| Unprofitable validators  | 278    | 288    | 293    |
+| Profitable validators    | 472    | 468    | 460    |
+| Breakeven validators     | 38     | 35     | 33     |
+| Unprofitable validators  | 335    | 342    | 352    |
 | Total Validators         | 845    | 845    | 845    |
-| Increase unprofitable    | 29     | 39     | 44     |
+| Increase unprofitable    | 30     | 37     | 47     |
 
 Profitability at -30% disinflation
 
 | Category                 | Current | Year 1 | Year 2 | Year 3 |
 |--------------------------|---------|--------|--------|--------|
-| Profitable validators    | 551     | 541    | 523    | 504    |
-| Breakeven validators     | 45      | 37     | 45     | 48     |
-| Unprofitable validators  | 249     | 267    | 277    | 293    |
+| Profitable validators    | 508     | 493    | 472    | 460    |
+| Breakeven validators     | 32      | 37     | 41     | 33     |
+| Unprofitable validators  | 305     | 315    | 332    | 352    |
 | Total Validators         | 845     | 845    | 845    | 845    |
-| Increase unprofitable    | 0       | 18     | 28     | 44     |
+| Increase unprofitable    | 0       | 10     | 27     | 47     |
 
 | Category                 | Year 4 | Year 5 | Year 6 |
 |--------------------------|--------|--------|--------|
-| Profitable validators    | 503    | 503    | 503    |
-| Breakeven validators     | 49     | 49     | 49     |
-| Unprofitable validators  | 293    | 293    | 293    |
+| Profitable validators    | 458    | 458    | 458    |
+| Breakeven validators     | 34     | 34     | 34     |
+| Unprofitable validators  | 353    | 353    | 353    |
 | Total Validators         | 845    | 845    | 845    |
-| Increase unprofitable    | 44     | 44     | 44     |
+| Increase unprofitable    | 48     | 48     | 48     |
 
 ## Security Considerations
 
@@ -377,8 +376,7 @@ the required governance threshold.
 [burn-rate-chart]: https://blockworks.com/analytics/solana/solana-financials/solana-burn-rate
 [staking-rate-chart]: https://blockworks.com/analytics/solana/solana-supply-staking-and-validators/solana-staking-rate
 [breakeven-code]: https://gist.github.com/0xIchigo/a387c324e48941ac2e301a2843579a18
-[cogent-calculator]: https://cogentcrypto.io/ValidatorProfitCalculator
-[profitability-sheet]: https://docs.google.com/spreadsheets/d/1oZxtwGVjQecyGCe2ezKSkt275lQ9r5PViaMGMXHaQ84/edit?usp=sharing
+[profitability-sheet]: https://docs.google.com/spreadsheets/d/1rKMnaDQ5oVZCJ4sXayjmHzgBXJtwqZQSSM6PHFYX2QE/edit?usp=sharing
 [trillium-api]: https://trillium.so/pages/trillium-api-documentation.html
 [max-resnick-analysis]: https://x.com/MaxResnick1/status/1896316441869381914?s=20
 [proposal-1]: https://github.com/solana-foundation/solana-improvement-documents/discussions/261
