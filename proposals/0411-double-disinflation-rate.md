@@ -31,7 +31,7 @@ unprofitable in year one, 27 in year two, and 47 in year three.
 
 ## New Terminology
 
-This proposal does not introduce any new terminology.
+N/A
 
 ## Motivation
 
@@ -42,17 +42,17 @@ benefits:
 
 **Simplicity**: Doubling the disinflation rate requires modifying a single
 parameter, making it the simplest possible protocol change that delivers a
-meaningful reduction in inflation. This adjustment is straightforward to
-implement and will not consume core developer resources. It carries minimal
-risk of introducing bugs or unforeseen edge cases.
+meaningful reduction in inflation. This adjustment will not consume core 
+developer resources. It carries minimal risk of introducing bugs or 
+unforeseen edge cases.
 
 Because the adjustment is intuitive, it can be easily communicated to all
 stakeholder groups, including retail stakers, non-crypto native institutions,
 and regulators, regardless of their technical background.
 
 **Predictability**: Unlike dynamic inflation mechanisms, the effects of doubling
-the disinflation rate are predictable and easy to model. This provides strong
-certainty around future inflation and emissions.
+the disinflation rate are predictable. This provides strong certainty around 
+future inflation and emissions.
 
 The adjustment gradually reduces emissions over many years, avoiding abrupt
 shocks to the network or the economic system. The original long-term inflation
@@ -67,24 +67,21 @@ downward price pressure, distorting market signals and hindering fair price
 comparison.
 
 **Plugging the Leaky Bucket**: High token inflation increases sell pressure, as
-some stakers, especially in certain jurisdictions, treat staking rewards as
-ordinary income and need to sell a portion to cover taxes.
-[Max Resnick's analysis][max-resnick-analysis] outlined a 17% "leaky bucket"
-tax on inflation (i.e., the gap between ordinary income and the 20% long-term
-capital gains rate). Combined with governments, centralized exchanges, and
-custody providers taking significant cuts of staking rewards, even small
-reductions in issuance can save the network hundreds of millions of dollars
-per year.
+some stakers treat staking rewards as ordinary income and need to sell a 
+portion to cover taxes. [Max Resnick's analysis][max-resnick-analysis] outlined 
+a 17% "leaky bucket" tax on inflation (i.e., the gap between ordinary income 
+and the 20% long-term capital gains rate). Combined with governments, 
+centralized exchanges, and custody providers taking significant cuts of staking 
+rewards, even small reductions in issuance can save the network hundreds of 
+millions of dollars per year.
 
 **DeFi Usage**: High inflation increases the opportunity cost of deploying SOL in
 DeFi, discouraging participation in lending, trading, and liquidity provision.
 The effect mirrors traditional finance: higher interest rates raise the
-risk-free rate and reduce borrowing and spending. In Solana’s case, the
-“risk-free rate” is the native staking yield.
+risk-free rate and reduce borrowing and spending.
 
 **Flexibility**: This adjustment does not preclude the community from adopting more
-sophisticated, dynamic, or market-driven emission systems at a later date,
-should they be desired.
+sophisticated, dynamic, or market-driven emission systems at a later date.
 
 ### Why Double?
 
@@ -110,9 +107,7 @@ disinflation schedule of -15% per year, it will take approximately 6.2 years
 significantly shortens this timeline, bringing the network to its long-term
 terminal inflation rate in roughly 3.1 years (early 2029). This assumes a
 6-month lag period before any change is activated to account for the governance
-process and Alpenglow update. This provides a reasonable timeline that
-addresses concerns about inflation, without introducing systemic shock to an
-already shrinking validator set.
+process and Alpenglow update.
 
 Yearly comparisons are provided below, with full numbers in
 [this sheet][modeling-sheet].
@@ -131,39 +126,26 @@ Yearly comparisons are provided below, with full numbers in
 
 ### Implementation
 
-We can implement the following proposal by adding a new implementation method
-to `Inflation` in the [`solana-inflation` crate](https://github.com/anza-xyz/solana-sdk/tree/master/inflation):
-
-```rust
-impl Inflation {
-    // ...
-
-    pub fn accelerated_taper() -> Self {
-        Self {
-            initial: DEFAULT_INITIAL,
-            terminal: DEFAULT_TERMINAL,
-            taper: 0.30, // Double
-            foundation: 0.0,
-            foundation_term: 0.0,
-            __unused: 0.0,
-        }
-    }
-}
-```
-
-We would also need to [add a new feature set][agave-feature-set], which would
-then be used in [Agave's bank.rs][agave-bank] to overwrite the current
-inflation schedule with the latest change, which would look like:
+Add a new feature gate to agave called `double_disinflation_rate`. 
+Upon feature gate activation, in the `Bank`, execute this function to 
+double the current taper of `0.15` to the new value of `0.30`.
 
 ```rust
 if new_feature_activations.contains(
-    &feature_set::double_disinflation_rate::id(),
-) {
-    *self.inflation.write().unwrap() = Inflation::accelerated_taper();
-    self.fee_rate_governor.burn_percent =
-        solana_fee_calculator::DEFAULT_BURN_PERCENT;
-    self.rent_collector.rent.burn_percent = 50;
+    &feature_set::double_disinflation_rate::id())
+{
+      let mut new_inflation - self.inflation.read().unwrap();
+      new_inflation.taper = inflation.taper * 2.0;
+      self.set_inflation(inflation)
 }
+```
+
+After feature gate activation on all networks, the feature gate will be 
+cleaned up from the Bank, followed by changing the `DEFAULT_TAPER` in 
+`solana-inflation` to `0.30` as follows:
+
+```rust
+`const DEFAULT_TAPER: f64 = 0.30;`
 ```
 
 ## Impact
@@ -212,8 +194,8 @@ scenario for staking yield in the event of very low network activity.
 At the mid-range assumption of a 66% staking rate (which closely reflects
 current conditions), nominal staking yields decline by roughly 0.8% after one
 year under a -15% disinflation scenario, and by about 1.4% under a -30%
-disinflation scenario. The table and chart below provide full year-over-year
-comparisons. Full numbers in [this sheet][modeling-sheet].
+disinflation scenario.
+Full numbers in [this sheet][modeling-sheet].
 
 | Period                | Current Schedule | Proposed Schedule |
 |-----------------------|------------------|-------------------|
@@ -241,8 +223,7 @@ proposal on validator profitability. We assume $18,000 USD/year—based in
 server costs, an average commission of 2.75%, a SOL price of $130 USD, 
 and annual voting costs of 201 SOL (i.e., Alpenglow's VAT * 182.5 epochs, 
 rounded to the nearest whole number). Using the current inflation rate 
-(i.e., 4.185%), we can make a simple model of this proposal's effects on 
-validator profitability.
+(i.e., 4.185%), we can make a simple model of this proposal's effects.
 
 Ceteris paribus, we find the following for the amount of SOL a validator needs
 to stake to break even under the following scenarios:
@@ -263,17 +244,13 @@ need at least 556,000 SOL to break even in the long term due to the 1.5%
 inflation floor. The 6-month grace period before doubling the disinflation rate
 to -30% attains this break-even amount in 3.1 years, compared to the current
 schedule’s six, without introducing the same intensity of shocks as immediately
-doubling the disinflation rate. This also offers a more straightforward
-implementation compared to linear or quadratic easing, which, over a two- to
-three-year period, yield similar results.
+doubling the disinflation rate.
 
 ### Validator Set Profitability
 
 In [this spreadsheet][profitability-sheet], we captured real mainnet rewards
 data from a recent epoch (878) via the [Trillium API][trillium-api], then
-evaluated validator profitability by estimating operational costs and totaling
-revenue across three sources: Jito MEV tip commissions, block rewards, and
-inflation reward commissions.
+evaluated validator profitability by estimating operational costs.
 
 We compared how the number of profitable validators would change as inflation
 rewards decrease over six years, under both the -15% and -30% disinflation
@@ -326,33 +303,32 @@ Profitability at -30% disinflation
 
 ## Security Considerations
 
-As staking yields decline, the network’s staking rate (i.e., currently 68%)
+As staking yields decline, the network’s staking rate (currently 68%)
 could fall below levels considered optimal for security. However, this same
 dynamic would also occur under the current inflation schedule, since the
 terminal inflation rate of 1.5% remains unchanged. This proposal simply brings
 the network to those long-term rates sooner. Any challenges arising from lower
 yields would therefore need to be addressed regardless of whether the timeline
-is accelerated. The accelerated -30% disinflation schedule still takes multiple
-years to reach the terminal rate, providing ample time to make further
-adjustments if required.
+is accelerated. The accelerated schedule still takes multiple years to reach 
+the terminal rate providing time to make further adjustments if required.
 
 ## Drawbacks
 
 SOL’s relatively high nominal yield has made it appealing to certain retail and
 traditional finance investors, some of whom characterize it as “a high-growth
 stock with a bond.” Increasing the disinflation rate will cause this yield
-advantage to diminish more quickly than it otherwise would.
+advantage to diminish more quickly.
 
 Reduced emissions may lead to a contraction in the validator set among
-operators who depend on staking commissions to cover their operational
-expenses. As staking rewards decline, a subset of validators may find it
-increasingly challenging to remain economically sustainable, potentially
-impacting overall validator diversity.
+operators who depend on staking commissions to cover operational
+expenses. As staking rewards decline, a subset of validators may find it 
+challenging to remain economically sustainable, potentially impacting 
+validator diversity.
 
 Previous governance discussions on modifying the inflation schedule became
 unusually heated and divisive, ultimately diverting attention away from more
 productive ecosystem work. With this proposal, we aim to avoid repeating those
-missteps and promote a more constructive and focused governance process.
+missteps and promote a more focused governance process.
 
 ## Alternatives Considered
 
