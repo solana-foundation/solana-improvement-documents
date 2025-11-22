@@ -134,7 +134,7 @@ double the current taper of `0.15` to the new value of `0.30`.
 if new_feature_activations.contains(
     &feature_set::double_disinflation_rate::id())
 {
-      let mut new_inflation - self.inflation.read().unwrap();
+      let mut new_inflation = self.inflation.read().unwrap();
       new_inflation.taper = inflation.taper * 2.0;
       self.set_inflation(inflation)
 }
