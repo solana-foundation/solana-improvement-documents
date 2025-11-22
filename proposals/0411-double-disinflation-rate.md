@@ -359,5 +359,3 @@ the required governance threshold.
 [proposal-2]: https://x.com/kdipep/status/1897722476940976183?s=20
 [proposal-3]: https://x.com/jon_charb/status/1855958290980839432
 [proposal-4]: https://www.helius.dev/blog/solana-issuance-inflation-schedule#modelling-inflation-schedule-modifications
-[agave-feature-set]: https://github.com/anza-xyz/agave/blob/43ac2f39d7a57d927433e621173d2e8b7be6a209/feature-set/src/lib.rs#L1206
-[agave-bank]: https://github.com/anza-xyz/agave/blob/master/runtime/src/bank.rs
