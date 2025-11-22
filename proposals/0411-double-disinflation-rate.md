@@ -145,7 +145,7 @@ cleaned up from the Bank, followed by changing the `DEFAULT_TAPER` in
 `solana-inflation` to `0.30` as follows:
 
 ```rust
-`const DEFAULT_TAPER: f64 = 0.30;`
+const DEFAULT_TAPER: f64 = 0.30;
 ```
 
 ## Impact
