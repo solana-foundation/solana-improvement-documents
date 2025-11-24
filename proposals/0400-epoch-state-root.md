@@ -65,7 +65,6 @@ Data layout (little-endian unless stated otherwise):
 ```text
 struct EpochStakeRootV1 {
     u64    epoch;                // epoch the root applies to (N+1)
-    [u8;32] root;                // SHA-256 Merkle root over INCLUDED leaves
     u64    leaf_count;           // number of INCLUDED validators
                                  // (stake >= min_stake_lamports)
     u128   total_active_stake;   // sum of ALL effective stakes across
@@ -74,6 +73,7 @@ struct EpochStakeRootV1 {
                                  // (>= min_stake_lamports)
     u128   min_stake_lamports;   // threshold; below this stake excluded
                                  // from ESR tree
+    [u8;32] root;                // SHA-256 Merkle root over INCLUDED leaves
     // Future hash functions (e.g., BLS12-381, Poseidon) can be appended here
 }
 ```
@@ -305,11 +305,11 @@ fn write_esr_sysvar(epoch_n_plus_1: u64,
 
     let esr = EpochStakeRootV1 {
         epoch: epoch_n_plus_1,
-        root,
         leaf_count: included.len() as u64,
         total_active_stake,
         tree_lamports,
         min_stake_lamports,
+        root,
     };
 
     sysvar_write(SysvarId::EpochStakeRoot, &esr);
