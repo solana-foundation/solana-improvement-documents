@@ -39,11 +39,11 @@ None.
 
 ## Detailed Design
 
-A check must be inclided for every instruction that goes through program 
+A check must be included for every instruction that goes through program 
 runtime (CPI, user deployed program invocation, builtin invocation or 
 precompiles) to ensure it does not reference more than 255 accounts, and 
 throw `InstructionError::MaxAccountsExceeded` when that is the case. Such 
-verification must happend right before account deduplication for instruction 
+verification must happen right before account deduplication for instruction 
 execution.
 
 ## Alternatives Considered
