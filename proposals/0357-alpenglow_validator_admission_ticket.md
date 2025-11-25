@@ -118,8 +118,7 @@ the following criteria:
 
   - The account has a balance of at least 1.6 SOL
 
-  - The account has a valid BLS compressed public key (i.e., it can be
-    correctly decompressed)
+  - The account has a BLS public key
 
 4. If the number of filtered accounts exceeds 2,000, sort them according to the
 following rules and select the top 2,000. Otherwise, return the entire list:
@@ -142,7 +141,7 @@ bank is executed.
 - To be included in epoch e+1, validator operators must ensure the vote
 account has at least 1.6 SOL before epoch e-1 ends
 
-- Validator operators must ensure they have valid BLS public key specified in
+- Validator operators must ensure they have BLS public key specified in
 their vote account
 
 - We will not allow removing the BLS public key
