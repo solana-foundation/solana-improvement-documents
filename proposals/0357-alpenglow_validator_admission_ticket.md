@@ -81,27 +81,6 @@ the account where the 1.6 SOL VAT is deducted from.
 
 ## Detailed Design
 
-### What is considered a valid vote account
-
-A valid vote account in an Alpenglow epoch must contain:
-
-- a BLS public key
-
-- at least 1.6 SOL VAT fee plus the necessary storage rent amount for a new
-epoch in the vote account
-
-When the staked validators for a new epoch are calculated, all validators must
-perform the following operations:
-
-- When there are more than 2,000 valid validators, sort all valid vote accounts
-by descending order of stake. If some validator with stake S is in position
-2001, then we remove all validators with stake S and less. If there are fewer
-than 2,000 valid validators, pick all of them.
-
-- Deduct 1.6 SOL VAT fee from each picked vote account
-
-- Mark the fee burned and write the result into the bank
-
 ### How to implement the checks
 
 1. When a new bank crosses an epoch boundary (bank.epoch() >
@@ -115,7 +94,8 @@ processed in the new epoch’s bank.
 3. The calculation iterates all vote accounts and filters those that meet
 the following criteria:
 
-  - The account has a balance of at least 1.6 SOL
+  - The account has a balance of at least 1.6 SOL plus the necessary storage
+  rent amount for a new epoch
 
   - The account has a BLS public key
 
