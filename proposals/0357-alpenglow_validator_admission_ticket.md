@@ -124,8 +124,8 @@ following rules and select the top 2,000. Otherwise, return the entire list:
 
   - Sort in descending order of stake (largest to smallest)
 
-  - If multiple validators have exactly the same amount of stake and including
-  all of them would exceed the 2,000 limit, then exclude all of them
+  - Do not tiebreak. If total valid vote accounts exceed the limit of 2000,
+  omit all accounts whose stake is equal to that of the 2001st account
 
 5. Subtract 1.6 SOL from the vote account for each validator in the accepted
 list from the previous step
