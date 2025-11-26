@@ -78,7 +78,6 @@ happen here, but the `votes` list in vote state will be empty. This will be
 the account where the 1.6 SOL VAT is deducted from.
 
 - Identity account: It continues receiving block rewards and priority fees.
-But we may change that in a separate SIMD.
 
 ## Detailed Design
 
