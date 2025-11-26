@@ -9,7 +9,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-10-27
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: EGJLweNUVskAPEwpjvNB7JT6uUi6h4mFhowNYXVSrimG
 ---
 
 ## Summary
@@ -121,7 +121,7 @@ message binding the key to its specific context.
 The PoP calculation and verification must use the following message structure:
 
 ```rust
-message=label ∣∣ chain_id ∣∣ authorized_voter_pubkey ∣∣ bls_pubkey_bytes
+message=label ∣∣ vote_account_pubkey ∣∣ bls_pubkey_bytes
 ```
 
 Where: (|| above is concatenation)
@@ -129,9 +129,7 @@ Where: (|| above is concatenation)
 - `label` is a constant string, we will make it "ALPENGLOW" here (all upper
 case).
 
-- `chain_id` is the genesis hash of the chain.
-
-- `authorized_voter_pubkey` is the authorized_voter Ed25519 public key.
+- `vote_account_pubkey` is the Ed25519 address of the vote account.
 
 - `bls_pubkey_bytes` is the compressed new BLS public key (48 bytes).
 
@@ -177,7 +175,7 @@ account is created with given parameters.
 
 ```rust
 pub struct VoterWithBLSArgs {
-    bls_pub_key: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+    bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
     bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
 }
 
@@ -225,7 +223,7 @@ public key, then an attacker can select a particular public key which interacts
 with other participants' keys so a forged aggregate signature verifies even
 though not all honest parties actually signed.
 
-We need to put `authorized_voter_pubkey` in Proof of Possession calculation
+We need to put `vote_account_pubkey` in Proof of Possession calculation
 because a replay attack exists:
 
 - User A wants to update vote authority, calculates PoP signature
@@ -235,8 +233,7 @@ transaction grabbing the BLS public key before user A
 
 - Now user A cannot use the BLS public key generated for his own vote account
 
-We also add a `label` so in the future we can update the version, and add a
-`chain_id` so attackers can't do cross-chain replay attack.
+We also add a `label` so in the future we can update the version.
 
 ## Alternatives Considered
 
