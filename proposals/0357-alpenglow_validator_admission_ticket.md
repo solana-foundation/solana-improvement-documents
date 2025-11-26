@@ -98,7 +98,7 @@ by descending order of stake. If some validator with stake S is in position
 2001, then we remove all validators with stake S and less. If there are fewer
 than 2,000 valid validators, pick all of them.
 
-- Deduct 1.6 SOL VAT fee from each picked vote account once
+- Deduct 1.6 SOL VAT fee from each picked vote account
 
 - Mark the fee burned and write the result into the bank
 
@@ -130,20 +130,8 @@ following rules and select the top 2,000. Otherwise, return the entire list:
 5. Subtract 1.6 SOL from the vote account for each validator in the accepted
 list from the previous step
 
-6. Record the VAT fee subtraction in the bank, which reduces the bank’s
-capitalization. The recording of fee subtraction occurs when the bank is
-frozen even though fee reduction happens before any transaction in the
-bank is executed.
-
-## Operation Considerations
-
-- To be included in epoch e+1, validator operators must ensure the vote
-account has at least 1.6 SOL before epoch e-1 ends
-
-- Validator operators must ensure they have BLS public key specified in
-their vote account
-
-- We will not allow removing the BLS public key
+6. Record the VAT fee subtraction in the bank, move the lamports directly into
+the incinerator account.
 
 ## Alternatives Considered
 
