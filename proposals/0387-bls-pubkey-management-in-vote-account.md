@@ -121,7 +121,7 @@ message binding the key to its specific context.
 The PoP calculation and verification must use the following message structure:
 
 ```rust
-message=label ∣∣ authorized_voter_pubkey ∣∣ bls_pubkey_bytes
+message=label ∣∣ vote_account_pubkey ∣∣ bls_pubkey_bytes
 ```
 
 Where: (|| above is concatenation)
@@ -129,7 +129,7 @@ Where: (|| above is concatenation)
 - `label` is a constant string, we will make it "ALPENGLOW" here (all upper
 case).
 
-- `authorized_voter_pubkey` is the authorized_voter Ed25519 public key.
+- `vote_account_pubkey` is the Ed25519 address of the vote account.
 
 - `bls_pubkey_bytes` is the compressed new BLS public key (48 bytes).
 
@@ -223,7 +223,7 @@ public key, then an attacker can select a particular public key which interacts
 with other participants' keys so a forged aggregate signature verifies even
 though not all honest parties actually signed.
 
-We need to put `authorized_voter_pubkey` in Proof of Possession calculation
+We need to put `vote_account_pubkey` in Proof of Possession calculation
 because a replay attack exists:
 
 - User A wants to update vote authority, calculates PoP signature
