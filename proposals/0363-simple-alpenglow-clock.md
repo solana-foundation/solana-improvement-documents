@@ -102,6 +102,13 @@ Developers and validators must not rely on a highly precise system clock. If an
 application relies on a highly accurate clock, it should consider alternative
 sources.
 
+The semantics of the clock sysvar have slightly changed: The clock value does no
+longer represent the start time of the current block. It now represents the time 
+at which the last slice of the parent block was produced.
+
+Also, while the new clock has a nanosecond resolution, we compute a second 
+resolution clock by dividing by 1_000_000_000 and rounding down.
+
 ## Security Considerations
 
 A byzantine player could bribe a long series of consecutive leaders to either
