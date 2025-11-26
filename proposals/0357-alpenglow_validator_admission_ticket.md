@@ -185,6 +185,9 @@ accounts. Because the keypair for identity account needs to be in a hot wallet
 to support real-time validator operations, while the vote authorized withdrawer
 keypair does not need to be in a hot wallet.
 
+In furtherance of improving operational security, a future simd may change
+the deposit location of validator rewards to the vote account. This would
+eliminate the necessity for any funds to be controlled by a hot keypair.
 ## Backwards Compatibility
 
 This feature is not backwards compatible.
