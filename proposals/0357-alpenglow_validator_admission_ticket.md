@@ -151,20 +151,10 @@ we also need to return the fee collected.
 
 ## Impact
 
-Validators not providing BLS public key or desired fee will not be able to
-participate in an Alpenglow epoch regardless of their stake. Also, only the
-nodes selected by this process will receive votes or certificates from other
-selected validators in real time.
+The voting set of validators will be strictly capped at 2,000.
 
-Validator operators need to ensure they have enough funds and correct BLS
-public key before end of epoch e-1 to participate in epoch e+1. This poses some
-new operation challenges.
-
-We are requiring correct setup of vote accounts at end of epoch e-1 for
-inclusion in epoch e+1 because of the following reason: We want to be
-absolutely sure that we have a finalized state before we enter epoch e+1.
-Specifically, if the last slots of epoch e-1 are not finalized at the end
-of the epoch, we have enough slots in epoch e to finalize epoch e-1's state.
+The validator operators must also take care to keep their vote account topped
+up, instead of relying on funds inside identity account.
 
 ## Security Considerations
 
