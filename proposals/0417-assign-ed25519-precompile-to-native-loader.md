@@ -14,7 +14,7 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 This proposal restores nominal functionality of the Ed25519 precompile to 
-testnet witohut any changes to mainnet and devnet.
+testnet without any changes to mainnet and devnet.
 
 ## Motivation
 
