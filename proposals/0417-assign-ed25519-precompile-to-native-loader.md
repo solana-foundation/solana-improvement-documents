@@ -35,7 +35,8 @@ N/A
 Introduce a feature gated change to the bank that, upon activation, updates 
 the owner of the Ed25519 program to the Native Loader program if it is not 
 already owned by it, also explicitly flagging its account as executable, 
-leaving all other remaining fields unchanged.
+and setting the data to `ed25519_program` to match all other clusters. All
+other fields remain unchanged.
 
 ```rust
 if new_feature_activations
@@ -54,6 +55,7 @@ if new_feature_activations
         let new_account = AccountSharedData::from(Account {
             owner: native_loader::ID,
             executable: true,
+            data: b"ed25519_program".to_vec(),
             ..Account::from(account)
         });
 
