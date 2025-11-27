@@ -1,12 +1,12 @@
 ---
-simd: 'XXXX'
+simd: '0418'
 title: Migration of Loader v2 Programs to Loader v3
 authors:
   - febo (Anza)
 category: Standard
 type: Core
 status: Review
-created: 2025-11-21
+created: 2025-11-27
 feature: N/A 
 ---
 
@@ -40,18 +40,18 @@ ELF bytes of the program’s implementation.
 
 The migration proceeds in the following steps:
 
-*  **Create the program data account**:
-   A program data account is derived from the program ID. This account must
-   not already exist, with one exception: if an account with the derived address
-   exists, holds lamports, and is owned by the System Program, it may be reused.
-   In that case, any excess lamports are burned. The ELF bytes from the buffer
-   account are then copied into this program data account.
+* **Create the program data account**:
+  A program data account is derived from the program ID. This account must
+  not already exist, with one exception: if an account with the derived address
+  exists, holds lamports, and is owned by the System Program, it may be reused.
+  In that case, any excess lamports are burned. The ELF bytes from the buffer
+  account are then copied into this program data account.
 
-*  **Rewrite the program account**:
-   The existing Loader v2 program account is replaced with a Loader v3 program
-   account that references the newly created program data account. Because
-   Loader v2 programs are not upgradable, they do not have an upgrade authority,
-   and `None` is assigned during migration.
+* **Rewrite the program account**:
+  The existing Loader v2 program account is replaced with a Loader v3 program
+  account that references the newly created program data account. Because
+  Loader v2 programs are not upgradable, they do not have an upgrade authority,
+  and `None` is assigned during migration.
 
 * **Close the buffer account**:
   Once both program and program data accounts have been created and populated,
