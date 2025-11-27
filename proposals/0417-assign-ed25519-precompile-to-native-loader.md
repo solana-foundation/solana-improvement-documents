@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0417'
 title: Assign Ed25519 Precompile to Native Loader
 authors:
   - Dean Little (Blueshift)
