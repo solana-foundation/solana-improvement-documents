@@ -32,10 +32,10 @@ N/A
 
 ## Detailed Design
 
-Introduce a feature gated change to `bank.rs` that, upon activation, updates 
+Introduce a feature gated change to the bank that, upon activation, updates 
 the owner of the Ed25519 program to the Native Loader program if it is not 
 already owned by it, also explicitly flagging its account as executable, 
-leaving all other fields unchanged.
+leaving all other remaining fields unchanged.
 
 ```rust
 if new_feature_activations
