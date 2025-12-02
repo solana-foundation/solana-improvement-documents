@@ -75,7 +75,7 @@ purpose:
 corresponding to vote authority keypair. It continues to keep all the vote
 credits and all validator identity/authority/commission information updates
 happen here, but the `votes` list in vote state will be empty. This will be
-the account where the 1.6 SOL VAT is deducted from.
+the account where the VAT is deducted from.
 
 - Identity account: It continues receiving block rewards and priority fees.
 
@@ -94,7 +94,7 @@ processed in the new epoch’s bank.
 3. The calculation iterates all vote accounts and filters those that meet
 the following criteria:
 
-  - The account has a balance of at least 1.6 SOL plus the necessary storage
+  - The account has a balance of at least VAT plus the necessary storage
   rent amount for a new epoch
 
   - The account has a BLS public key
@@ -107,7 +107,7 @@ following rules and select the top 2,000. Otherwise, return the entire list:
   - Do not tiebreak. If total valid vote accounts exceed the limit of 2000,
   omit all accounts whose stake is equal to that of the 2001st account
 
-5. Subtract 1.6 SOL from the vote account for each validator in the accepted
+5. Subtract VAT from the vote account for each validator in the accepted
 list from the previous step
 
 6. Record the VAT fee subtraction in the bank, move the lamports directly into
@@ -115,8 +115,8 @@ the incinerator account.
 
 ## Alternatives Considered
 
-- Have all validators send a transaction to deduct 1.6 SOL VAT fee every epoch.
-A few problems with this approach:
+- Have all validators send a transaction to deduct VAT every epoch. A few
+problems with this approach:
 
   - This transaction must land before the staked validators are selected
 
