@@ -108,53 +108,50 @@ change =
 ```
 
 All multiplications are performed first in `u128` to maximize precision and
-delay truncation.
-
-In the case the `u128` product overflows, the helper falls back to allowing the
-account's entire portion to move and returns `account_portion`. This is not
-expected under normal network conditions. It requires extremely large values
-where even the legacy `f64` implementation is highly imprecise.
+delay truncation. If the intermediate product would overflow, the numerator
+saturates to `u128::MAX` before division and the final result is clamped to the
+account's stake (`account_portion`), so the overflow path remains rate-limited
+(fail-safe rather than fail-open).
 
 #### New methods
 
-The Delegation/Stake implementation uses the new integer math helpers in the
-primary methods:
+The Delegation/Stake implementation exposes the integer math helpers under
+new `_v2` entrypoints:
 
 ```rust
-// === Integer math used under-the-hood === 
+// === Integer math used under-the-hood ===
 impl Delegation {
-    pub fn stake_activating_and_deactivating<T: StakeHistoryGetEntry>(
+    pub fn stake_activating_and_deactivating_v2<T: StakeHistoryGetEntry>(
         ...
     ) -> StakeActivationStatus
-    fn stake_and_activating<T: StakeHistoryGetEntry>(...) -> (u64, u64)
+    fn stake_and_activating_v2<T: StakeHistoryGetEntry>(...) -> (u64, u64)
 }
 
 impl Stake {
-    pub fn stake<T: StakeHistoryGetEntry>(...) -> u64
+    pub fn stake_v2<T: StakeHistoryGetEntry>(...) -> u64
 }
 ```
 
-This means the integer version is now the primary API under the original names.
-For consumers that need to feature-gate the change, the legacy f64 path is preserved
-under deprecated methods:
+The pre-existing float-based functions remain under their original names for
+API compatibility but are marked deprecated in favor of the `_v2` versions:
 
 ```rust
 impl Delegation {
-    #[deprecated(since = "2.0.1", note = "Use stake() instead")]
-    pub fn stake_v1_legacy<T: StakeHistoryGetEntry>(...) -> u64
+    #[deprecated(since = "2.0.1", note = "Use stake_v2() instead")]
+    pub fn stake<T: StakeHistoryGetEntry>(...) -> u64
 
     #[deprecated(
         since = "2.0.1",
-        note = "Use stake_activating_and_deactivating() instead",
+        note = "Use stake_activating_and_deactivating_v2() instead",
     )]
-    pub fn stake_activating_and_deactivating_v1_legacy<
+    pub fn stake_activating_and_deactivating<
         T: StakeHistoryGetEntry,
     >(...) -> StakeActivationStatus
 }
 
 impl Stake {
-    #[deprecated(since = "2.0.1", note = "Use stake() instead")]
-    pub fn stake_v1_legacy<T: StakeHistoryGetEntry>(...) -> u64
+    #[deprecated(since = "2.0.1", note = "Use stake_v2() instead")]
+    pub fn stake<T: StakeHistoryGetEntry>(...) -> u64
 }
 ```
 
@@ -211,14 +208,13 @@ scaled math (without a library) is preferred.
 ### Entities
 
 - **Stake Program:** The on-chain program is updated to use the new
-  integer-based calculation helpers from `solana-stake-interface`. It is doing so
-  mostly through its use of
-  `stake.delegation.stake_activating_and_deactivating()`.
+  integer-based calculation helpers from `solana-stake-interface`. It now
+  routes through `stake.delegation.stake_activating_and_deactivating_v2()`.
 
 - **Agave:** Update the workspace dependency on
-  `solana-stake-interface` & feature gate the use of the new
-  `Stake::stake()` w/ `Stake::stake_v1_legacy()` & `Delegation::stake_activating_and_deactivating()`
-  with `Delegation::stake_activating_and_deactivating_v1_legacy()`.
+  `solana-stake-interface` and adopt the integer entrypoints
+  (`Stake::stake_v2()` and `Delegation::stake_activating_and_deactivating_v2()`).
+  behind feature gate.
 
 - **Firedancer:** Will need to update their stake calculations in
   lock-step with the above integer-math changes.
