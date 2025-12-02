@@ -24,6 +24,12 @@ minimum balance requirement calculated at any point since the most recent
 allocation occurred. When enabled, only newly allocated accounts will be
 subject to rent increases.
 
+Note, rent increases are capped: the effective rent-per-byte used for
+checks MUST NOT exceed the legacy rent-exempt per-byte rate. This
+limitation isn't strictly necessary for the implementation of this
+proposal but it's required for minimal modifications to core system
+programs (e.g. stake program).
+
 ## Motivation
 
 In order to safely reduce rent there must be a mechanism available for
@@ -36,6 +42,15 @@ prevent write-locking all accounts with balances below the new rent value.
 - `calculate_min_balance(acc_size) = acc_size * current_rent_per_byte`.
   Note, `acc_size` includes both the account data size and the 128 overhead
   bytes.
+- `legacy_rent_per_byte`: the fixed rent-exempt per-byte rate used prior to this
+  proposal.
+
+  ```
+  bytes = ACCOUNT_STORAGE_OVERHEAD + acc.data.len;
+   // 3,480.9112548828 on mainnet
+  legacy_rent_per_byte = LAMPORTS_PER_BYTE_YEAR * EXEMPTION_THRESHOLD
+  legacy_min_balance = legacy_rent_per_byte * bytes
+  ```
 
 ## Detailed Design
 
@@ -45,8 +60,8 @@ For all write-locked accounts, post-execution account balance checks
 currently verify:
 
 ```
-min_balance = calculate_min_balance(acc.data_size_post)
-assert(acc.post_exec_balance == 0 or acc.post_exec_balance >= post_min_balance)
+min_allowed_balance = calculate_min_balance(acc.post_exec_size)
+assert(acc.post_exec_balance == 0 or acc.post_exec_balance >= min_allowed_balance)
 ```
 
 This allows a transaction to reduce an account's balance as long as it still
@@ -63,7 +78,9 @@ verify:
 
 ```
 rent_exempt_min_balance = calculate_min_balance(acc.post_exec_size)
-if acc.pre_exec_balance > 0 and acc.post_exec_size <= acc.pre_exec_size:
+if acc.pre_exec_balance > 0
+   and acc.post_exec_size <= acc.pre_exec_size
+   and acc.post_exec_owner == acc.pre_exec_owner:
     min_allowed_balance = min(rent_exempt_min_balance, acc.pre_exec_balance)
 else:
     min_allowed_balance = rent_exempt_min_balance
@@ -90,11 +107,14 @@ the last (re)allocation of its data:
   (e.g. before fee collection, instruction execution, etc).
 - The pre and post-execution sizes are compared to determine if reallocation
   occurred.
+- The pre-execution owner MUST be captured. If the account owner changes during
+  execution, the `min(pre_exec_balance, …)` clause MUST NOT apply; enforce the
+  current rent-exempt minimum for the post-exec size.
 - The `calculate_min_balance()` function uses the current rent_per_byte value,
   which may vary based on active feature gates and rent policies.
 - Newly created accounts have `pre_exec_balance = 0` and are not subject to the
   `min()` clause.
-- As before, 0 post-balance is allowed and equivelent to closing an account.
+- As before, 0 post-balance is allowed and equivalent to closing an account.
 
 ### Edge cases
 
@@ -115,14 +135,19 @@ the last (re)allocation of its data:
 **No net size increase:**
 
 - `post_exec_size <= pre_exec_size`
-- The `min()` clause applies: `min_balance = min(calculate_min_balance(size),
-  pre_exec_balance)`
+- Owner MUST remain unchanged for the `min()` clause to apply:
+  `min_balance = min(calculate_min_balance(size), pre_exec_balance)`
 - **This is the key behavioral change**: allows accounts to retain their
   original rent price even if current rent increases
 - Note that if the balance increases but is still below the current rent price,
   the new balance becomes the effective minimum balance for the given account.
   This means that the balance can no longer be reduced back to the original
   rent price.
+
+**Owner change:**
+
+- If the account owner changes, always enforce the current rent-exempt minimum
+  for the post-exec size; the `min(pre_exec_balance, …)` clause does not apply.
 
 ## Alternatives Considered
 
