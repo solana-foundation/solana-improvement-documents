@@ -1,6 +1,6 @@
 ---
 simd: '0418'
-title: Migration of Loader v2 Programs to Loader v3
+title: Enable Loader v2 to v3 Program Migrations
 authors:
   - febo (Anza)
 category: Standard
@@ -17,9 +17,10 @@ v3.
 
 ## Motivation
 
-Loader v2 programs are immutable by nature, since the loader does not support
-program upgrades. There are essential Loader v2 programs (e.g., SPL Token) that
-would benefit from updates, but currently lack a sound mechanism to be upgraded.
+Loader v2 programs are immutable by design, as the loader does not support
+program upgrades. However, several essential Loader v2 programs would benefit
+from a feature-gated, consensus-driven mechanism that allows the community to
+approve targeted upgrades to specific programs (e.g., SPL Token).
 
 ## Alternatives Considered
 
