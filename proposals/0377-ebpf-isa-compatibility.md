@@ -106,12 +106,19 @@ frames is going to change.
 The R10 register must continue to be the frame pointer, i.e. pointing to the 
 highest address accessible in a function. As such, the stack will grow upwards.
 
-At the prologue of each function, there may be one ADD64 (opcode 0x07) 
-instruction to adjust the frame pointer to its new position with a positive 
-offset (`add64 R10, +imm`). When a function returns, the virtual machine will 
-automatically restore the frame pointer register with the value used in the 
-caller, so programs do not need to emit any instruction to adjust the frame 
-pointer in the epilogue of each function.
+The virtual machine must initialize the frame pointer `R10` at 4096 bytes to 
+allow stack space for the entry function. After that, the it must increment 
+the frame pointer in 4096 at each internall call (`callx` or `call` with 
+source field set to one).
+
+Functions may optionally include an instruction `add64 r10, imm` on their 
+prologue to increment the frame pointer relative to the already supplied 4096 
+bytes, providing `4096 + imm` bytes of frame space for them.
+
+When a function returns, the virtual machine must automatically restore the 
+frame pointer register with the value used in the caller, so programs do not 
+need to emit any instruction to adjust the pointer in the epilogue of each 
+function.
 
 ### JMP32 instruction class
 
@@ -162,7 +169,7 @@ such an approach to be compatible with the existing LLVM eBPF code generation.
 
 Another consideration was bringing new eBPFv4 instructions to the Solana 
 environment. They are a superset of eBPFv3 and does not conflict with it, 
-however they are not yet stabilized, so they can change in future LLVM releaes.
+so any additions may be included in the future without a breaking change.
 
 ## Impact
 
