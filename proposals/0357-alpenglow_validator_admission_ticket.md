@@ -111,7 +111,7 @@ following rules and select the top 2,000. Otherwise, return the entire list:
 list from the previous step
 
 6. Record the VAT fee subtraction in the bank, move the lamports directly into
-the incinerator account.
+the incinerator account. This information will be recorded in RewardInfo.
 
 ## Alternatives Considered
 
