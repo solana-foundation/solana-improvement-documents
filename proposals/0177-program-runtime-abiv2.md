@@ -73,9 +73,10 @@ return data. The contents of this memory region are the following:
 - The CPI scratchpad: `&[u8]`, which consists of:
   - Pointer to CPI scratchpad: `u64`
   - Length of CPI scratchpad: `u64`
-- Index of current executing instruction: `u64`
-- Number of instructions in transaction: `u64`
-- The number of transaction accounts: `u64`
+- Index of current executing instruction: `u32`
+- Number of instructions in transaction (including CPIs): `u32`
+- Number of executed CPIs: `u32`
+- The number of transaction accounts: `u32`
 
 
 #### Account metadata area
