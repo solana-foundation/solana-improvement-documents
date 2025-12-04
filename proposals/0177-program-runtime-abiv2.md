@@ -107,8 +107,7 @@ updated at each CPI call edge. The contents of this region are the following:
   - Index of parent instruction (`u32::MAX` for top-level instructions): `u32`
   - Reference to a slice of instruction accounts `&[InstructionAccount]`, 
     consisting of:
-    - Pointer to beginning of slice: `u64` (points to the `0x700000000` 
-      region)
+    - Pointer to slice: `u64`
     - Number of elements in slice: `u64`
   - Instruction data `&[u8]`, which is composed of:
     - Pointer to data: `u64`
@@ -120,26 +119,15 @@ Let `InstrucionAccount` contain the following fields:
   - Signer flag: `u8` (1 for signer, 0 for non-singer)
   - Writable flag: `u8` (1 for writable, 0 for readonly)
 
-The second region is readonly and starts at `0x700000000`. It must also be 
-updated at each CPI call edge. This region contains an array of all 
-`InstructionAccounts` for every instruction in the transction. In other words:
-
-- For instruction in transaction:
-  - For each account in instruction:
-    - `InstructionAccount`, consisting of:
-      - Index to transaction account: `u16`
-        - Signer flag: `u8` (1 for signer, 0 for non-singer)
-        - Writable flag: `u8` (1 for writable, 0 for readonly)
-
 #### Return data scratchpad
 
-A writable memory region starting at `0x800000000` must be mapped in for the
+A writable memory region starting at `0x700000000` must be mapped in for the
 return-data scratchpad.
 
 ### Accounts area
 
 For each unique (meaning deduplicated) instruction account the payload must
-be mapped in at `0x900000000` plus `0x100000000` times the index of the
+be mapped in at `0x800000000` plus `0x100000000` times the index of the
 **transaction** account (not the index of the instruction account). Only if the
 instruction account has the writable flag set and is owned by the current
 program it is mapped in as a writable region. The writability of a region must
@@ -152,13 +140,27 @@ must NOT be mapped.
 ### Instruction payload area
 
 For each instruction, the runtime must map its payload at address 
-`0x10900000000` plus `0x100000000` times the index of the instruction in the 
+`0x10800000000` plus `0x100000000` times the index of the instruction in the 
 trasaction. All instruction payload mappings are readonly.
 
 One extra writable mapping must be created after the last instruction payload 
-area to be the CPI scratch pad, i.e. at address `0x10900000000` plus 
-`0x100000000` times the number of instructions in the transaction. Its purpose 
+area to be the CPI scratch pad, i.e. at address `0x10800000000` plus 
+`0x100000000` times the number of instructions in the transaction. Its purpose  
 is for programs to write CPI instruction data directly to it and avoid copies.
+
+### Instruction accounts area
+
+For each instruction, the runtime must map an array of `InstructionAccount`
+(as previously defined) at address `0x14800000000` plus `0x100000000` times 
+the index of the instruction in the transaction. This mapped are is readonly.
+
+Each of these memory regions contain the following for each instruction:
+
+- For each account in instruction:
+  - `InstructionAccount`, consisting of:
+    - Index to transaction account: `u16`
+      - Signer flag: `u8` (1 for signer, 0 for non-singer)
+      - Writable flag: `u8` (1 for writable, 0 for readonly)
 
 ### VM initialization
 
