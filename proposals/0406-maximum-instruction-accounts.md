@@ -26,7 +26,7 @@ accounts, each being a `u8` index referencing a transaction account.
 
 Allowing instructions to reference more accounts than what the message format 
 allows is not necessary. On one hand there is a limit of 255 accounts for CPI 
-and user deployed program, on the other, builtins and precompiles do not need 
+and user deployed programs, on the other, builtins and precompiles do not need 
 as many accounts as the message format allows. 
 
 Furthermore, since there can only be 256 unique pubkeys in a transaction, any 
@@ -39,12 +39,11 @@ None.
 
 ## Detailed Design
 
-A check must be included for every instruction that goes through program 
-runtime (CPI, user deployed program invocation, builtin invocation or 
-precompiles) to ensure it does not reference more than 255 accounts, and 
-throw `InstructionError::MaxAccountsExceeded` when that is the case. Such 
-verification must happen right before account deduplication for instruction 
-execution.
+A new verification step must be included in message sanitization for message 
+formats legacy and v0. The verification step must examine every instruction in 
+a transaction, check if the former references more than 255 accounts, and 
+throw `SanitizationError::ValueOutOfBounds` otherwise. Transactions violating 
+such a restriction must be considered invalid and not included in a block.
 
 ## Alternatives Considered
 
