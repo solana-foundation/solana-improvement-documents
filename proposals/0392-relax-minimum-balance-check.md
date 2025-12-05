@@ -8,16 +8,13 @@ type: Core
 status: Idea
 created: 2025-10-30
 feature: (fill in with feature key and github tracking issues once accepted)
-supersedes:
-superseded-by:
-extends:
 ---
 
 ## Summary
 
 To allow for non-disruptive rent increases, relax post-execution account
 minimum balance checks. The new lower-bound on post-exec balance is
-`min(acc.pre_exec_balance, cur_rent_per_byte * acc.size())`.
+`min(acc.pre_exec_balance, calculate_min_balance(acc.size()))`.
 
 This maintains the invariant that every account has a balance at or above the
 minimum balance requirement calculated at any point since the most recent
@@ -46,10 +43,10 @@ prevent write-locking all accounts with balances below the new rent value.
   proposal.
 
   ```
-  bytes = ACCOUNT_STORAGE_OVERHEAD + acc.data.len;
-   // 3,480.9112548828 on mainnet
+  acc_size = ACCOUNT_STORAGE_OVERHEAD + acc.data.len;
+  // 6,960 lamports on mainnet
   legacy_rent_per_byte = LAMPORTS_PER_BYTE_YEAR * EXEMPTION_THRESHOLD
-  legacy_min_balance = legacy_rent_per_byte * bytes
+  legacy_min_balance = legacy_rent_per_byte * acc_size
   ```
 
 ## Detailed Design
@@ -92,21 +89,25 @@ The check ensures that an account's balance is always rent-exempt as of
 the last (re)allocation of its data:
 
 - As the base case, it's clear this holds
-  for new account creations or re-allocations: the post-execution rent price
-  and account size is used to determine the minimum balance.
+  for new account creations or upwards reallocations: the post-execution rent
+  price and account size is used to determine the minimum balance.
 - The first subsequent transaction write-locking the same account but not
-  performing any reallocations can either have (1) a balance higher than the
-  original min_balance or (2) a lower balance that's bounded below by a reduced
-  rent price.
+  performing any upwards reallocations can either have (1) a balance higher than
+  the original min_balance or (2) a lower balance that's bounded below by a
+  reduced rent price.
 - With this, we can inductively prove that the post-execution balance of
   every account is bounded below by the lowest rent since the last allocation.
+
+The owner check is intended to make reselling low-rent account state more
+difficult so a secondary market doesn't develop. See the security considerations
+section for more details.
 
 ### Implementation details
 
 - The pre-execution balance MUST be captured before any state is modified
   (e.g. before fee collection, instruction execution, etc).
-- The pre and post-execution sizes are compared to determine if reallocation
-  occurred.
+- The pre and post-execution sizes are compared to determine if upwards
+  reallocation occurred.
 - The pre-execution owner MUST be captured. If the account owner changes during
   execution, the `min(pre_exec_balance, …)` clause MUST NOT apply; enforce the
   current rent-exempt minimum for the post-exec size.
@@ -172,10 +173,10 @@ the last allocation.
 ## Impact
 
 - Dapp developers: Enables non-disruptive rent increases. Existing accounts are
-  grandfathered at their creation-time rent price until they reallocate. New
-  accounts and reallocated accounts adopt the current rent price. Minimal
-  behavior change for typical applications; most applications do not reduce
-  account balances below their minimum during normal operation.
+  grandfathered at their creation-time rent price until they increase in size. New
+  accounts and accounts that have increased in size adopt the current rent price.
+  Minimal behavior change for typical applications; most applications do not
+  reduce account balances below their minimum during normal operation.
 - Validators: Minimal performance impact; requires storing pre-execution balance
   (one u64) and size per write-locked account during transaction execution.
 - Core contributors: Changes to transaction processing logic to capture
@@ -188,13 +189,15 @@ the last allocation.
 - Maintains the invariant that accounts always satisfy the minimum rent price
   since the time of their most recent allocation.
 - No mechanism for forcing accounts to "upgrade" to current rent prices without
-  reallocation; this is intentional to preserve non-disruptiveness.
+  upwards reallocation; this is intentional to preserve non-disruptiveness.
 - It's essentially free to adopt a new rent rate that's lower than the rent rate
   an account was subject to at allocation time. This isn't problematic in itself
   but it may cause users to be less sensitive to rent increases.
 - For similar reasons, there's potential for a secondary state market to develop,
   leading to an additional sudden increase in state allocation in anticipation of
   a future rent hike. This can further exacerbate an excessive state growth event.
+  The owner change check during minimum balance calculation is intended to limit
+  this by making reselling accounts more difficult.
 
 
 ## Backwards Compatibility
@@ -202,7 +205,7 @@ the last allocation.
 This is a **relaxation** of existing constraints:
 
 - The change makes the balance check less strict by allowing accounts to retain
-  their original rent price when not reallocating.
+  their original rent price when not upwards reallocating.
 - This is backwards compatible in the sense that transactions that currently
   succeed will continue to succeed.
 - However, it changes consensus rules and must be activated behind a feature gate.
