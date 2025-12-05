@@ -44,7 +44,7 @@ prevent write-locking all accounts with balances below the new rent value.
 
   ```
   acc_size = ACCOUNT_STORAGE_OVERHEAD + acc.data.len;
-  // 6,960 lamports on mainnet
+  // 6,960 lamports on mainnet-beta
   legacy_rent_per_byte = LAMPORTS_PER_BYTE_YEAR * EXEMPTION_THRESHOLD
   legacy_min_balance = legacy_rent_per_byte * acc_size
   ```
