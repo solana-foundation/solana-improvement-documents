@@ -18,7 +18,7 @@ extends:
 Reduce the minimum deposit rate by 10x (set baseline
 `min_deposit = 0.1 * min_balance_legacy`) and make this the new floor.
 
-Introduce a supervisory integral controller targeting 1 GB/epoch state growth
+Introduce a supervisory integral controller targeting 2 GB/epoch state growth
 as the safety threshold. Under normal conditions, `min_deposit` remains pinned
 at the 0.1x floor.
 
@@ -31,7 +31,7 @@ Introduce a real-time price signal for state demand and apply back pressure to
 prevent runaway state growth. The proposal gives the protocol more tuning knobs
 (controller parameters such as deadband H, bounds, step sizes, clamps, target growth)
 than a single fixed constant, enabling better behavior targeting. With an
-average on-chain state growth currently around ~200 MB per epoch, targeting 1
+average on-chain state growth currently around ~400 MB per epoch, targeting 2
 GB per epoch allows significant minimum-deposit reductions while keeping growth
 bounded and predictable.
 
@@ -51,7 +51,7 @@ bounded and predictable.
 - Replace the current fixed minimum balance constant (legacy
   `min_balance_legacy`) used in account creation with a runtime-maintained
   `min_deposit` per-byte rate.
-- A supervisory integral controller targets 1 GB/epoch state growth as the safety
+- A supervisory integral controller targets 2 GB/epoch state growth as the safety
   threshold. The controller remains inactive unless the threshold is breached, in
   which case it engages through discrete adjustments of the `min_deposit` value.
 - The absolute `min_deposit` value is clamped to remain between 0.1x and 1.0x
@@ -95,7 +95,7 @@ rent (128 bytes), representing the per-account storage overhead.
 
 **Update rule (executed once per slot):**
 
-Let target growth per slot be `G_target = 1 GiB/epoch / slots_per_epoch`.
+Let target growth per slot be `G_target = 2 GiB/epoch / slots_per_epoch`.
 
 Compute error: `e = G_slot - G_target` (positive if growth exceeds target).
 
@@ -191,8 +191,8 @@ The Rent sysvar account is `SysvarRent111111111111111111111111111111111`.
 ### Protocol constants and feature gates
 
 - New constants:
-  - `G_target = 1 GiB/epoch`
-  - `H` deadband threshold for integral accumulator (tunable)
+  - `G_target = 2 GB/epoch`
+  - `H` deadband threshold for integral accumulator
   - `I_min = -4_000_000_000`, `I_max = +2_000_000_000`
   - `down_step = -5%`, `up_step = +10%`
   - `min_deposit_lower_bound = 0.1 * min_balance_legacy`
