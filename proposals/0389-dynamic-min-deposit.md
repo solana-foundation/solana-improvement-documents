@@ -70,8 +70,28 @@ floor) and only engage when sustained growth exceeds a safety threshold.
 **State tracking:**
 
 - The integral accumulator `I` MUST be tracked in fork-aware bank state.
-- Each slot measures realized state growth `G_slot` (bytes of new account data
-  allocated minus freed/deallocated data).
+- The state growth for the current slot MUST also be tracked in fork-aware bank
+  state via two per-slot deltas:
+  - `data_size_delta` (bytes): accumulate only changes to `account.data.len`.
+    The runtime already tracks per-instruction resize deltas; these MUST be
+    accumulated into a single per-slot value. Additionally, for any accounts that
+    end post-execution with zero lamports, their final data length MUST be
+    subtracted from this delta (these deletions are not covered by the resize
+    delta). Newly created accounts are covered by the resize delta.
+  - `num_accounts_delta` (count): the net change in the number of accounts. Zero
+    balance accounts are considered deleted.
+
+**`G_slot` calculation:**
+
+`G_slot` is the sum of the account data size growth plus the storage overhead
+associated with changes in the number of accounts:
+
+```
+G_slot = data_size_delta + ACCOUNT_STORAGE_OVERHEAD * num_accounts_delta
+```
+
+where `ACCOUNT_STORAGE_OVERHEAD` is an existing in-consensus parameter used by
+rent (128 bytes), representing the per-account storage overhead.
 
 **Update rule (executed once per slot):**
 
@@ -137,6 +157,36 @@ this feature activation.
 
 Expose `min_deposit` via the existing Rent sysvar to avoid introducing a new
 sysvar and to preserve compatibility with existing on-chain programs.
+
+The Rent sysvar account is `SysvarRent111111111111111111111111111111111`.
+
+### Persistence and snapshot integrity
+
+- The two per-slot deltas (`data_size_delta`, `num_accounts_delta`) and the
+  integral accumulator `I` MUST be backed up into dedicated sysvars so they are
+  covered by snapshot integrity checks via the accounts lthash. This avoids the
+  need to include these values in the bank hash.
+- On startup, validators MUST load these values exclusively from the sysvars,
+  rather than any non-account serialized fields in the snapshot, ensuring that
+  integrity-checked values are used.
+- Sysvar accounts:
+  - `SysvarAccountsDataSizeDe1ta1111111111111111`:
+    carries the per-slot `data_size_delta` in bytes.
+  - `SysvarAccountsNumDe1ta111111111111111111111`:
+    carries the per-slot `num_accounts_delta` (net account count change).
+  - `SysvarRentContro11er1ntegra1111111111111111`:
+    carries the integral accumulator `I`.
+  - `SysvarRent111111111111111111111111111111111` (existing):
+    carries Rent fields and `min_deposit`.
+- Update timing:
+  - When the slot is advanced and a new bank is created, the accumulator `I`
+    and the Rent sysvar (carrying `min_deposit`) MUST be updated then written
+    to their respective sysvars.
+  - At slot completion, the two per-slot deltas MUST be written to their
+    respective per-slot sysvars. This ensures
+    the integral and rent for the next slot have access to the correct
+    delta values for the current (just-completed) slot, even in the case of
+    restarting and loading from a snapshot.
 
 ### Protocol constants and feature gates
 
