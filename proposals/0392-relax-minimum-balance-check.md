@@ -21,11 +21,13 @@ minimum balance requirement calculated at any point since the most recent
 allocation occurred. When enabled, only newly allocated accounts will be
 subject to rent increases.
 
-Note, rent increases are capped: the effective rent-per-byte used for
-checks MUST NOT exceed the legacy rent-exempt per-byte rate. This
-limitation isn't strictly necessary for the implementation of this
-proposal but it's required for minimal modifications to core system
-programs (e.g. stake program).
+Sidenote: this proposal doesn't include any mechanism for increasing rent,
+but when such a mechanism is added in the future it should cap the
+effective rent-per-byte at the legacy rent-exempt per-byte rate. This
+limitation isn't strictly necessary but it avoids needing to significantly
+modify any core system programs (e.g. stake program). If increasing the
+per-byte rate beyond this cap is desirable then the relevant core programs
+need to be updated to be compatible.
 
 ## Motivation
 
