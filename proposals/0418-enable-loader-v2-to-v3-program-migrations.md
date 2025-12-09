@@ -67,9 +67,9 @@ which triggers the migration process when activated.
 
 ## Impact
 
-With this change, validator clients would no longer be required to implement
-changes to essential programs. Instead these programs could be updated just
-once. This reduces some engineering overhead on validator teams.
+This change introduces a feature-gated, consensus-driven mechanism that allows
+the community to approve targeted upgrades for specific programs that would
+otherwise be non-upgradeable.
 
 ## Security Considerations
 
