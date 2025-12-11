@@ -13,274 +13,213 @@ feature: (to be assigned upon acceptance)
 
 ## Summary
 
-Replace all floating-point (`f64`) arithmetic within the Solana Stake Program's
-warmup and cooldown logic with a fixed-point implementation using integer
-arithmetic. The new logic expresses the warmup/cooldown rate in basis points
-(bps) and performs all proportional stake calculations using `u128`
-intermediates.
-
-This change is a prerequisite to the Stake Program's migration to a `no_std`
-Pinocchio-based implementation and ensures compatibility with upstream eBPF
-toolchains, which do not support floating-point operations.
+This SIMD proposes replacing all IEEE-754 double-precision floating-point
+arithmetic within the Solana Stake Program & validator client's warmup/
+cooldown logic with a fixed-point implementation using integer arithmetic.
+The new logic expresses the warmup/cooldown rate in basis points (bps) and
+performs stake calculations using unsigned 128-bit integers to maintain
+precision.
 
 ## Motivation
 
-The Stake Program's use of `f64` presents two blockers to the upcoming roadmap:
+This change is a prerequisite to the Stake Program's migration to a `no_std`
+& upstream eBPF-toolchain friendly implementation. Standard eBPF strictly
+forbids floating-point operations. While the solana fork (SBF) allows for it
+via a deterministic (and inefficient) `soft-float` compiler built-in,
+aligning with upstream standards requires removing all floating-point usage
+from the program.
 
-1. **Upstream eBPF incompatibility:** Standard eBPF strictly forbids
-   floating-point operations. While the solana fork (SBF) currently supports `f64`
-   via a deterministic (and inefficient) `soft-float` compiler built-in, aligning
-   with upstream standards requires removing all `f64` usage from the program.
-
-2. **Pinocchio migration inconsistency:** There is appetite for
-   converting the Stake Program to a highly efficient, `no_std` Pinocchio
-   implementation (reducing CU usage by +90%). These efforts are undermined by the
-   immense cost of soft-float operations. [Benchmarking
-   shows](https://solana.com/docs/programs/limitations#limited-float-support:~:text=Recent%20results%20show,Divide%20%20%20%20%20%209%20%20%20219)
-   a 22x performance penalty for a single multiplication of an `f32` versus a
-   `u64`. Using an `f64` with an operation like division is even more complex.
-   Further, doing the float migration independently allows p-stake to enforce
-   semantic equivalence for its migration.
-
-## Requirements
-
-The new implementation must be a replacement that precisely models the intent of
-the original logic. Any resulting differences in output should be minor and a
-direct result of improved numerical precision.
+The validator client shares the same warmup/cooldown calculation logic with
+the on-chain program, so it is also in need of a lock-step update to stay in
+sync.
 
 ## New Terminology
 
-None
+- **Basis points (bps)**: An integer representation of a percentage where
+  `bps = percent × 100`.
+  - 1 bps = 0.01%
+  - 1% = 100 bps
+
+- Formula variables
+  - **account_portion**: The amount of stake (in lamports) for a single
+    account that is eligible to warm up or cool down in a given epoch.
+  - **cluster_portion**: The total amount of stake (in lamports) across the
+    cluster that is in the same warmup/cooldown phase as `account_portion`
+    for the previous epoch.
+  - **cluster_effective**: The total effective stake in the cluster (in
+    lamports) for the previous epoch.
 
 ## Detailed Design
 
-### Proposed Fixed-Point Implementation
+### Rate representation (basis points)
 
-This proposal replaces `f64` with fixed-point arithmetic in basis points and
-reorders operations to preserve precision while using integer arithmetic only.
+The current network warmup/cooldown rate is 9%. This means that, in any given
+epoch, at most 9% of the previous epoch's effective stake can be activated or
+deactivated.
 
-#### Rate representation (basis points)
+Currently, this figure is represented in floating-point: `0.09`. The new
+representation is an integer of basis points: `900`.
 
-Instead of storing the warmup/cooldown rate as an `f64`, it is represented in
-basis points (bps). The default (`0.25`) and new warmup (`0.09`) are encoded as:
+### Maintaining precision
 
-```rust
-pub const BASIS_POINTS_PER_UNIT: u64 = 10_000;
-pub const ORIGINAL_WARMUP_COOLDOWN_RATE_BPS: u64 = 2_500; // 25%
-pub const TOWER_WARMUP_COOLDOWN_RATE_BPS: u64 = 900; // 9%
-```
-
-with a new helper that determines the active rate based on the epoch:
-
-```rust
-pub fn warmup_cooldown_rate_bps(
-    epoch: Epoch,
-    new_rate_activation_epoch: Option<Epoch>,
-) -> u64
-```
-
-The legacy `f64` constants and function are preserved but marked deprecated:
-
-```rust
-// All marked as deprecated as of 2.0.1
-pub const DEFAULT_WARMUP_COOLDOWN_RATE: f64 = 0.25;
-pub const NEW_WARMUP_COOLDOWN_RATE: f64 = 0.09;
-pub fn warmup_cooldown_rate(
-    current_epoch: Epoch,
-    new_rate_activation_epoch: Option<Epoch>,
-) -> f64
-```
-
-#### Reordered proportional stake formula
-
-The original float logic computed:
+The original float logic computes:
 
 ```text
-(account_portion / cluster_portion) * (cluster_effective * rate)
+RATE_FLOAT = 0.09
+
+allowed_change = (account_portion / cluster_portion) * (cluster_effective * RATE_FLOAT)
 ```
 
-This is algebraically equivalent to the fixed-point re-ordering:
+For an integer implementation, it's important to re-arrange the formula so
+that the division happens last to maintain the highest precision. This is
+achieved via an algebraically equivalent re-ordering:
 
 ```text
-change =
-    (account_portion * cluster_effective * rate_bps) /
+BASIS_POINTS_PER_UNIT = 10_000
+RATE_BPS = 900
+
+allowed_change =
+    (account_portion * cluster_effective * RATE_BPS) /
     (cluster_portion * BASIS_POINTS_PER_UNIT)
 ```
 
-All multiplications are performed first in `u128` to maximize precision and
-delay truncation. If the intermediate product would overflow, the numerator
-saturates to `u128::MAX` before division and the final result is clamped to the
-account's stake (`account_portion`), so the overflow path remains rate-limited
+Note: any truncation in the division that occurs should truncate toward zero.
+
+#### Widening arithmetic to 128-bit integers
+
+Because of the extra multiplication, 64-bit integer math is not sufficient for
+safety. For that reason, all values used in the formula should be widened to
+128-bit integers. The final value should then be cast back down to a 64-bit
+integer.
+
+Implementations that do not offer native unsigned 128-bit arithmetic must
+emulate it (for example via fixed-width limb arithmetic).
+
+#### Saturation and fail-safe behavior
+
+If the intermediate multiplication overflows the maximum representable
+unsigned 128-bit value, the numerator saturates to the maximum 128-bit value
+before division. The result is then clamped to `account_portion`. This ensures
+that overflow cannot amplify a stake change beyond the account's own portion
 (fail-safe rather than fail-open).
 
-#### New methods
+### Minimum progress clamp
 
-The Delegation/Stake implementation exposes the integer math helpers under
-new `_v2` entrypoints:
+Currently, when `account_portion > 0`, there is a granted minimum change of 1
+lamport per epoch so that small delegations do not get stuck in activating/
+deactivating states due to truncation. The new implementation keeps this
+behavior.
 
-```rust
-// === Integer math used under-the-hood ===
-impl Delegation {
-    pub fn stake_activating_and_deactivating_v2<T: StakeHistoryGetEntry>(
-        ...
-    ) -> StakeActivationStatus
-    fn stake_and_activating_v2<T: StakeHistoryGetEntry>(...) -> (u64, u64)
-}
+### Pseudocode guidance
 
-impl Stake {
-    pub fn stake_v2<T: StakeHistoryGetEntry>(...) -> u64
-}
+#### Current implementation
+
+```text
+RATE_FLOAT = 0.09
+
+# All params 64-bit integer
+function rate_limited_stake_change(account_portion, cluster_portion, cluster_effective):
+    if account_portion == 0 or cluster_portion == 0 or cluster_effective == 0:
+        return 0
+
+    # Cast all params to double
+    weight_float = account_portion_float / cluster_portion_float
+    allowed_change_float = weight_float * cluster_effective_float * RATE_FLOAT
+
+    # Truncate toward zero via cast
+    allowed_change = allowed_change_float as 64-bit integer
+
+    # Never allow more than the account's own portion to change
+    if allowed_change > account_portion:
+        allowed_change = account_portion
+
+    # Minimum progress clamp
+    if allowed_change == 0:
+        return 1
+
+    return allowed_change
 ```
 
-The pre-existing float-based functions remain under their original names for
-API compatibility but are marked deprecated in favor of the `_v2` versions:
+#### Proposed new implementation
 
-```rust
-impl Delegation {
-    #[deprecated(since = "2.0.1", note = "Use stake_v2() instead")]
-    pub fn stake<T: StakeHistoryGetEntry>(...) -> u64
+```text
+BASIS_POINTS_PER_UNIT = 10_000
+RATE_BPS = 900
 
-    #[deprecated(
-        since = "2.0.1",
-        note = "Use stake_activating_and_deactivating_v2() instead",
-    )]
-    pub fn stake_activating_and_deactivating<
-        T: StakeHistoryGetEntry,
-    >(...) -> StakeActivationStatus
-}
+# All params 64-bit integer
+function rate_limited_stake_change(account_portion, cluster_portion, cluster_effective):
+    if account_portion == 0 or cluster_portion == 0 or cluster_effective == 0:
+        return 0
 
-impl Stake {
-    #[deprecated(since = "2.0.1", note = "Use stake_v2() instead")]
-    pub fn stake<T: StakeHistoryGetEntry>(...) -> u64
-}
+    # Cast all params to 128-bit integer
+    # All multiplications saturate
+    numerator = account_portion_128 * cluster_effective_128 * RATE_BPS_128
+
+    denominator = cluster_portion_128 * BASIS_POINTS_PER_UNIT_128
+
+    allowed_change_128 = numerator / denominator
+
+    # Never allow more than the account's own portion to change
+    if allowed_change_128 > account_portion_128:
+        allowed_change_128 = account_portion_128
+
+    # Narrow back to 64-bit integer
+    allowed_change = allowed_change_128 as 64-bit integer
+
+    # Minimum progress clamp
+    if allowed_change == 0:
+        return 1
+
+    return allowed_change
 ```
 
-#### Minimum Progress Clamp (`max(1)`)
+## State compatibility
 
-To match legacy behavior, the fixed-point implementation preserves a minimum
-per-epoch change of 1 lamport for non-zero stake. This preserves the "always
-make forward progress" invariant for both warmup and cooldown, ensuring small
-delegations do not get stuck in activating/deactivating states due to
-truncation.
+In existing stake account data, there is an 8-byte field that historically
+stored warmup/cooldown rate value as a double-precision float. It is legacy
+and currently unused by any part of the program. To preserve backwards
+compatibility with existing stake account state, this SIMD does not change
+stake account layout or size. Instead, it reclassifies that field as 8 bytes
+of reserved data.
 
-### State Compatibility
-
-To maintain backwards compatibility with on-chain stake account data, the
-`Delegation` struct is modified as follows:
-
-```diff
-pub struct Delegation {
-    pub voter_pubkey: Pubkey,
-    pub stake: u64,
-    pub activation_epoch: Epoch,
-    pub deactivation_epoch: Epoch,
--   pub warmup_cooldown_rate: f64,
-+   pub _reserved: [u8; 8],
-}
-```
-
-This preserves the exact memory size and layout of existing accounts. It is a
-legacy field anyway, with the actual rate being determined dynamically in
-functions.
+The implementations should continue not using this field when computing warmup/
+cooldown values and setting it to zero when creating new stake accounts.
 
 ## Alternatives Considered
 
-Tested a number of other libraries [have been
-tested](https://github.com/grod220/stake-ebpf-check) for upstream bpf
-compatibility.
-
-| Method        | Result  | Notes                              |
-|---------------|---------|------------------------------------|
-| bnum          | Success | Requires using `u32` limbs         |
-| crypto-bigint | Failure | Composite return types not allowed |
-| fixed-bigint  | Failure | Composite return types not allowed |
-| uint          | Failure | `__multi3` is not supported        |
-
-Note also that this SIMD recommends using `u128` arithmetic. Currently, this is
-_not_ supported in upstream bpf (`__multi3` error is
-raised). [Llvm-project PR#168442](https://github.com/llvm/llvm-project/pull/168442)
-is currently up to get upstream bpf support for it, and VM maintainers feel
-confident it will be merged and included in the next release. For that reason,
-scaled math (without a library) is preferred.
+The primary alternative is to continue using floating-point arithmetic. For
+reasons given in the motivation section, this blocks upstream eBPF-toolchain
+usage, which just puts the technical debt off to handle later.
 
 ## Impact
 
-### Entities
+- **Stake Interface**:
+  - Export new integer-based stake activation and deactivation logic for rust
+    consumers
+  - Deprecate the floating-point rate field while preserving binary layout
+    compatibility
 
-- **Stake Program:** The on-chain program is updated to use the new
-  integer-based calculation helpers from `solana-stake-interface`. It now
-  routes through `stake.delegation.stake_activating_and_deactivating_v2()`.
+- **Stake Program**: Feature gate v2 interface helpers in:
+  - Stake Merging
+  - Stake Splitting
+  - Stake Redelegation
 
-- **Agave:** Update the workspace dependency on
-  `solana-stake-interface` and adopt the integer entrypoints
-  (`Stake::stake_v2()` and `Delegation::stake_activating_and_deactivating_v2()`).
-  behind feature gate.
-
-- **Firedancer:** Will need to update their stake calculations in
-  lock-step with the above integer-math changes.
-
-### Differential Fuzzing
-
-To quantify the numerical differences between the fixed-point implementation and
-the legacy `f64` path, we run an additional prop test that:
-
-- samples random non-zero `account`, `cluster_portion`, and
-  `cluster_effective` values across the full `u64` range,
-- exercises both the legacy `f64` formula and the new integer
-  implementation at the current 9% rate
-
-For 100,000 samples at the 9% rate we observe:
-
-| Metric           | Value                    | Notes                        |
-|------------------|--------------------------|------------------------------|
-| Avg. abs. diff.  | 0.505 lamports           | Mean abs(candidate − oracle) |
-| Avg. diff (ULPs) | 0.218 ULPs               | Avg. ULP distance of `f64`   |
-| p50/p90/p95/p99  | 0 / 1 / 1 / 6 lamports   | Percentiles of abs. diff.    |
-| Worst-case diff. | 932 lamports (1.82 ULPs) | Float imprecision at high #s |
-
-In short, there is high agreement and minimal deviation in outputs. Over 50% of
-results were identical, and 95% of results differed by at most 1 lamport. In the
-worst case, the difference was still only a difference of 1.82 ULPs, confirming it
-is an expected artifact of f64 precision limitations, not a logic error.
-
-#### Note on ULPs
-
-A "Unit in the Last Place" (ULP) measures the gap between adjacent representable
-`f64` values. We use this metric to compare our new integer implementation
-against the legacy float implementation. Because a `f64` cannot represent every
-integer precisely past 2^53, the float-based result can differ slightly from the
-integer-based one, even when both are logically correct. Measuring this
-difference in ULPs allows us to verify the discrepancy is due to expected
-floating-point artifacts, not a bug.
-
-### Performance
-
-For a sample configuration (`account_portion = 1_000_000_000`, `cluster_portion
-= 100_000_000_000`, `cluster_effective = 5_000_000_000_000`,
-`new_rate_activation_epoch = 50`), the results show a minor increase in CU
-consumption for the new logic:
-
-- **Legacy (`f64`) Implementation:** 985 CUs
-- **New (`u128`) Implementation:** 1046 CUs
-
-The fixed-point implementation is **6.2% more expensive** for this benchmark.
-This result is due to the type widening to `u128` and checked math. However,
-this is acceptable given the vast majority of CU costs are due to serialization
-(improved by [zero-copy
-p-stake](https://github.com/solana-foundation/solana-improvement-documents/pull/401)).
+- **Validator Clients (Agave & Firedancer)**: Feature gate fixed-point math
+  in:
+  - Runtime & stake logic for stake activation and deactivation calculations
+  - Stake cache & history for effective stake derivation and history
+    aggregation
+  - Inflation rewards for calculation of stake-weighted rewards
 
 ## Security Considerations
 
+All implementations must adhere to the following standards:
+
 1. **Unit tests:** Baseline of correctness by testing specific, known
    scenarios and edge cases.
-2. **Differential Fuzzing (`proptest`):**
-    - Maintains an oracle implementation that preserves the original
-      `f64` logic, used only in tests.
-    - Runs the new integer implementation against the oracle over
-      thousands of randomly generated inputs spanning the full `u64` domain.
-    - Uses a ULP-based tolerance (`4 × ULP`) to account for the
-      accumulated rounding error inherent in the float-based path while
-      ensuring the integer implementation never deviates more than expected
-      from the float oracle.
-3. **External Audit:** A comprehensive audit from an auditor with good
-   skills in numerical audits to validate arithmetic equivalence or regressions.
+2. **Differential Fuzzing:** maintains an oracle implementation that preserves
+   the original logic, used only in tests. Those should then be run against
+   the integer arithmetic to ensure a difference of no more than `4 x ULP`
+   (units of last place).
+3. **External Audit:** A comprehensive audit from an auditor with good skills
+   in numerical audits to validate arithmetic equivalence or regressions.
