@@ -39,7 +39,9 @@ information in the transaction header itself.
 
 - 'v1 transaction' - A new transaction format that is designed to enable larger
   transactions sizes while not having the address lookup table features 
-  introduced in v0 transactions.
+  introduced in v0 transactions. The v1 transaction format also does not require
+  compute budget instructions to be present within the transaction, but instead
+  the TransactionConfigMask detailed below should be used.
 
 ## Detailed Design
 
@@ -134,8 +136,6 @@ For reference, they are:
   loaded as writable
 - `num_readonly_unsigned_accounts` addresses for which the transaction does
   not contain signatures and are loaded as readonly
-
-Any section with 0 addresses is skipped.
 
 #### ConfigValues
 
@@ -240,7 +240,9 @@ For all fields, if the bit(s) are not set, the minimum allowed value is used:
 
 - If bits [0, 1] are not set, the priority-fee is 0.
 - If bit 2 is not set, the requested compute-unit-limit is 0.
-- If bit 3 is not set the requested accounts data size limit is 0.
+- If bit 3 is not set the requested accounts data size limit is 0. This is 
+  different from the current requested accounts data size limit defaulting today
+  to 64MiB (MAX_LOADED_ACCOUNTS_DATA_SIZE_BYTES).
 - If bit 4 is not set the requested heap size is 32768 (MIN_HEAP_FRAME_BYTES).
 
 ## Alternatives Considered
