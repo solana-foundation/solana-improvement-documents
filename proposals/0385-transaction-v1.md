@@ -53,9 +53,9 @@ sizes.
 ```
 VersionByte (u8)
 LegacyHeader (u8, u8, u8) 
-NumInstructions (u8)
 TransactionConfigMask (u32) -- Bitmask of which config requests are present.
 LifetimeSpecifier [u8; 32]
+NumInstructions (u8)
 NumAddresses (u8)
 Addresses [[u8; 32]] -- Length matches NumAddresses
 ConfigValues [[u8; 4]] -- Length equal to the popcount (number of set bits)
