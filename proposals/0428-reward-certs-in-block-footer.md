@@ -1,10 +1,8 @@
 ---
-simd: '0402'
-title: Finalization Certificate in Block Footer
+simd: '0428'
+title: Reward certificates in Block Footer
 authors:
-  - Quentin Kniep (Anza)
-  - ksn6 (Anza)
-  - Wen Xu (Anza)
+  - Akhi Singhania (Anza)
 category: Standard
 type: Core
 status: Review
