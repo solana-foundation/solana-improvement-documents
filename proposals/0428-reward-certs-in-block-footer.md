@@ -88,11 +88,11 @@ Block Footer Extension
 
 ```rust
 struct BlockFooterV1 {
-    bank_hash: Hash,                                                // Introduced in V1 (SIMD-0298)
-    block_producer_time_nanos: u64,                                 // Introduced in V1 (SIMD-0307)
-    block_user_agent: Vec<u8>,                                      // Introduced in V1 (SIMD-0307)
-    skip_reward_certificate: Option<SkipRewardCertificate>,         // New in this SIMD
-    notar_reward_certificate: Option<NotarRewardCertificate>,       // New in this SIMD
+    bank_hash: Hash,                           // Introduced in V1 (SIMD-0298)
+    block_producer_time_nanos: u64,            // Introduced in V1 (SIMD-0307)
+    block_user_agent: Vec<u8>,                 // Introduced in V1 (SIMD-0307)
+    skip_reward_cert: Option<SkipRewardCertificate>,   // New in this SIMD
+    notar_reward_cert: Option<NotarRewardCertificate>, // New in this SIMD
 }
 ```
 
