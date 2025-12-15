@@ -59,7 +59,7 @@ network.
 
 ### Data Layout in Block Footer
 
-#### Finalization Certificate for Observability data structure
+#### Skip and notarization reward certificate data structure
 
 ```rust
 struct SkipRewardCertificate {
@@ -81,7 +81,7 @@ struct NotarRewardCertificate {
 Where `Slot` is u64, `Hash` is [u8; 32], and `BLSSignatureCompressed` is
 specified in `bls-signatures` is a 96 bytes array.
 
-`solana-signer-store` describes the bitmap format. Both aggregates use the
+`solana-signer-store` describes the `bitmap` format. Both aggregates use the
 base2-encoding.
 
 Block Footer Extension
