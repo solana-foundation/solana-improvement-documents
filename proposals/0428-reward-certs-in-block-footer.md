@@ -17,7 +17,7 @@ The [Rewards](https://github.com/solana-foundation/solana-improvement-documents/
 
 We propose augmenting `BlockMarkerV1`, introduced in SIMD-0307, to allow slot leaders to insert optional skip and notarization reward certificates.
 
-This will enable validators observing the block marker to pay the validators (and delegators) rewards for voting as per the Alpenglow consensus protocol.
+This will enable validators observing the block marker to pay the validators rewards for voting as per the Alpenglow consensus protocol.
 
 
 ## Motivation
@@ -26,7 +26,7 @@ Alpenglow introduces a new way of voting (validators no longer send vote transac
 Since, votes transactions are no longer available no chain, Alpenglow also introduces a new way for validators to get rewarded for voting.
 In slot *s+8*, the corresponding leader can post up to two vote aggregates (a notarization aggregate and/or skip aggregate) for all the votes it saw for slot *s*.
 
-The block footer mechanism, introduced in SIMD-0307, serves as an ideal location to place these aggregates since each valid block must contain a footer and the footer is designed to disemminate per block information to validators on the network.
+The block footer mechanism, introduced in SIMD-0307, serves as an ideal location to place these aggregates since each valid block must contain a footer and the footer is designed to disseminate per block information to validators on the network.
 
 ## Dependencies
 
@@ -38,7 +38,7 @@ The block footer mechanism, introduced in SIMD-0307, serves as an ideal location
 
 - **Skip Reward Certificate**: this is an aggregate of all the skip votes that were recorded by the leader.
 
-- **Notarization Reward Certificate**: this is an aggregate of all the notarization otes that were recorded by the leader.
+- **Notarization Reward Certificate**: this is an aggregate of all the notarization votes that were recorded by the leader.
 
 ## Detailed Design
 
