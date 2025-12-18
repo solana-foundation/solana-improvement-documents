@@ -35,7 +35,7 @@ The `Upgrade` instruction will be updated to automatically resize the program
 data account to match the length of the ELF in the buffer being deployed.
 
 If the new ELF is larger than the current program data account, the upgrade will
-fail. The account must first be extended to the required size via the
+fail. The account must first be extended to at least the required size via the
 `ExtendProgram` instruction.
 
 If the new ELF is smaller than the current program data account, the account
