@@ -37,17 +37,17 @@ sync.
 
 - **Basis points (bps)**: An integer representation of a percentage where
   `bps = percent × 100`.
-  - 1 bps = 0.01%
-  - 1% = 100 bps
+    - 1 bps = 0.01%
+    - 1% = 100 bps
 
 - Formula variables
-  - **account_portion**: The amount of stake (in lamports) for a single
-    account that is eligible to warm up or cool down in a given epoch.
-  - **cluster_portion**: The total amount of stake (in lamports) across the
-    cluster that is in the same warmup/cooldown phase as `account_portion`
-    for the previous epoch.
-  - **cluster_effective**: The total effective stake in the cluster (in
-    lamports) for the previous epoch.
+    - **account_portion**: The amount of stake (in lamports) for a single
+      account that is eligible to warm up or cool down in a given epoch.
+    - **cluster_portion**: The total amount of stake (in lamports) across the
+      cluster that is in the same warmup/cooldown phase as `account_portion`
+      for the previous epoch.
+    - **cluster_effective**: The total effective stake in the cluster (in
+      lamports) for the previous epoch.
 
 ## Detailed Design
 
@@ -194,22 +194,59 @@ usage, which just puts the technical debt off to handle later.
 ## Impact
 
 - **Stake Interface**:
-  - Export new integer-based stake activation and deactivation logic for rust
-    consumers
-  - Deprecate the floating-point rate field while preserving binary layout
-    compatibility
+    - Export new integer-based stake activation and deactivation logic for rust
+      consumers
+    - Deprecate the floating-point rate field while preserving binary layout
+      compatibility
 
 - **Stake Program**: Feature gate v2 interface helpers in:
-  - Stake Merging
-  - Stake Splitting
-  - Stake Redelegation
+    - **Stake Merging**: Stake calculations are used to determine if the
+      account is in a transient state, ensuring that merges are rejected if the
+      account is not effectively fully active or inactive.
+    - **Stake Splitting**: Stake calculations are used determine if the source
+      stake is currently active (effective stake > 0). This status is required
+      to correctly enforce rent-exempt reserve prefunding requirements for the
+      destination account.
+    - **Stake Redelegation**: The account's cooldown status is determined with
+      stake calculations and confirms that effective stake is exactly zero
+      before allowing redelegation.
+    - **Stake Withdrawal**: When withdrawing from a deactivated account, stake
+      calculations are used to determine the remaining effective stake.
 
-- **Validator Clients (Agave & Firedancer)**: Feature gate fixed-point math
-  in:
-  - Runtime & stake logic for stake activation and deactivation calculations
-  - Stake cache & history for effective stake derivation and history
-    aggregation
-  - Inflation rewards for calculation of stake-weighted rewards
+- **Validator Clients (Agave & Firedancer)**: Clients must feature gate the
+  transition from floating-point to fixed-point arithmetic in all
+  consensus-critical operations involving effective, activating, or
+  deactivating stake. The following operations require updates:
+    - **Stake Activation and Deactivation**: When querying a stake delegation's
+      status for a given epoch, the validator _computes how much of the
+      delegation's stake has completed warmup or cooldown_. This requires
+      walking through epochs from the delegation's activation or deactivation
+      point, computing the allowed stake change at each epoch boundary to
+      determine the portion that transitioned. The result categorizes the
+      delegation's lamports into effective, activating, and deactivating
+      buckets.
+    - **Epoch Boundary Stake History**: At each epoch boundary, the validator
+      iterates over all stake delegations and _computes their activation status_
+      as of the concluding epoch. These per-delegation values are summed to
+      produce the cluster-wide totals (effective/activating/deactivating) that
+      form the new stake history entry. This entry is then used as input for
+      subsequent epoch calculations.
+    - **Stake Cache Updates**: The validator maintains a cache mapping vote
+      accounts to their delegated stake. When a stake account is
+      created/modified/closed, the cache entry for the associated vote account
+      must be updated. This requires _computing the delegation's effective stake_
+      contribution before and after the change to correctly adjust the cached
+      totals.
+    - **Vote Account Stake Totals**: At epoch boundaries, the validator
+      refreshes the stake distribution across vote accounts for the upcoming
+      epoch. For each vote account, it _sums the effective stake_ of all
+      delegations pointing to that account. These totals determine leader
+      schedule weights and fork choice voting power.
+    - **Inflation Rewards**: Reward calculation iterates over each epoch in a
+      vote account's credit history. For each epoch, the validator _computes the
+      delegation's effective stake_ at that epoch, multiplies by the earned vote
+      credits to produce points and accumulates these across epochs. The final
+      reward is proportional to the delegation's share of total cluster points.
 
 ## Security Considerations
 
