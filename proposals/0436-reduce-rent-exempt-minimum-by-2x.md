@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0436'
 title: Reduce Rent-Exempt Minimum Balance by 2x
 authors:
   - Igor Durovic (anza)
