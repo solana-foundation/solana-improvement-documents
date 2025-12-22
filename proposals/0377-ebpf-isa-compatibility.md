@@ -40,68 +40,11 @@ The set containing these new instructions will form an sBPFv3 program.
 Programs containing the instructions mentioned in this SIMD must have the 
 `0x03` value in the `e_flags` field of their header.
 
-### Revert SIMD-0166
-
-SIMD-0166 must be reverted beginning with sBPFv3, since we will introduce a 
-new design for dynamic stack frames that is closer to the eBPF code generation.
-
-### Revert SIMD-0173
-
-All changes proposed in SIMD-173 will no longer take effect in sBPFv3. 
-Consequently, the verifier must accept the following opcodes:
-
-- `0x18`, `0x00` (`LDDW`)
-- `0x72`, `0x71`, `0x73` (`STB`, `LDXB`, `STXB`)
-- `0x6A`, `0x69`, `0x6B` (`STH`, `LDXH`, `STXH`)
-- `0x62`, `0x61`, `0x63` (`STW`, `LDXW`, `STXW`)
-- `0x7A`, `0x79`, `0x7B` (`STDW`, `LDXDW`, `STXDW`)
-- `0xD4` (`LE`)
-
-The new opcodes introduced in SIMD-173 must be rejected in the verifier with `VerifierError::UnknownOpCode`:
-
-- the `HOR64` instruction (opcode `0xF7`)
-- the moved opcodes:
-  - `0x27`, `0x2C`, `0x2F` (`STB`, `LDXB`, `STXB`)
-  - `0x37`, `0x3C`, `0x3F` (`STH`, `LDXH`, `STXH`)
-  - `0x87`, `0x8C`, `0x8F` (`STW`, `LDXW`, `STXW`)
-  - `0x97`, `0x9C`, `0x9F` (`STDW`, `LDXDW`, `STXDW`)
-
-### Revert SIMD-0174
-
-All changes proposed in SIMD-174 will no longer take effect in sBPFv3. 
-Consequently, the verifier must accept the following opcodes:
-
-- the `MUL` instruction (opcodes `0x24`, `0x2C`, `0x27` and `0x2F`)
-- the `DIV` instruction (opcodes `0x34`, `0x3C`, `0x37` and `0x3F`)
-- the `MOD` instruction (opcodes `0x94`, `0x9C`, `0x97` and `0x9F`)
-- the `NEG` instruction (opcodes `0x84` and `0x87`)
-
-The verifier must reject programs and throw `VerifierError::UnknownOpCode` for 
-programs that contain any of the following opcodes.
-
-- the `UHMUL64` instruction (opcode `0x36` and `0x3E`)
-- the `UDIV32` instruction (opcode `0x46` and `0x4E`)
-- the `UDIV64` instruction (opcode `0x56` and `0x5E`)
-- the `UREM32` instruction (opcode `0x66` and `0x6E`)
-- the `UREM64` instruction (opcode `0x76` and `0x7E`)
-- the `LMUL32` instruction (opcode `0x86` and `0x8E`)
-- the `LMUL64` instruction (opcode `0x96` and `0x9E`)
-- the `SHMUL64` instruction (opcode `0xB6` and `0xBE`)
-- the `SDIV32` instruction (opcode `0xC6` and `0xCE`)
-- the `SDIV64` instruction (opcode `0xD6` and `0xDE`)
-- the `SREM32` instruction (opcode `0xE6` and `0xEE`)
-- the `SREM64` instruction (opcode `0xF6` and `0xFE`)
-
-### Execution changes
-
-MOV32_REG (opcode `0x14`) must NOT perform sign extension.
-
-SUB32_IMM and SUB64_IMM must perform the operation `src = src - imm`.
-
 ### Dynamic stack frames
 
-Aiming a closer compatibility to eBPF, the implementation of dynamic stack 
-frames is going to change.
+Aiming to efficiently use the stack space, while still being compatible with 
+the LLVM eBPF code generation, we propose an implementation of dynamic stack 
+frames that is optional per function.
 
 The R10 register must continue to be the frame pointer, i.e. pointing to the 
 highest address accessible in a function. As such, the stack will grow upwards.
