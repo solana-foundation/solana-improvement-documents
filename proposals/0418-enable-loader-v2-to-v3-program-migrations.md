@@ -36,8 +36,12 @@ N/A
 ## Detailed Design
 
 Migrating a Loader v2 program to Loader v3 involves creating a buffer
-account owned by the Loader v3 (BPF Upgradable Loader) that contains the
-ELF bytes of the program’s implementation.
+account owned by the Loader v3 (BPF Upgradable Loader) that contains
+the ELF bytes of the program's implementation to be migrated. This
+buffer is deployed before the initiating the migration, and a portion
+of its lamports is later used to fund the new program and program data
+accounts. Any remaining lamports in the buffer are burned as part of
+the migration process.
 
 The migration proceeds in the following steps:
 
