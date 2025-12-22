@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0438'
 title: Safeguard for rent-exempt minimum increase
 authors:
   - Igor Durovic (anza)
