@@ -48,7 +48,7 @@ ACCOUNT_STORAGE_OVERHEAD = 128
 lamports_per_byte_year = 3480 // reduced from 6960 by this proposal
 exemption_threshold = 1.0
 effective_size = ACCOUNT_STORAGE_OVERHEAD + data_size_bytes
-min_balance(data_size) = effective_size 
+min_balance = effective_size 
                             * lamports_per_byte_year
                             * exemption_threshold
                        = effective_size * 3480
