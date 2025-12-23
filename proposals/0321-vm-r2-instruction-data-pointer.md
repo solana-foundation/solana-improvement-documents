@@ -3,6 +3,7 @@ simd: '0321'
 title: VM Register 2 Instruction Data Pointer
 authors:
   - Joe Caulfield (Anza)
+  - Dean Little (Blueshift)
 category: Standard
 type: Core
 status: Review
