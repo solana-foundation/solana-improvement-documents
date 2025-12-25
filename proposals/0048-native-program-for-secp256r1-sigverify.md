@@ -28,7 +28,7 @@ remains as a single point of failure). Arguably, multi-signature wallets fit
 into this equation as they enable the dependency on multiple private keys.
 However in practice the UX takes too much of a hit, as having to sign a
 transaction a minimum of 3 seperate times and having to write down 3 seed
-phrases is too cumbersome. It would be ideal to have an authetication form that
+phrases is too cumbersome. It would be ideal to have an authentication form that
 relies on a more familiar second factor, such as a users mobile device.
 
 Passkeys & WebAuthn are a standardized implementation of this. They enable users
