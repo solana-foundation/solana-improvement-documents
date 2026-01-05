@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-08-06
-feature: 
+feature:
 ---
 
 ## Summary
@@ -36,8 +36,10 @@ N/A
 The block_id already lives in the bank. Snapshot producers for all
 clients must include the block ID of the snapshot slot in the serialized
 bank of the snapshot. This can be implemented by adding a `block_id`
-field to the snapshot serialization schema (eg. `BankFieldsToSerialize`
-in Agave or `fd_snapshot_manifest_t` in Firedancer).
+field to the snapshot serialization schema (eg. the
+`ExtraFieldsToSerialize` addendum to `BankFieldsToSerialize`). The
+`block_id` will be serialized at the end of the manifest, after
+`accounts_lt_hash`.
 
 Snapshot consumers may optionally read the block ID in the deserialized
 bank, and use it to validate as seen fit.
@@ -46,7 +48,9 @@ In cases where an artificial bank is created (ex. via ledger tool during
 development or for a cluster restart), the block_id must also be
 populated.  If the artificial bank with bank hash `bank_hash` builds on
 slot S with block ID `parent_block_id`, the block ID value for the
-serialized bank will be a SHA256 `hash(parent_block_id, bank_hash)`
+serialized bank will be a SHA256 hash of the direct concatenation of
+32-bytes of `parent_block_id` followed by 32-bytes of `bank_hash`, i.e.
+`SHA256(parent_block_id || bank_hash)`
 
 ## Alternatives Considered
 
@@ -55,7 +59,10 @@ N/A
 ## Impact
 
 Clients will now need to include an extra field when generating a
-snapshot.
+snapshot. Supporting deserializing the `block_id` will also need to be
+backported to the adjacent (previous) versions of Agave before we begin
+serializing the `block_id` in snapshots. Other clients will also update
+their corresponding snapshot serialize and deserialize structures.
 
 ## Security Considerations
 
