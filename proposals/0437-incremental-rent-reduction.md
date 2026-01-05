@@ -1,6 +1,6 @@
 ---
 simd: '0437'
-title: Incremental Reduction of lamports_per_byte to 696
+title: Incrementally Reduce lamports_per_byte to 696
 authors:
   - Igor Durovic (anza)
 category: Standard
