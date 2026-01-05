@@ -1,6 +1,6 @@
 ---
 simd: '0436'
-title: Reduce Rent-Exempt Minimum Balance by 2x
+title: Reduce lamports_per_byte to 3480
 authors:
   - Igor Durovic (anza)
 category: Standard
@@ -12,7 +12,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Reduce `lamports_per_byte_year` by half, which is equivalent
+Reduce `lamports_per_byte` by 50% to 3480, which is equivalent
 to reducing the rent-exempt minimum balance by half for all
 new and existing accounts.
 
@@ -33,25 +33,18 @@ N/A
 
 ## Detailed Design
 
-On feature activation, set the effective `lamports_per_byte_year`
-to `current_value / 2` in the runtime, Rent sysvar, and RPC
-helpers (e.g., `getMinimumBalanceForRentExemption`).
-
-Note: SIMD-0194 changed `lamports_per_byte_year` from `3480`
-to `6960` and reduced `exemption_threshold` from `2.0` to
-`1.0`, effectively deprecating the `exemption_threshold`
-while keeping the actual rent-exempt minimum balance constant.
-This proposal reduces `lamports_per_byte_year` back to `3480`.
+On feature activation, set the effective `lamports_per_byte`
+to `3480` in the bank and rent sysvar
+(`SysvarRent111111111111111111111111111111111`), followed by
+updating  `DEFAULT_LAMPORTS_PER_BYTE` in all relevant SDKs
+post-activation.
 
 ```
 ACCOUNT_STORAGE_OVERHEAD = 128
-lamports_per_byte_year = 3480 // reduced from 6960 by this proposal
-exemption_threshold = 1.0
+lamports_per_byte = 3480 // reduced from 6960 by this proposal
 effective_size = ACCOUNT_STORAGE_OVERHEAD + data_size_bytes
-min_balance = effective_size 
-                            * lamports_per_byte_year
-                            * exemption_threshold
-                       = effective_size * 3480
+min_balance = effective_size * lamports_per_byte
+            = effective_size * 3480
 ```
 
 ## Alternatives Considered
