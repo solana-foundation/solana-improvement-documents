@@ -185,12 +185,13 @@ introduced in this SIMD (the return-data scratchpad and the CPI scratchpad)
 must be communicated via a new sycall `set_buffer_length`, with the following 
 parameters:
 
-- Address of region to be resized: `u64`
+- Base address of region to be resized: `u64`
 - New length of region: `u64`
 
-The syscall must check if the address belongs to either a writable account 
-payload or one of the scratchpads and return and error otherwise. Constrains 
-for the maximum resizable limits must also be verified (10 kb).
+The syscall must check if the address matches the base address of either a 
+writable account payload mapping or one of the scratchpad mappings and return 
+an error otherwise. Constrains for the maximum resizable limits must also be 
+verified (10 kb).
 
 The verifier must reject SBPFv4 programs containing the `sol_invoke_signed_c` 
 and `sol_invoke_signed_rust`, since they are not compatible with ABIv2. A new 
@@ -211,7 +212,7 @@ syscall `sol_invoke_signed_v2` must replace them. The parameters for
 Programs using `sol_get_return_data` and `sol_set_return_data` must be 
 rejected by the verfier if ABI v2 is in use.
 
-### Scratchpads managemnts
+### Scratchpad management
 
 This SIMD introduces two scratch pad regions: the return-data scratchpad and 
 the CPI scratchpad. At the beginning of every instruction, these scratchpads 
