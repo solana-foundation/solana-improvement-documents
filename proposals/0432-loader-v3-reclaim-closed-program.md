@@ -59,6 +59,12 @@ longer rent-exempt and subject to garbage collection by the runtime at the end
 of the transaction. As such, the program address can be reclaimed after the
 account has been garbage collected.
 
+The Close instruction MUST fail if `tombstone` is `false` and the program was
+deployed in the current slot (this field is stored in the programdata account
+layout). This prevents a deploy-close-reclaim loop within the same slot, which
+would corrupt the program cache (see Security Considerations). Programs
+deployed in the current slot can still be closed with `tombstone=true`.
+
 For a value of `true`, the program will clear the program account's data, resize
 it to zero, but retain the rent-exempt minimum lamports for the base account
 metadata. The program account will then be assigned to itself, creating a
@@ -111,8 +117,9 @@ This proposal preserves both invariants:
 
 - **Program account**: When closing without tombstoning, the account is drained
   of lamports rather than reassigned to System. The account remains owned by
-  Loader v3 until garbage-collected at transaction end, preventing same-slot
-  redeployment.
+  Loader v3 until garbage-collected at transaction end, preventing same-TX
+  redeployment. Additionally, closing without tombstoning is rejected if the
+  program was deployed in the current slot, preventing multiple-TX loops.
 
 - **Programdata account**: Fully deallocated and reassigned to System. This is
   safe because programdata is not used for cache indexing or invocation.
