@@ -53,6 +53,15 @@ Close { tombstone: bool }
 | 4-byte discriminator | 1-byte boolean |
 ```
 
+The accounts required by the instruction are unchanged:
+
+- Account 0: Programdata account (writable)
+- Account 1: Recipient (writable)
+- Account 2: Authority (signer)
+- Account 3: Program account (writable)
+
+### Base Workflow
+
 For a value of `false`, the program will clear the program account's data,
 resize it to zero, and withdraw all lamports. This will render the account no
 longer rent-exempt and subject to garbage collection by the runtime at the end
@@ -87,9 +96,38 @@ permanent tombstone for the program.
 In both workflows, the programdata account (or any adjacent accounts under
 Loader v3) will be completely deallocated, defunded, and reassigned to System.
 
+### Non-Frozen Active Program Closures
+
+Programs that are not frozen exist in the following state:
+
+- Program account: Owned by Loader v3, `Program { programdata }` state, funded
+- Programdata account: `ProgramData { upgrade_authority: Some(..), .. }`
+
+For all non-frozen programs in the above state, the authority signer at account
+index 2 must be the program's upgrade authority, stored in the programdata
+account. This preserves the existing authority behavior.
+
+If the above state and signer requirements are met, the base workflow proceeds.
+
+### Legacy Tombstone Reclamation
+
+Programs closed before this proposal remain in a legacy tombstone state:
+
+- Program account: Owned by Loader v3, `Program { programdata }` state, funded
+- Programdata account: `Uninitialized` (all-zeroes)
+
+These programs cannot be invoked. The Close instruction is extended to reclaim
+them. When the provided program and programdata accounts are in the legacy
+tombstone state described above, the authority signer at account index 2 must be
+the program keypair.
+
+If the above state and signer requirements are met, the base workflow proceeds.
+
+### Feature Activation
+
 This change will be a feature-gated behavioral change to the existing Close
 instruction. After the feature is activated, the boolean value can be included
-to utilize the new functionality.
+to utilize the new functionality, and legacy tombstones can be reclaimed.
 
 ## Alternatives Considered
 
