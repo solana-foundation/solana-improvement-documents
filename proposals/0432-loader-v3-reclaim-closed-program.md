@@ -97,11 +97,28 @@ users who explicitly wish to permanently disable a program ID.
 
 ## Security Considerations
 
-When closing a program, the program account must not be reassigned to the
-system program. Doing so would allow redeployment within the same slot,
-potentially corrupting the program cache. When tombstoning, assigning the
-account to itself ensures the address is permanently unusable, as self-owned
-accounts cannot be modified by any program.
+The program cache relies on two invariants:
+
+1. **One redeployment per slot**: The cache keys on program address and
+   deployment slot. Multiple deployments to the same address in one slot would
+   corrupt the cache.
+
+2. **Loader stability within a transaction**: A program's loader determines its
+   ABI and alignment requirements. Changing loaders mid-transaction would cause
+   CPI mismatches.
+
+This proposal preserves both invariants:
+
+- **Program account**: When closing without tombstoning, the account is drained
+  of lamports rather than reassigned to System. The account remains owned by
+  Loader v3 until garbage-collected at transaction end, preventing same-slot
+  redeployment.
+
+- **Programdata account**: Fully deallocated and reassigned to System. This is
+  safe because programdata is not used for cache indexing or invocation.
+
+- **Tombstone**: When tombstoning, the program account is assigned to itself,
+  permanently locking the address. Self-owned accounts cannot be modified.
 
 ## Backwards Compatibility
 
