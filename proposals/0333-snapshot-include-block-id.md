@@ -1,0 +1,75 @@
+---
+simd: '0333'
+title: Serialize Block ID in Bank into Snapshot
+authors:
+  - Emily Wang
+category: Standard
+type: Core
+status: Review
+created: 2025-08-06
+feature:
+---
+
+## Summary
+
+Currently the block ID (the merkle root of the last FEC set) of the
+snapshot slot is not included in the snapshot Bank Fields. This would
+enforce the snapshot producer to include the block ID in the serialized
+bank.
+
+## Motivation
+
+It is convenient for multiple validator clients to have the block ID
+when booting from a snapshot, and allows the inter-slot equivocation
+block ID verification to not be special-cased on startup.  In addition,
+this future-proofs for Alpenglow, as Alpenglow votes and related
+tracking is done on (Slot, Block ID), and repair & duplicate block
+resolution uses block ID. Having the block ID available in snapshots
+enables this.
+
+## New Terminology
+
+N/A
+
+## Detailed Design
+
+The block_id already lives in the bank. Snapshot producers for all
+clients must include the block ID of the snapshot slot in the serialized
+bank of the snapshot. This can be implemented by adding a `block_id`
+field to the snapshot serialization schema (eg. the
+`ExtraFieldsToSerialize` addendum to `BankFieldsToSerialize`). The
+`block_id` will be serialized at the end of the manifest, after
+`accounts_lt_hash`.
+
+Snapshot consumers may optionally read the block ID in the deserialized
+bank, and use it to validate as seen fit.
+
+In cases where an artificial bank is created (ex. via ledger tool during
+development or for a cluster restart), the block_id must also be
+populated.  If the artificial bank with bank hash `bank_hash` builds on
+slot S with block ID `parent_block_id`, the block ID value for the
+serialized bank will be a SHA256 hash of the direct concatenation of
+32-bytes of `parent_block_id` followed by 32-bytes of `bank_hash`, i.e.
+`SHA256(parent_block_id || bank_hash)`
+
+## Alternatives Considered
+
+N/A
+
+## Impact
+
+Clients will now need to include an extra field when generating a
+snapshot. Supporting deserializing the `block_id` will also need to be
+backported to the adjacent (previous) versions of Agave before we begin
+serializing the `block_id` in snapshots. Other clients will also update
+their corresponding snapshot serialize and deserialize structures.
+
+## Security Considerations
+
+Security is improved because this now allows inter-slot verification
+between the snapshot slot and its child without repairing the block ID
+of the snapshot slot.
+
+## Backwards Compatibility
+
+This feature is not backwards compatible.
