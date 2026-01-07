@@ -83,14 +83,14 @@ allowed_change =
     (cluster_portion * BASIS_POINTS_PER_UNIT)
 ```
 
-Note: any truncation in the division that occurs should truncate toward zero.
+Note: The division uses unsigned integer division so it truncates (rounds down).
 
 #### Widening arithmetic to 128-bit integers
 
-Because of the extra multiplication, 64-bit integer math is not sufficient for
-safety. For that reason, all values used in the formula should be widened to
-128-bit integers. The final value should then be cast back down to a 64-bit
-integer.
+All inputs are unsigned 64-bit lamport quantities. Because of the extra
+multiplication, all values used in the formula should be widened to unsigned
+128-bit integers (or an exact emulation). The final value should then be cast
+back down to an unsigned 64-bit integer.
 
 Implementations that do not offer native unsigned 128-bit arithmetic must
 emulate it (for example via fixed-width limb arithmetic).
@@ -110,6 +110,11 @@ lamport per epoch so that small delegations do not get stuck in activating/
 deactivating states due to truncation. The new implementation keeps this
 behavior.
 
+**Note:** This clamp applies only to stake activation/deactivation
+transitions, not to inflation reward payouts. Reward distribution has a
+separate mechanism that defers sub-lamport payouts by not advancing
+`credits_observed` until a full lamport can be paid.
+
 ### Pseudocode guidance
 
 #### Current implementation
@@ -117,7 +122,7 @@ behavior.
 ```text
 RATE_FLOAT = 0.09
 
-# All params 64-bit integer
+# All params are unsigned 64-bit integers
 function rate_limited_stake_change(account_portion, cluster_portion, cluster_effective):
     if account_portion == 0 or cluster_portion == 0 or cluster_effective == 0:
         return 0
@@ -127,7 +132,7 @@ function rate_limited_stake_change(account_portion, cluster_portion, cluster_eff
     allowed_change_float = weight_float * cluster_effective_float * RATE_FLOAT
 
     # Truncate toward zero via cast
-    allowed_change = allowed_change_float as 64-bit integer
+    allowed_change = allowed_change_float as unsigned 64-bit integer
 
     # Never allow more than the account's own portion to change
     if allowed_change > account_portion:
@@ -146,12 +151,12 @@ function rate_limited_stake_change(account_portion, cluster_portion, cluster_eff
 BASIS_POINTS_PER_UNIT = 10_000
 RATE_BPS = 900
 
-# All params 64-bit integer
+# All params are unsigned 64-bit integers
 function rate_limited_stake_change(account_portion, cluster_portion, cluster_effective):
     if account_portion == 0 or cluster_portion == 0 or cluster_effective == 0:
         return 0
 
-    # Cast all params to 128-bit integer
+    # Cast all params to unsigned 128-bit integer
     # All multiplications saturate
     numerator = account_portion_128 * cluster_effective_128 * RATE_BPS_128
 
@@ -163,8 +168,8 @@ function rate_limited_stake_change(account_portion, cluster_portion, cluster_eff
     if allowed_change_128 > account_portion_128:
         allowed_change_128 = account_portion_128
 
-    # Narrow back to 64-bit integer
-    allowed_change = allowed_change_128 as 64-bit integer
+    # Narrow back to unsigned 64-bit integer
+    allowed_change = allowed_change_128 as unsigned 64-bit integer
 
     # Minimum progress clamp
     if allowed_change == 0:
@@ -172,18 +177,6 @@ function rate_limited_stake_change(account_portion, cluster_portion, cluster_eff
 
     return allowed_change
 ```
-
-## State compatibility
-
-In existing stake account data, there is an 8-byte field that historically
-stored warmup/cooldown rate value as a double-precision float. It is legacy
-and currently unused by any part of the program. To preserve backwards
-compatibility with existing stake account state, this SIMD does not change
-stake account layout or size. Instead, it reclassifies that field as 8 bytes
-of reserved data.
-
-The implementations should continue not using this field when computing warmup/
-cooldown values and setting it to zero when creating new stake accounts.
 
 ## Alternatives Considered
 
@@ -247,6 +240,9 @@ usage, which just puts the technical debt off to handle later.
       delegation's effective stake_ at that epoch, multiplies by the earned vote
       credits to produce points and accumulates these across epochs. The final
       reward is proportional to the delegation's share of total cluster points.
+        - Note: Only the effective stake computation (warmup/cooldown) is
+          affected by this SIMD. The downstream reward-to-lamport conversion
+          and sub-lamport deferral logic remain unchanged.
 
 ## Security Considerations
 
