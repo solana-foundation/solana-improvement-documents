@@ -57,7 +57,7 @@ otherwise `ElfParserError::OutOfBounds` must be thrown.
 - `e_shoff` is not checked
 - `e_flags` see SIMD-0161
 - `e_ehsize` must be `size_of::<Elf64Ehdr>()` (64 bytes)
-- `e_phnum` must be greater than or equal `0x0002`
+- `e_phnum` must be greater than or equal `0x0001`
 - `e_phoff + e_phnum * size_of::<Elf64Phdr>()` must be
   less than or equal the file size
 - `e_phentsize` must be `size_of::<Elf64Phdr>()` (56 bytes)
@@ -74,7 +74,9 @@ If any check fails `ElfParserError::InvalidFileHeader` must be thrown.
 | 0     | ro data   | PF_R       | 0 << 32 |
 | 1     | bytecode  | PF_X       | 1 << 32 |
 
-For each of these predefined program headers:
+If `p_flags` of the first program header is not `PF_R`, then only the second
+program header is expected (effectively skipping the first). For each of these
+predefined program headers:
 
 - `p_type` must be `PT_LOAD`
 - `p_flags` must match the `p_flags` of the entry in the table above
