@@ -62,8 +62,8 @@ otherwise `ElfParserError::OutOfBounds` must be thrown.
   less than or equal the file size
 - `e_phentsize` must be `size_of::<Elf64Phdr>()` (56 bytes)
 - `e_shnum` is not checked
-- `e_shentsize` must be `size_of::<Elf64Shdr>()` (64 bytes)
-- `e_shstrndx` must be less than `e_shnum`
+- `e_shentsize` is not checked
+- `e_shstrndx` is not checked
 
 If any check fails `ElfParserError::InvalidFileHeader` must be thrown.
 
