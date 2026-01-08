@@ -38,12 +38,15 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-The following features will be activated behind a feature gate:
+After the feature is activated, the program will no longer enforce the
+following checks:
+* `DeployWithMaxDataLen`: The signing authority no longer must match the
+  authority stored on the buffer account.
+* `Upgrade`: The signing authority no longer must match the authority
+  stored on the buffer account.
 
-1. Remove owner check on program buffer accounts during program deployment, 
-requiring buffer to be owned by `BPFLoaderUpgradeab1e11111111111111111111111`.
-1. Remove authority check enforcing buffer shares an upgrade authority with
-program being updated.
+Note that the authority account will remain in the same position for both
+instructions and must still sign the transaction as before.
 
 ## Alternatives Considered
 
