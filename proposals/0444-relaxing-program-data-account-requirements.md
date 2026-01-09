@@ -1,0 +1,87 @@
+---
+simd: '0444'
+title: Relax program data account check in migration
+authors:
+  - febo (Anza)
+category: Standard
+type: Core
+status: Review
+created: 2026-01-09
+feature: (fill in with feature tracking issues once accepted)
+---
+
+## Summary
+
+This proposal relaxes the requirements for migrating builtins and Loader
+v2 program accounts to allow the reuse of program data accounts that hold
+lamports and are owned by the system program.
+
+## Motivation
+
+Currently, migration of builtins and Loader v2 program accounts to Loader v3
+requires that the target program data account must not already exist. This
+means the account must have zero lamports. If the program data account is
+pre-funded (i.e., has a lamports balance greater than `0`), the migration will
+not proceed.
+
+## Alternatives Considered
+
+Taking no action will result in a situation in which pre-funding a target
+program data account prevents the migration from being completed.
+
+## New Terminology
+
+N/A
+
+## Detailed Design
+
+Improve the check for target program data accounts to relax the requirement
+that they must not exist. If an account with the derived address for the target
+program data account already exists, holds lamports, and is owned by the system
+program, it may be reused.
+
+Current test:
+
+```rust
+// The program data account should not exist and have zero lamports.
+if bank
+    .get_account_with_fixed_root(&program_data_address)
+    .is_some()
+{
+    return Err(CoreBpfMigrationError::ProgramHasDataAccount(
+        *program_address,
+    ));
+}
+```
+
+Test after this SIMD is enabled:
+
+```rust
+// The program data account should not exist, but a system account with funded
+// lamports is acceptable.
+let program_data_account_lamports = if let Some(account) = bank
+    .get_account_with_fixed_root(&program_data_address)
+{
+    if account.owner() != &SYSTEM_PROGRAM_ID {
+        return Err(CoreBpfMigrationError::ProgramHasDataAccount(
+            *program_address,
+        ));
+    }
+    account.lamports()
+} else {
+    0
+}
+```
+
+## Impact
+
+This change prevents the migration from failing when the target program
+data account is pre-funded.
+
+## Security Considerations
+
+N/A
+
+## Backwards Compatibility
+
+This proposal itself does not introduce any breaking changes.
