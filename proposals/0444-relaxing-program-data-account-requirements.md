@@ -36,7 +36,7 @@ N/A
 Improve the check for target program data accounts to relax the requirement
 that they must not exist. If an account with the derived address for the target
 program data account already exists, holds lamports, and is owned by the system
-program, it may be reused.
+program, the migration proceeds.
 
 Current test:
 
