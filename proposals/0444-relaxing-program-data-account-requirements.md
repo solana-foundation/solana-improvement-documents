@@ -70,7 +70,9 @@ let program_data_account_lamports = if let Some(account) = bank
     0
 }
 ```
-
+Important Note: If the system-owned programdata account contains lamports,
+those lamports must be burned during any runtime-level program migrations
+by updating the Bank's capitalization.
 ## Impact
 
 This change prevents the migration from failing when the target program
