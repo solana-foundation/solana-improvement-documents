@@ -12,8 +12,8 @@ feature: N/A
 
 ## Summary
 
-This proposal introduces a mechanism to migrate Loader v2 programs to Loader
-v3.
+This proposal introduces a feature-gated mechanism for runtime-level migration
+of Loader v2 programs to Loader v3.
 
 ## Motivation
 
@@ -24,9 +24,9 @@ approve targeted upgrades to specific programs (e.g., SPL Token).
 
 ## Alternatives Considered
 
-Previously, Loader v2 programs could be “upgraded” by directly modifying their
-account data. This approach is no longer recommended due to the introduction of
-the global program cache, since it can cause inconsistencies if account data is
+Previously, the runtime could "upgrade" Loader v2 programs by directly modifying
+their account data. This approach is no longer recommended due to the introduction
+of the global program cache, since it can cause inconsistencies if account data is
 modified in-place.
 
 ## New Terminology
@@ -34,6 +34,9 @@ modified in-place.
 N/A
 
 ## Detailed Design
+
+The migration from Loader v2 program to Loader v3 is only performed by the
+runtime and activated via a feature gate.
 
 Migrating a Loader v2 program to Loader v3 involves creating a buffer
 account owned by the Loader v3 (BPF Upgradable Loader) that contains
