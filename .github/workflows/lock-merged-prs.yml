@@ -1,0 +1,23 @@
+name: Lock Merged PRs
+
+on:
+  schedule:
+    # Run every Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  pull-requests: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dessant/lock-threads@v5
+        with:
+          github-token: ${{ github.token }}
+          process-only: 'prs'
+          pr-inactive-days: 60
+          pr-lock-reason: 'resolved'
+          exclude-any-pr-labels: 'keep-open'
+          log-output: true
