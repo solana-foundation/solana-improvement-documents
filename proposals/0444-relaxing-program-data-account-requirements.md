@@ -12,9 +12,8 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-This proposal relaxes the requirements for migrating builtins and Loader
-v2 program accounts to allow the reuse of program data accounts that hold
-lamports and are owned by the system program.
+This proposal relaxes the requirements for runtime-level migrations of programs
+(such as builtins) to permit system-owned programdata accounts to hold lamports.
 
 ## Motivation
 
