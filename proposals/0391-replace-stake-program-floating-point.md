@@ -70,9 +70,9 @@ RATE_FLOAT = 0.09
 allowed_change = (account_portion / cluster_portion) * (cluster_effective * RATE_FLOAT)
 ```
 
-For an integer implementation, it's important to re-arrange the formula so
-that the division happens last to maintain the highest precision. This is
-achieved via an algebraically equivalent re-ordering:
+For an integer implementation, the division MUST occur last (after all
+multiplications) to maintain the highest precision and done via an
+algebraically equivalent re-ordering:
 
 ```text
 BASIS_POINTS_PER_UNIT = 10_000
@@ -81,37 +81,50 @@ RATE_BPS = 900
 allowed_change =
     (account_portion * cluster_effective * RATE_BPS) /
     (cluster_portion * BASIS_POINTS_PER_UNIT)
+
+# Note: all multiplications saturate
 ```
 
-Note: The division uses unsigned integer division so it truncates (rounds down).
+Note: The division MUST use unsigned integer division and truncate (round down).
 
-#### Widening arithmetic to 128-bit integers
+#### Widening arithmetic and safety
 
-All inputs are unsigned 64-bit lamport quantities. Because of the extra
-multiplication, all values used in the formula should be widened to unsigned
-128-bit integers (or an exact emulation). The final value should then be cast
-back down to an unsigned 64-bit integer.
+All inputs are unsigned 64-bit integers. To maintain precision and bound
+overflow behavior, all values used in the formula MUST be widened to unsigned
+128-bit integers (or an exact emulation) prior to any multiplication or
+division.
 
-Implementations that do not offer native unsigned 128-bit arithmetic must
-emulate it (for example via fixed-width limb arithmetic).
+Implementations MUST NOT fault or abort due to overflow in intermediate
+arithmetic. Instead, the computation MUST adhere to the following sequence:
 
-#### Saturation and fail-safe behavior
+1. Saturate: All intermediate 128-bit multiplications in the computation
+   (including both numerator and denominator multiplications) MUST use
+   saturating arithmetic, capping at the maximum representable unsigned 128-bit
+   value.
+2. Divide: The division MUST use unsigned integer division and truncate
+   (round down).
+3. Clamp: The post-division result MUST be clamped to `account_portion`.
+4. Narrow: The clamped value MUST be converted back to an unsigned 64-bit
+   integer. Because the value is capped at `account_portion`, this conversion
+   MUST be exact (lossless) and NOT truncate, wrap, or otherwise alter the
+   clamped value.
 
-If the intermediate multiplication overflows the maximum representable
-unsigned 128-bit value, the numerator saturates to the maximum 128-bit value
-before division. The result is then clamped to `account_portion`. This ensures
-that overflow cannot amplify a stake change beyond the account's own portion
-(fail-safe rather than fail-open).
+Rationale: Saturating multiplication combined with post-division clamping
+ensures that overflow cannot amplify a stake change beyond the account’s own
+portion (fail-safe rather than fail-open) and avoids introducing a fault/abort
+path.
+
+Implementations without native 128-bit support MUST emulate these semantics exactly.
 
 ### Minimum progress clamp
 
 Currently, when `account_portion > 0`, there is a granted minimum change of 1
 lamport per epoch so that small delegations do not get stuck in activating/
-deactivating states due to truncation. The new implementation keeps this
+deactivating states due to truncation. The new implementation MUST keep this
 behavior.
 
-**Note:** This clamp applies only to stake activation/deactivation
-transitions, not to inflation reward payouts. Reward distribution has a
+**Note:** This clamp MUST apply only to stake activation/deactivation
+transitions and NOT to inflation reward payouts. Reward distribution has a
 separate mechanism that defers sub-lamport payouts by not advancing
 `credits_observed` until a full lamport can be paid.
 
@@ -196,7 +209,7 @@ usage, which just puts the technical debt off to handle later.
     - **Stake Merging**: Stake calculations are used to determine if the
       account is in a transient state, ensuring that merges are rejected if the
       account is not effectively fully active or inactive.
-    - **Stake Splitting**: Stake calculations are used determine if the source
+    - **Stake Splitting**: Stake calculations are used to determine if the source
       stake is currently active (effective stake > 0). This status is required
       to correctly enforce rent-exempt reserve prefunding requirements for the
       destination account.
@@ -206,7 +219,7 @@ usage, which just puts the technical debt off to handle later.
     - **Stake Withdrawal**: When withdrawing from a deactivated account, stake
       calculations are used to determine the remaining effective stake.
 
-- **Validator Clients (Agave & Firedancer)**: Clients must feature gate the
+- **Validator Clients (Agave & Firedancer)**: Clients MUST feature gate the
   transition from floating-point to fixed-point arithmetic in all
   consensus-critical operations involving effective, activating, or
   deactivating stake. The following operations require updates:
@@ -227,7 +240,7 @@ usage, which just puts the technical debt off to handle later.
     - **Stake Cache Updates**: The validator maintains a cache mapping vote
       accounts to their delegated stake. When a stake account is
       created/modified/closed, the cache entry for the associated vote account
-      must be updated. This requires _computing the delegation's effective stake_
+      MUST be updated. This requires _computing the delegation's effective stake_
       contribution before and after the change to correctly adjust the cached
       totals.
     - **Vote Account Stake Totals**: At epoch boundaries, the validator
@@ -246,7 +259,7 @@ usage, which just puts the technical debt off to handle later.
 
 ## Security Considerations
 
-All implementations must adhere to the following standards:
+All implementations MUST adhere to the following standards:
 
 1. **Unit tests:** Baseline of correctness by testing specific, known
    scenarios and edge cases.
