@@ -38,41 +38,31 @@ that they must not exist. If an account with the derived address for the target
 program data account already exists, holds lamports, and is owned by the system
 program, the migration proceeds.
 
-Current test:
+Current logic (pseudo-code):
 
 ```rust
 // The program data account should not exist and have zero lamports.
-if bank
-    .get_account_with_fixed_root(&program_data_address)
-    .is_some()
-{
-    return Err(CoreBpfMigrationError::ProgramHasDataAccount(
-        *program_address,
-    ));
+if bank.get_account(&program_data_address).is_some() {
+    // --> return error
 }
 ```
 
-Test after this SIMD is enabled:
+Logic after this SIMD is enabled:
 
 ```rust
 // The program data account should not exist, but a system account with funded
 // lamports is acceptable.
-let program_data_account_lamports = if let Some(account) = bank
-    .get_account_with_fixed_root(&program_data_address)
-{
+if let Some(account) = bank.get_account(&program_data_address) {
     if account.owner() != &SYSTEM_PROGRAM_ID {
-        return Err(CoreBpfMigrationError::ProgramHasDataAccount(
-            *program_address,
-        ));
+        // --> return error
     }
-    account.lamports()
-} else {
-    0
 }
 ```
+
 Important Note: If the system-owned programdata account contains lamports,
 those lamports must be burned during any runtime-level program migrations
 by updating the Bank's capitalization.
+
 ## Impact
 
 This change prevents the migration from failing when the target program
