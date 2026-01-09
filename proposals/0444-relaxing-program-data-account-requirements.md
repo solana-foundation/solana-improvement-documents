@@ -17,11 +17,10 @@ This proposal relaxes the requirements for runtime-level migrations of programs
 
 ## Motivation
 
-Currently, migration of builtins and Loader v2 program accounts to Loader v3
-requires that the target program data account must not already exist. This
-means the account must have zero lamports. If the program data account is
-pre-funded (i.e., has a lamports balance greater than `0`), the migration will
-not proceed.
+Currently, runtime-level program migrations require that the target program
+data account must not already exist. This means the account must have zero
+lamports.  If the program data account is pre-funded (i.e., has a lamports
+balance greater than `0`), the migration will not proceed.
 
 ## Alternatives Considered
 
