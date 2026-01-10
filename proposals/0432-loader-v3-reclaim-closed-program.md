@@ -60,6 +60,11 @@ The accounts required by the instruction are unchanged:
 - Account 2: Authority (signer)
 - Account 3: Program account (writable)
 
+Currently, the authority (index 2) and program (index 3) accounts are only
+required for closure of initialized programs. This proposal also requires them
+for reclamation of legacy tombstones. This is detailed in the Control Flow
+section.
+
 ### Base Workflow
 
 For a value of `false`, the program will clear the program account's data,
@@ -93,35 +98,111 @@ permanent tombstone for the program.
            Address reclaimable      Address permanently locked
 ```
 
-In both workflows, the programdata account (or any adjacent accounts under
-Loader v3) will be completely deallocated, defunded, and reassigned to System.
+In both workflows, the programdata account will be defunded and set to
+`Uninitialized`, causing it to be garbage collected at end of transaction.
 
-### Non-Frozen Active Program Closures
+### Control Flow
 
-Programs that are not frozen exist in the following state:
+The entire control flow of the Loader V3 `Close` instruction is detailed below
+with modifications highlighted.
 
-- Program account: Owned by Loader v3, `Program { programdata }` state, funded
-- Programdata account: `ProgramData { upgrade_authority: Some(..), .. }`
+1. At least 2 accounts must be provided, otherwise throw
+   `NotEnoughAccountKeys`.
+2. Accounts at index 0 and 1 must not alias, otherwise throw
+   `InvalidArgument`.
+3. The "close" account (index 0) must deserialize as `UpgradeableLoaderState`,
+   otherwise throw `InvalidAccountData`.
 
-For all non-frozen programs in the above state, the authority signer at account
-index 2 must be the program's upgrade authority, stored in the programdata
-account. This preserves the existing authority behavior.
+Once the close account's state is deserialized, the remaining control flow
+depends on the type of account.
 
-If the above state and signer requirements are met, the base workflow proceeds.
+#### `ProgramData`
 
-### Legacy Tombstone Reclamation
+1. At least 4 accounts must be provided, otherwise throw
+   `NotEnoughAccountKeys`.
+2. The program account (index 3) must be writable, otherwise throw
+   `InvalidArgument`.
+3. The program account must be owned by Loader v3, otherwise throw
+   `IncorrectProgramId`.
+4. **[NEW]** If `tombstone` is `false`, the programdata's `slot` field must not
+   equal the current slot (from Clock sysvar), otherwise throw
+   `InvalidArgument`.
+5. The program account must deserialize as `UpgradeableLoaderState`, otherwise
+   throw `InvalidAccountData`.
+6. The program account must be in `Program` state, otherwise throw
+   `InvalidArgument`.
+7. The program account's `programdata_address` must match the close account
+   (index 0), otherwise throw `InvalidArgument`.
+8. If the programdata's `upgrade_authority_address` is `None` (frozen program),
+   throw `Immutable`.
+9. The authority (index 2) must match the programdata's
+   `upgrade_authority_address`, otherwise throw `IncorrectAuthority`.
+10. The authority must be a signer, otherwise throw `MissingRequiredSignature`.
+11. Transfer all lamports from the close account to the recipient (index 1).
+12. Set the close account's state to `Uninitialized` (account will be garbage
+    collected at end of transaction due to zero lamports).
+13. **[NEW]** Clear the program account's data and resize to zero.
+14. **[NEW]** If `tombstone` is `true`: transfer excess lamports (above
+    rent-exempt minimum for zero-data account) to recipient, then assign the
+    program account to itself.
+15. **[NEW]** If `tombstone` is `false`: transfer all lamports from the program
+    account to the recipient (account will be garbage collected).
+
+#### `Uninitialized`
+
+First determine if this is a reclaim of a legacy tombstone.
 
 Programs closed before this proposal remain in a legacy tombstone state:
 
-- Program account: Owned by Loader v3, `Program { programdata }` state, funded
-- Programdata account: `Uninitialized` (all-zeroes)
+- Program account: Owned by Loader v3, `Program { programdata }` state, funded,
+  programdata address points to programdata account.
+- Programdata account: `Uninitialized` (all-zeroes).
 
-These programs cannot be invoked. The Close instruction is extended to reclaim
-them. When the provided program and programdata accounts are in the legacy
-tombstone state described above, the authority signer at account index 2 must be
-the program keypair.
+**[NEW]** This state must be infallibly evaluated. If the above program account
+state is confirmed, the control flow for a legacy tombstone reclaim is as
+follows:
 
-If the above state and signer requirements are met, the base workflow proceeds.
+1. At least 4 accounts must be provided, otherwise throw
+   `NotEnoughAccountKeys`.
+2. The program account (index 3) must be writable, otherwise throw
+   `InvalidArgument`.
+3. The program account must be owned by Loader v3, otherwise throw
+   `IncorrectProgramId`.
+4. The authority (index 2) must equal the program account's pubkey (i.e., the
+   program keypair), otherwise throw `IncorrectAuthority`.
+5. The authority must be a signer, otherwise throw `MissingRequiredSignature`.
+6. Transfer all lamports from the close account to the recipient (index 1).
+7. Set the close account's state to `Uninitialized` (account will be garbage
+   collected at end of transaction due to zero lamports).
+8. Clear the program account's data and resize to zero.
+9. If `tombstone` is `true`: transfer excess lamports (above rent-exempt
+   minimum for zero-data account) to recipient, then assign the program
+   account to itself.
+10. If `tombstone` is `false`: transfer all lamports from the program account
+    to the recipient.
+
+If this is not a reclaim of a legacy tombstone, the control flow is as follows:
+
+1. At least 1 account must be provided, otherwise throw
+   `NotEnoughAccountKeys`.
+2. Transfer all lamports from the close account to the recipient (index 1).
+
+#### `Buffer`
+
+1. At least 3 accounts must be provided, otherwise throw
+   `NotEnoughAccountKeys`.
+2. If the buffer's `authority_address` is `None`, throw `Immutable`.
+3. The authority (index 2) must match the buffer's `authority_address`,
+   otherwise throw `IncorrectAuthority`.
+4. The authority must be a signer, otherwise throw `MissingRequiredSignature`.
+5. Transfer all lamports from the close account to the recipient (index 1).
+6. Set the close account's state to `Uninitialized` (account will be garbage
+   collected at end of transaction due to zero lamports).
+
+#### `Program`
+
+1. Throw `InvalidArgument`. Program accounts cannot be closed directly; the
+   programdata account must be closed instead.
 
 ### Feature Activation
 
