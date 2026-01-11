@@ -59,6 +59,9 @@ if let Some(account) = bank.get_account(&program_data_address) {
 }
 ```
 
+Note that an ownership check is sufficient, since allocating a Loader V3
+programdata PDA under System is not feasible.
+
 Important Note: If the system-owned programdata account contains lamports,
 those lamports must be burned during any runtime-level program migrations
 by updating the Bank's capitalization.
