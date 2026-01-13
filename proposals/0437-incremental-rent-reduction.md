@@ -30,8 +30,8 @@ compelling justification provided by real resource costs.
 
 This reduction is split into multiple steps to allow for gradual
 observation of state growth and to allow for controversial steps
-to be debated separately. This proposal replaces the 2x reduction 
-previously suggested in SIMD-0436 with a five-step schedule 
+to be debated separately. This proposal replaces the 2x reduction
+previously suggested in SIMD-0436 with a five-step schedule
 culminating in the final target of 696.
 
 ## New Terminology
@@ -40,23 +40,75 @@ N/A
 
 ## Detailed Design
 
-This proposal defines five incremental reductions to the `lamports_per_byte` constant.
-Each reduction is controlled by its own feature gate. The values are absolute,
-starting from the current value of 6960.
+This proposal defines five incremental reductions to the
+`lamports_per_byte` constant. Each reduction is controlled by its own
+feature gate. The values are absolute, starting from the current value
+of 6960.
 
-| Step | Target `lamports_per_byte` | Feature Gate |
-|------|----------------------------|--------------|
-| 1    | 6333                       | TBD          |
-| 2    | 5080                       | TBD          |
-| 3    | 2575                       | TBD          |
-| 4    | 1322                       | TBD          |
-| 5    | 696                        | TBD          |
+### Reduction Schedule
 
-On activation of each feature, the effective `lamports_per_byte` is updated
-in the bank and rent sysvar
-(`SysvarRent111111111111111111111111111111111`), followed by
-updating  `DEFAULT_LAMPORTS_PER_BYTE` in all relevant SDKs
-post-activation.
+The incremental percentage represents the portion of the total target
+reduction (6264 lamports, from 6960 to 696) applied at each step. The
+target `lamports_per_byte` values are derived by applying the cumulative
+percentage reduction to the total reduction amount and truncating the
+result to the nearest integer.
+
+| Step | Target        | Incr % | Cumul % | Eff Reduc |
+|------|---------------|--------|---------|-----------|
+| 1    | 6333          | 10%    | 10%     | 9%        |
+| 2    | 5080          | 20%    | 30%     | 27%       |
+| 3    | 2575          | 40%    | 70%     | 63%       |
+| 4    | 1322          | 20%    | 90%     | 81%       |
+| 5    | 696           | 10%    | 100%    | 90%       |
+
+### Operational Details
+
+Each reduction step is controlled by its own feature gate and must meet
+specific activation criteria.
+
+| Step | Feature Gate | Criteria |
+|------|--------------|----------|
+| 1    | TBD          | Applied immediately |
+| 2    | TBD          | See [Criteria 2](#step-2-criteria) |
+| 3    | TBD          | See [Criteria 3](#step-3-criteria) |
+| 4    | TBD          | See [Criteria 4/5](#step-45-criteria) |
+| 5    | TBD          | See [Criteria 4/5](#step-45-criteria) |
+
+#### Step 2 Criteria
+
+Depends on (1).
+
+Average net increase per-day following activation of (1):
+
+- In account data size: does not exceed 250MB (measured over at least 3
+  weeks).
+- In number of accounts: does not exceed 1.5M (measured over at least 3
+  weeks).
+
+If after the first 3 weeks these conditions aren't met then the timeline
+is extended until the averages since the activation of (1) satisfy the
+requirements.
+
+#### Step 3 Criteria
+
+Activation of SIMD-0389 (supervisory controller).
+
+Does not depend on activation of (1) or (2), meaning that if 0389 is
+activated then the schedule can skip directly to (3).
+
+#### Step 4/5 Criteria
+
+The supervisory controller (SIMD-0389) has not been engaged for at
+least 3 continuous weeks.
+
+(4) depends on activation of (3) and (5) depends on activation of (4).
+
+### Implementation
+
+On activation of each feature, the effective `lamports_per_byte` is
+updated in the bank and rent sysvar
+(`SysvarRent111111111111111111111111111111111`), followed by updating
+`DEFAULT_LAMPORTS_PER_BYTE` in all relevant SDKs post-activation.
 
 ```
 ACCOUNT_STORAGE_OVERHEAD = 128
@@ -73,18 +125,17 @@ min_balance = effective_size * lamports_per_byte
 
 ## Alternatives Considered
 
-This proposal is intended to be combined with safety measures like
-a supervisory controller (SIMD-0389).
+N/A
 
 ## Impact
 
 - Lower rent for app developers. Existing accounts and programs using
   the higher rent value will be unaffected, besides being allowed to
   reduce the balance to the new minimum.
-- Validators: a potential increase in state growth. In the
-  case of excessive state growth, rent can be increased back to the
-  legacy value (0392 allows this without significant disruption to
-  existing accounts). SIMD-0389 does this automatically.
+- Validators: a potential increase in state growth. In the case of
+  excessive state growth, rent can be increased back to the legacy
+  value (0392 allows this without significant disruption to existing
+  accounts). SIMD-0389 does this automatically.
 
 ## Security Considerations
 
