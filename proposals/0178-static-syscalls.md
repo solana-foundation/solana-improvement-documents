@@ -50,10 +50,10 @@ SBF ISA format, see the
 [spec document](https://github.com/solana-labs/rbpf/blob/main/doc/bytecode.md).
 
 We define the hash code for a syscall as the murmur32 hash of its respective 
-name. The 32-bit immediate value of the `call` instruction must be the 
+name. The 32-bit immediate value of the call instruction must be the 
 integer representation of such a hash. For instance, the code for `abort` is 
-given by `murmur32("abort")`, so the instruction assembly should look like 
-`call 3069975057`.
+given by `murmur32("abort")`, so the instruction hexadecimal representation
+should look like `85 00 00 00 11 1a fc b6`.
 
 Consequently, system calls in the Solana SDK and in any related compiler tools 
 must be registered as function pointers, whose address is the murmur32 hash of 
@@ -62,9 +62,9 @@ syscall instruction points to a valid syscall, and throw
 `VerifierError::InvalidSyscall` otherwise.
 
 This new instruction comes together with modifications in the semantics of 
-`call imm` (opcode `0x85` with source register set to one) instructions, which 
-must only refer to internal calls and their immediate field must only be 
-interpreted as a relative address to jump from the program counter.
+the instruction opcode `0x85` with source register set to one, which  must 
+only refer to internal calls and its immediate field must only be interpreted 
+as a relative address to jump from the program counter.
 
 Syscall names must NOT be present in the symbol table anymore, since the new 
 scheme does not require symbol relocations and obviates the need for symbols 
