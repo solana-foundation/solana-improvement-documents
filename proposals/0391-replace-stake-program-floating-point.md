@@ -51,6 +51,18 @@ sync.
 
 ## Detailed Design
 
+### Pseudocode conventions
+
+This document uses the following notation to describe arithmetic operations
+with explicit bit-width and overflow semantics:
+
+- Uint64 / Uint128: Unsigned 64-bit / 128-bit integer types
+- widen(x): Zero-extend a Uint64 to Uint128 (lossless)
+- narrow(x): Convert a Uint128 to Uint64 (caller must ensure x ≤ 2^64−1)
+- sat_mul(a, b): Saturating multiplication—returns a × b or 2^128−1 if
+  the result would overflow
+- trunc_div(a, b): Truncating unsigned integer division (floor toward zero)
+
 ### Rate representation (basis points)
 
 The current network warmup/cooldown rate is 9%. This means that, in any given
@@ -78,11 +90,10 @@ algebraically equivalent re-ordering:
 BASIS_POINTS_PER_UNIT = 10_000
 RATE_BPS = 900
 
-allowed_change =
-    (account_portion * cluster_effective * RATE_BPS) /
-    (cluster_portion * BASIS_POINTS_PER_UNIT)
+numerator = sat_mul(sat_mul(account_portion, cluster_effective), RATE_BPS)
+denominator = sat_mul(cluster_portion, BASIS_POINTS_PER_UNIT)
 
-# Note: all multiplications saturate
+allowed_change = trunc_div(numerator, denominator)
 ```
 
 Note: The division MUST use unsigned integer division and truncate (round down).
@@ -110,7 +121,7 @@ arithmetic. Instead, the computation MUST adhere to the following sequence:
    clamped value.
 
 Rationale: Saturating multiplication combined with post-division clamping
-ensures that overflow cannot amplify a stake change beyond the account’s own
+ensures that overflow cannot amplify a stake change beyond the account's own
 portion (fail-safe rather than fail-open) and avoids introducing a fault/abort
 path.
 
@@ -135,7 +146,7 @@ separate mechanism that defers sub-lamport payouts by not advancing
 ```text
 RATE_FLOAT = 0.09
 
-# All params are unsigned 64-bit integers
+# All params are Uint64
 function rate_limited_stake_change(account_portion, cluster_portion, cluster_effective):
     if account_portion == 0 or cluster_portion == 0 or cluster_effective == 0:
         return 0
@@ -145,7 +156,7 @@ function rate_limited_stake_change(account_portion, cluster_portion, cluster_eff
     allowed_change_float = weight_float * cluster_effective_float * RATE_FLOAT
 
     # Truncate toward zero via cast
-    allowed_change = allowed_change_float as unsigned 64-bit integer
+    allowed_change = allowed_change_float as Uint64
 
     # Never allow more than the account's own portion to change
     if allowed_change > account_portion:
@@ -161,34 +172,35 @@ function rate_limited_stake_change(account_portion, cluster_portion, cluster_eff
 #### Proposed new implementation
 
 ```text
-BASIS_POINTS_PER_UNIT = 10_000
-RATE_BPS = 900
+BASIS_POINTS_PER_UNIT: Uint128 = 10_000
+RATE_BPS: Uint128 = 900
 
-# All params are unsigned 64-bit integers
+# All params are Uint64
 function rate_limited_stake_change(account_portion, cluster_portion, cluster_effective):
     if account_portion == 0 or cluster_portion == 0 or cluster_effective == 0:
         return 0
 
-    # Cast all params to unsigned 128-bit integer
-    # All multiplications saturate
-    numerator = account_portion_128 * cluster_effective_128 * RATE_BPS_128
+    # Widen inputs to Uint128
+    numerator = sat_mul(
+                    sat_mul(widen(account_portion), widen(cluster_effective)), 
+                    RATE_BPS
+                )
+    denominator = sat_mul(widen(cluster_portion), BASIS_POINTS_PER_UNIT)
 
-    denominator = cluster_portion_128 * BASIS_POINTS_PER_UNIT_128
-
-    allowed_change_128 = numerator / denominator
+    allowed_change = trunc_div(numerator, denominator)
 
     # Never allow more than the account's own portion to change
-    if allowed_change_128 > account_portion_128:
-        allowed_change_128 = account_portion_128
+    if allowed_change > widen(account_portion):
+        allowed_change = widen(account_portion)
 
-    # Narrow back to unsigned 64-bit integer
-    allowed_change = allowed_change_128 as unsigned 64-bit integer
+    # Narrow back to Uint64
+    result = narrow(allowed_change)
 
     # Minimum progress clamp
-    if allowed_change == 0:
+    if result == 0:
         return 1
 
-    return allowed_change
+    return result
 ```
 
 ## Alternatives Considered
