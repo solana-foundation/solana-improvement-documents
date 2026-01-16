@@ -63,45 +63,14 @@ result to the nearest integer.
 
 ### Operational Details
 
-Each reduction step is controlled by its own feature gate and must meet
-specific activation criteria.
+Each reduction step is controlled by its own feature gate.
 
-| Step | Feature Gate | Criteria |
-|------|--------------|----------|
-| 1    | TBD          | Applied immediately |
-| 2    | TBD          | See [Criteria 2](#step-2-criteria) |
-| 3    | TBD          | See [Criteria 3](#step-3-criteria) |
-| 4    | TBD          | See [Criteria 4/5](#step-45-criteria) |
-| 5    | TBD          | See [Criteria 4/5](#step-45-criteria) |
+#### Risk-Based Advancement
 
-#### Step 2 Criteria
-
-Depends on (1).
-
-Average net increase per-day following activation of (1):
-
-- In account data size: does not exceed 250MB (measured over at least 3
-  weeks).
-- In number of accounts: does not exceed 1.5M (measured over at least 3
-  weeks).
-
-If after the first 3 weeks these conditions aren't met then the timeline
-is extended until the averages since the activation of (1) satisfy the
-requirements.
-
-#### Step 3 Criteria
-
-Activation of SIMD-0389 (supervisory controller).
-
-Does not depend on activation of (1) or (2), meaning that if 0389 is
-activated then the schedule can skip directly to (3).
-
-#### Step 4/5 Criteria
-
-The supervisory controller (SIMD-0389) has not been engaged for at
-least 3 continuous weeks.
-
-(4) depends on activation of (3) and (5) depends on activation of (4).
+Proceed to the next step only if a risk analysis, grounded in existing
+safeguards and empirical data, indicates that it is safe to do so. The
+analysis must account for the fact that risk increases superlinearly as
+the reduction increases with each step.
 
 ### Implementation
 
