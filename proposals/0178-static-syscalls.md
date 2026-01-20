@@ -27,6 +27,7 @@ symbol table or offset addresses to after the start of the virtual machine's
 memory. Moreover, relocations pose security concerns, as they allow the 
 arbitrary modification of program headers and programs sections. Introducing 
 static syscalls allows us to resolve all program relocations during link time.
+
 ## Dependencies
 
 This proposal depends on the following previously accepted proposal:
