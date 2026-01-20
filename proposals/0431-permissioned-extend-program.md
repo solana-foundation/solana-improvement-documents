@@ -41,7 +41,7 @@ by the program upgrade authority.
 
 ## Alternatives Considered
 
-- Allow DoS vectory to remain unresolved
+- Allow DoS vector to remain unresolved
 
 ## Impact
 
