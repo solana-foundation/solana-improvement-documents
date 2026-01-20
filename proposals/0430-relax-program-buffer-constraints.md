@@ -87,6 +87,21 @@ buffer-related checks are relaxed for `close_buffer=false`; the
                  Buffer closed          (reusable)
 ```
 
+### Buffer Layout Requirement
+
+Regardless of the buffer's owner, the buffer account must still conform to the
+expected layout for Loader V3 buffer accounts. Specifically, the account data
+must deserialize to `UpgradeableLoaderState::Buffer` (discriminant `1` as a
+little-endian u32), and the ELF data must begin at the expected offset within
+the account data (after the header).
+
+```
+| discriminant (4 bytes) | authority_address (33 bytes) | ELF data ... |
+|       0x01000000       |    option byte + pubkey      |              |
+|                        |                              |              |
+|<--------------- 37-byte header ---------------------->|
+```
+
 ## Alternatives Considered
 
 - Introduce a new loader that enables these behaviors by default
