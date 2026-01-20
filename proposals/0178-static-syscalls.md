@@ -27,6 +27,15 @@ symbol table or offset addresses to after the start of the virtual machine's
 memory. Moreover, relocations pose security concerns, as they allow the 
 arbitrary modification of program headers and programs sections. Introducing 
 static syscalls allows us to resolve all program relocations during link time.
+## Dependencies
+
+This proposal depends on the following previously accepted proposal:
+
+- **[SIMD-0189]: SBPF stricter ELF headers**
+
+    Deprecation of PT_DYNAMIC header for SBPFv3 programs
+
+[SIMD-0189]: https://github.com/solana-foundation/solana-improvement-documents/pull/189
 
 ## New Terminology
 
