@@ -29,6 +29,18 @@ consumption, we want to be compatible with at least the current eBPF version
 (v3), which brings in new instructions. In order for that to be possible, we 
 must modify our virtual machine to support eBPF integrally.
 
+## Dependencies
+
+This proposal depends on the following previously accepted proposals:
+
+- **[SIMD-0178]: SBPF Static Syscalls**
+- **[SIMD-0189]: SBPF stricter ELF headers**
+
+    This SIMD requires static syscalls which requires stricter ELF headers.
+
+[SIMD-0178]: https://github.com/solana-foundation/solana-improvement-documents/pull/178
+[SIMD-0189]: https://github.com/solana-foundation/solana-improvement-documents/pull/189
+
 ## New Terminology
 
 The set containing these new instructions will form an sBPFv3 program.
