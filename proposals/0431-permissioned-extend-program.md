@@ -35,9 +35,9 @@ No new terminology is introduced by this proposal.
 ## Detailed Design
 
 1. Add a check to the extend program instruction to ensure it is being invoked 
-by the current program upgrade authority.
-2. Activate this change with a feature gate.
-3. Remove feature gate after network activation.
+by the program upgrade authority.
+2. Remove the restriction in extend program preventing invocation via CPI.
+3. Activate both changes via feature gate.
 
 ## Alternatives Considered
 
