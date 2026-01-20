@@ -15,7 +15,8 @@ supersedes: '0164'
 ## Summary
 
 This SIMD proposes restricting invocation of the extend program instruction in 
-Loader V3 to the program's upgrade authority.
+Loader V3 to the program's upgrade authority, along with lifting the current
+restriction preventing it from being invoked via CPI.
 
 ## Motivation
 
