@@ -13,11 +13,12 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-This SIMD proposes relaxing current constraints on program buffers, currently
-requiring them to:
+This SIMD proposes relaxing current constraints on program buffers used by the
+`DeployWithMaxDataLen` (initial deployment) and `Upgrade` (redeployment)
+instructions, currently requiring them to:
 
-- Be owned by:`BPFLoaderUpgradeab1e11111111111111111111111`, and 
-- Share an upgrade authority with the program being upgraded
+- Be owned by `BPFLoaderUpgradeab1e11111111111111111111111`, and
+- Share an upgrade authority with the program being deployed or upgraded
 
 ## Motivation
 
@@ -38,16 +39,19 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-After the feature is activated, the program will no longer enforce the
-following checks:
+After the feature is activated, the program will no longer return
+`IncorrectAuthority` when the buffer's authority does not match the
+program's authority:
 
-- `DeployWithMaxDataLen`: The signing authority no longer must match the
-  authority stored on the buffer account.
-- `Upgrade`: The signing authority no longer must match the authority
-  stored on the buffer account.
+- `DeployWithMaxDataLen`: The buffer's authority no longer must match the
+  authority that will be set on the deployed program.
+- `Upgrade`: The buffer's authority no longer must match the upgrade
+  authority stored on the program account.
 
-Note that the authority account will remain in the same position for both
-instructions and must still sign the transaction as before.
+Note that the authority account must still be provided in the same position
+for both instructions and must still sign the transaction. Only the
+`IncorrectAuthority` check is removed; the `MissingRequiredSignature` check
+remains enforced.
 
 ## Alternatives Considered
 
