@@ -40,9 +40,10 @@ No new terminology is introduced by this proposal.
 
 After the feature is activated, the program will no longer enforce the
 following checks:
-* `DeployWithMaxDataLen`: The signing authority no longer must match the
+
+- `DeployWithMaxDataLen`: The signing authority no longer must match the
   authority stored on the buffer account.
-* `Upgrade`: The signing authority no longer must match the authority
+- `Upgrade`: The signing authority no longer must match the authority
   stored on the buffer account.
 
 Note that the authority account will remain in the same position for both
