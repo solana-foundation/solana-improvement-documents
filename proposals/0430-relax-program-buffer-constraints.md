@@ -13,11 +13,12 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-This SIMD proposes relaxing current constraints on program buffers, currently
-requiring them to:
+This SIMD proposes relaxing current constraints on program buffers used by the
+`DeployWithMaxDataLen` (initial deployment) and `Upgrade` (redeployment)
+instructions, currently requiring them to:
 
-- Be owned by:`BPFLoaderUpgradeab1e11111111111111111111111`, and 
-- Share an upgrade authority with the program being upgraded
+- Be owned by `BPFLoaderUpgradeab1e11111111111111111111111`, and
+- Share an upgrade authority with the program being deployed or upgraded
 
 ## Motivation
 
@@ -38,15 +39,68 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-After the feature is activated, the program will no longer enforce the
-following checks:
-* `DeployWithMaxDataLen`: The signing authority no longer must match the
-  authority stored on the buffer account.
-* `Upgrade`: The signing authority no longer must match the authority
-  stored on the buffer account.
+The `DeployWithMaxDataLen` and `Upgrade` instructions will be updated to include
+an optional boolean input. If not provided, the default will be `true`.
 
-Note that the authority account will remain in the same position for both
-instructions and must still sign the transaction as before.
+```
+DeployWithMaxDataLen {
+  max_data_len: u32,
+  close_buffer: bool, // New
+}
+Upgrade {
+  close_buffer: bool, // New
+}
+```
+
+The accounts required by the instructions are unchanged, but the signer
+requirements differ based on the value of the `close_buffer` option.
+
+For a value of `true`, existing behavior is preserved. The buffer account will
+be closed (lamports transferred to a designated recipient and account data
+zeroed).
+
+For a value of `false`, the buffer account is not modified, enabling reuse for
+future deployments. Additionally, constraints on the buffer are relaxed:
+
+- No buffer authority signature is required.
+- No buffer ownership check is required.
+- The `IncorrectAuthority` check is removed:
+  - `DeployWithMaxDataLen`: The buffer's authority no longer must match the
+    authority that will be set on the deployed program.
+  - `Upgrade`: The buffer's authority no longer must match the upgrade
+    authority stored on the program account.
+
+Note that the program's authority account must still be provided in the same
+position for both instructions and must still sign the transaction. Only the
+buffer-related checks are relaxed for `close_buffer=false`; the
+`MissingRequiredSignature` check for the program's authority remains enforced.
+
+```
+              DeployWithMaxDataLen / Upgrade { close_buffer }
+                                    |
+                        +-----------+-----------+
+                        |                       |
+                 close_buffer=true       close_buffer=false
+                    (default)                   |
+                        |               Relaxed buffer checks
+                 Existing checks        Buffer not modified
+                 Buffer closed          (reusable)
+```
+
+### Buffer Layout Requirement
+
+Regardless of the buffer's owner, the buffer account must still conform to the
+expected layout for Loader V3 buffer accounts. Specifically, the account data
+must deserialize to `UpgradeableLoaderState::Buffer` (discriminant `1` as a
+little-endian u32), and the ELF data must begin at the expected offset within
+the account data (after the header).
+
+```
+| discriminant (4 bytes) | authority_address (33 bytes) | ELF data ... |
+|       0x01000000       |    option byte + pubkey      |              |
+|                        |                              |              |
+|<--------------- 37-byte header ---------------------->|
+```
 
 ## Alternatives Considered
 
