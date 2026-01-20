@@ -77,6 +77,8 @@ will be removed. The instruction will be fully available for CPI.
 ## Alternatives Considered
 
 - Allow DoS vector to remain unresolved
+- Retain existing account ordering by combining payer and authority into a
+  single mandatory account
 
 ## Impact
 
@@ -91,13 +93,13 @@ instruction will now also be invokable by CPI.
 
 In the case of a multisig atomically setting its authority to a top-level 
 signer, it is important to introspect the transaction and ensure that it 
-consists of the following instructions:
+executes the following behavior:
 
 - Set upgrade authority to top-level signer
 - Extend program data account in top-level instruction
 - Set upgrade authority back to quorum
 
-If this order is not observed, it would be possible for a quorum to 
+If this behavior is not observed, it would be possible for a quorum to 
 accidentally lose its upgrade authority.
 
 ## Backwards Compatibility
