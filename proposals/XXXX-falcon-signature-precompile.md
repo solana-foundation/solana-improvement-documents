@@ -390,14 +390,18 @@ NIST-compliant SHAKE-256 variant to:
 
 Falcon-512 targets NIST Security Level I, providing approximately 128
 bits of classical security and resistance against known quantum attacks.
-The security is based on the hardness of the NTRU problem and the Short
-Integer Solution (SIS) problem over NTRU lattices.
+The security is based on the hardness of the **NTRU problem**, which
+relates to finding short vectors (**SVP**) in NTRU lattices. Without
+knowledge of the trapdoor (private key), an attacker cannot find the
+short signature vectors that satisfy the verification equation.
 
 ### Implementation Security
 
-1. **Constant-time implementation**: The verification algorithm SHOULD be
-   implemented in constant time where feasible to prevent timing attacks,
-   though verification is inherently less sensitive than signing.
+1. **Constant-time implementation**: Constant-time implementation is NOT
+   required for verification. Unlike signing (which involves secret key
+   operations), verification only processes public data (public key,
+   message, signature) and does not leak secret information through
+   timing variations.
 
 2. **Input validation**: All inputs (signatures, public keys) MUST be
    thoroughly validated before processing to prevent malformed input
