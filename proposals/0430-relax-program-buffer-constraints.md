@@ -39,19 +39,53 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-After the feature is activated, the program will no longer return
-`IncorrectAuthority` when the buffer's authority does not match the
-program's authority:
+The `DeployWithMaxDataLen` and `Upgrade` instructions will be updated to include
+an optional boolean input. If not provided, the default will be `true`.
 
-- `DeployWithMaxDataLen`: The buffer's authority no longer must match the
-  authority that will be set on the deployed program.
-- `Upgrade`: The buffer's authority no longer must match the upgrade
-  authority stored on the program account.
+```
+DeployWithMaxDataLen {
+  max_data_len: u32,
+  close_buffer: bool, // New
+}
+Upgrade {
+  close_buffer: bool, // New
+}
+```
 
-Note that the authority account must still be provided in the same position
-for both instructions and must still sign the transaction. Only the
-`IncorrectAuthority` check is removed; the `MissingRequiredSignature` check
-remains enforced.
+The accounts required by the instructions are unchanged, but the signer
+requirements differ based on the value of the `close_buffer` option.
+
+For a value of `true`, existing behavior is preserved. The buffer account will
+be closed (lamports transferred to a designated recipient and account data
+zeroed).
+
+For a value of `false`, the buffer account is not modified, enabling reuse for
+future deployments. Additionally, constraints on the buffer are relaxed:
+
+- No buffer authority signature is required.
+- No buffer ownership check is required.
+- The `IncorrectAuthority` check is removed:
+  - `DeployWithMaxDataLen`: The buffer's authority no longer must match the
+    authority that will be set on the deployed program.
+  - `Upgrade`: The buffer's authority no longer must match the upgrade
+    authority stored on the program account.
+
+Note that the program's authority account must still be provided in the same
+position for both instructions and must still sign the transaction. Only the
+buffer-related checks are relaxed for `close_buffer=false`; the
+`MissingRequiredSignature` check for the program's authority remains enforced.
+
+```
+              DeployWithMaxDataLen / Upgrade { close_buffer }
+                                    |
+                        +-----------+-----------+
+                        |                       |
+                 close_buffer=true       close_buffer=false
+                    (default)                   |
+                        |               Relaxed buffer checks
+                 Existing checks        Buffer not modified
+                 Buffer closed          (reusable)
+```
 
 ## Alternatives Considered
 
