@@ -34,10 +34,45 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-1. Add a check to the extend program instruction to ensure it is being invoked 
-by the program upgrade authority.
-2. Remove the restriction in extend program preventing invocation via CPI.
-3. Activate both changes via feature gate.
+The `ExtendProgram` instruction will require the program's upgrade authority as
+a signer and it will be available for invocation via CPI.
+
+### Changes to Required Accounts
+
+The current `ExtendProgram` instruction expects the following accounts:
+
+```
+0. [w] ProgramData account
+1. [w] Program account
+2. [ ] System program, optional
+3. [ws] Payer, optional
+```
+
+After this proposal's feature gate is activated, the instruction will expect:
+
+```
+0. [w] ProgramData account
+1. [w] Program account
+2. [s] Upgrade authority    // New
+3. [ ] System program, optional
+4. [ws] Payer, optional
+```
+
+### Control Flow
+
+The instruction will verify:
+
+1. The program has an upgrade authority set (i.e., is not immutable). If not,
+   return `Immutable`.
+2. The provided authority matches the program's stored upgrade authority. If
+   not, return `IncorrectAuthority`.
+3. The authority account is a signer. If not, return
+   `MissingRequiredSignature`.
+
+### CPI Restriction Removal
+
+The current restriction preventing `ExtendProgram` from being invoked via CPI
+will be removed. The instruction will be fully available for CPI.
 
 ## Alternatives Considered
 
