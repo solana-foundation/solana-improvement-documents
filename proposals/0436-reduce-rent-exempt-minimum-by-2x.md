@@ -7,6 +7,7 @@ category: Standard
 type: Core
 status: Idea
 created: 2025-12-22
+superseded-by: '0437'
 feature: (fill in with feature key and github tracking issues once accepted)
 ---
 
