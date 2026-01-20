@@ -40,28 +40,6 @@ The set containing these new instructions will form an sBPFv3 program.
 Programs containing the instructions mentioned in this SIMD must have the 
 `0x03` value in the `e_flags` field of their header.
 
-### Dynamic stack frames
-
-Aiming to efficiently use the stack space, while still being compatible with 
-the LLVM eBPF code generation, we propose an implementation of dynamic stack 
-frames that is optional per function.
-
-The R10 register must continue to be the frame pointer, i.e. pointing to the 
-highest address accessible in a function. As such, the stack will grow upwards.
-
-The virtual machine must initialize the frame pointer `R10` at 4096 bytes to 
-allow stack space for the entry function. After that, the it must increment 
-the frame pointer in 4096 at each internall call (`callx` or `call` with 
-source field set to one).
-
-Functions may optionally include an instruction `add64 r10, imm` on their 
-prologue to increment the frame pointer relative to the already supplied 4096 
-bytes, providing `4096 + imm` bytes of frame space for them.
-
-When a function returns, the virtual machine must automatically restore the 
-frame pointer register with the value used in the caller, so programs do not 
-need to emit any instruction to adjust the pointer in the epilogue of each 
-function.
 
 ### JMP32 instruction class
 
