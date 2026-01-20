@@ -75,9 +75,10 @@ the instruction opcode `0x85` with source register set to one, which  must
 only refer to internal calls and its immediate field must only be interpreted 
 as a relative address to jump from the program counter.
 
-Syscall names must NOT be present in the symbol table anymore, since the new 
-scheme does not require symbol relocations and obviates the need for symbols 
-to be referenced in the table.
+As static syscalls don't use dynamic text-based relocations, the `PT_DYNAMIC` 
+program header, along with the `.dynamic`, `.dynsym`, `.dynstr` and `.rel.dyn` 
+section header entries will no longer be required to invoke static syscalls 
+for any SBPFv3 program and will be omitted by default.
 
 ## Alternatives Considered
 
