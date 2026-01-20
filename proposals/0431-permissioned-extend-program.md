@@ -45,7 +45,8 @@ This proposal will remove the DoS vector for all deployed programs. Due to
 constraints of ABI V1, in the case that a multisig upgrade authority wishes to 
 extend the program data account by greater than 10KiB, it will either need to 
 create multiple resize proposals, or atomically set its authority to a 
-top-level signer and reclaim it in the same transaction.
+top-level signer and reclaim it in the same transaction. The `ExtendProgram`
+instruction will now also be invokable by CPI.
 
 ## Security Considerations
 
