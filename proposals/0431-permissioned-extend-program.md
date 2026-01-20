@@ -23,7 +23,10 @@ restriction preventing it from being invoked via CPI.
 Currently, due to the permissionless nature of the extend program instruction 
 and some complexities surrounding the program cache, there is a DoS vector by 
 which anyone could disable a program for one slot by permissionlessly 
-extending its program data account.
+extending its program data account. Thus the motivation of this SIMD is to both
+resolve the DoS vector by restricting access to this instruction to the program's 
+upgrade authority, whilst improving the devex of this new restriction by allowing 
+ExtendProgram to be invoked via CPI.
 
 ## New Terminology
 
