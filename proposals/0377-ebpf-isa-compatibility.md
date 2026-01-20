@@ -52,7 +52,6 @@ The set containing these new instructions will form an sBPFv3 program.
 Programs containing the instructions mentioned in this SIMD must have the 
 `0x03` value in the `e_flags` field of their header.
 
-
 ### JMP32 instruction class
 
 The JMP32 instruction class utilizes 32 bit wide operands for the same 
@@ -93,6 +92,10 @@ The encoding of callx must change so that the register containing the address
 to jump to is in the destination register.
 
 - `callx` -> opcode = `0x9d` -> pc = `dst`
+
+### Stack frame gaps
+
+The virtual machine feature of stack gaps must be disabled for sBPFv3 programs.
 
 ## Alternatives Considered
 
