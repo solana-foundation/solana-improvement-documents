@@ -102,8 +102,13 @@ Developers and validators must not rely on a highly precise system clock. If an
 application relies on a highly accurate clock, it should consider alternative
 sources.
 
+<<<<<<< Updated upstream
 The semantics of the clock sysvar have slightly changed: The clock value does 
 no longer represent the start time of the current block. It now represents the 
+=======
+The semantics of the clock sysvar have slightly changed: The clock value does
+no longer represent the start time of the current block. It now represents the
+>>>>>>> Stashed changes
 time at which the last slice of the parent block was produced.
 
 Also, while the new clock has a nanosecond resolution, we compute a second 
