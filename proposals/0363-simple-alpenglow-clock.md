@@ -2,8 +2,8 @@
 simd: '0363'
 title: Simple Alpenglow Clock
 authors:
-  - Akhi Singhania
   - Roger Wattenhofer
+  - ksn6
 category: Standard
 type: Core
 status: Review
@@ -79,6 +79,63 @@ halting the clocks or advancing them maximally.
 In practice, we will probably see much lower levels of byzantine and crashed
 leaders, which brings the average clock skew to around 20 ms.
 
+## Implementation
+
+We next articulate implementation details for the Alpenglow clock.
+
+## Block Marker Modifications
+
+In proposing a block, a leader will include a special marker called a "block footer," which stores a UNIX timestamp (in nanoseconds). As of the writing of this SIMD, the `block_producer_time_nanos` field of `BlockFooterV1` stores the clock:
+
+```
+/// Version 1 block footer containing production metadata.
+///
+/// The user agent bytes are capped at 255 bytes during serialization to prevent
+/// unbounded growth while maintaining reasonable metadata storage.
+///
+/// # Serialization Format
+/// ```text
+/// ┌─────────────────────────────────────────┐
+/// │ Producer Time Nanos          (8 bytes)  │
+/// ├─────────────────────────────────────────┤
+/// │ User Agent Length            (1 byte)   │
+/// ├─────────────────────────────────────────┤
+/// │ User Agent Bytes          (0-255 bytes) │
+/// └─────────────────────────────────────────┘
+/// ```
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct BlockFooterV1 {
+    pub block_producer_time_nanos: u64,
+    pub block_user_agent: Vec<u8>,
+}
+```
+
+Upon receiving a block footer from a leader, non-leader validators will:
+
+- Locally update the clock sysvar associated with the bank
+- During replay, validate the bounds of this clock sysvar with respect to the parent bank's clock sysvar and proceed as outlined in "Detailed Design"
+
+## Alpenglow Clock Variable Storage
+
+The clock sysvar, as currently implemented, has second-resolution. This SIMD proposes a clock with greater resolution (nanoseconds). Accordingly, we introduce an off-curve account where we store the clock value upon processing the block footer (at the end of a block).
+
+In particular, we calculate the off-curve account as follows:
+
+```rust
+/// The off-curve account where we store the Alpenglow clock. The clock sysvar has seconds
+/// resolution while the Alpenglow clock has nanosecond resolution.
+static NANOSECOND_CLOCK_ACCOUNT: LazyLock<Pubkey> = LazyLock::new(|| {
+    let (pubkey, _) =
+        Pubkey::find_program_address(&[b"alpenclock"], &agave_feature_set::alpenglow::id());
+    pubkey
+});
+```
+
+where `Pubkey::find_program_address` is a part of `solana-address-1.0.0`. In practice, the `Pubkey` ends up having value `BKRDmw2hTDSxQK4mitpK7eCWkNUvCvnaWqm1NZmGDTUm`.
+
+The clock sysvar is updated at the end of each block by simply dividing the nanosecond timestamp by `1_000_000_000` and rounding down (i.e., integer division). For now, we do not expose the nanosecond clock to SPL programs via a sysvar; we may choose to do so in the future.
+
+
 ## Alternatives Considered
 
 We discussed several designs for more complicated and potentially more accurate
@@ -88,8 +145,7 @@ Time Protocol NTP) was “close enough” to the clock value proposed by the lea
 However, this design has many problems, and one can possibly even disadvantage
 the next leader by pushing the clock to the allowed limit.
 
-We also discussed some complex but possibly more accurate alternatives. For a
-highly accurate clock, we need to have the nodes solve an approximate agreement
+Alternatively, for a highly accurate clock, we need to have the nodes solve an approximate agreement
 problem. This is similar to the current clock design, where all (or a selected
 random sample of nodes) publish their local times, and then we (repeatedly) take
 the median of the reported values. In principle, such an approach will give us a
@@ -102,13 +158,8 @@ Developers and validators must not rely on a highly precise system clock. If an
 application relies on a highly accurate clock, it should consider alternative
 sources.
 
-<<<<<<< Updated upstream
 The semantics of the clock sysvar have slightly changed: The clock value does 
 no longer represent the start time of the current block. It now represents the 
-=======
-The semantics of the clock sysvar have slightly changed: The clock value does
-no longer represent the start time of the current block. It now represents the
->>>>>>> Stashed changes
 time at which the last slice of the parent block was produced.
 
 Also, while the new clock has a nanosecond resolution, we compute a second 
