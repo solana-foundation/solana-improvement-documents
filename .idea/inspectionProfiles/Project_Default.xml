@@ -9,7 +9,10 @@
       </option>
     </inspection_tool>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     <inspection_tool class="XmlInvalidId" enabled="true" level="ERROR" enabled_by_default="true" />
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
   </profile>
