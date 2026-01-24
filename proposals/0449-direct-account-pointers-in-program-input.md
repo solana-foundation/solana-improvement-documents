@@ -92,6 +92,32 @@ On-chain programs are positively impacted by this change. The program
 entrypoint complexity is significantly reduced, along with the number of
 compute units consumed.
 
+- Current entrypoint (pinocchio):
+
+| Name         | CUs | Delta |
+|--------------|-----|-------|
+| Account (1)  | 17  |  --   |
+| Account (2)  | 17  |  --   |
+| Account (3)  | 37  |  --   |
+| Account (4)  | 45  |  --   |
+| Account (8)  | 78  |  --   |
+| Account (16) | 143 |  --   |
+| Account (32) | 261 |  --   |
+| Account (64) | 504 |  --   |
+
+- Estimated entrypoint (after the changes proposed):
+
+| Name         | CUs | Delta |
+|--------------|-----|-------|
+| Account (1)  | 11  |  -6   |
+| Account (2)  | 11  |  -6   |
+| Account (3)  | 11  |  -26  |
+| Account (4)  | 11  |  -34  |
+| Account (8)  | 11  |  -67  |
+| Account (16) | 11  |  -132 |
+| Account (32) | 11  |  -250 |
+| Account (64) | 11  |  -493 |
+
 The implementation is relatively simple, as it relies on information that
 is already available during program input serialization.
 
