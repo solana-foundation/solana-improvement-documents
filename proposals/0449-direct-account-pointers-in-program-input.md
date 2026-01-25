@@ -48,6 +48,7 @@ parameters remain unchanged:
 - 8 bytes: length of instruction data (little-endian)
 - <variable>: instruction data bytes
 - 32 bytes: program ID
+- 0-7 bytes: padding bytes to align offset to 8-bytes
 - [u64; <number of accounts>]: slice of account pointers
 ```
 
@@ -74,8 +75,8 @@ of the slice of account pointers without parsing the accounts section:
     `r2 + <length of the instruction data>` with length equal
     to `32 bytes`.
   2. `accounts`: a `&[AccountView]` slice created from
-    `r2 + <length of the instruction data> + 32` with length equal
-    to `<number of accounts>`.
+    `r2 + <length of the instruction data> + 32 + padding` with length
+    equal to `<number of accounts>`.
   3. `instruction_data`: a `&[u8]` slice created from `r2` with
     length equal to `<length of instruction data>`.
 
