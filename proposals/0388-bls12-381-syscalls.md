@@ -184,6 +184,24 @@ pub const SUB: u64 = 1;
 pub const MUL: u64 = 2;
 ```
 
+The validation requirements differ by operation type to balance safety and
+compute cost:
+
+1. Addition (`ADD`) and Subtraction (`SUB`):
+   Input points MUST be validated to ensure that they are on the curve
+   (satisfy the curve equation). However, the _subgroup check is skipped_.
+   - _Reasoning_: The addition formulas are valid for any point on the curve,
+     even those not in the prime-order subgroup. Skipping the costly subgroup
+     check allows for cheaper accumulation of points, assuming the final
+     result will be validated or processed by an operation that enforces it.
+
+2. _Scalar Multiplication (`MUL`)_:
+   Input points MUST undergo _full validation_, including the field check,
+   curve equation check, and the _subgroup check_.
+   - _Reasoning_: Enforcing the subgroup check allows the runtime to safely use
+     faster endomorphism-based scalar multiplication algorithms (e.g., GLV),
+     which are only valid for points in the correct subgroup.
+
 ### Point Validation in G1 and G2
 
 There is an existing definition for a `sol_curve_validate_point` syscall
