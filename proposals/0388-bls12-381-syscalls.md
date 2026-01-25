@@ -280,6 +280,45 @@ should then compute the pairing product `e(P1, Q1) * ... * e(Pn, Qn)`.
 The result of the syscall will be the actual target group element from the
 product of pairings.
 
+### Target Group (Gt) Encoding
+
+The pairing operation returns an element in the target group `Gt`, which is a
+subgroup of the field extension (of degree 12) field `Fq12`. An element in
+`Fq12` is represented as a tower of extensions:
+
+1. `Fq12` is a quadratic extension of `Fq6`: `Fq12 = c0 + c1 * w`
+2. `Fq6` is a cubic extension of `Fq2`: `Fq6 = c0 + c1 * v + c2 * v^2`
+3. `Fq2` is a quadratic extension of `Fq`: `Fq2 = c0 + c1 * u`
+
+This results in 12 base field coefficients (`Fq`), usually denoted as
+`c0` through `c11` in increasing order of their "tower" degree.
+
+The serialization of the 576-byte `Gt` element follows these rules:
+
+1. **Little-Endian (LE)**:
+   - **Coefficient Ordering**: Canonical memory order (lowest degree first).
+     The layout is `c0, c1, ..., c11`.
+   - **Byte Ordering**: Each 48-byte `Fq` coefficient is encoded in
+     little-endian.
+
+2. **Big-Endian (BE)**:
+   - **Coefficient Ordering**: Highest degree first (reverses the tower).
+     The layout is `c11, c10, ..., c0`.
+   - **Byte Ordering**: Each 48-byte `Fq` coefficient is encoded in
+     big-endian.
+
+_Implementation Note:_ The Big-Endian format effectively corresponds to reversing
+the entire 576-byte Little-Endian array. This operation simultaneously swaps the
+coefficient ordering (from `c0...c11` to `c11...c0`) and converts every
+underlying `Fq` element from little-endian to big-endian.
+
+For example, the multiplicative identity `1` in `Gt` is represented as:
+
+- **LE**: `01 00 ... 00` (The first byte is `0x01`, followed by 575 zeros).
+  This represents `c0 = 1`, and all other coefficients `0`.
+- **BE**: `00 ... 00 01` (575 zeros, followed by `0x01` as the last byte).
+  This represents `c0 = 1` as the _last_ coefficient in the stream.
+
 ### Decompression Operations in G1 and G2
 
 For the decompression operations in G1 and G2, we propose adding a dedicated
