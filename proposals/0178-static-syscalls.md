@@ -52,7 +52,7 @@ specification of SIMD-0161.
 
 
 We follow the encoding referenced in the 
-[eBPF specification](https://www.ietf.org/archive/id/draft-thaler-bpf-isa-00.html#name-jump-instructions)
+[eBPF specification](https://github.com/solana-foundation/solana-improvement-documents/tree/main/documents/bpf-spec.pdf)
 for encoding static syscalls. That means we must use the call instruction 
 (opcode `0x85`) with the source register field set to zero. The immediate field 
 must be filled with a registered syscall hash code. For more reference on the 
