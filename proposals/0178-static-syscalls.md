@@ -81,6 +81,13 @@ program header, along with the `.dynamic`, `.dynsym`, `.dynstr` and `.rel.dyn`
 section header entries will no longer be required to invoke static syscalls 
 for any SBPFv3 program and will be omitted by default.
 
+Albeit rare, hash collisions may occur depending on the syscall name, so care 
+must be taken not to introduce names whose hash collides with existing ones.
+We expect core developers to rely on proper testing to identify such cases when 
+registering a new syscall in the program loader. It is worth pointing that the 
+solution proposed in this document is an improvement over the existing 
+mechanism that does not realiably distinguish internal and external calls.
+
 ## Alternatives Considered
 
 None.
