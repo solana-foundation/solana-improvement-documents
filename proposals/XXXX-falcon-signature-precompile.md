@@ -95,12 +95,14 @@ The following parameters define Falcon-512:
 | n (degree) | 512 |
 | q (modulus) | 12289 |
 | Public key size | 897 bytes |
-| Signature size | <= 666 bytes |
+| Signature size | 666 bytes (padded, fixed) |
 | Security level | NIST Level I (~128 bits classical) |
 
 ### Program
 
-ID: `Fa1con512SigVerify11111111111111111111111111`
+ID: `Fa1con512SigVerify11111111111111111111111111` (placeholder)
+The final program ID MUST be assigned via the standard precompile
+program deployment process.
 
 In accordance with [SIMD-0152], the program's `verify` instruction MUST
 accept the following data:
@@ -115,7 +117,6 @@ struct Falcon512SigVerifyInstruction {
 
 struct Falcon512SignatureOffsets {
     signature_offset: uint16 LE,               // Offset to signature
-    signature_length: uint16 LE,               // Length of signature (variable)
     signature_instruction_index: uint16 LE,    // Instruction index to signature
     public_key_offset: uint16 LE,              // Offset to public key
     public_key_instruction_index: uint16 LE,   // Instruction index to public key
@@ -125,28 +126,28 @@ struct Falcon512SignatureOffsets {
 }
 ```
 
-Note: Unlike Ed25519 and secp256k1/r1 which have fixed signature sizes,
-Falcon signatures have variable length due to compression. The
-`signature_length` field is required to handle this variability. The
-maximum compressed signature size is 666 bytes as specified in draft
-FIPS 206. This value may change in the final specification; implementations
-MUST be updated to match the final FIPS 206 before activation.
+Note: This proposal uses the fixed-length (padded) Falcon-512 signature
+encoding. Signatures MUST be exactly 666 bytes. This value is specified
+in draft FIPS 206 and may change in the final specification; this
+document and implementations MUST be updated to match the final FIPS
+206 before activation.
 
-The padding byte MUST be ignored and MAY contain any value.
+The padding byte MUST be ignored and MAY contain any value. It is
+reserved for alignment/forward compatibility with SIMD-0152.
 
 ### Signature Format
 
-Falcon-512 signatures MUST be in the compressed format as specified in
-draft FIPS 206 Section 3.5. The signature consists of:
+Falcon-512 signatures MUST be in the fixed-length (padded) format as
+specified in draft FIPS 206. The signature consists of:
 
-1. A header byte (0x39 for Falcon-512 compressed, computed as 0x30 + logn)
+1. A header byte (as specified in draft FIPS 206 for Falcon-512 padded)
 2. A 40-byte random salt (nonce)
-3. The compressed signature polynomial s2
+3. The padded encoding of the signature polynomial s2
 
 The precompile MUST reject signatures that:
-- Exceed the maximum allowed signature size (666 bytes)
+- Have a length other than 666 bytes
 - Have an invalid header byte
-- Fail decompression
+- Fail decoding
 - Have coefficients outside the valid range
 
 ### Public Key Format
@@ -168,13 +169,22 @@ The precompile MUST reject public keys that:
 The verification follows draft FIPS 206 Algorithm 18 (Verify):
 
 1. Decode the public key h from the encoded format
-2. Decode the signature (salt, s2) from the compressed format
+2. Decode the signature (salt, s2) from the padded format
 3. Compute c = HashToPoint(salt || message)
 4. Compute s1 = c - s2 * h (mod q)
 5. Verify that ||(s1, s2)||^2 <= bound^2
 
 The HashToPoint function uses SHAKE-256 as specified in draft FIPS 206
 to hash the message into a polynomial in Z_q[x]/(x^n + 1).
+The `bound` value is the Falcon-512 norm bound parameter defined in
+draft FIPS 206; implementations MUST use that exact value for
+verification.
+This document MUST be updated with the exact numeric bound once the
+final FIPS 206 value is published.
+Domain separation for HashToPoint MUST follow the draft FIPS 206
+definition for Falcon-512. If Solana-specific domain separation is
+desired, it MUST be applied by the caller to the message bytes before
+invoking the precompile.
 
 ### Behavior
 
@@ -191,9 +201,8 @@ In accordance with [SIMD-0152], the behavior of the precompile MUST be:
    a. Read `offsets`: an instance of `Falcon512SignatureOffsets`
    b. Based on the `offsets`, retrieve `signature`, `public_key`, and
       `message` bytes. If any of the three fails, return error.
-   c. Validate signature length is within bounds [41, 666]. The minimum
-      of 41 bytes accounts for the header byte (1) plus salt (40). Note
-      that decode failures during verification supersede length checks.
+   c. Validate signature length is exactly 666 bytes. Decode failures
+      during verification supersede length checks.
    d. Invoke the Falcon-512 verification function. If it fails, return error.
 
 All arithmetic operations (offset + length, num_signatures * struct_size,
@@ -203,10 +212,9 @@ If overflow occurs, return error.
 ```
 /// Pseudocode for verification
 
-SERIALIZED_OFFSET_STRUCT_SIZE = 16  // 8 uint16 fields
+SERIALIZED_OFFSET_STRUCT_SIZE = 14  // 7 uint16 fields
 PUBLIC_KEY_LENGTH = 897
-MAX_SIGNATURE_LENGTH = 666
-MIN_SIGNATURE_LENGTH = 41  // header (1) + salt (40)
+SIGNATURE_LENGTH = 666
 
 function verify() {
     if length_of_data == 0 {
@@ -242,16 +250,10 @@ function verify() {
                              data_start_position + SERIALIZED_OFFSET_STRUCT_SIZE]
         data_start_position += SERIALIZED_OFFSET_STRUCT_SIZE
 
-        // Validate signature length
-        if offsets.signature_length < MIN_SIGNATURE_LENGTH ||
-           offsets.signature_length > MAX_SIGNATURE_LENGTH {
-            return Error
-        }
-
         signature = get_data_slice(all_tx_data,
                                    offsets.signature_instruction_index,
                                    offsets.signature_offset,
-                                   offsets.signature_length)
+                                   SIGNATURE_LENGTH)
         if !signature {
             return Error
         }
@@ -407,10 +409,10 @@ short signature vectors that satisfy the verification equation.
    thoroughly validated before processing to prevent malformed input
    attacks.
 
-3. **Signature uniqueness**: Unlike ECDSA, Falcon signatures are
-   inherently non-malleable due to the use of a random salt (nonce) in
-   the signing process. Each signing operation produces a unique
-   signature.
+3. **Signature uniqueness and malleability**: The random salt (nonce)
+   makes honest signatures unique across signings of the same message.
+   Non-malleability relies on the verification rule, including the
+   tight norm bound check, which should reject transformed signatures.
 
 ### Cross-Client Consistency
 
