@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-03-19
-feature: (fill in with feature tracking issues once accepted)
+feature: ptokFjwyJtrwCa9Kgo9xoDS59V4QccBGEaRFnRPnSdP
 ---
 
 ## Summary
@@ -86,14 +86,14 @@ Token-2022, while `batch` and `unwrap_lamports` have discriminator values that
 are not used in either SPL Token nor Token-2022.
 
 The program will be loaded into an account
-(`ptokNfvuU7terQ2r2452RzVXB3o4GT33yPWo1fUkkZ2`) prior to enabling the feature
+(`ptok6rngomXrDbWf5v5Mkmu5CEbB51hzSCPDoj9DrvF`) prior to enabling the feature
 gate that triggers the replacement.
 
-When the feature gate `ptokSWRqZz5u2xdqMdstkMKpFurauUpVen7TZXgDpkQ` is enabled,
+When the feature gate `ptokFjwyJtrwCa9Kgo9xoDS59V4QccBGEaRFnRPnSdP` is enabled,
 the runtime needs to:
 
 - Replace `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` program with
-  `ptokNfvuU7terQ2r2452RzVXB3o4GT33yPWo1fUkkZ2` using the Upgradable Loader `v3`.
+  `ptok6rngomXrDbWf5v5Mkmu5CEbB51hzSCPDoj9DrvF` using the Upgradable Loader `v3`.
 
 ## Alternatives Considered
 
