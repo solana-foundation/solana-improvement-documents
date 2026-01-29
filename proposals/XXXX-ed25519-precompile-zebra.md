@@ -1,94 +1,109 @@
 ---
-simd: 'XXXX'
-title: Ed25519 Precompile Signature Verification with ZIP-215
+simd: '453'
+title: Ed25519 Precompile Verification Mode Flag
 authors:
   - SK, ZZ
 category: Standard
 type: Core
 status: Idea
 created: 2026-01-27
-feature: ed25519_precompile_verify_strict_to_zip215
+feature: ed25519_precompile_verification_mode_flag
 extends: '0152'
 ---
 
 ## Summary
 
-Update the Ed25519 signature verification precompile
-(`Ed25519SigVerify111111111111111111111111111`) to use
-[ZIP-215](https://zips.z.cash/zip-0215) verification semantics via
-`ed25519-zebra`, replacing the current `strict_verify` implementation from
-`ed25519-dalek`.
+Extend the Ed25519 signature verification precompile
+(`Ed25519SigVerify111111111111111111111111111`) to support both `strict_verify`
+(current behavior) and [ZIP-215](https://zips.z.cash/zip-0215) verification
+semantics. The caller selects the verification mode via a flag byte, enabling
+opt-in ZIP-215 verification while preserving backwards compatibility.
 
 ## Motivation
 
 SIMD-0376 specifies the transition from `ed25519-dalek`'s `strict_verify` to
-ZIP-215 verification across Solana's EdDSA usage, including transaction
-signatures, gossip packets, shred packets, and the Ed25519 precompile. This
-SIMD provides the concrete specification and feature gate for the Ed25519
-precompile portion of that transition.
+ZIP-215 verification for transaction signatures, gossip packets, and shred
+packets. This SIMD addresses the Ed25519 precompile, but with a different
+approach: rather than replacing `strict_verify`, this SIMD adds ZIP-215 as
+an opt-in alternative while preserving the existing behavior.
 
-Separating the precompile change into its own SIMD allows:
+### Why Not Simply Replace `strict_verify`?
 
-1. **Independent rollout**: The precompile can be activated separately from
-   transaction signature changes, enabling staged deployment and validation.
+The precompile has different security considerations than transaction
+signatures:
 
-2. **Explicit specification**: Precompile behavior is consensus-critical and
-   warrants explicit documentation of decoding rules and acceptance criteria.
+1. **Cross-chain bridge security**: Applications may use the Ed25519 precompile
+   to verify signatures from other chains (e.g., bridging from chains that use
+   Ed25519). If those chains use stricter verification than ZIP-215, an
+   attacker could craft signatures that pass ZIP-215 but would be rejected on
+   the origin chain. This could enable forged bridge transactions.
 
-3. **Feature gate isolation**: A dedicated feature gate allows the precompile
-   change to be tested and activated independently.
+2. **Small-order key exploits**: ZIP-215 accepts small-order public keys
+   (torsion points) for which trivial signature forgeries exist (e.g.,
+   $R = \mathcal{O}, S = 0$ verifies for any message). An attacker could
+   deposit funds to such an address on another chain and then "bridge" them
+   to Solana using forged signatures.
 
-The benefits of ZIP-215 for the precompile:
+3. **Immutability expectations**: Existing applications may depend on the
+   precompile's current behavior. Changing verification semantics could break
+   security assumptions without the application's knowledge.
 
-- **Standardization**: ZIP-215 provides a well-specified verification
-  equation, simplifying alternative validator implementations.
+### The Solution: Caller-Selected Verification Mode
 
-- **Consistency**: After this SIMD activates, the precompile uses the same
-  verification semantics as transaction signatures.
+This SIMD repurposes the existing padding byte in the precompile instruction
+format as a verification mode flag:
 
-Note: ZIP-215 allows batch verification in general, but this SIMD does not
-require or target it for the precompile. The primary goals are standardization
-and consistency with transaction signature verification.
+- `0x00`: Use `strict_verify` (current behavior, backwards compatible)
+- `0x01`: Use ZIP-215 verification
+
+This approach:
+
+- **Preserves security**: Existing applications continue to use `strict_verify`
+  without code changes.
+- **Enables opt-in consistency**: New applications can choose ZIP-215 to match
+  transaction signature verification semantics.
+- **Maintains backwards compatibility**: The default mode (`0x00`) matches
+  current behavior exactly.
 
 ## Scope Alignment with SIMD-0376
 
 SIMD-0376 defines the transition from `strict_verify` to ZIP-215 across all
 EdDSA verification contexts in Solana, listing the Ed25519 precompile as one
-of its targets. This SIMD carves out the precompile-specific portion of that
-transition into a separate specification with its own feature gate.
+of its targets. This SIMD carves out the precompile-specific portion into a
+separate specification with a different approach.
 
-**This SIMD refines SIMD-0376's scope by providing the concrete specification
-for the Ed25519 precompile.** The precompile is removed from SIMD-0376's
-activation scope; the precompile change is governed solely by this SIMD's
-feature gate. SIMD-0376's feature gate does not affect the precompile. There
-is no double-activation requirement.
+**This SIMD diverges from SIMD-0376's approach for the precompile.** Rather
+than replacing `strict_verify` with ZIP-215, this SIMD adds ZIP-215 as an
+opt-in mode while preserving `strict_verify` as the default. The precompile
+is removed from SIMD-0376's activation scope; SIMD-0376's feature gate does
+not affect the precompile.
 
-The rationale for a separate SIMD and feature gate:
+The rationale for this different approach:
 
-- **Staged activation**: Transaction signature verification (the primary
-  SIMD-0376 target) can be activated and validated on mainnet before the
-  precompile changes.
+- **Bridge security**: Unlike transaction signatures, the precompile may be
+  used to verify signatures from other chains with stricter verification
+  rules. Replacing `strict_verify` could enable cross-chain exploits.
 
-- **Precompile-specific concerns**: Precompiles have unique considerations
-  around instruction data parsing and error handling that warrant explicit
-  specification.
+- **Backwards compatibility**: Existing applications expect `strict_verify`
+  semantics. Changing the default could break security assumptions silently.
 
-- **Rollback isolation**: If issues arise with the precompile change, it can
-  be disabled independently without affecting transaction verification.
+- **Flexibility**: Applications that want ZIP-215 consistency with transaction
+  signatures can opt in explicitly.
 
 ## Dependencies
 
-This proposal depends on the following previously accepted proposals:
+This proposal relates to the following SIMDs:
 
-- **[SIMD-0152]: Precompiles**
+- **[SIMD-0152]: Precompiles** (Activated)
 
     Established the precompile specification and aligned the Ed25519 precompile
     with transaction signature verification using `strict_verify`.
 
-- **[SIMD-0376]: Relaxing Transaction Signature Verification**
+- **[SIMD-0376]: Relaxing Transaction Signature Verification** (In Review)
 
     Defines the ZIP-215 verification algorithm and security rationale. This
-    SIMD implements the precompile portion of SIMD-0376's scope.
+    SIMD uses SIMD-0376's ZIP-215 specification but diverges from its approach
+    by offering ZIP-215 as an opt-in mode rather than a replacement.
 
 [SIMD-0152]: ./0152-precompiles.md
 [SIMD-0376]: ./0376-relaxing-tx-sig-verification.md
@@ -111,10 +126,24 @@ This proposal uses terminology defined in SIMD-0376:
 
 ## Detailed Design
 
-Replace the signature verification function in the Ed25519 precompile with
-ZIP-215 verification semantics, as implemented by `ed25519-zebra`.
+Extend the Ed25519 precompile to support two verification modes, selected by
+the caller via a flag byte.
 
-### Verification Algorithm
+### Verification Mode Flag
+
+The existing padding byte in the precompile instruction format is repurposed
+as a verification mode flag:
+
+| Flag Value | Verification Mode | Behavior |
+|------------|-------------------|----------|
+| `0x00` | Strict | Use `strict_verify` (current behavior) |
+| `0x01` | ZIP-215 | Use ZIP-215 cofactored verification |
+| `0x02`-`0xFF` | Reserved | Return error |
+
+Flag values `0x02` through `0xFF` are reserved for future use and MUST return
+an error if specified.
+
+### ZIP-215 Verification Algorithm (Flag = 0x01)
 
 Given a 64-byte signature and 32-byte public key:
 
@@ -145,10 +174,15 @@ $$8(S \cdot B) - 8R - 8(h \cdot A) = \mathcal{O}$$
 
 where $B$ is the Ed25519 base point and $\mathcal{O}$ is the identity element.
 
-### Key Differences from `strict_verify`
+### Strict Verification Algorithm (Flag = 0x00)
 
-| Property | `strict_verify` | ZIP-215 |
-|----------|-----------------|---------|
+When the flag is `0x00`, the precompile uses the existing `strict_verify`
+behavior as specified in SIMD-0152. This is unchanged from current behavior.
+
+### Key Differences Between Modes
+
+| Property | Strict (0x00) | ZIP-215 (0x01) |
+|----------|---------------|----------------|
 | Non-canonical $R$ encoding | Rejected | Accepted |
 | Non-canonical $A$ encoding | Rejected | Accepted |
 | Small-order $R$ | Rejected | Accepted |
@@ -161,11 +195,13 @@ where $B$ is the Ed25519 base point and $\mathcal{O}$ is the identity element.
 This SIMD requires a runtime feature gate:
 
 ```
-ed25519_precompile_verify_strict_to_zip215
+ed25519_precompile_verification_mode_flag
 ```
 
 This feature gate is separate from SIMD-0376's feature gate. When activated,
-the Ed25519 precompile switches from `strict_verify` to ZIP-215 verification.
+the Ed25519 precompile interprets the second byte as a verification mode flag,
+enabling callers to select between `strict_verify` (`0x00`) and ZIP-215
+(`0x01`) verification modes.
 
 ### Implementation
 
@@ -179,27 +215,35 @@ not used.
 
 The precompile MUST:
 
-1. Parse the instruction data according to the existing precompile
-   specification defined in SIMD-0152.
+1. Parse the instruction data according to the precompile specification
+   defined in SIMD-0152, with the padding byte now interpreted as a
+   verification mode flag.
 
-2. For each signature to verify:
+2. Validate the flag byte:
+   - If `0x00`: use `strict_verify` mode.
+   - If `0x01`: use ZIP-215 mode.
+   - If `0x02`-`0xFF`: return an error.
+
+3. For each signature to verify:
    - Extract the public key ($A$), signature ($R$, $S$), and message ($M$)
      using the offset-based data retrieval mechanism.
-   - Verify the signature using the ZIP-215 algorithm specified above.
+   - Verify the signature using the algorithm corresponding to the selected
+     mode.
    - Return an error if verification fails.
 
-3. Return success if all signatures verify successfully.
+4. Return success if all signatures verify successfully.
 
 ### Precompile Interface
 
-The instruction format remains unchanged from SIMD-0152:
+The instruction format is modified from SIMD-0152 to repurpose the padding
+byte:
 
 ```
 struct PrecompileVerifyInstruction {
-  num_signatures:  u8,
-  padding:         u8,
-  offsets:         PrecompileOffsets[num_signatures],
-  additionalData?: Bytes,
+  num_signatures:    u8,
+  verification_mode: u8,    
+  offsets:           PrecompileOffsets[num_signatures],
+  additionalData?:   Bytes,
 }
 
 struct PrecompileOffsets {
@@ -215,32 +259,42 @@ struct PrecompileOffsets {
 
 ## Alternatives Considered
 
-### Keep `strict_verify` for Precompile
+### Replace `strict_verify` with ZIP-215
 
-Maintain the current `strict_verify` semantics for the precompile while
-transactions use ZIP-215. This was rejected because:
+Simply replace `strict_verify` with ZIP-215 in the precompile, matching
+SIMD-0376's approach for transaction signatures. This was rejected because:
 
-- Creates inconsistency between transaction signatures and precompile
-  verification.
+- **Bridge security risk**: Applications using the precompile to verify
+  signatures from other chains could be exploited if those chains use stricter
+  verification. An attacker could forge signatures that pass ZIP-215 but would
+  be rejected on the origin chain.
+- **Small-order key exploits**: ZIP-215 accepts small-order public keys
+  (torsion points) for which trivial forgeries exist. An attacker could
+  deposit funds to such addresses on other chains and bridge them to Solana
+  using forged signatures.
+- **Silent breakage**: Existing applications expect `strict_verify` semantics.
+  Changing the default could break security assumptions without warning.
+
+### Keep `strict_verify` Only
+
+Maintain only `strict_verify` semantics for the precompile. This was rejected
+because:
+
+- Creates permanent inconsistency between transaction signatures and precompile
+  verification after SIMD-0376 activates.
 - Signatures valid for transaction authentication could be rejected by the
-  precompile.
+  precompile, which may confuse developers.
+- Does not provide a path for applications that want ZIP-215 consistency.
 
-### Single Feature Gate with SIMD-0376
+### Add a New Precompile
 
-Use SIMD-0376's feature gate to activate all EdDSA verification changes
-atomically, including the precompile. This was rejected because:
+Create a new precompile address for ZIP-215 verification, leaving the existing
+precompile unchanged. This was rejected because:
 
-- Precompile changes affect on-chain program behavior and warrant independent
-  testing.
-- Transaction signature verification is more critical; it should stabilize
-  before the precompile changes.
-- A precompile-specific issue should not require rolling back transaction
-  verification changes.
-
-This SIMD introduces a separate feature gate for the precompile. The two
-feature gates (SIMD-0376 for transactions/gossip/shreds, this SIMD for the
-precompile) can be activated in either order, though activating SIMD-0376
-first is recommended.
+- Adds unnecessary protocol complexity with two precompile addresses.
+- The flag-based approach achieves the same flexibility with less overhead.
+- Existing precompile address can accommodate both modes via the unused
+  padding byte.
 
 ## Impact
 
@@ -249,76 +303,119 @@ verification, gossip packets, and shred packets are covered by SIMD-0376.
 
 ### Dapp Developers
 
-- **No breaking changes**: All signatures currently valid under `strict_verify`
-  remain valid under ZIP-215.
-- **Consistency**: After both SIMD-0376 and this SIMD activate, signatures
-  that work for transaction authentication also work with the precompile.
+- **No breaking changes**: Existing applications using `padding = 0x00`
+  continue to work with `strict_verify` semantics.
+- **Opt-in consistency**: Applications that want ZIP-215 verification (to
+  match transaction signature semantics) can set the flag to `0x01`.
+- **Migration path**: Applications can evaluate their security requirements
+  and choose the appropriate verification mode.
 
 ### Validators
 
-- **Simplified implementation**: ZIP-215 is a well-documented specification,
-  making the precompile easier to implement in alternative validator clients.
+- **Dual implementation**: Validators must support both `strict_verify` and
+  ZIP-215 verification modes.
+- **Flag validation**: Validators must reject flag values outside `0x00`-`0x01`.
 
 ### Core Contributors
 
-- **Library update**: Replace `ed25519-dalek` with `ed25519-zebra` for the
-  precompile verification path.
+- **Library support**: Ensure both `ed25519-dalek` (for strict) and
+  `ed25519-zebra` (for ZIP-215) verification paths are available.
 - **Feature gate**: Implement and coordinate activation of a new feature gate
   separate from SIMD-0376.
 
 ## Security Considerations
 
+### Cross-Chain Bridge Security
+
+The primary security motivation for this design is protecting cross-chain
+bridges. Applications using the precompile to verify signatures from other
+chains must consider:
+
+- **Verification mismatch attacks**: If the origin chain uses stricter
+  verification than the precompile, an attacker could craft signatures that
+  pass on Solana but would be rejected on the origin chain. This could enable
+  forged bridge transactions.
+
+- **Small-order key exploits**: ZIP-215 accepts small-order public keys
+  (torsion points) for which trivial signature forgeries exist. An attacker
+  could:
+  1. Deposit funds to a small-order address on another chain.
+  2. Forge signatures for that address that pass ZIP-215.
+  3. Bridge funds to Solana.
+
+**Recommendation**: Bridge applications SHOULD use strict mode (`0x00`) unless
+they have verified that the origin chain's verification is compatible with
+ZIP-215.
+
+### EdDSA Security Properties
+
 There are two important security properties for EdDSA schemes:
 
 - **Strong Unforgeability under Chosen Message Attack (SUF-CMA)**: An attacker
   cannot create any new valid signature, even on a message that has been
-  signed before. This prevents signature malleation.
+  signed before.
 
 - **Strongly Binding Signatures (SBS)**: Each valid signature corresponds to
-  exactly one valid message, with no ambiguity in the verification equation.
+  exactly one valid message.
 
-ZIP-215 achieves SUF-CMA by requiring $S \in \{0, ..., l - 1\}$. This is the
-security property relevant to Solana's use cases. ZIP-215 does not provide
-SBS, but SBS is not required for the precompile's security model.
+Both verification modes achieve SUF-CMA by requiring $S \in \{0, ..., l - 1\}$.
+Neither mode provides SBS, but SBS is not required for typical use cases.
 
-The relaxation of $R$ and $A$ checks does not affect security for honest
-users:
+### Mode Selection Guidance
 
-- Keys and signatures generated per RFC 8032 do not contain non-canonical
-  encodings or torsion components.
-- Only adversarially crafted inputs could contain these elements, and such
-  signatures cannot be forged for keys the attacker does not control.
-- Small-order public keys are inherently attacker-controlled; honest key
-  generation cannot produce them.
+| Use Case | Recommended Mode | Rationale |
+|----------|------------------|-----------|
+| Cross-chain bridges | Strict (`0x00`) | Matches stricter origin chain verification |
+| Solana-native signatures | Either | Both modes accept canonically-encoded RFC 8032 signatures |
+| Consistency with tx sigs | ZIP-215 (`0x01`) | Matches SIMD-0376 semantics |
 
-The precompile continues to verify signatures over user-specified messages,
-providing the same semantic guarantees as before activation.
+Note: "Solana-native signatures" assumes keys and signatures are canonically
+encoded per RFC 8032. Non-canonical encodings are only accepted in ZIP-215 mode.
 
-For detailed security analysis, including the SUF-CMA proof, see SIMD-0376.
+For detailed security analysis of ZIP-215, see SIMD-0376.
 
 ## Backwards Compatibility
 
 This change requires a dedicated feature gate, separate from SIMD-0376.
 
+### Full Backwards Compatibility
+
+This SIMD is fully backwards compatible:
+
+- **Default behavior preserved**: Existing applications using `padding = 0x00`
+  (which was the only valid value) continue to receive `strict_verify`
+  semantics with no changes required.
+
+- **No silent behavior changes**: Unlike a wholesale replacement of
+  `strict_verify`, existing applications are not exposed to ZIP-215's broader
+  acceptance criteria unless they explicitly opt in.
+
+### Activation
+
 Upon activation:
 
-- **All signatures valid under `strict_verify` remain valid**: The cofactored
-  equation accepts a strict superset of signatures accepted by `strict_verify`.
-  SIMD-0376 provides a formal proof that any signature passing `strict_verify`
-  also passes ZIP-215 verification.
+- Instructions with flag `0x00` behave identically to pre-activation.
+- Instructions with flag `0x01` use ZIP-215 verification.
+- Instructions with flag `0x02`-`0xFF` return an error.
 
-- **Some previously rejected signatures become valid**: Signatures with
-  non-canonical $R$ or $A$ encodings, or small-order $R$ or $A$ points, that
-  were previously rejected will now be accepted. These signatures cannot be
-  produced by standard libraries following RFC 8032 and do not affect honest
-  users.
+**Note on padding byte behavior**: Per SIMD-0152, the current implementation
+skips the padding byte without validation (see pseudocode: `data_position = 2`).
+Standard SDKs set this byte to `0x00`. This SIMD assigns semantic meaning to
+the byte, rejecting values `0x02`-`0xFF`. Applications using non-standard
+padding values would be affected, though such usage is not expected in
+practice.
 
-The recommended upgrade path:
+### Migration Path
 
-1. Activate SIMD-0376 feature gate for transaction signatures, gossip packets,
-   and shred packets.
-2. Activate this SIMD's feature gate for the Ed25519 precompile.
+Applications do not need to migrate. The recommended approach:
 
-This ordering allows transaction signature verification to stabilize before
-modifying precompile behavior. However, the feature gates are independent and
-can be activated in either order without correctness issues.
+1. **Existing applications**: No changes required. Continue using flag `0x00`
+   for `strict_verify` behavior.
+
+2. **New applications**: Evaluate security requirements:
+   - Use `0x00` (strict) for cross-chain bridges or when matching other
+     chains' verification.
+   - Use `0x01` (ZIP-215) for consistency with Solana transaction signatures.
+
+3. **Feature gate ordering**: This SIMD's feature gate can be activated
+   independently of SIMD-0376.
