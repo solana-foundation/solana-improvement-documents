@@ -2,7 +2,7 @@
 simd: '453'
 title: Ed25519 Precompile Verification Mode Flag
 authors:
-  - SK, ZZ
+  - EC, SK, ZZ
 category: Standard
 type: Core
 status: Idea
