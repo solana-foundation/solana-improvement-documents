@@ -1,6 +1,6 @@
 ---
 simd: '0458'
-title: Stop using static SimpleVote transaction cost
+title: Stop special-casing of Simple Vote in Cost Model
 authors:
   - Tao Zhu
 category: Standard
