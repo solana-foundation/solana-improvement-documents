@@ -1,6 +1,6 @@
 ---
 simd: '0458'
-title: Stop special-casing of Simple Vote in Cost Model
+title: Stop special-casing of Vote CU cost
 authors:
   - Tao Zhu
 category: Standard
