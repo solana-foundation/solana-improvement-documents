@@ -1,0 +1,62 @@
+---
+simd: 'XXXX'
+title: Stop using static SimpleVote transaction cost
+authors:
+  - Tao Zhu
+category: Standard
+type: Core
+status: Review
+created: 2026-01-30
+feature: (fill in with feature key and github tracking issues once accepted)
+supersedes: SIMD-0387
+---
+
+## Summary
+
+This proposal removes the use of statically defined compute unit (CU) costs for
+Simple Vote transactions and instead accounts for them in the same way as normal
+transactions when enforcing block-wide and vote-specific CU limits. Because this
+change affects consensus behavior, it must be gated behind a feature flag.
+
+## Motivation
+
+Simple Vote transactions currently reserve a fixed, statically defined number of
+compute units for cost tracking, based on the assumption that the Vote program,
+as a builtin program, has a static execution CU cost. However, SIMD-0387
+specifies that the Vote program will be removed from builtin cost modeling. As a
+result, the cost of Simple Vote transactions should no longer rely on static CU
+assumptions and should instead be calculated in the same manner as other
+transactions.
+
+## New Terminology
+
+N/A
+
+## Detailed Design
+
+- Stop using statically defined CU values for Simple Vote transactions.
+- Calculate the cost of Simple Vote transactions using the same cost model and
+  accounting path as normal transactions.
+
+## Alternatives Considered
+
+N/A
+
+## Impact
+
+- Cost tracking:
+  The impact is expected to be minimal, as the actual executed CU consumption of
+Simple Vote transactions is close to the previously statically defined value.
+
+- Block production:
+  Under the current cost model, Simple Vote transactions may have higher
+estimated CUs due to inclusion of default account data loading costs. For
+block-packing strategies that reserve CUs upfront and refund unused CUs after
+execution, this may result in larger initial CU reservations for Simple Vote
+transactions, followed by refunds. This effect is specific to such
+“reserve-then-refund” packing strategies.
+
+## Security Considerations
+
+N/A
+
