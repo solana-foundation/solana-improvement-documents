@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0458'
 title: Stop using static SimpleVote transaction cost
 authors:
   - Tao Zhu
