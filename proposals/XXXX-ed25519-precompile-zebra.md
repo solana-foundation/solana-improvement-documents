@@ -1,5 +1,5 @@
 ---
-simd: '453'
+simd: '0453'
 title: Ed25519 Precompile Verification Mode Flag
 authors:
   - EC, SK, ZZ
