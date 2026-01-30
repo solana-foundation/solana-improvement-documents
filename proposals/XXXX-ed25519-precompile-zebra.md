@@ -365,9 +365,9 @@ Neither mode provides SBS, but SBS is not required for typical use cases.
 
 | Use Case | Recommended Mode | Rationale |
 |----------|------------------|-----------|
-| Cross-chain bridges | Strict (`0x00`) | Matches stricter origin chain verification |
-| Solana-native signatures | Either | Both modes accept canonically-encoded RFC 8032 signatures |
-| Consistency with tx sigs | ZIP-215 (`0x01`) | Matches SIMD-0376 semantics |
+| Cross-chain bridges | Strict (`0x00`) | Match origin chain verification |
+| Solana-native signatures | Either | Accepts canonical RFC 8032 |
+| Consistency with tx sigs | ZIP-215 (`0x01`) | Matches SIMD-0376 |
 
 Note: "Solana-native signatures" assumes keys and signatures are canonically
 encoded per RFC 8032. Non-canonical encodings are only accepted in ZIP-215 mode.
