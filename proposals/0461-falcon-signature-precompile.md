@@ -1,8 +1,8 @@
 ---
-simd: 'XXXX'
+simd: '0461'
 title: Precompile for Falcon-512 Signature Verification
 authors:
-  - TBD
+  - ZZ
 category: Standard
 type: Core
 status: Draft
