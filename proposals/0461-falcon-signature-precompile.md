@@ -513,5 +513,4 @@ cross-client compatibility.
 
 [fips-206]: https://csrc.nist.gov/pubs/fips/206/ipd
 [eip-8052]: https://eips.ethereum.org/EIPS/eip-8052
-[simd-0152]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0152-precompiles.md
 [simd-0075]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0075-precompile-for-secp256r1-sigverify.md
