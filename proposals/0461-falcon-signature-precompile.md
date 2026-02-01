@@ -145,6 +145,7 @@ specified in draft FIPS 206. The signature consists of:
 3. The padded encoding of the signature polynomial s2
 
 The precompile MUST reject signatures that:
+
 - Have a length other than 666 bytes
 - Have an invalid header byte
 - Fail decoding
@@ -160,6 +161,7 @@ Public keys MUST be in the format specified in draft FIPS 206 Section 3.3:
 Total public key size: 897 bytes
 
 The precompile MUST reject public keys that:
+
 - Have an invalid header byte
 - Have an incorrect length
 - Fail decoding
@@ -305,6 +307,7 @@ fn get_data_slice(all_tx_data, instruction_index, offset, length) {
 ```
 
 ### Compute Cost
+
 (**Tentative**)
 
 Falcon-512 verification is computationally more expensive than Ed25519
@@ -312,6 +315,7 @@ due to the polynomial arithmetic involved. Benchmarking MUST be performed
 on representative hardware to determine appropriate compute costs.
 
 Based on preliminary estimates from reference implementations:
+
 - Falcon-512 verification: approximately 0.5-1ms on modern hardware
 - This translates to approximately 15,000-30,000 CUs per verification
 
@@ -326,15 +330,18 @@ with the limit defined in SIMD-0152 for all precompiles.
 ### 1. Other Post-Quantum Signature Schemes
 
 **Dilithium (ML-DSA):**
+
 - Pros: Larger security margins, simpler implementation
 - Cons: Significantly larger signatures (~2,420 bytes for Dilithium2 vs
   ~666 bytes for Falcon-512), making it less suitable for blockchain use
 
 **SPHINCS+:**
+
 - Pros: Hash-based, very conservative security assumptions
 - Cons: Very large signatures (~17KB-49KB), impractical for blockchain
 
 **Falcon-1024:**
+
 - Pros: Higher security level (NIST Level V)
 - Cons: Larger signatures (~1,280 bytes) and keys (~1,793 bytes),
   higher computational cost
@@ -361,6 +368,7 @@ impractical without precompile support.
 EIP-8052 proposes two variants: one using SHAKE-256 (NIST-compliant) and
 one using Keccak256 (EVM-optimized). For Solana, we recommend only the
 NIST-compliant SHAKE-256 variant to:
+
 - Maintain compliance with draft FIPS 206
 - Avoid unnecessary complexity
 - Ensure interoperability with other draft FIPS 206 implementations
@@ -421,6 +429,7 @@ reproducibility between implementations across different validator
 clients. Any discrepancy could cause network forks.
 
 Recommendations:
+
 - Development of a comprehensive test suite including NIST test vectors
 - Active communication between client teams during implementation
 - Use of well-audited reference implementations where possible
@@ -484,6 +493,7 @@ cryptographic libraries for signing operations.
 
 Implementations MUST pass the Known Answer Tests (KATs) provided by NIST
 for FN-DSA. Additional test vectors will be derived from:
+
 - NIST ACVP (Automated Cryptographic Validation Protocol) test vectors
 - Falcon reference implementation test suite
 - Wycheproof project test vectors (when available)
@@ -493,7 +503,10 @@ cross-client compatibility.
 
 ## References
 
-- [Draft FIPS 206: FN-DSA (Falcon)](https://csrc.nist.gov/pubs/fips/206/ipd) - NIST Post-Quantum Signature Standard (Initial Public Draft)
+- [Draft FIPS 206: FN-DSA (Falcon)][fips-206] - NIST Post-Quantum Signature
+  Standard (Initial Public Draft)
+
+[fips-206]: https://csrc.nist.gov/pubs/fips/206/ipd
 - [EIP-8052: Falcon Signature Precompile](https://eips.ethereum.org/EIPS/eip-8052)
 - [SIMD-0152: Precompiles](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0152-precompiles.md)
 - [SIMD-0075: Precompile for secp256r1](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0075-precompile-for-secp256r1-sigverify.md)
