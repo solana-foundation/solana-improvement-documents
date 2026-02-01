@@ -1,11 +1,11 @@
 ---
 simd: '0461'
-title: Precompile for Falcon-512 Signature Verification
+title: Falcon-512 Signature Precompile
 authors:
   - ZZ
 category: Standard
 type: Core
-status: Draft
+status: Idea
 created: 2026-01-16
 feature: (fill in with feature key and github tracking issues once accepted)
 ---
@@ -505,10 +505,13 @@ cross-client compatibility.
 
 - [Draft FIPS 206: FN-DSA (Falcon)][fips-206] - NIST Post-Quantum Signature
   Standard (Initial Public Draft)
-
-[fips-206]: https://csrc.nist.gov/pubs/fips/206/ipd
-- [EIP-8052: Falcon Signature Precompile](https://eips.ethereum.org/EIPS/eip-8052)
-- [SIMD-0152: Precompiles](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0152-precompiles.md)
-- [SIMD-0075: Precompile for secp256r1](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0075-precompile-for-secp256r1-sigverify.md)
+- [EIP-8052: Falcon Signature Precompile][eip-8052]
+- [SIMD-0152: Precompiles][simd-0152]
+- [SIMD-0075: Precompile for secp256r1][simd-0075]
 - [Falcon Reference Implementation](https://falcon-sign.info/)
 - [NIST PQC Standardization](https://csrc.nist.gov/projects/post-quantum-cryptography)
+
+[fips-206]: https://csrc.nist.gov/pubs/fips/206/ipd
+[eip-8052]: https://eips.ethereum.org/EIPS/eip-8052
+[simd-0152]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0152-precompiles.md
+[simd-0075]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0075-precompile-for-secp256r1-sigverify.md
