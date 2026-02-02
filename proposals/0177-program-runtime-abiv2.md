@@ -97,7 +97,7 @@ The contents for this region are as follow:
 
 #### Instruction area
 
-For each transction, the program runtime must also preapre two memory regions. 
+For each transaction, the program runtime must also prepare two memory regions. 
 The first one is a readonly region starting at `0x600000000`. It must be 
 updated at each CPI call edge. The contents of this region are the following:
 
