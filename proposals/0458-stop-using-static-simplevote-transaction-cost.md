@@ -48,6 +48,11 @@ N/A
   The impact is expected to be minimal, as the actual executed CU consumption of
 Simple Vote transactions is close to the previously statically defined value.
 
+  Detail: statically define CUs for simple vote includes 1 signature (720 CU), 2
+write locks (600 CU), 1 vote instruction which has 2,100 CU, and 8 CU to load
+small accounts, total 3428 CU. All components stay same except the CU for loaded
+accounts data size may change, which is a small part overall CUs.  
+
 - Block production:
   Under the current cost model, Simple Vote transactions may have higher
 estimated CUs due to inclusion of default account data loading costs. For
