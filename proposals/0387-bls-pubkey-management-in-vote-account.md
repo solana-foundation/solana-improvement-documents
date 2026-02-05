@@ -42,12 +42,29 @@ N/A
 
 ## Dependencies
 
-- Alpenglow is specified in [SIMD 326](https://github.com/solana-foundation/solana-improvement-documents/pull/326)
+This proposal depends on the following previously accepted proposals:
 
-- VoteStateV4 is specified in [SIMD 185](https://github.com/solana-foundation/solana-improvement-documents/pull/185)
-and it adds an optional BLS public key field
+- **[SIMD-0185]: Vote Account v4**
 
-- Requiring BLS public key for Alpenglow is specified in [SIMD 357](https://github.com/solana-foundation/solana-improvement-documents/pull/357)
+    Adds the vote state v4 structure including the BLS public key field
+
+- **[SIMD-0326]: Alpenglow**
+
+    Specifies the new consensus protocol that requires BLS signatures
+
+- **[SIMD-0357]: Require BLS Public Key for Alpenglow**
+
+    Specifies that vote accounts must have a BLS public key to participate in
+    voting
+
+- **[SIMD-0458]: Stop Using Static SimpleVote Transaction Cost**
+
+    Removes statically defined compute unit costs for Simple Vote transactions
+
+[SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
+[SIMD-0326]: https://github.com/solana-foundation/solana-improvement-documents/pull/326
+[SIMD-0357]: https://github.com/solana-foundation/solana-improvement-documents/pull/357
+[SIMD-0458]: https://github.com/solana-foundation/solana-improvement-documents/pull/458
 
 ## Detailed Design
 
