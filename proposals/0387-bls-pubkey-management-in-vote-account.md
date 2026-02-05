@@ -5,6 +5,7 @@ authors:
   - Sam Kim (Anza)
   - Quentin Kniep (Anza)
   - Wen Xu (Anza)
+  - Joe Caulfield (Anza)
 category: Standard
 type: Core
 status: Review
@@ -68,22 +69,13 @@ This proposal depends on the following previously accepted proposals:
 
 ## Detailed Design
 
-BLS keypairs can be generated randomly like ed25519 keypairs. But to save the
-users some trouble on keypair management, the current plan is to initially
-derive their BLS keypair used in Alpenglow votes based on their ed25519 vote
-keypair. In other words, with an existing ed25519 vote keypair, the operators
-can safely regenerate the associated BLS keypair on demand. Also during
-validator operations, the users still only need to supply the vote keypair as
-before.
+BLS keypairs can be generated or derived however users choose; the Vote program
+does not enforce any particular derivation scheme.
 
-The association of BLS keypair with vote authority ed25519 keypair is the
-default client behavior to simplify Alpenglow launch. After Alpenglow launches
-we may get rid of ed25519 vote keypair and allow users to randomly generate BLS
-keypairs.
-
-When users create vote accounts, they must register their BLS public key by
-storing it in the newly created vote account. When they modify their vote
-authority, they must re-register the new corresponding BLS key.
+Registering a BLS public key on a vote state v4 account is done via the
+`VoteAuthorize` instruction with the new `VoterWithBLS` variant, as described
+in the later section. A proof of possession that verifies ownership of the BLS
+keypair is required, as described in the later section.
 
 ### Changes to vote program
 
