@@ -143,37 +143,12 @@ During PoP verification, the validators will construct the same message, then
 check that the `authorized_voter_bls_proof_of_possession` is the correct
 signature.
 
-#### Add InitializeAccountV2
-
-```rust
-InitializeAccountV2(VoteInitV2),
-```
+#### Add new variant of VoteAuthorize
 
 ```rust
 pub const BLS_PUBLIC_KEY_COMPRESSED_SIZE: usize = 48;
 pub const BLS_SIGNATURE_COMPRESSED_SIZE: usize = 96;
 
-pub struct VoteInitV2 {
-  pub node_pubkey: Pubkey,
-  pub authorized_voter: Pubkey,
-  pub authorized_voter_bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
-  pub authorized_voter_bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
-  pub authorized_withdrawer: Pubkey,
-  pub inflation_rewards_commission_bps: u16,
-  pub inflation_rewards_collector: Pubkey,
-  pub block_revenue_commission_bps: u16,
-  pub block_revenue_collector: Pubkey,
-}
-```
-
-Upon receiving the transaction, the vote program will perform a BLS
-verification on submitted BLS public key and associated proof of possession.
-The transaction will fail if the verification failed. Otherwise the new vote
-account is created with given parameters.
-
-#### Add new variant of VoteAuthorize
-
-```rust
 pub struct VoterWithBLSArgs {
     bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
     bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
@@ -190,6 +165,10 @@ Upon receiving the transaction, if the parameter is of the new variant, the
 vote program will perform a BLS verification on submitted BLS public key and
 associated proof of possession. The transaction will fail if the verification
 failed. Otherwise the vote authority change will be recorded in vote account.
+
+Voters can set or update their BLS public key without changing their authorized
+voter by calling `VoteAuthorize` with `VoterWithBLS` and providing the current
+authorized voter.
 
 ## Impact
 
