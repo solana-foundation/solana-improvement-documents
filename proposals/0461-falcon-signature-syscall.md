@@ -156,7 +156,7 @@ The verification follows the Falcon v1.2 verification algorithm:
 5. Verify that $$||(s1, s2)||^2 <= bound^2$$
 
 The HashToPoint function uses SHAKE-256 as specified in the Falcon v1.2
-to hash the message into a polynomial in Z_q[x]/(x^n + 1).
+to hash the message into a polynomial in $$\mathbb{Z}_q[x]/(x^n + 1)$$.
 The `bound` value is the Falcon-512 norm bound parameter defined in
 the Falcon v1.2 specification; implementations MUST use that exact
 value for verification.
