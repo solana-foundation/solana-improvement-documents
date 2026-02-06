@@ -78,7 +78,7 @@ None.
 ## Detailed Design
 
 The syscall's purpose is to verify Falcon-512 signatures in accordance
-with draft FIPS 206 (FN-DSA).
+with the Falcon specification (v1.2).
 
 ### Falcon-512 Parameters
 
@@ -108,15 +108,13 @@ define_syscall!(fn sol_falcon512_verify(
 Programs can batch verifications by invoking the syscall multiple times.
 
 Note: This proposal uses the fixed-length (padded) Falcon-512 signature
-encoding. Signatures MUST be exactly 666 bytes. This value is specified
-in draft FIPS 206 and may change in the final specification; this
-document and implementations MUST be updated to match the final FIPS
-206 before activation.
+encoding. Signatures MUST be exactly 666 bytes, as specified in the
+Falcon v1.2 specification.
 
 ### Signature Format
 
 Falcon-512 signatures MUST be in the fixed-length (padded) format as
-specified in draft FIPS 206. The signature consists of:
+specified in the Falcon v1.2 specification. The signature consists of:
 
 1. A header byte (as specified in draft FIPS 206 for Falcon-512 padded)
 2. A 40-byte random salt (nonce)
@@ -132,7 +130,8 @@ The syscall MUST treat signatures as invalid if they:
 
 ### Public Key Format
 
-Public keys MUST be in the format specified in draft FIPS 206 Section 3.3:
+Public keys MUST be in the format specified in the Falcon v1.2
+specification:
 
 1. A header byte (0x09 for Falcon-512, computed as 0x00 + logn where logn = 9)
 2. The 896-byte encoding of the public key polynomial h
@@ -148,7 +147,7 @@ The syscall MUST treat public keys as invalid if they:
 
 ### Verification Algorithm
 
-The verification follows draft FIPS 206 Algorithm 18 (Verify):
+The verification follows the Falcon v1.2 verification algorithm:
 
 1. Decode the public key h from the encoded format
 2. Decode the signature (salt, s2) from the padded format
@@ -156,14 +155,12 @@ The verification follows draft FIPS 206 Algorithm 18 (Verify):
 4. Compute s1 = c - s2 * h (mod q)
 5. Verify that ||(s1, s2)||^2 <= bound^2
 
-The HashToPoint function uses SHAKE-256 as specified in draft FIPS 206
+The HashToPoint function uses SHAKE-256 as specified in the Falcon v1.2
 to hash the message into a polynomial in Z_q[x]/(x^n + 1).
 The `bound` value is the Falcon-512 norm bound parameter defined in
-draft FIPS 206; implementations MUST use that exact value for
-verification.
-This document MUST be updated with the exact numeric bound once the
-final FIPS 206 value is published.
-Domain separation for HashToPoint MUST follow the draft FIPS 206
+the Falcon v1.2 specification; implementations MUST use that exact
+value for verification.
+Domain separation for HashToPoint MUST follow the Falcon v1.2
 definition for Falcon-512. If Solana-specific domain separation is
 desired, it MUST be applied by the caller to the message bytes before
 invoking the syscall.
@@ -381,11 +378,11 @@ proposal.
 5. **Ecosystem immaturity**: Post-quantum cryptography tooling and
    libraries are less mature than classical cryptography.
 
-6. **Draft specification**: FIPS 206 is not yet finalized. If the final
-   specification differs from the current draft, this syscall may
-   require updates before activation. The implementation SHOULD track
-   the NIST standardization process and incorporate any changes from
-   the final FIPS 206 specification.
+6. **Specification alignment**: If future NIST standardization (FIPS 206)
+   diverges from the Falcon v1.2 specification referenced here, this
+   syscall may require updates before activation. The implementation
+   SHOULD track the NIST standardization process and incorporate any
+   changes needed for alignment.
 
 ## Backwards Compatibility
 
@@ -418,13 +415,16 @@ cross-client compatibility.
 
 ## References
 
-- [Draft FIPS 206: FN-DSA (Falcon)][fips-206] - NIST Post-Quantum Signature
-  Standard (Initial Public Draft)
+- [Falcon Specification v1.2 (PDF)][falcon-spec]
+- [FIPS 206: FN-DSA (Falcon) Presentation][fips-206] - NIST CSRC presentation
+- [FIPS 206 Status Update (PDF)][fips-206-pdf]
 - [EIP-8052: Falcon Signature Precompile][eip-8052]
 - [SIMD-0075: Precompile for secp256r1][simd-0075]
 - [Falcon Reference Implementation](https://falcon-sign.info/)
 - [NIST PQC Standardization](https://csrc.nist.gov/projects/post-quantum-cryptography)
 
-[fips-206]: https://csrc.nist.gov/pubs/fips/206/ipd
+[falcon-spec]: https://falcon-sign.info/falcon.pdf
+[fips-206]: https://csrc.nist.gov/presentations/2025/fips-206-fn-dsa-falcon
+[fips-206-pdf]: https://csrc.nist.gov/csrc/media/presentations/2025/fips-206-fn-dsa-%28falcon%29/images-media/fips_206-perlner_2.1.pdf
 [eip-8052]: https://eips.ethereum.org/EIPS/eip-8052
 [simd-0075]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0075-precompile-for-secp256r1-sigverify.md
