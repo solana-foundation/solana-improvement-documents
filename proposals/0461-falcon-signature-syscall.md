@@ -101,8 +101,7 @@ define_syscall!(fn sol_falcon512_verify(
     signature_addr: *const u8, // 666 bytes, fixed-length padded signature
     public_key_addr: *const u8, // 897 bytes
     message_addr: *const u8,
-    message_len: u64,
-    result_addr: *mut u8 // 1 = valid, 0 = invalid
+    message_len: u64
 ) -> u64);
 ```
 
@@ -176,16 +175,14 @@ The syscall MUST:
 1. Read exactly 666 bytes at `signature_addr` and 897 bytes at
    `public_key_addr`.
 2. Read `message_len` bytes at `message_addr`.
-3. Write the verification result to `result_addr` as a single byte:
-   `1` for valid, `0` for invalid.
 
 The syscall MUST treat any signature or public key that fails decoding
-or format validation as invalid, and MUST return success with
-`result_addr` set to `0` (i.e., invalid signature is not a fatal error).
+or format validation as invalid.
 
-The syscall returns `0` on successful execution (regardless of signature
-validity) after writing `result_addr`. Non-zero return values are
-reserved for internal errors.
+Return values:
+
+- `0`: signature is valid
+- `1`: signature is invalid (including any decoding or format failure)
 
 The syscall MUST abort the virtual machine if any of the following are
 true:
@@ -194,7 +191,6 @@ true:
   `[public_key_addr, public_key_addr + 897)` are not readable.
 - The VM memory range `[message_addr, message_addr + message_len)` is
   not readable.
-- The VM memory range `[result_addr, result_addr + 1)` is not writable.
 - `message_len` exceeds `MAX_FALCON_MESSAGE_LEN`.
 - Any pointer + length arithmetic overflows.
 - Compute budget is exceeded.
@@ -246,10 +242,6 @@ apply across all invocations.
 - The syscall MUST be feature-gated and unavailable prior to activation.
 - The syscall MUST be registered in the runtime syscall table under the
   name `sol_falcon512_verify`.
-- The ABI MUST follow existing syscall conventions:
-  - `0` return value indicates successful execution (validity is conveyed
-    only via `result_addr`).
-  - Non-zero return values indicate internal errors.
 
 ## Alternatives Considered
 
@@ -403,9 +395,6 @@ MUST be used to enable this feature when the majority of the cluster is
 running the required version.
 
 Transactions that do not use this feature are not impacted.
-
-Existing Ed25519 signatures and other precompiles (secp256k1, secp256r1)
-continue to function unchanged.
 
 ## Scope
 
