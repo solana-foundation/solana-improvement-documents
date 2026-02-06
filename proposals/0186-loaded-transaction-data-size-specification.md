@@ -77,11 +77,11 @@ the unique intersection of:
 irrespective of how they are used.
     * The set of programdata accounts referenced by the LoaderV3 program
 accounts specified on the transaction.
-2. Each account's size is defined as the byte length of its data prior to
+2. Each loaded account's size is defined as the byte length of its data prior to
 transaction execution plus 64 bytes to account for metadata.
-3. There is an additional flat 8248 byte cost for transactions that use an
-address lookup table, accounting for the 8192 bytes for the maximum size of such
-a table plus 56 bytes for metadata.
+3. There is a flat 8248 byte cost for each address lookup table used by a
+transaction, accounting for the 8192 bytes for the maximum size of such a table
+plus 56 bytes for metadata.
 4. The total transaction loaded account data size is the sum of these sizes.
 
 Transactions may include a
@@ -102,17 +102,53 @@ counted otherwise.
 Read-only and writable accounts are treated the same. In the future, when direct
 mapping is enabled, this SIMD may be amended to count them differently.
 
+If an account does not exist, it has not been loaded, and thus its size is 0.
+
 We include programdata size for LoaderV3 programs because using the program
 account on a transaction forces an unconditional load of programdata to compile
 the program for execution. We always count it, even when the program account is
-not a transaction program ID, because the program must be available for CPI.
+not a transaction program ID, because the program must be available for CPI. If
+the programdata account does not exist, then its size is 0, and transaction
+loading continues as normal.
 
 There is no special handling for any account owned by the native loader,
-LoaderV1, or LoaderV2.
+LoaderV1, LoaderV2, or LoaderV4.
 
-Account size for programs owned by LoaderV4 is left undefined. This SIMD should
-be amended to define the required semantics before LoaderV4 is enabled on any
-network.
+The cost for address lookup tables described in point 3 does not include the
+actual byte length or the additional 64 bytes described in point 2.
+
+### Sidebar: Program ID and Loader Validation
+
+After all accounts are loaded, if the transaction's size comes at or under its
+loaded accounts data size limit, the program IDs of each instruction, along with
+their program owners, are validated. This process is not part of determining
+loaded transaction data size, but it is part of account loading (and consensus),
+and it is not explicitly defined elsewhere. So we define it here.
+
+The process is as follows; for each instruction's program ID:
+
+* Verify the account exists. Otherwise, return `ProgramAccountNotFound`.
+* Verify the program account's owner is one of:
+    * `NativeLoader1111111111111111111111111111111`
+    * `BPFLoader1111111111111111111111111111111111`
+    * `BPFLoader2111111111111111111111111111111111`
+    * `BPFLoaderUpgradeab1e11111111111111111111111`
+    * `LoaderV411111111111111111111111111111111111`
+
+  Otherwise, return `InvalidProgramForExecution`.
+
+If either of these conditions are violated, loading is aborted and the
+transaction pays fees.
+
+Previously, instead of a hardcoded list of valid loaders, the program owner was
+loaded and verified to be executable and itself owned by
+`NativeLoader1111111111111111111111111111111`. This is undesirable because there
+are many programs which match this criteria but are in fact not program loaders.
+
+Previously, all checks were skipped if the program ID was
+`NativeLoader1111111111111111111111111111111` itself. This special case has been
+removed, and `NativeLoader1111111111111111111111111111111` behaves like any
+other account.
 
 ## Alternatives Considered
 

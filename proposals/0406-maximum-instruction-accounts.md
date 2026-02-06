@@ -1,0 +1,68 @@
+---
+simd: "0406"
+title: Maximum instruction accounts
+authors: 
+    - Alexander Meißner (Anza)
+    - Lucas Steuernagel (Anza)
+category: Standard
+type: Core
+status: Review
+created: 2025-11-19
+feature: DqbnFPASg7tHmZ6qfpdrt2M6MWoSeiicWPXxPhxqFCQ
+---
+
+## Summary
+
+This SIMD imposes a hard restriction on the maximum number of account 
+references that an instruction may declare. There is already a limit of 255 
+account references imposed during serialization in ABI v0 and v1, but it does 
+not currently apply to builtin invocations or precompiles.
+
+## Motivation
+
+Although there can only be a maximum of 35 account keys in the legacy message 
+format and 256 in the v0 format, instructions can have up to 65535 (`u16::MAX`) 
+accounts, each being a `u8` index referencing a transaction account.
+
+Allowing instructions to reference more accounts than what the message format 
+allows is not necessary. On one hand there is a limit of 255 accounts for CPI 
+and user deployed programs, on the other, builtins and precompiles do not need 
+as many accounts as the message format allows. 
+
+Furthermore, since there can only be 256 unique pubkeys in a transaction, any 
+instruction referencing more than 256 will have aliased references, requiring 
+the validator to deduplicate them, even though they are unused.
+
+## New Terminology
+
+None.
+
+## Detailed Design
+
+A new verification step must be included in message sanitization for message 
+formats legacy and v0. The verification step must examine every instruction in 
+a transaction, check if the former references more than 255 accounts, and 
+throw an error otherwise. Transactions violating such a restriction must be 
+considered invalid and not included in a block. Likewise, blocks containing 
+transactions that violate such condition should be declared dead.
+
+Transactions in the v1 format 
+([SIMD-0385](https://github.com/solana-foundation/solana-improvement-documents/pull/385))
+already have a limit of 255 accounts per instruction, so this change and the 
+accompanying feature gate do not affect such newer format.
+
+## Alternatives Considered
+
+None.
+
+## Impact
+
+Calls to user deployed programs from top level instructions and CPIs will not 
+be impacted, since there is already a limit in place.
+
+Instructions that invoke builtin programs or precompiles will error out if 
+they have more than 255 accounts.
+
+## Security Considerations
+
+None.
