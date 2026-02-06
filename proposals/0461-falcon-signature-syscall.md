@@ -116,7 +116,7 @@ Falcon v1.2 specification.
 Falcon-512 signatures MUST be in the fixed-length (padded) format as
 specified in the Falcon v1.2 specification. The signature consists of:
 
-1. A header byte (as specified in draft FIPS 206 for Falcon-512 padded)
+1. A header byte (Falcon-512 padded: `0x39`)
 2. A 40-byte random salt (nonce)
 3. The padded encoding of the signature polynomial s2
 
@@ -153,7 +153,7 @@ The verification follows the Falcon v1.2 verification algorithm:
 2. Decode the signature (salt, s2) from the padded format
 3. Compute c = HashToPoint(salt || message)
 4. Compute s1 = c - s2 * h (mod q)
-5. Verify that ||(s1, s2)||^2 <= bound^2
+5. Verify that $$||(s1, s2)||^2 <= bound^2$$
 
 The HashToPoint function uses SHAKE-256 as specified in the Falcon v1.2
 to hash the message into a polynomial in Z_q[x]/(x^n + 1).
@@ -202,7 +202,7 @@ on representative hardware to determine appropriate compute costs.
 
 Based on preliminary estimates from reference implementations:
 
-- Falcon-512 verification: approximately 0.5-1ms on modern hardware
+- Falcon-512 verification: approximately 10-20µs on modern hardware
 - This translates to approximately 15,000-30,000 CUs per verification
 
 Final compute costs MUST be determined through benchmarking in accordance
@@ -228,7 +228,8 @@ Where `falcon_verify_base` and `falcon_hash_bytes_per_cu` are runtime
 parameters set by benchmarking. `MAX_FALCON_MESSAGE_LEN` is a fixed
 constant defined by this SIMD and enforced by the feature gate.
 **Tentative**: `MAX_FALCON_MESSAGE_LEN = 65_535`.
-Cost calculation MUST use overflow-checked arithmetic.
+Cost calculation MUST use saturating arithmetic and MUST NOT fail due to
+overflow.
 
 Programs can invoke the syscall multiple times to verify multiple
 signatures within a single instruction; the total compute budget will
