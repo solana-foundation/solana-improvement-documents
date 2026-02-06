@@ -42,10 +42,6 @@ This proposal depends on the following previously accepted proposals:
 
     Specifies BLS public key generation and proof of possession verification
 
-- **[SIMD-0458]: Stop Using Static SimpleVote Transaction Cost**
-
-    Removes statically defined compute unit costs for Simple Vote transactions
-
 ### Feature Activation Ordering
 
 The `InitializeAccountV2` instruction introduced by this proposal allows
@@ -85,7 +81,6 @@ creation.
 [SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
 [SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/pull/291
 [SIMD-0387]: https://github.com/solana-foundation/solana-improvement-documents/pull/387
-[SIMD-0458]: https://github.com/solana-foundation/solana-improvement-documents/pull/458
 
 ## Detailed Design
 
