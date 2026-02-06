@@ -23,6 +23,9 @@ change default value from `3480` to `6960`, change `exemption_threshold` to
 `1.0` and deprecate it from the protocol. This will enable us to remove `f64` 
 math from all Rent-related SDKs and onchain programs moving forward.
 
+To align the cluster value of `burn_percent` with current SDK defaults, we
+will also explicity set `burn_percent` to `50`.
+
 ## Motivation
 
 Emulating floating point math is expensive inside of SVM due to the lack of 
@@ -83,6 +86,9 @@ pub fn minimum_balance(&self, data_len: usize) -> u64 {
 Validator implementations should stop using `exemption_threshold` and only use
 the `lamports_per_byte` value. Any existing program using the current 
 implementation will be unaffected.
+
+Validator implementations should also set `burn_percent` to `50` to align all
+cluster values to the current value of [DEFAULT_BURN_PERCENT](https://github.com/anza-xyz/solana-sdk/blob/f2d15de6f7a1715ff806f0c39bba8f64bf6a587d/rent/src/lib.rs#L69).
 
 ## Alternatives Considered
 
