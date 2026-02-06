@@ -1,6 +1,6 @@
 ---
 simd: '0461'
-title: Falcon-512 Signature Precompile
+title: Falcon-512 Signature Syscall
 authors:
   - ZZ
 category: Standard
@@ -12,7 +12,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Adding a precompile to support the verification of Falcon-512 signatures,
+Adding a syscall to support the verification of Falcon-512 signatures,
 providing post-quantum cryptographic security for Solana transactions.
 This enables quantum-resistant signature verification as an alternative
 to the existing Ed25519 signatures.
@@ -34,7 +34,7 @@ chosen for its compact signature size relative to other lattice-based
 schemes, making it particularly suitable for blockchain applications
 where transaction size directly impacts costs and throughput.
 
-By adding Falcon-512 signature verification as a precompile, Solana can:
+By adding Falcon-512 signature verification as a syscall, Solana can:
 
 1. **Future-proof the network**: Enable users to protect high-value
    accounts and critical infrastructure against future quantum attacks.
@@ -57,13 +57,7 @@ document are to be interpreted as described in RFC 2119.
 
 ## Dependencies
 
-This proposal depends on the following previously accepted proposals:
-
-- **[SIMD-0152]: Precompiles**
-
-    This SIMD follows the unified precompile behavior defined in SIMD-0152.
-
-[SIMD-0152]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0152-precompiles.md
+None.
 
 ## New Terminology
 
@@ -83,7 +77,7 @@ This proposal depends on the following previously accepted proposals:
 
 ## Detailed Design
 
-The precompile's purpose is to verify Falcon-512 signatures in accordance
+The syscall's purpose is to verify Falcon-512 signatures in accordance
 with draft FIPS 206 (FN-DSA).
 
 ### Falcon-512 Parameters
@@ -98,42 +92,27 @@ The following parameters define Falcon-512:
 | Signature size | 666 bytes (padded, fixed) |
 | Security level | NIST Level I (~128 bits classical) |
 
-### Program
+### Syscall
 
-ID: `Fa1con512SigVerify11111111111111111111111111` (placeholder)
-The final program ID MUST be assigned via the standard precompile
-program deployment process.
+We propose a new syscall that verifies a single Falcon-512 signature per call:
 
-In accordance with [SIMD-0152], the program's `verify` instruction MUST
-accept the following data:
-
+```rust
+define_syscall!(fn sol_falcon512_verify(
+    signature_addr: *const u8, // 666 bytes, fixed-length padded signature
+    public_key_addr: *const u8, // 897 bytes
+    message_addr: *const u8,
+    message_len: u64,
+    result_addr: *mut u8 // 1 = valid, 0 = invalid
+) -> u64);
 ```
-struct Falcon512SigVerifyInstruction {
-    num_signatures: uint8 LE,                  // Number of signatures to verify
-    padding: uint8 LE,                         // Single byte padding
-    offsets: Array<Falcon512SignatureOffsets>, // Array of offset structs
-    additionalData?: Bytes,                    // Optional additional data
-}
 
-struct Falcon512SignatureOffsets {
-    signature_offset: uint16 LE,               // Offset to signature
-    signature_instruction_index: uint16 LE,    // Instruction index to signature
-    public_key_offset: uint16 LE,              // Offset to public key
-    public_key_instruction_index: uint16 LE,   // Instruction index to public key
-    message_offset: uint16 LE,                 // Offset to start of message data
-    message_length: uint16 LE,                 // Size of message data
-    message_instruction_index: uint16 LE,      // Instruction index to message
-}
-```
+Programs can batch verifications by invoking the syscall multiple times.
 
 Note: This proposal uses the fixed-length (padded) Falcon-512 signature
 encoding. Signatures MUST be exactly 666 bytes. This value is specified
 in draft FIPS 206 and may change in the final specification; this
 document and implementations MUST be updated to match the final FIPS
 206 before activation.
-
-The padding byte MUST be ignored and MAY contain any value. It is
-reserved for alignment/forward compatibility with SIMD-0152.
 
 ### Signature Format
 
@@ -144,9 +123,10 @@ specified in draft FIPS 206. The signature consists of:
 2. A 40-byte random salt (nonce)
 3. The padded encoding of the signature polynomial s2
 
-The precompile MUST reject signatures that:
+The syscall MUST treat signatures as invalid if they:
 
-- Have a length other than 666 bytes
+- Are provided with insufficient buffer length (the syscall always reads
+  exactly 666 bytes)
 - Have an invalid header byte
 - Fail decoding
 - Have coefficients outside the valid range
@@ -160,10 +140,11 @@ Public keys MUST be in the format specified in draft FIPS 206 Section 3.3:
 
 Total public key size: 897 bytes
 
-The precompile MUST reject public keys that:
+The syscall MUST treat public keys as invalid if they:
 
+- Are provided with insufficient buffer length (the syscall always reads
+  exactly 897 bytes)
 - Have an invalid header byte
-- Have an incorrect length
 - Fail decoding
 
 ### Verification Algorithm
@@ -186,125 +167,37 @@ final FIPS 206 value is published.
 Domain separation for HashToPoint MUST follow the draft FIPS 206
 definition for Falcon-512. If Solana-specific domain separation is
 desired, it MUST be applied by the caller to the message bytes before
-invoking the precompile.
+invoking the syscall.
 
 ### Behavior
 
-In accordance with [SIMD-0152], the behavior of the precompile MUST be:
+The syscall MUST:
 
-1. If instruction `data` is empty, return error.
-2. The first byte of `data` is the number of signatures `num_signatures`.
-3. If `num_signatures` is 0, return error.
-4. If `num_signatures` > 8, return error (MAX_ALLOWED_PRECOMPILE_SIGNATURES).
-5. Expect enough bytes of `data` for `num_signatures` instances of
-   `Falcon512SignatureOffsets`.
-6. The second byte (padding) MUST be ignored and MAY contain any value.
-7. Iterate `num_signatures` times:
-   a. Read `offsets`: an instance of `Falcon512SignatureOffsets`
-   b. Based on the `offsets`, retrieve `signature`, `public_key`, and
-      `message` bytes. If any of the three fails, return error.
-   c. Validate signature length is exactly 666 bytes. Decode failures
-      during verification supersede length checks.
-   d. Invoke the Falcon-512 verification function. If it fails, return error.
+1. Read exactly 666 bytes at `signature_addr` and 897 bytes at
+   `public_key_addr`.
+2. Read `message_len` bytes at `message_addr`.
+3. Write the verification result to `result_addr` as a single byte:
+   `1` for valid, `0` for invalid.
 
-All arithmetic operations (offset + length, num_signatures * struct_size,
-data_start_position increments) MUST use overflow-checked arithmetic.
-If overflow occurs, return error.
+The syscall MUST treat any signature or public key that fails decoding
+or format validation as invalid, and MUST return success with
+`result_addr` set to `0` (i.e., invalid signature is not a fatal error).
 
-```
-/// Pseudocode for verification
+The syscall returns `0` on successful execution (regardless of signature
+validity) after writing `result_addr`. Non-zero return values are
+reserved for internal errors.
 
-SERIALIZED_OFFSET_STRUCT_SIZE = 14  // 7 uint16 fields
-PUBLIC_KEY_LENGTH = 897
-SIGNATURE_LENGTH = 666
+The syscall MUST abort the virtual machine if any of the following are
+true:
 
-function verify() {
-    if length_of_data == 0 {
-        return Error
-    }
-
-    num_signatures = data[0]
-
-    if num_signatures == 0 {
-        return Error
-    }
-
-    if num_signatures > 8 {
-        return Error
-    }
-
-    // Check for overflow before arithmetic
-    required_length = checked_add(
-        checked_mul(num_signatures, SERIALIZED_OFFSET_STRUCT_SIZE),
-        2
-    )
-    if required_length == OVERFLOW || length_of_data < required_length {
-        return Error
-    }
-
-    all_tx_data = { data, instruction_datas }
-    data_start_position = 2
-
-    // Iterate num_signatures times
-    for i in 0 to num_signatures (exclusive) {
-        offsets = (Falcon512SignatureOffsets)
-            all_tx_data.data[data_start_position..
-                             data_start_position + SERIALIZED_OFFSET_STRUCT_SIZE]
-        data_start_position += SERIALIZED_OFFSET_STRUCT_SIZE
-
-        signature = get_data_slice(all_tx_data,
-                                   offsets.signature_instruction_index,
-                                   offsets.signature_offset,
-                                   SIGNATURE_LENGTH)
-        if !signature {
-            return Error
-        }
-
-        public_key = get_data_slice(all_tx_data,
-                                    offsets.public_key_instruction_index,
-                                    offsets.public_key_offset,
-                                    PUBLIC_KEY_LENGTH)
-        if !public_key {
-            return Error
-        }
-
-        message = get_data_slice(all_tx_data,
-                                 offsets.message_instruction_index,
-                                 offsets.message_offset,
-                                 offsets.message_length)
-        if !message {
-            return Error
-        }
-
-        result = falcon512_verify(signature, public_key, message)
-        if result != Success {
-            return Error
-        }
-    }
-    return Success
-}
-
-// This function is re-used across precompiles in accordance with SIMD-0152
-fn get_data_slice(all_tx_data, instruction_index, offset, length) {
-    if instruction_index == 0xFFFF {
-        instruction_data = all_tx_data.data
-    } else {
-        if instruction_index >= num_instructions {
-            return Error
-        }
-        instruction_data = all_tx_data.instruction_datas[instruction_index]
-    }
-
-    start = offset
-    // Check for overflow before arithmetic
-    end = checked_add(offset, length)
-    if end == OVERFLOW || end > length(instruction_data) {
-        return Error
-    }
-
-    return instruction_data[start..end]
-}
-```
+- The VM memory ranges `[signature_addr, signature_addr + 666)` or
+  `[public_key_addr, public_key_addr + 897)` are not readable.
+- The VM memory range `[message_addr, message_addr + message_len)` is
+  not readable.
+- The VM memory range `[result_addr, result_addr + 1)` is not writable.
+- `message_len` exceeds `MAX_FALCON_MESSAGE_LEN`.
+- Any pointer + length arithmetic overflows.
+- Compute budget is exceeded.
 
 ### Compute Cost
 
@@ -322,8 +215,41 @@ Based on preliminary estimates from reference implementations:
 Final compute costs MUST be determined through benchmarking in accordance
 with established Solana compute unit pricing conventions (33ns/CU).
 
-The maximum number of Falcon signatures per transaction is 8, consistent
-with the limit defined in SIMD-0152 for all precompiles.
+Because the verification hashes `message_len` bytes via SHAKE-256, the
+syscall MUST meter compute cost for hashing work proportionally to
+`message_len`, or enforce a maximum `message_len` to cap total cost.
+This proposal specifies both:
+
+- `MAX_FALCON_MESSAGE_LEN`: maximum allowed `message_len` (bytes). Calls
+  with larger values MUST abort the VM.
+- `falcon_hash_bytes_per_cu`: bytes per CU charged for hashing work.
+
+Compute cost MUST be charged as:
+
+```
+falcon_verify_base
++ ceil(message_len / falcon_hash_bytes_per_cu)
+```
+
+Where `falcon_verify_base` and `falcon_hash_bytes_per_cu` are runtime
+parameters set by benchmarking. `MAX_FALCON_MESSAGE_LEN` is a fixed
+constant defined by this SIMD and enforced by the feature gate.
+**Tentative**: `MAX_FALCON_MESSAGE_LEN = 65_535`.
+Cost calculation MUST use overflow-checked arithmetic.
+
+Programs can invoke the syscall multiple times to verify multiple
+signatures within a single instruction; the total compute budget will
+apply across all invocations.
+
+### Syscall Integration
+
+- The syscall MUST be feature-gated and unavailable prior to activation.
+- The syscall MUST be registered in the runtime syscall table under the
+  name `sol_falcon512_verify`.
+- The ABI MUST follow existing syscall conventions:
+  - `0` return value indicates successful execution (validity is conveyed
+    only via `result_addr`).
+  - Non-zero return values indicate internal errors.
 
 ## Alternatives Considered
 
@@ -349,19 +275,19 @@ with the limit defined in SIMD-0152 for all precompiles.
 Falcon-512 provides the best balance of security, signature size, and
 verification performance for blockchain applications.
 
-### 2. Syscall Instead of Precompile
+### 2. Precompile Instead of Syscall
 
-Similar to the discussion in SIMD-0048/0075, implementing as a syscall
-would ease integration for developers by avoiding instruction
-introspection. However, precompiles are the established pattern for
-signature verification in Solana, and following this pattern ensures
-consistency.
+Following the existing signature verification pattern (Ed25519 and
+secp256k1) via precompiles would keep consistency with established
+native programs. However, a syscall avoids instruction introspection,
+is simpler for program developers, and aligns with other cryptographic
+operations already exposed via syscalls.
 
 ### 3. On-chain BPF Implementation
 
 Implementing Falcon verification in BPF would consume excessive compute
 units due to the complex polynomial arithmetic involved, making it
-impractical without precompile support.
+impractical without syscall support.
 
 ### 4. Hash Function Variants
 
@@ -377,21 +303,21 @@ NIST-compliant SHAKE-256 variant to:
 
 ### For dApp Developers
 
-- New precompile available for post-quantum signature verification
+- New syscall available for post-quantum signature verification
 - Larger signature and public key sizes require adjustments to account
   data structures and transaction layouts
 - SDK updates will be needed to support Falcon key generation and signing
 
 ### For Validators
 
-- Additional precompile to implement and maintain
+- Additional syscall to implement and maintain
 - Higher computational cost per Falcon signature verification
 - No impact on existing transaction processing
 
 ### For Core Contributors
 
 - Implementation of Falcon-512 verification following draft FIPS 206
-- Integration with existing precompile infrastructure per SIMD-0152
+- Integration with the syscall interface and compute budget accounting
 - Development of comprehensive test suites for cross-client compatibility
 
 ## Security Considerations
@@ -424,7 +350,7 @@ short signature vectors that satisfy the verification equation.
 
 ### Cross-Client Consistency
 
-As with other precompiles, it is imperative that there is bit-level
+As with other syscalls, it is imperative that there is bit-level
 reproducibility between implementations across different validator
 clients. Any discrepancy could cause network forks.
 
@@ -436,7 +362,7 @@ Recommendations:
 
 ### Migration Considerations
 
-This precompile does NOT replace Ed25519 for transaction signing. It
+This syscall does NOT replace Ed25519 for transaction signing. It
 provides an additional verification capability that applications can
 choose to use. A full migration of Solana's core transaction signatures
 to post-quantum algorithms would require a separate, more comprehensive
@@ -464,14 +390,14 @@ proposal.
    libraries are less mature than classical cryptography.
 
 6. **Draft specification**: FIPS 206 is not yet finalized. If the final
-   specification differs from the current draft, this precompile may
+   specification differs from the current draft, this syscall may
    require updates before activation. The implementation SHOULD track
    the NIST standardization process and incorporate any changes from
    the final FIPS 206 specification.
 
 ## Backwards Compatibility
 
-Transactions using the Falcon precompile instruction cannot be processed
+Transactions using the Falcon syscall cannot be processed
 on Solana versions that do not implement this feature. A feature gate
 MUST be used to enable this feature when the majority of the cluster is
 running the required version.
@@ -483,7 +409,7 @@ continue to function unchanged.
 
 ## Scope
 
-This precompile provides **signature verification only**. Key generation
+This syscall provides **signature verification only**. Key generation
 and signing are out of scope and must be performed off-chain. Note that
 Falcon signing is more complex than Ed25519 signing, requiring discrete
 Gaussian sampling over lattices. Implementers should use well-audited
@@ -506,7 +432,6 @@ cross-client compatibility.
 - [Draft FIPS 206: FN-DSA (Falcon)][fips-206] - NIST Post-Quantum Signature
   Standard (Initial Public Draft)
 - [EIP-8052: Falcon Signature Precompile][eip-8052]
-- [SIMD-0152: Precompiles][simd-0152]
 - [SIMD-0075: Precompile for secp256r1][simd-0075]
 - [Falcon Reference Implementation](https://falcon-sign.info/)
 - [NIST PQC Standardization](https://csrc.nist.gov/projects/post-quantum-cryptography)
