@@ -15,8 +15,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 This proposal introduces the `InitializeAccountV2` instruction to the Vote
 program, which allows creating new vote accounts with all vote state v4 fields
-— including BLS public keys — at account creation time. It also disallows the
-legacy `InitializeAccount` instruction.
+— including BLS public keys — at account creation time.
 
 ## Motivation
 
@@ -115,13 +114,6 @@ parameters.
 
 The BLS PoP verification will cost 34,500 CUs, as described in [SIMD-0387].
 
-### Disallow legacy InitializeAccount instruction
-
-After the feature gate associated with this SIMD is activated, the legacy
-`InitializeAccount` instruction will be disallowed and will result in a
-transaction error. All new vote accounts must be created using
-`InitializeAccountV2`.
-
 ## Impact
 
 ### Before feature gate in this SIMD is activated
@@ -132,10 +124,9 @@ instructions (ie. `UpdateCommissionBps`).
 
 ### After the feature gate in this SIMD is activated
 
-All new vote accounts must be created using `InitializeAccountV2`, which
-requires setting all vote state v4 fields at creation time including the BLS
-public key and proof of possession. The legacy `InitializeAccount` instruction
-will be disallowed.
+New vote accounts can be created using `InitializeAccountV2`, which sets all
+vote state v4 fields at creation time including the BLS public key and proof of
+possession. The legacy `InitializeAccount` instruction remains available.
 
 ## Security Considerations
 
