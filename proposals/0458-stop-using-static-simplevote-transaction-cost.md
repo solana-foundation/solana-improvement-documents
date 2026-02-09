@@ -54,7 +54,7 @@ summarized in table:
 
 - Cost tracking:
   The impact is expected to be minimal, as the actual executed CU consumption of
-Simple Vote transactions is close to the previously statically defined value.
+Simple Vote transactions is identical to the previously statically defined value for the vast majority of votes.  CU consumption will only change for unusual vote transactions that still classify as simple votes (e.g. two signatures, or additional writable accounts), or unusually large vote accounts.
 
   [ * ]statically define CUs for simple vote includes 1 signature (720 CU), 2
 write locks (600 CU), 1 vote instruction which has 2,100 CU, and 8 CU to load
