@@ -44,22 +44,30 @@ N/A
 
 ## Impact
 
+The impact on cost consuming/tracking, and CU reserving for simple vote can be
+summarized in table:
+
+| |Total consumed CUs	| Total reserved CUs|
+|:--|:--|:--|
+|Current	|3428	|3428|
+|Proposed	|3428* |19812**	|
+
 - Cost tracking:
   The impact is expected to be minimal, as the actual executed CU consumption of
 Simple Vote transactions is close to the previously statically defined value.
 
-  Detail: statically define CUs for simple vote includes 1 signature (720 CU), 2
+  [ * ]statically define CUs for simple vote includes 1 signature (720 CU), 2
 write locks (600 CU), 1 vote instruction which has 2,100 CU, and 8 CU to load
 small accounts, total 3428 CU. All components stay same except the CU for loaded
 accounts data size may change, which is a small part overall CUs.  
 
 - Block production:
-  Under the current cost model, Simple Vote transactions may have higher
-estimated CUs due to inclusion of default account data loading costs. For
-block-packing strategies that reserve CUs upfront and refund unused CUs after
-execution, this may result in larger initial CU reservations for Simple Vote
-transactions, followed by refunds. This effect is specific to such
-“reserve-then-refund” packing strategies.
+  [ ** ] Under the current cost model, Simple Vote transactions may have higher
+estimated CUs ( about 16K additional CUs) due to inclusion of default account
+data loading costs. For block-packing strategies that reserve CUs upfront and
+refund unused CUs after execution, this may result in larger initial CU 
+reservations for Simple Vote transactions, followed by refunds. This effect is
+specific to such “reserve-then-refund” packing strategies.
 
 ## Security Considerations
 
