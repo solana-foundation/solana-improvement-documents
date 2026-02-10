@@ -5,6 +5,7 @@ authors:
   - Sam Kim (Anza)
   - Quentin Kniep (Anza)
   - Wen Xu (Anza)
+  - Joe Caulfield (Anza)
 category: Standard
 type: Core
 status: Review
@@ -42,31 +43,39 @@ N/A
 
 ## Dependencies
 
-- Alpenglow is specified in [SIMD 326](https://github.com/solana-foundation/solana-improvement-documents/pull/326)
+This proposal depends on the following previously accepted proposals:
 
-- VoteStateV4 is specified in [SIMD 185](https://github.com/solana-foundation/solana-improvement-documents/pull/185)
-and it adds an optional BLS public key field
+- **[SIMD-0185]: Vote Account v4**
 
-- Requiring BLS public key for Alpenglow is specified in [SIMD 357](https://github.com/solana-foundation/solana-improvement-documents/pull/357)
+    Adds the vote state v4 structure including the BLS public key field
+
+- **[SIMD-0326]: Alpenglow**
+
+    Specifies the new consensus protocol that requires BLS signatures
+
+- **[SIMD-0357]: Require BLS Public Key for Alpenglow**
+
+    Specifies that vote accounts must have a BLS public key to participate in
+    voting
+
+- **[SIMD-0458]: Stop Using Static SimpleVote Transaction Cost**
+
+    Removes statically defined compute unit costs for Simple Vote transactions
+
+[SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
+[SIMD-0326]: https://github.com/solana-foundation/solana-improvement-documents/pull/326
+[SIMD-0357]: https://github.com/solana-foundation/solana-improvement-documents/pull/357
+[SIMD-0458]: https://github.com/solana-foundation/solana-improvement-documents/pull/458
 
 ## Detailed Design
 
-BLS keypairs can be generated randomly like ed25519 keypairs. But to save the
-users some trouble on keypair management, the current plan is to initially
-derive their BLS keypair used in Alpenglow votes based on their ed25519 vote
-keypair. In other words, with an existing ed25519 vote keypair, the operators
-can safely regenerate the associated BLS keypair on demand. Also during
-validator operations, the users still only need to supply the vote keypair as
-before.
+BLS keypairs can be generated or derived however users choose; the Vote program
+does not enforce any particular derivation scheme.
 
-The association of BLS keypair with vote authority ed25519 keypair is the
-default client behavior to simplify Alpenglow launch. After Alpenglow launches
-we may get rid of ed25519 vote keypair and allow users to randomly generate BLS
-keypairs.
-
-When users create vote accounts, they must register their BLS public key by
-storing it in the newly created vote account. When they modify their vote
-authority, they must re-register the new corresponding BLS key.
+Registering a BLS public key on a vote state v4 account is done via the
+`VoteAuthorize` instruction with the new `VoterWithBLS` variant, as described
+in the later section. A proof of possession that verifies ownership of the BLS
+keypair is required, as described in the later section.
 
 ### Changes to vote program
 
@@ -143,37 +152,12 @@ During PoP verification, the validators will construct the same message, then
 check that the `authorized_voter_bls_proof_of_possession` is the correct
 signature.
 
-#### Add InitializeAccountV2
-
-```rust
-InitializeAccountV2(VoteInitV2),
-```
+#### Add new variant of VoteAuthorize
 
 ```rust
 pub const BLS_PUBLIC_KEY_COMPRESSED_SIZE: usize = 48;
 pub const BLS_SIGNATURE_COMPRESSED_SIZE: usize = 96;
 
-pub struct VoteInitV2 {
-  pub node_pubkey: Pubkey,
-  pub authorized_voter: Pubkey,
-  pub authorized_voter_bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
-  pub authorized_voter_bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
-  pub authorized_withdrawer: Pubkey,
-  pub inflation_rewards_commission_bps: u16,
-  pub inflation_rewards_collector: Pubkey,
-  pub block_revenue_commission_bps: u16,
-  pub block_revenue_collector: Pubkey,
-}
-```
-
-Upon receiving the transaction, the vote program will perform a BLS
-verification on submitted BLS public key and associated proof of possession.
-The transaction will fail if the verification failed. Otherwise the new vote
-account is created with given parameters.
-
-#### Add new variant of VoteAuthorize
-
-```rust
 pub struct VoterWithBLSArgs {
     bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
     bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
@@ -190,6 +174,10 @@ Upon receiving the transaction, if the parameter is of the new variant, the
 vote program will perform a BLS verification on submitted BLS public key and
 associated proof of possession. The transaction will fail if the verification
 failed. Otherwise the vote authority change will be recorded in vote account.
+
+Voters can set or update their BLS public key without changing their authorized
+voter by calling `VoteAuthorize` with `VoterWithBLS` and providing the current
+authorized voter.
 
 ## Impact
 
