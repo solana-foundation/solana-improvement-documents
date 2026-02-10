@@ -16,8 +16,8 @@ feature: (fill in with feature key and github tracking issues once accepted)
 This proposal introduces a new parallelism-aware CU tracking algorithm
 and serial execution constraint. The goal is to properly bound worst case
 slow-replay edge cases that aren’t covered by the existing block CU limit and
-per-account CU write limit. Properly bounding worst case replay time will allow
-us to increase global CU limit faster
+per-account CU write limit, while also increasing the total block capacity
+safely for parallel workloads.
 
 ## Motivation
 
@@ -26,23 +26,23 @@ cluster running a default client on reference hardware. The more accurately the
 protocol can bound worst case replay time, the more throughput can be allowed in
 the average case.
 
-Solana currently enforces 4 block level constraints:
+Solana currently enforces 4 block-level constraints:
 | Type | Current Block Limit |
 |------|----------------------|
-| Max Block Units | 50M
+| Max Block Units | 60M
 | Max Writable Account Units | 12M |
 | Max Vote Units | 36M | 36M |
 | Max Block Accounts Data Size Delta | 100MB | 100MB |
 
-The Max Writable Account Unit limit which specifies the maximum number of CU's
-that can be consumed by transactions writing to a single account was motivated
-by the desire to enforce paralelism in replay. It was originally set to `12M` CU
-back when the Global Block CU limit was `48m = 12m*4` because the default client
-implementation called for execution on `4` execution threads. Unfortunately,
-this constraint doesn't properly bound the worst case replay behavior of a
-block. It is possible to construct a block with overlapping write account
-accesses such that all `50m` CU must be replayed serially on a single thread but
-no single account is written more than the `12m` CU limit.
+The Max Writable Account Unit limit, which specifies the maximum number of
+CUs that can be consumed by transactions write-locking a single account, is
+intended to limit account contention. It was originally set to `12M` CUs
+when the Global Block CU limit was `48m = 12m*4` because the default client
+implementation used `4` execution threads. Unfortunately,
+this constraint alone doesn't properly bound worst-case replay behavior:
+it's possible to construct a block with overlapping write account
+accesses such that all `60m` CUs must be replayed serially but
+no single account exceeds the `12m` CU limit.
 
 The per-account limit doesn't only fail in these pathological cases. Data
 sampled from mainnet shows that among blocks with 40M+ CUs, the **median**
@@ -60,15 +60,15 @@ quickly.
 ## New Terminology
 
 - **TX-DAG**: a dependency graph where each node is a transaction and each edge
-- represents execution dependencies between transactions that contend for the
-- same account lock. The direction of the edge is determined by the relative
-- position of each transaction in the block order.
+  represents execution dependencies between transactions that contend for the
+  same account lock. The direction of the edge is determined by the relative
+  position of each transaction in the block order.
 - **Track**: ordered list of transactions belonging to a subset of transactions
-- in a given block. Analogous to a serial execution schedule on a single thread.
+  in a given block. Analogous to a serial execution schedule on a single thread.
 - **Vote Track**: track dedicated to only simple vote transactions.
 - **Deterministic Transaction Assignment Algorithm (DTAA)**: streaming algorithm
-- that adds each incoming transaction to the TX-DAG and assigns it to a track
-- based on previous assignments and the dependencies encoded by the TX-DAG.
+  that adds each incoming transaction to the TX-DAG and assigns it to a track
+  based on previous assignments and the dependencies encoded by the TX-DAG.
 - **Critical Path**: longest CU-weighted path in a TX-DAG.
 - **Makespan**: the highest CU track produced by DTAA to an entire block.
 - **Serial Execution Limit**: cap on makespan.
@@ -80,30 +80,28 @@ limits:
 
 | Type | Current Block Limit | Proposed Block Limit |
 |------|----------------------|----------------------|
-| Max Block Units | 50M | 50M |
+| Max Block Units | 60M | 60M |
 | Max Writable Account Units | 12M | 12M |
 | **NEW!** Max Serial Execution Units | N/A | 25M |
 | Max Vote Units | 36M | 36M |
 | Max Block Accounts Data Size Delta | 100MB | 100MB |
 
-The change introduces a new Max Serial Execution Units constraint at 25M CUs.
+The change introduces a new Max Serial Execution Units constraint of 25M CUs.
 
-High-level: the protocol cost tracker maintains CU counts for each execution
-track. *After* transactions are executed, they are sent to a cost tracker. As
-the cost tracker receives transactions, it processes them in block order (based
-on their relative positions in the block) , it deterministically assigns each
+High-level: as the cost tracker receives executed transactions, it
+deterministically assigns each
 executed transaction to a virtual execution track and updates that track's CU
-amount to account for the used CUs of the transaction, all of its parents in the
-`TX-DAG`, and all previous transactions assigned to the same track. This is
+amount to account for the CUs consumed by (1) the transaction itself,
+(2) all of its parents in the `TX-DAG`, and (3) all previous transactions
+assigned to the same track. This is
 equivalent to virtual scheduling, where each task's virtual start time depends
-on completion of tasks that must complete before it.
+on completion of tasks that must complete before it. No track can have a CU
+count exceeding the Max Serial Execution limit.
 
-Note that this change is purely a resource constraint on which blocks are
-considered valid and not a prescription on how transactions should be scheduled
-either duing scheduling or replay. If validators are running more performant
-hardware they are welcome to use additional cores to schedule or replay
-transactions. The goal of this proposal is to ensure that blocks can replay in a
-timeley manner on reference hardware.
+Note that this is used purely for block validity checks and isn't a
+prescription on how transactions should be scheduled
+during replay. Validators are welcome to use additional cores or
+a different scheduling algorithm for that purpose.
 
 Example applications of DTAA to mainnet blocks (the red transactions are on the
 critical path):
@@ -198,12 +196,13 @@ APPLY_TX_COST(t):
   transactions in the standard tracks, and be parents in the `TX-DAG` for those
   transactions.
 
-### Implementation
+### Implementation Details
 
 - Block Verification (Replay): because real CUs rather than requested CUs are
   used for determining if constraints are satisfied, cost tracking must
   occur post-execution (i.e. `APPLY_TX_COST` must be called after `tx` is
-  executed). Block execution during replay doesn't guarantee that transactions
+  executed).
+  - Block execution during replay doesn't guarantee that transactions
   in a block will complete execution in the same order they appear in the block,
   so cost tracking must account for this somehow. For example, the cost tracker
   can handle re-ordering internally or a synchronization mechanism in the bank
@@ -211,11 +210,13 @@ APPLY_TX_COST(t):
 - Block Production: similar post-execution requirements apply here as well; the
   main difference being that the position of a transaction in the block, in
   addition to the real CUs it consumes, isn't determined until post-execution
-  when the transaction is processed by the PoH recorder. Caveat: this implies
+  when the transaction is processed by the PoH recorder.
+  - Caveat: this implies
   failure to satisfy the serial execution constraint may occur **after** a
   transaction has already been executed, which would waste compute resources.
   This can be mitigated partially with additional, speculative pre-execution
-  checks (as is done currently by apply the requested CUs to the cost tracker).
+  checks (as is done currently by applying the requested CUs to the cost
+  tracker).
 
 ### DTAA Optimality
 
