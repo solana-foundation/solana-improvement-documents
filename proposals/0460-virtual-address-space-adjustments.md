@@ -1,0 +1,83 @@
+---
+simd: '0460'
+title: Virtual Address Space Adjustments
+authors:
+  - Alexander Meißner (Anza)
+category: Standard
+type: Core
+status: Review
+created: 2026-01-30
+feature: TBD
+supersedes: 0219
+---
+
+## Summary
+
+Virtual address space related changes split off from SIMD-0219.
+
+## Motivation
+
+In a recent meeting between the Agave and Firedancer core developers it was
+decided that SIMD-0219 should be split into two feature gates. This SIMD covers
+the second half which is focused on the address translation, memory mappings,
+reallocation / resizing, zeroing and defining empty / unmapped address space.
+
+## New Terminology
+
+None.
+
+## Detailed Design
+
+### Additional changes
+
+Stack frame gaps must be deactivated globally (even for existing SBPFv0
+programs). So far they were only deactivated for newer SBPF versions.
+
+### Changes inherited from SIMD-0219
+
+Memory accesses (both by the program and by syscalls) which span across memory
+mapping regions are considered access violations. Accesses to multiple regions
+(e.g. by memcpy syscalls) have to be split into multiple separate accesses
+(one for each region) by the user.
+
+For all memory accesses to the payload address space of an account which is
+flagged as writable and owned by the currently executed program, check that:
+
+- The access is completely within the maximum account length,
+otherwise `InstructionError::InvalidRealloc` must be thrown.
+- The access is completely within the rest of the account growth budget of the
+transaction, otherwise `InstructionError::InvalidRealloc` must be thrown.
+- The access is completely within the current length of the account,
+otherwise extend the account with zeros to the maximum allowed by the previous
+two checks.
+
+For loads / read accesses to the payload address space of an account check
+that:
+
+- The access is completely within the current length of the account,
+otherwise `InstructionError::AccountDataTooSmall` must be thrown.
+
+For stores / write accesses to the payload address space of an account check
+that:
+
+- The account is flagged as writable,
+otherwise `InstructionError::ReadonlyDataModified` must be thrown
+- The account is owned by the currently executed program,
+otherwise `InstructionError::ExternalAccountDataModified` must be thrown.
+
+## Alternatives Considered
+
+Leaving SIMD-0219 as is.
+
+## Impact
+
+Splitting SIMD-0219 should have no impact on dApp developers or validators.
+An experiment to gauge the impact of the additional changes is currently
+running.
+
+## Security Considerations
+
+Removing the stack frame gaps globally (even for SBPFv0) programs can affect
+programs which rely on the address space layout of the stack either by using
+absolute addressing, relative addressing across stack frames or being dependent
+on bugs such accesses reaching over the boundary of stack frames.
