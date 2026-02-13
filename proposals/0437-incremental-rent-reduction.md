@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Idea
 created: 2025-12-22
-supersedes: 0436
+supersedes: '0436'
 feature: (fill in with feature key and github tracking issues once accepted)
 ---
 
@@ -19,6 +19,10 @@ providing a more granular reduction schedule.
 
 Requires SIMD-0392: Relaxation of post-execution min_balance check,
 to allow for subsequent rent increases if necessary.
+
+Requires SIMD-0194: deprecate rent exemption threshold, to avoid
+unnecessary floating point math when setting the rent params on
+feature activation.
 
 ## Motivation
 
