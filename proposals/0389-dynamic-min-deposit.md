@@ -18,7 +18,7 @@ extends:
 Reduce the minimum deposit rate by 10x (set baseline
 `min_deposit = 0.1 * min_balance_legacy`) and make this the new floor.
 
-Introduce a supervisory integral controller targeting 2 GB/epoch state growth
+Introduce a supervisory integral controller targeting 5.5 GiB/epoch state growth
 as the safety threshold. Under normal conditions, `min_deposit` remains pinned
 at the 0.1x floor.
 
@@ -30,10 +30,10 @@ minimum deposit increases.
 Introduce a real-time price signal for state demand and apply back pressure to
 prevent runaway state growth. The proposal gives the protocol more tuning knobs
 (controller parameters such as deadband H, bounds, step sizes, clamps, target growth)
-than a single fixed constant, enabling better behavior targeting. With an
-average on-chain state growth currently around ~400 MB per epoch, targeting 2
-GB per epoch allows significant minimum-deposit reductions while keeping growth
-bounded and predictable.
+than a single fixed constant, enabling better behavior targeting. The target
+state growth (5.5 GiB/epoch) is set from first principles based on validator
+resource capacity (SSD size and upgrade cycle); see *Rationale for target state
+growth* below.
 
 ## New Terminology
 
@@ -51,7 +51,7 @@ bounded and predictable.
 - Replace the current fixed minimum balance constant (legacy
   `min_balance_legacy`) used in account creation with a runtime-maintained
   `min_deposit` per-byte rate.
-- A supervisory integral controller targets 2 GB/epoch state growth as the safety
+- A supervisory integral controller targets 5.5 GiB/epoch state growth as the safety
   threshold. The controller remains inactive unless the threshold is breached, in
   which case it engages through discrete adjustments of the `min_deposit` value.
 - The absolute `min_deposit` value is clamped to remain between 0.1x and 1.0x
@@ -81,6 +81,12 @@ floor) and only engage when sustained growth exceeds a safety threshold.
   - `num_accounts_delta` (count): the net change in the number of accounts. Zero
     balance accounts are considered deleted.
 
+The quantity thus tracked is the growth of on-chain account data (and per-account
+overhead). On a validator, the accounts database and its indexes scale with this
+state; so the accumulator effectively tracks the growth of the resource that
+matters for capacity planning—accounts DB size plus index size on the accounts
+disk.
+
 **`G_slot` calculation:**
 
 `G_slot` is the sum of the account data size growth plus the storage overhead
@@ -95,7 +101,7 @@ rent (128 bytes), representing the per-account storage overhead.
 
 **Update rule (executed once per slot):**
 
-Let target growth per slot be `G_target = 2 GiB/epoch / slots_per_epoch`.
+Let target growth per slot be `G_target = 5.5 GiB/epoch / slots_per_epoch`.
 
 Compute error: `e = G_slot - G_target` (positive if growth exceeds target).
 
@@ -125,8 +131,22 @@ Notes:
 - `I` is the integral accumulator over error; large positive values indicate
   sustained overshoot; large negative values indicate sustained slack.
 
-Rationale: the main goal of the controller is to supervise state growth and
-engage effectively and predictably when the safety threshold is violated.
+**Rationale for target state growth (G_target):**
+
+Assume **4 TB** SSD capacity after a 2-year window; constants can be revisited
+when typical validator capacity changes. The accumulator tracks growth of
+accounts data + index (the storage that scales with state on the accounts disk).
+
+Capacity budget: compressed snapshots are ~20% of total accounts data size with
+2 full snapshots retained; ledger up to **500 GB**; current data + index **~500 GB**.
+If data + index growth over 2 years is **2 TB**, total accounts size is 2.5 TB and
+snapshot footprint is 2 × 0.2 × 2.5 TB ≈ **1 TB**. Then 4 TB − 1 TB (snapshots) −
+0.5 TB (current data+index) − 0.5 TB (ledger) = **2 TB** for that growth. With
+~182 epochs/year, 2 TiB over 364 epochs → **G_target = 5.5 GiB/epoch**.
+
+Rationale for the controller design: the main goal of the controller is to
+supervise state growth and engage effectively and predictably when the safety
+threshold is violated.
 
 - Asymmetric updates: bias towards upwards adjustments after engagement is
   triggered allows a faster response to excessive state growth and a more
@@ -191,7 +211,7 @@ The Rent sysvar account is `SysvarRent111111111111111111111111111111111`.
 ### Protocol constants and feature gates
 
 - New constants:
-  - `G_target = 2 GB/epoch`
+  - `G_target = 5.5 GiB/epoch` (see *Rationale for target state growth* above)
   - `H` deadband threshold for integral accumulator
   - `I_min = -4_000_000_000`, `I_max = +2_000_000_000`
   - `down_step = -5%`, `up_step = +10%`
