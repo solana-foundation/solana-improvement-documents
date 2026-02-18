@@ -8,22 +8,17 @@ type: Core
 status: Idea
 created: 2025-10-27
 feature: (fill in with feature key and github tracking issues once accepted)
-supersedes:
-superseded-by:
-extends:
 ---
 
 ## Summary
 
-Reduce the minimum deposit rate by 10x (set baseline
-`min_deposit = 0.1 * min_balance_legacy`) and make this the new floor.
+Set `min_balance_per_byte` to 696 lamports/byte and make this the new floor.
 
-Introduce a supervisory integral controller targeting 5.5 GiB/epoch state growth
-as the safety threshold. Under normal conditions, `min_deposit` remains pinned
-at the 0.1x floor.
+Introduce a supervisory integral controller targeting 5.5 GB/epoch state growth
+as the safety threshold. Under normal conditions, `min_balance_per_byte` remains
+pinned at the floor but increased if the safety threshold is exceeded.
 
-Depends on SIMD-0392 or another protocol change to allow for non-disruptive
-minimum deposit increases.
+Depends on SIMD-0392 to allow for non-disruptive minimum-balance increases.
 
 ## Motivation
 
@@ -31,40 +26,40 @@ Introduce a real-time price signal for state demand and apply back pressure to
 prevent runaway state growth. The proposal gives the protocol more tuning knobs
 (controller parameters such as deadband H, bounds, step sizes, clamps, target growth)
 than a single fixed constant, enabling better behavior targeting. The target
-state growth (5.5 GiB/epoch) is set from first principles based on validator
-resource capacity (SSD size and upgrade cycle); see *Rationale for target state
-growth* below.
+state growth (5.5 GB/epoch) is set based on validator
+resource capacity; see *Rationale for target state growth* below.
 
 ## New Terminology
 
-- `min_deposit`: The protocol-defined minimum lamports per byte required to
-  allocate account data. Baseline is 0.1x the legacy minimum-balance constant
-  (the floor). A supervisory integral controller MAY adjust it above the floor
-  only when safety thresholds are exceeded.
+- `min_balance`: The minimum lamports required for an account, given by
+  `(ACCOUNT_STORAGE_OVERHEAD + data_size) * min_balance_per_byte`. Same meaning
+  as the pre-feature rent-exempt minimum.
+- `min_balance_per_byte`: The protocol-controlled rate (lamports per byte) that
+  determines `min_balance`. A supervisory integral controller MAY adjust it
+  above the floor only when safety thresholds are exceeded. Bounded by
+  `min_balance_per_byte_floor` and `min_balance_per_byte_ceiling`.
+- `ACCOUNT_STORAGE_OVERHEAD`: 128 bytes; per-account storage overhead in
+  addition to `data_size`.
+- `min_balance_per_byte_floor`: 696 lamports per byte (10% of legacy rate).
+- `min_balance_per_byte_ceiling`: 6960 lamports per byte (legacy rate).
 
 ## Detailed Design
 
 ### High level
 
-- Upon activation, set `min_deposit = 0.1 * min_balance_legacy` (a 10x
-  reduction) and treat this as the floor.
-- Replace the current fixed minimum balance constant (legacy
-  `min_balance_legacy`) used in account creation with a runtime-maintained
-  `min_deposit` per-byte rate.
-- A supervisory integral controller targets 5.5 GiB/epoch state growth as the safety
+- Upon activation, set `min_balance_per_byte = min_balance_per_byte_floor`
+- A supervisory integral controller targets 5.5 GB/epoch state growth as the safety
   threshold. The controller remains inactive unless the threshold is breached, in
-  which case it engages through discrete adjustments of the `min_deposit` value.
-- The absolute `min_deposit` value is clamped to remain between 0.1x and 1.0x
-  of the legacy `min_balance_legacy` constant.
-- When an account is allocated (either newly created or data size changed), the
-  funder deposits `min_deposit * new_bytes` into the account.
-- Post-execution min_balance checks must be relaxed so that minimum-deposit
-  increases do not affect existing accounts. SIMD-0392 proposes such a change.
+  which case it engages through discrete adjustments of `min_balance_per_byte`.
+- Growth is tracked by an integral accumulator, which encodes the extent to which
+  the current growth rate deviates from the threshold target.
+- `min_balance_per_byte` is clamped to `[min_balance_per_byte_floor,
+  min_balance_per_byte_ceiling]` = [696, 6960].
 
 ### Supervisory integral controller
 
-The controller updates `min_deposit` every slot based on measured state growth
-but is intended to be inactive during normal conditions (holding at the 0.1x
+The controller updates `min_balance_per_byte` every slot based on measured state
+growth but is intended to be inactive during normal conditions (holding at the
 floor) and only engage when sustained growth exceeds a safety threshold.
 
 **State tracking:**
@@ -81,12 +76,6 @@ floor) and only engage when sustained growth exceeds a safety threshold.
   - `num_accounts_delta` (count): the net change in the number of accounts. Zero
     balance accounts are considered deleted.
 
-The quantity thus tracked is the growth of on-chain account data (and per-account
-overhead). On a validator, the accounts database and its indexes scale with this
-state; so the accumulator effectively tracks the growth of the resource that
-matters for capacity planning—accounts DB size plus index size on the accounts
-disk.
-
 **`G_slot` calculation:**
 
 `G_slot` is the sum of the account data size growth plus the storage overhead
@@ -96,12 +85,9 @@ associated with changes in the number of accounts:
 G_slot = data_size_delta + ACCOUNT_STORAGE_OVERHEAD * num_accounts_delta
 ```
 
-where `ACCOUNT_STORAGE_OVERHEAD` is an existing in-consensus parameter used by
-rent (128 bytes), representing the per-account storage overhead.
-
 **Update rule (executed once per slot):**
 
-Let target growth per slot be `G_target = 5.5 GiB/epoch / slots_per_epoch`.
+Let target growth per slot be `G_target = 5.5 GB/epoch / slots_per_epoch`.
 
 Compute error: `e = G_slot - G_target` (positive if growth exceeds target).
 
@@ -115,18 +101,18 @@ Deadband and discrete asymmetric steps:
 
 ```
 if I_next >= H:                    # above-band (sustained over-target)
-    min_deposit_next = min_deposit_current * 1.10   # +10%
+    min_balance_per_byte_next = min_balance_per_byte_current * 1.10   # +10%
 elif I_next <= -H:                 # below-band (sustained under-target)
-    min_deposit_next = min_deposit_current * 0.95   # -5%
+    min_balance_per_byte_next = min_balance_per_byte_current * 0.95   # -5%
 else:
-    min_deposit_next = min_deposit_current          # hold
+    min_balance_per_byte_next = min_balance_per_byte_current          # hold
 ```
 
 Notes:
 
 - No proportional term; the controller is integral-only with a deadband. The
-  goal is to keep price pinned at the floor (0.1x) under normal conditions and
-  react only to pronounced spikes.
+  goal is to keep `min_balance_per_byte` pinned at the floor under normal
+  conditions and react only to sustained spikes.
 - `H` (deadband threshold) is a protocol constant (see Protocol constants).
 - `I` is the integral accumulator over error; large positive values indicate
   sustained overshoot; large negative values indicate sustained slack.
@@ -134,15 +120,18 @@ Notes:
 **Rationale for target state growth (G_target):**
 
 Assume **4 TB** SSD capacity after a 2-year window; constants can be revisited
-when typical validator capacity changes. The accumulator tracks growth of
-accounts data + index (the storage that scales with state on the accounts disk).
+when typical validator capacity changes.
 
-Capacity budget: compressed snapshots are ~20% of total accounts data size with
-2 full snapshots retained; ledger up to **500 GB**; current data + index **~500 GB**.
-If data + index growth over 2 years is **2 TB**, total accounts size is 2.5 TB and
-snapshot footprint is 2 × 0.2 × 2.5 TB ≈ **1 TB**. Then 4 TB − 1 TB (snapshots) −
-0.5 TB (current data+index) − 0.5 TB (ledger) = **2 TB** for that growth. With
-~182 epochs/year, 2 TiB over 364 epochs → **G_target = 5.5 GiB/epoch**.
+Capacity budget:
+
+- compressed snapshots are ~20% of total accounts data size with 2 full
+snapshots retained; ledger up to **500 GB**; current data + index **~500 GB**.
+- If data + index growth over 2 years is **2 TB**, total accounts size is
+2.5 TB and snapshot footprint is less than 2 * 0.2 * 2.5 TB = **1 TB**.
+- Then 4 TB (total) - 1 TB (snapshots) − 0.5 TB (current data+index) − 0.5 TB
+(ledger) = **2 TB**.
+- With ~182 epochs/year, 2 TB over 364 epochs implies roughly
+**G_target = 5.5 GB/epoch**.
 
 Rationale for the controller design: the main goal of the controller is to
 supervise state growth and engage effectively and predictably when the safety
@@ -153,42 +142,35 @@ threshold is violated.
   gradual return to baseline when conditions normalize.
 - Asymmetric integral bounds: the absolute value of `I_min` being larger than
   `I_max` allows for the accumulation of a buffer to prevent smaller spikes
-  from causing a `min_deposit` adjustment, thereby increasing stability of the
-  0.1x floor price. A return to baseline can happen faster after a high
+  from causing a `min_balance_per_byte` adjustment, thereby increasing stability
+  of the floor. A return to baseline can happen faster after a high
   allocation event has passed, with the lower `I_max` value.
 - Deadband: avoids oscillations around the safety threshold.
 
 **Clamps:**
 
-Apply clamps after the update to ensure `min_deposit` stays within bounds:
+Apply clamps after the update to ensure `min_balance_per_byte` stays within
+bounds:
 
 ```
-min_deposit_next = clamp(
-  0.1 * min_balance_legacy,
-  1.0 * min_balance_legacy,
-  min_deposit_next
+min_balance_per_byte_next = clamp(
+  min_balance_per_byte_floor,
+  min_balance_per_byte_ceiling,
+  min_balance_per_byte_next
 )
 ```
 
-where `min_balance_legacy` is the fixed minimum-balance constant used prior to
-this feature activation.
-
 ### Sysvar exposure
 
-Expose `min_deposit` via the existing Rent sysvar to avoid introducing a new
-sysvar and to preserve compatibility with existing on-chain programs.
+Expose `min_balance_per_byte` via the existing Rent sysvar to avoid introducing
+a new sysvar and to preserve compatibility with existing on-chain programs.
 
 The Rent sysvar account is `SysvarRent111111111111111111111111111111111`.
 
 ### Persistence and snapshot integrity
 
 - The two per-slot deltas (`data_size_delta`, `num_accounts_delta`) and the
-  integral accumulator `I` MUST be backed up into dedicated sysvars so they are
-  covered by snapshot integrity checks via the accounts lthash. This avoids the
-  need to include these values in the bank hash.
-- On startup, validators MUST load these values exclusively from the sysvars,
-  rather than any non-account serialized fields in the snapshot, ensuring that
-  integrity-checked values are used.
+  integral accumulator `I` MUST be stored in dedicated sysvars.
 - Sysvar accounts:
   - `SysvarAccountsDataSizeDe1ta1111111111111111`:
     carries the per-slot `data_size_delta` in bytes.
@@ -197,10 +179,10 @@ The Rent sysvar account is `SysvarRent111111111111111111111111111111111`.
   - `SysvarRentContro11er1ntegra1111111111111111`:
     carries the integral accumulator `I`.
   - `SysvarRent111111111111111111111111111111111` (existing):
-    carries Rent fields and `min_deposit`.
+    carries Rent fields and `min_balance_per_byte`.
 - Update timing:
   - When the slot is advanced and a new bank is created, the accumulator `I`
-    and the Rent sysvar (carrying `min_deposit`) MUST be updated then written
+    and the Rent sysvar (carrying `min_balance_per_byte`) MUST be updated then written
     to their respective sysvars.
   - At slot completion, the two per-slot deltas MUST be written to their
     respective per-slot sysvars. This ensures
@@ -211,12 +193,12 @@ The Rent sysvar account is `SysvarRent111111111111111111111111111111111`.
 ### Protocol constants and feature gates
 
 - New constants:
-  - `G_target = 5.5 GiB/epoch` (see *Rationale for target state growth* above)
+  - `G_target = 5.5 GB/epoch` (see *Rationale for target state growth* above)
   - `H` deadband threshold for integral accumulator
   - `I_min = -4_000_000_000`, `I_max = +2_000_000_000`
   - `down_step = -5%`, `up_step = +10%`
-  - `min_deposit_lower_bound = 0.1 * min_balance_legacy`
-  - `min_deposit_upper_bound = 1.0 * min_balance_legacy`
+  - `min_balance_per_byte_floor` = 696
+  - `min_balance_per_byte_ceiling` = 6960
 
 ## Alternatives Considered
 
@@ -233,7 +215,7 @@ The Rent sysvar account is `SysvarRent111111111111111111111111111111111`.
 ## Impact
 
 - Dapp developers: Creation and reallocation costs vary over time; programs can
-  query the Rent sysvar for current rates. Significant minimum-deposit
+  query the Rent sysvar for current rates. Significant minimum-balance
   reduction is expected.
 - Validators: Minor overhead to track controller state (integral accumulator
   `I`, state growth measurements) and measure state growth per slot;
@@ -252,7 +234,7 @@ The Rent sysvar account is `SysvarRent111111111111111111111111111111111`.
 
 ## Backwards Compatibility *(Optional)*
 
-- The shift from a fixed minimum-balance constant to dynamic `min_deposit` with
+- The shift from a fixed per-byte rate to dynamic `min_balance_per_byte` with
   checks is a breaking change to account validity semantics, gated behind
   feature activation.
 - No account metadata changes required; backwards compatible with existing account
