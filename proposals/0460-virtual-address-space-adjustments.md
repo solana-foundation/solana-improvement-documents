@@ -33,6 +33,19 @@ None.
 Stack frame gaps must be deactivated globally (even for existing SBPFv0
 programs). So far they were only deactivated for newer SBPF versions.
 
+After the removal of the gaps the stack address space will be compacted by a
+factor of two but the total mapped bytes will stay the same. They will simply
+be at lower addresses than before and form one contiguous address range.
+
+- `0x200000000..0x200001000`: mapped frame => `0x200000000..0x200001000`
+- `0x200001000..0x200002000`: unmapped gap => removed
+- `0x200002000..0x200003000`: mapped frame => `0x200001000..0x200002000`
+- `0x200003000..0x200004000`: unmapped gap => removed
+- etc ...
+
+In SBPFv0 the stack frame bump on `call` and `callx` must be lowered from 8 KiB
+to 4 KiB (this is already the case in SBPFv3).
+
 ### Changes inherited from SIMD-0219
 
 Memory accesses (both by the program and by syscalls) which span across memory
