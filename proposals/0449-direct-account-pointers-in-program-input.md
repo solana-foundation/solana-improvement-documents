@@ -40,7 +40,8 @@ independent of the number of accounts.
 
 When the feature is activated, the VM serializes the slice of account
 pointers after the program ID in the program input parameters for any
-ABIv1 program. All other parameters remain unchanged:
+ABIv1 program (i.e., those that do not use Loader v1). All other parameters
+remain unchanged:
 
 ```
 - 8 bytes: number of accounts (little-endian)
