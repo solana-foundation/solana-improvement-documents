@@ -87,6 +87,14 @@ else:
 assert(acc.post_exec_balance == 0 or acc.post_exec_balance >= min_allowed_balance)
 ```
 
+The same pre/post-balance semantics MUST also be applied to fee and commission
+distribution:
+transaction fee debits and subsequent fee/commission distribution are treated as
+an additional balance-changing phase, and the invariant above MUST be enforced
+using the pre-fee and post-fee balances. This applies to the current fee
+distribution as well as the next version of commission distribution where fees
+are distributed via block revenue commission (SIMD-0123)
+
 The check ensures that an account's balance is always rent-exempt as of
 the last (re)allocation of its data:
 
@@ -107,7 +115,10 @@ section for more details.
 ### Implementation details
 
 - The pre-execution balance MUST be captured before any state is modified
-  (e.g. before fee collection, instruction execution, etc).
+  (e.g. before fee collection, instruction execution, etc). This same
+  `pre_exec_balance` snapshot MUST be reused when enforcing the minimum balance
+  invariant across both instruction execution and fee/commission
+  debiting/distribution.
 - The pre and post-execution sizes are compared to determine if upwards
   reallocation occurred.
 - The pre-execution owner MUST be captured. If the account owner changes during
