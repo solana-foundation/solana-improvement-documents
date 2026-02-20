@@ -13,7 +13,8 @@ supersedes: 0219
 
 ## Summary
 
-Virtual address space related changes split off from SIMD-0219.
+Virtual address space related changes split off from SIMD-0219:
+Removing pitfalls and foot-guns from the ABI (including syscalls) and runtime.
 
 ## Motivation
 
@@ -22,29 +23,20 @@ decided that SIMD-0219 should be split into two feature gates. This SIMD covers
 the second half which is focused on the address translation, memory mappings,
 reallocation / resizing, zeroing and defining empty / unmapped address space.
 
+The reasoning for splitting SIMD-0219 is to de-risk its deployment and to be
+able to make progress on shipping earlier parts even if later parts have to be
+delayed further.
+
+Additionally, as the unaligned address translation mechanism required for this
+part of SIMD-0219 incurs a slight performance decrease, it was decided to
+globally deactivate stack frame gaps to counter the effect. Stack frame gaps
+were identified as a performance issue in the address translation in general.
+
 ## New Terminology
 
 None.
 
 ## Detailed Design
-
-### Additional changes
-
-Stack frame gaps must be deactivated globally (even for existing SBPFv0
-programs). So far they were only deactivated for newer SBPF versions.
-
-After the removal of the gaps the stack address space will be compacted by a
-factor of two but the total mapped bytes will stay the same. They will simply
-be at lower addresses than before and form one contiguous address range.
-
-- `0x200000000..0x200001000`: mapped frame => `0x200000000..0x200001000`
-- `0x200001000..0x200002000`: unmapped gap => removed
-- `0x200002000..0x200003000`: mapped frame => `0x200001000..0x200002000`
-- `0x200003000..0x200004000`: unmapped gap => removed
-- etc ...
-
-In SBPFv0 the stack frame bump on `call` and `callx` must be lowered from 8 KiB
-to 4 KiB (this is already the case in SBPFv3).
 
 ### Changes inherited from SIMD-0219
 
@@ -77,6 +69,28 @@ that:
 otherwise `InstructionError::ReadonlyDataModified` must be thrown
 - The account is owned by the currently executed program,
 otherwise `InstructionError::ExternalAccountDataModified` must be thrown.
+
+### Additional changes
+
+Stack frame gaps must be deactivated globally (even for existing SBPFv0
+programs). So far they were only deactivated for newer SBPF versions.
+
+After the removal of the gaps the stack address space will be compacted by a
+factor of two but the total mapped bytes will stay the same. They will simply
+be at lower addresses than before and form one contiguous address range. See
+example below:
+
+| Address range | Before this SIMD | After this SIMD |
+| --- | --- | --- |
+| `0x200000000..0x200001000` | mapped | mapped |
+| `0x200001000..0x200002000` | --- | mapped |
+| `0x200002000..0x200003000` | mapped | mapped |
+| `0x200003000..0x200004000` | --- | --- |
+| `0x200004000..0x200006000` | mapped | --- |
+| `0x200005000..0x200007000` | --- | --- |
+
+In SBPFv0 the stack frame bump on `call` and `callx` must be lowered from 8 KiB
+to 4 KiB (this is already the case in SBPFv3).
 
 ## Alternatives Considered
 
