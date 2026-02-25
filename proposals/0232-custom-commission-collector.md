@@ -125,7 +125,7 @@ pub enum VoteInstruction {
     ///   0. `[WRITE]` Vote account to be updated with the new collector public key
     ///   1. `[WRITE]` New collector account
     ///   2. `[SIGNER]` Withdraw authority
-    UpdateCommissionCollector { // 16u32
+    UpdateCommissionCollector { // 17u32
         kind: CommissionKind,
     },
 }
@@ -140,7 +140,7 @@ pub enum CommissionKind {
 #### `UpdateCommissionCollector`
 
 A new instruction for setting collector accounts will be added to the vote
-program with the enum discriminant value of `16u32` little endian encoded in the
+program with the enum discriminant value of `17u32` little endian encoded in the
 first 4 bytes.
 
 Perform the following checks:
