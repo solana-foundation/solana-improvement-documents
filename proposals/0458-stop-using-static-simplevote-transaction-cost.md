@@ -15,7 +15,7 @@ supersedes: SIMD-0387
 
 This proposal removes the use of statically defined compute unit (CU) costs for
 Simple Vote transactions and instead accounts for them in the same way as normal
-transactions when enforcing block CU limits. This also renders the Vote CU limit 
+transactions when enforcing block CU limits. This also renders the Vote CU limit
 obsolete. Because this change affects consensus behavior, it must be gated
 behind a feature flag.
 
