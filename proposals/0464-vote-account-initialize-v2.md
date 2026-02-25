@@ -100,13 +100,13 @@ pub enum VoteInstruction {
 
 ```rust
 pub const BLS_PUBLIC_KEY_COMPRESSED_SIZE: usize = 48;
-pub const BLS_SIGNATURE_COMPRESSED_SIZE: usize = 96;
+pub const BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE: usize = 96;
 
 pub struct VoteInitV2 {
   pub node_pubkey: Pubkey,
   pub authorized_voter: Pubkey,
   pub authorized_voter_bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
-  pub authorized_voter_bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+  pub authorized_voter_bls_proof_of_possession: [u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
   pub authorized_withdrawer: Pubkey,
   pub inflation_rewards_commission_bps: u16,
   pub inflation_rewards_collector: Pubkey,
