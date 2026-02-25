@@ -85,8 +85,17 @@ creation.
 
 ### Add InitializeAccountV2
 
+A new instruction for initializing a vote account with all vote state v4 fields
+will be added to the vote program with the enum discriminant value of `16u32`
+little endian encoded in the first 4 bytes.
+
 ```rust
-InitializeAccountV2(VoteInitV2),
+pub enum VoteInstruction {
+    /// # Account references
+    ///   0. `[WRITE]` Uninitialized vote account
+    ///   1. `[SIGNER]` New validator identity (node_pubkey)
+    InitializeAccountV2(VoteInitV2), // 16u32
+}
 ```
 
 ```rust
