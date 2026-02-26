@@ -36,7 +36,10 @@ N/A
 ## Detailed Design
 
 The migration from Loader v2 program to Loader v3 is only performed by the
-runtime and activated via a feature gate.
+runtime and activated via a feature gate. This SIMD describes the procedure
+to follow to execute the migration. Each individual program upgrade will
+reference the procedure described in this SIMD when proposing a migration
+and specify its corresponding feature gate.
 
 Migrating a Loader v2 program to Loader v3 involves creating a buffer
 account owned by the Loader v3 (BPF Upgradable Loader) that contains
