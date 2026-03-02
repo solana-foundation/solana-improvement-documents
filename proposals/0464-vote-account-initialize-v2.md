@@ -94,6 +94,8 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[WRITE]` Uninitialized vote account
     ///   1. `[SIGNER]` New validator identity (node_pubkey)
+    ///   2. `[WRITE]` Inflation rewards collector (or vote account if same)
+    ///   3. `[WRITE]` Block revenue collector (or vote account if same)
     InitializeAccountV2(VoteInitV2), // 16u32
 }
 ```
@@ -109,17 +111,29 @@ pub struct VoteInitV2 {
   pub authorized_voter_bls_proof_of_possession: [u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
   pub authorized_withdrawer: Pubkey,
   pub inflation_rewards_commission_bps: u16,
-  pub inflation_rewards_collector: Pubkey,
   pub block_revenue_commission_bps: u16,
-  pub block_revenue_collector: Pubkey,
 }
 ```
 
 Upon receiving the transaction, the vote program will perform a BLS
 verification on the submitted BLS public key and associated proof of
 possession, as described in [SIMD-0387]. The transaction will fail if the
-verification fails. Otherwise the new vote account is created with the given
-parameters.
+verification fails.
+
+For each collector account (indices `2` and `3`), the vote program MUST perform
+the following validation, matching the checks required by
+`UpdateCommissionCollector` in [SIMD-0232]:
+
+1. If the collector is not equal to the vote account, it must be system program
+   owned. Otherwise return `InstructionError::InvalidAccountOwner`.
+2. The collector must be rent-exempt. Otherwise return
+   `InstructionError::InsufficientFunds`.
+3. The collector must be writable (not a reserved account). Otherwise return
+   `InstructionError::InvalidArgument`.
+
+If all checks pass, the new vote account is created with the given parameters.
+The inflation rewards collector address is taken from account index `2` and the
+block revenue collector address is taken from account index `3`.
 
 The BLS PoP verification will cost 34,500 CUs, as described in [SIMD-0387].
 
