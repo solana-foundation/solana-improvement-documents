@@ -27,7 +27,12 @@ approve targeted upgrades to specific programs (e.g., SPL Token).
 Previously, the runtime could "upgrade" Loader v2 programs by directly modifying
 their account data. This approach is no longer recommended due to the introduction
 of the global program cache, since it can cause inconsistencies if account data is
-modified in-place.
+modified in-place. The global program cache does not support upgrades of Loader v2
+programs because in Loader v2 there is no upgrade path and thus also no last
+upgrade slot metainfo. Without this metainfo, the global program cache cannot
+distinguish the old and new version across forks. When migrating to Loader v3
+this would not be a problem because the owner is a distinguishing feature and
+Loader v3 does have the last upgrade slot metainfo for further future changes.
 
 ## New Terminology
 
