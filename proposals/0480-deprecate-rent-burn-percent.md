@@ -1,5 +1,5 @@
 ---
-simd: '0479'
+simd: '0480'
 title: Deprecate Rent Burn Percent
 authors:
   - Dean Little (@deanmlittle)
