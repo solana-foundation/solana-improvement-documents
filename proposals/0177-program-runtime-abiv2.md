@@ -143,7 +143,7 @@ must NOT be mapped.
 
 For each instruction, the runtime must map its payload at address 
 `0x10800000000` plus `0x100000000` times the index of the instruction in the 
-trasaction. All instruction payload mappings are readonly.
+transaction. All instruction payload mappings are readonly.
 
 One extra writable mapping must be created after the last instruction payload 
 area to be the CPI scratch pad, i.e. at address `0x10800000000` plus 
