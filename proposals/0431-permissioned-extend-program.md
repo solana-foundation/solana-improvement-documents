@@ -1,6 +1,6 @@
 ---
 simd: '0431'
-title: Permissioned Extend Program
+title: 'Loader V3: Minimum Extend Program Size'
 authors:
     - Dean Little (Blueshift)
     - Joe Caulfield (Anza)
@@ -14,19 +14,44 @@ supersedes: '0164'
 
 ## Summary
 
-This SIMD proposes restricting invocation of the extend program instruction in 
-Loader V3 to the program's upgrade authority, along with lifting the current
-restriction preventing it from being invoked via CPI.
+Enforce a minimum extension size of 10,240 bytes (10 KiB) on the
+`ExtendProgram` instruction in Loader V3, mitigating the existing
+denial-of-service vector through economic deterrence while preserving the
+instruction's permissionless nature.
 
 ## Motivation
 
-Currently, due to the permissionless nature of the extend program instruction 
-and some complexities surrounding the program cache, there is a DoS vector by 
-which anyone could disable a program for one slot by permissionlessly 
-extending its program data account. Thus the motivation of this SIMD is to both
-resolve the DoS vector by restricting access to this instruction to the 
-program's upgrade authority, whilst improving the devex of this new 
-restriction by allowing ExtendProgram to be invoked via CPI.
+The `ExtendProgram` instruction is currently permissionless — anyone can extend
+any upgradeable program's data account by as little as 1 byte. Due to
+complexities surrounding the program cache, each invocation of `ExtendProgram`
+invalidates the program's cache entry for the current slot, effectively
+disabling the program for one slot. Combined with the negligible cost of a
+1-byte extension, this creates a cheap denial-of-service vector.
+
+SIMD-0164 and earlier revisions of this SIMD attempted to fix this by making
+`ExtendProgram` permissioned, requiring the upgrade authority as a signer.
+While this provides absolute DoS protection, it breaks several important
+workflows:
+
+- **Multisig PDA authorities** cannot sign top-level instructions. With a CPI
+  resize cap of 10 KiB per instruction, large extensions require multiple
+  proposals or a clunky authority-shuffle pattern.
+- **Self-upgrading programs** that manage their own upgrade authority as a PDA
+  would lose the ability to extend themselves.
+
+SIMD-0164 was never approved, and the general sentiment favored a more
+flexible solution that preserves the permissionless nature of `ExtendProgram`.
+As [suggested by jstarry][jstarry_suggestion], a minimum extension size achieves
+this.
+
+[jstarry_suggestion]: https://github.com/solana-foundation/solana-improvement-documents/pull/164#issuecomment-3138353713
+
+A minimum extension size solves the DoS vector economically instead: at 10
+KiB, each extension costs the attacker approximately 0.072 SOL in rent-exempt
+lamports, which are irrecoverably donated to the victim's program data account.
+Ten successive attacks cost the attacker 0.72 SOL while only benefiting the
+program owner. This makes sustained griefing economically irrational without
+breaking any existing workflows.
 
 ## New Terminology
 
@@ -34,12 +59,12 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-The `ExtendProgram` instruction will require the program's upgrade authority as
-a signer and it will be available for invocation via CPI.
+After this proposal's feature gate is activated, the `ExtendProgram`
+instruction will enforce a minimum extension size of 10,240 bytes (10 KiB).
 
-### Changes to Required Accounts
+### Instruction Accounts
 
-The current `ExtendProgram` instruction expects the following accounts:
+The instruction accounts remain unchanged:
 
 ```
 0. [w] ProgramData account
@@ -48,61 +73,95 @@ The current `ExtendProgram` instruction expects the following accounts:
 3. [ws] Payer, optional
 ```
 
-After this proposal's feature gate is activated, the instruction will expect:
-
-```
-0. [w] ProgramData account
-1. [w] Program account
-2. [s] Upgrade authority    // New
-3. [ ] System program, optional
-4. [ws] Payer, optional
-```
-
 ### Control Flow
 
-The instruction will verify:
+The instruction will verify the following, in addition to all existing checks:
 
-1. The program has an upgrade authority set (i.e., is not immutable). If not,
-   return `Immutable`.
-2. The provided authority matches the program's stored upgrade authority. If
-   not, return `IncorrectAuthority`.
-3. The authority account is a signer. If not, return
-   `MissingRequiredSignature`.
+1. The requested extension size is at least 10,240 bytes. If not, return
+   `InvalidArgument`.
 
-### CPI Restriction Removal
+All other existing checks (program ownership, account state, rent-exempt
+balance) remain unchanged.
 
-The current restriction preventing `ExtendProgram` from being invoked via CPI
-will be removed. The instruction will be fully available for CPI.
+### CPI Restriction
+
+The existing restriction preventing `ExtendProgram` from being invoked via CPI
+is not modified by this proposal.
 
 ## Alternatives Considered
 
-- Allow DoS vector to remain unresolved
-- Retain existing account ordering by combining payer and authority into a
-  single mandatory account
+### Permissioned ExtendProgram (SIMD-0164)
+
+Require the upgrade authority as a signer and lift the CPI restriction. This
+provides absolute DoS protection but breaks multisig PDA workflows,
+self-upgrading programs, and any third-party tooling that extends programs on
+behalf of owners.
+
+### Disable ExtendProgram entirely
+
+If `ExtendProgram` were made permissioned, there would be little reason for it
+to exist as a standalone instruction — resizing could instead be folded into
+`Upgrade`. However, keeping `ExtendProgram` permissionless avoids nasty
+workarounds for multisigs and self-upgrading programs: anyone can crank a
+top-level extend to prime up space before a multisig upgrade, without needing
+the multisig authority to sign. It also sidesteps the CPI 10 KiB
+CPI growth limit that would otherwise cap how much a program can extend itself
+in a single call.
+
+### Smaller minimum extension size
+
+A 1 KiB minimum costs only ~0.008 SOL per attack — too cheap to deter
+sustained griefing.
+
+### Larger minimum extension size
+
+Minimums of 20 KiB or 50 KiB provide stronger deterrence but
+disproportionately affect small programs. A survey of 14,822 mainnet-beta
+programs shows the following size distribution:
+
+| Size Range   | Programs | Share  |
+|--------------|----------|--------|
+| 0 – 10 KiB  | 149      | 1.0%   |
+| 10 – 50 KiB | 843      | 5.7%   |
+| 50 – 200 KiB| 2,066    | 13.9%  |
+| 200 – 500 KiB| 6,058   | 40.9%  |
+| 500+ KiB    | 5,706    | 38.5%  |
+
+At 10 KiB, only 1.0% of programs are smaller than the minimum extension size,
+and over 93% of programs are larger than 50 KiB — well above the proposed
+minimum.
 
 ## Impact
 
-This proposal will remove the DoS vector for all deployed programs. Due to 
-constraints of ABI V1, in the case that a multisig upgrade authority wishes to 
-extend the program data account by greater than 10KiB, it will either need to 
-create multiple resize proposals, or atomically set its authority to a 
-top-level signer and reclaim it in the same transaction. The `ExtendProgram`
-instruction will now also be invokable by CPI.
+The 10 KiB minimum makes griefing attacks cost approximately 0.072 SOL per
+invocation, with all lamports irrecoverably donated to the victim's program
+data account.
+
+The minimum extension size has minimal impact on legitimate use:
+
+- Programs needing less than 10 KiB of additional space must extend by the
+  full 10 KiB minimum. The excess capacity is available for future use.
+- Only 1.0% of mainnet programs have a total size below 10 KiB.
+- No changes to the instruction's account list. No changes to signer
+  requirements. No impact on existing tooling or multisig workflows.
 
 ## Security Considerations
 
-In the case of a multisig atomically setting its authority to a top-level 
-signer, it is important to introspect the transaction and ensure that it 
-executes the following behavior:
+The minimum extension size provides economic deterrence rather than absolute
+prevention. An attacker willing to spend 0.072 SOL per slot can still trigger
+program cache invalidation. However:
 
-- Set upgrade authority to top-level signer
-- Extend program data account in top-level instruction
-- Set upgrade authority back to quorum
+- The cost scales linearly with attack duration (~650 SOL/hour at 400ms slots).
+- All lamports spent are donated to the victim, not burned.
+- The attacker receives no benefit — the victim's program only gains additional
+  allocated space.
 
-If this behavior is not observed, it would be possible for a quorum to 
-accidentally lose its upgrade authority.
+This economic model makes sustained attacks prohibitively expensive while
+preserving the permissionless nature of `ExtendProgram`.
 
 ## Backwards Compatibility
 
-This feature places additional restrictions upon an existing Loader V3 
-instruction and is therefore not backwards compatible, necessitating a feature gate.
+This feature places an additional constraint on an existing Loader V3
+instruction (minimum extension size) and is therefore not fully backwards
+compatible. Any caller currently extending by less than 10 KiB will need to
+increase their extension amount. This change is gated behind a feature flag.
