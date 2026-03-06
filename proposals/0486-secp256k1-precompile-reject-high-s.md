@@ -1,6 +1,6 @@
 ---
 simd: '0486'
-title: secp256k1 Precompile: Reject High-S Sigs
+title: 'secp256k1 Precompile: Reject High-S Sigs'
 authors:
   - SK, ZZ
 category: Standard
