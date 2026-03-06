@@ -1,5 +1,5 @@
 ---
-simd: '0462'
+simd: '0486'
 title: secp256k1 Precompile - Reject High-S Signatures
 authors:
   - SK, ZZ
