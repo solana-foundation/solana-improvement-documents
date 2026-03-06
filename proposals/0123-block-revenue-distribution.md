@@ -207,7 +207,7 @@ calculation.
 #### DepositDelegatorRewards
 
 A new instruction for distributing lamports to stake delegators will be added to
-the vote program with the enum discriminant value of `18u32` little endian
+the vote program with the enum discriminant value of `19u32` little endian
 encoded in the first 4 bytes.
 
 ```rust
@@ -215,7 +215,7 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[WRITE]` Vote account to be updated with the deposit
     ///   1. `[SIGNER, WRITE]` Source account for deposit funds
-    DepositDelegatorRewards { // 18u32
+    DepositDelegatorRewards { // 19u32
         deposit: u64,
     },
 }
