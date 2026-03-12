@@ -61,6 +61,10 @@ Where:
 * `rent_exempt_reserve`: the minimum lamport balance required for the stake
   account
 
+The `rent_exempt_reserve` calculation MUST use current `Rent` sysvar parameters,
+which MAY be updated immediately prior to reward calculation, during the epoch
+boundary.
+
 During distribution, the `delegation.stake` field (offset `[156,164)`) in the
 stake account's data MUST be set to the new delegation amount, expressed as a
 little-endian unsigned 64-bit integer.
