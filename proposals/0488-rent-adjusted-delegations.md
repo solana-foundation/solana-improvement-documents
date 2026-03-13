@@ -13,15 +13,16 @@ feature: (fill in with feature key and github tracking issues once accepted)
 ## Summary
 
 A new calculation is proposed to adjust stake delegation amounts during the
-partitioned rewards payout system of
+epoch rewards payout system of
 [SIMD-118](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0118-partitioned-epoch-reward-distribution.md),
 based on the Rent sysvar parameters at the beginning of that epoch.
 
 ## Motivation
 
-If
-[SIMD-0438 (Rent Increase)](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0438-rent-increase-safeguard.md)
-is enabled after any of the Rent decreases described in
+This proposal is a prerequisite for
+[SIMD-0438 (Rent Increase)](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0438-rent-increase-safeguard.md).
+
+If SIMD-0438 is enabled after any of the Rent decreases described in
 [SIMD-0437](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0437-incremental-rent-reduction.md),
 a stake account created with lower Rent may have an inflated delegation amount,
 consisting of the delta between the previous (decreased) minimum balance and the
@@ -43,27 +44,27 @@ During the partitioned epoch rewards calculation outlined in
 a stake's updated delegation MUST be calculated with the following formula:
 
 ```
-max(
-  min(
-    delegation + stake_rewards,
+post_delegation = min(
+    pre_delegation + stake_rewards,
     lamports + stake_rewards - rent_exempt_reserve
-  ),
-  0
 )
 ```
 
 Where:
 
-* `delegation`: the account's pre-reward delegated lamport amount
+* `post_delegation`: the account's post-reward delegated lamport amount
+* `pre_delegation`: the account's pre-reward delegated lamport amount
 * `stake_rewards`: the account's calculated stake reward lamport amount for the
   past epoch
 * `lamports`: the account's pre-reward lamports
 * `rent_exempt_reserve`: the minimum lamport balance required for the stake
   account
 
-The `rent_exempt_reserve` calculation MUST use current `Rent` sysvar parameters,
-which MAY be updated immediately prior to reward calculation, during the epoch
-boundary.
+All arithmetic operations MUST be saturating and use unsigned 64-bit integers.
+
+The `rent_exempt_reserve` calculation MUST use current `Rent` sysvar parameters.
+Any updates to the `Rent` sysvar values MUST take place before epoch rewards
+calculation takes place.
 
 During distribution, the `delegation.stake` field (offset `[156,164)`) in the
 stake account's data MUST be set to the new delegation amount, expressed as a
@@ -90,12 +91,9 @@ block rewards MUST be used to cover the new required minimum balance, so
 the formula becomes:
 
 ```
-max(
-  min(
+post_delegation = min(
     delegation + stake_rewards,
     lamports + stake_rewards + block_rewards - rent_exempt_reserve
-  ),
-  0
 )
 ```
 
@@ -119,10 +117,11 @@ delegation amounts will always be correct when new stake weights are calculated.
 
 ## Impact
 
-The biggest impact is that a delegation MAY decrease between epochs. Protocols
-MUST relax assumptions that delegation amounts only increase or stay the same.
+The biggest impact is that a delegation MAY decrease between epochs. Any
+consumer (on-chain program, dApp, etc) MUST relax assumptions that delegation
+amounts only increase or stay the same.
 
-Protocols MUST allow for stake accounts to become inactive as a result of reward
+Consumers MUST allow for stake accounts to become inactive as a result of reward
 distribution, without an explicit call to `Deactivate` or `DeactivateDelinquent`.
 
 ## Security Considerations
