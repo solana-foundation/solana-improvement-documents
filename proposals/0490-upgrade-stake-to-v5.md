@@ -33,9 +33,9 @@ N/A
 
 BPF Stake v5.0.0 introduces several changes:
 
-* Raise minimum delegation from 1 lamport to (XXX under discussion). This is a
-medium-firm blocker on rent reduction because allowing the total lamports
-required to open a stake account to fall is highly undesirable.
+* Raise minimum delegation from 1 lamport to 1 sol. This is a medium-firm
+blocker on rent reduction because allowing the total lamports required to open a
+stake account to fall is highly undesirable.
 * Use the `Rent` sysvar in preference to `Meta.rent_exempt_reserve`. This is a
 *hard* blocker on rent reduction to protect the integrity of mathematical
 operations involving delegated stake. The value of `rent_exempt_reserve` for all
@@ -53,13 +53,23 @@ new minimum delegation for the `getMinimumDelegation` RPC call.
 
 ## Alternatives Considered
 
-N/A
+The 1 sol minimum delegation was chosen after extensive debate and several other
+options had been considered, including 0.1 sol, 0.001 sol, and the current
+rent-exemption threshold.
+
+A substantial number of stake accounts on Mainnet-Beta are below 1 sol, however
+collectively these account for 0.02% of active stake on the network. Validator
+operators have expressed comfort with adopting a 1 sol minimum via SIMD.
+
+All other changes in v5.0.0 are routine fixes and improvements.
 
 ## Impact
 
-* Dapps must handle minimum delegation properly, since it will now rise above 1
-lamport. Ultimately the Stake Program is the arbiter of correctness and will
-safely reject invalid state transitions.
+* Creating new stake accounts whose delegation is below 1 sol will no longer be
+possible. Dapps which create stake accounts must account for minimum delegation.
+Ultimately the Stake Program is the arbiter of correctness and will safely
+reject invalid state transitions. Merging stake accounts is always allowed, even
+if the merge destination does not rise above 1 sol.
 * `Meta.rent_exempt_reserve` is now deprecated and dapps should calculate rent-
 exemption via `Rent`. This is a consequence of rent reduction itself rather than
 this SIMD specifically.
@@ -82,7 +92,7 @@ BPF Stake v5.0.0 will undergo security audit before deployment is allowed.
 ## Backwards Compatibility
 
 Minimum delegation will rise above 1 lamport. Tooling or onchain programs that
-assumes `Rent.minimum_balance(200) + 1` is sufficient to create a stake account
+assume `Rent.minimum_balance(200) + 1` is sufficient to create a stake account
 may break for very small balances.
 
 Splitting a stake account into itself is now an error. There is no valid usecase
