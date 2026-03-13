@@ -21,7 +21,7 @@ releases to upgrade to new versions. This proposal is not in and of itself a new
 feature.
 
 Aside from the general desire to improve and maintain the BPF Stake Program,
-this SIMD is necessary to actvate the
+this SIMD is necessary to activate the
 [Incremental Reduction of lamports_per_byte](https://github.com/solana-foundation/solana-improvement-documents/pull/437)
 feature gates.
 
@@ -47,7 +47,7 @@ gracefully accept existing instructions that include sysvars.
 that removing self-split, the new `Split` processor remains backwards
 compatible.
 
-In validator clients this fetaure will use existing code to effect a Core BPF 
+In validator clients this feature will use existing code to effect a Core BPF
 Program upgrade. Otherwise, the only required validator support is to return the
 new minimum delegation for the `getMinimumDelegation` RPC call.
 
