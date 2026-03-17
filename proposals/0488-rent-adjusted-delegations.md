@@ -28,9 +28,20 @@ a stake account created with lower Rent may have an inflated delegation amount,
 consisting of the delta between the previous (decreased) minimum balance and the
 new (increased) minimum balance.
 
+Any meaningful user of stake accounts (on-chain programs, dapps, etc) typically
+assume the following invariant:
+
+```
+lamports - delegation - rent_exempt_reserve >= 0
+```
+
+If a rent lamport can also be a delegation lamport, at best programs or users
+will abort operations due to incorrect values, at worst they might overestimate
+the value of a stake account and create a loss-of-funds scenario.
+
 Although the potential divergence is on the order of 1/1000 of a SOL per stake
-account, an incorrect delegation amount gives validators an artificially higher
-stake weight, reflecting stake that is not backed by lamports in a stake
+account, an incorrect delegation amount also gives validators an artificially
+higher stake weight, reflecting stake that is not backed by lamports in a stake
 account.
 
 ## New Terminology
@@ -39,7 +50,7 @@ None.
 
 ## Detailed Design
 
-During the partitioned epoch rewards calculation outlined in
+During the epoch rewards calculation outlined in
 [SIMD-118](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0118-partitioned-epoch-reward-distribution.md),
 a stake's updated delegation MUST be calculated with the following formula:
 
@@ -66,24 +77,18 @@ The `rent_exempt_reserve` calculation MUST use current `Rent` sysvar parameters.
 Any updates to the `Rent` sysvar values MUST take place before epoch rewards
 calculation takes place.
 
-During distribution, the `delegation.stake` field (offset `[156,164)`) in the
-stake account's data MUST be set to the new delegation amount, expressed as a
-little-endian unsigned 64-bit integer.
+During distribution, the `delegation.stake` field (absolute offset `[156,164)`)
+in the stake account's data MUST be set to the new delegation amount, expressed
+as a little-endian unsigned 64-bit integer.
 
-If the new delegation amount is 0, then `delegation.deactivation_epoch` (offset
-`[172,180)`) MUST be set to the rewarded epoch, expressed as a little-endian
-unsigned 64-bit integer.
+If the new delegation amount is 0, then `delegation.deactivation_epoch`
+(absolute offset `[172,180)`) MUST be set to the rewarded epoch, expressed as a
+little-endian unsigned 64-bit integer.
 
 If the stake account does not have enough lamports to meet the minimum balance,
 no other change is required. The account will continue to exist as any other
 account that does not meet minimum balance requirements as described in
 [SIMD-0392](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0392-relax-minimum-balance-check.md).
-
-The stake weight for the delegated vote account MUST take into account the new
-calculation.
-
-New entries in the Stake History sysvar MUST take into account the adjusted
-delegation amounts.
 
 During the implementation of block revenue distribution in
 [SIMD-0123](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0123-block-revenue-distribution.md),
