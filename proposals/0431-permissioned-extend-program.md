@@ -83,6 +83,20 @@ The instruction will verify the following, in addition to all existing checks:
 All other existing checks (program ownership, account state, rent-exempt
 balance) remain unchanged.
 
+### Edge Cases
+
+**Near maximum account size.** The maximum permitted account data length is
+10 MiB (10,485,760 bytes). If the program data account's current size is
+within 10 KiB of this limit (i.e. less than 10,240 bytes of headroom remain),
+the account may be extended by the remaining amount up to the 10 MiB cap. In
+this case the 10 KiB minimum does not apply, since the account cannot grow
+further regardless.
+
+**Frozen (immutable) programs.** Programs whose upgrade authority has been set
+to `None` cannot be extended. The loader program already rejects
+`ExtendProgram` for such programs with `Immutable`. This behavior is
+unchanged.
+
 ### CPI Restriction
 
 The existing restriction preventing `ExtendProgram` from being invoked via CPI
