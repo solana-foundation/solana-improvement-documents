@@ -226,7 +226,7 @@ export const metadataCategoryIsValid = {
     const category: string = frontMatter.category
     if (!category) return
 
-    if (!["Meta", "Standard"].includes(category)) {
+    if (!["Meta", "Standard", "Advisory"].includes(category)) {
       onError({
         lineNumber: 1,
         detail: `\`${category}\` is not supported as a value for category`,
@@ -251,7 +251,7 @@ export const metadataTypeIsValid = {
     const type: string = frontMatter.type
     if (!type) return
 
-    const validTypes = ["Core", "Networking", "Interface", "Meta"]
+    const validTypes = ["Core", "Networking", "Interface", "Meta", "Advisory"]
 
     if (!validTypes.some((validType) => type.includes(validType))) {
       onError({
