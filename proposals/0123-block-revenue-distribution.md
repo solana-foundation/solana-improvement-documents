@@ -45,10 +45,15 @@ This proposal depends on the following previously accepted proposals:
     Introduces a new instruction type for setting commission rates in basis
     points
 
+- **[SIMD-0488]: Rent-Adjusted Stake Delegations**
+
+    Updates delegation calculation based on `Rent` sysvar parameters
+
 [SIMD-0180]: https://github.com/solana-foundation/solana-improvement-documents/pull/180
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
 [SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
 [SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/pull/291
+[SIMD-0488]: https://github.com/solana-foundation/solana-improvement-documents/pull/488
 
 ## Alternatives Considered
 
@@ -176,6 +181,31 @@ must have its `pending_delegator_rewards` field and its balance deducted with
 the amount of rewards distributed to keep capitalization consistent.
 
 [SIMD-0118]: https://github.com/solana-foundation/solana-improvement-documents/pull/118
+
+#### Stake Delegation Adjustment
+
+The new delegation amount for a stake account MUST account for individual
+delegator rewards, by adapting the calculation from [SIMD-0488]:
+
+```
+post_delegation = min(
+    delegation + stake_rewards,
+    lamports + stake_rewards + block_rewards - rent_exempt_reserve
+)
+```
+
+Where `block_rewards` represents the individual block rewards earned by the
+stake account in that epoch. All other variables are the same as before:
+
+- `post_delegation`: the account's post-reward delegated lamport amount
+- `pre_delegation`: the account's pre-reward delegated lamport amount
+- `stake_rewards`: the account's calculated stake reward lamport amount for the
+  past epoch
+- `lamports`: the account's pre-reward lamports
+- `rent_exempt_reserve`: the minimum lamport balance required for the stake
+  account
+
+All arithmetic operations MUST be saturating and use unsigned 64-bit integers.
 
 ### Vote Program
 

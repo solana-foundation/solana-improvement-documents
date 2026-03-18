@@ -90,21 +90,6 @@ no other change is required. The account will continue to exist as any other
 account that does not meet minimum balance requirements as described in
 [SIMD-0392](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0392-relax-minimum-balance-check.md).
 
-During the implementation of block revenue distribution in
-[SIMD-0123](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0123-block-revenue-distribution.md),
-block rewards MUST be used to cover the new required minimum balance, so
-the formula becomes:
-
-```
-post_delegation = min(
-    delegation + stake_rewards,
-    lamports + stake_rewards + block_rewards - rent_exempt_reserve
-)
-```
-
-Where `block_rewards` represents the block rewards earned by the stake account
-in that epoch. All other variables are the same as before.
-
 ## Alternatives Considered
 
 We could fix the minimum balance for stake accounts to the current minimum
