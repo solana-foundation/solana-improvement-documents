@@ -45,7 +45,7 @@ This proposal depends on the following previously accepted proposals:
     Introduces a new instruction type for setting commission rates in basis
     points
 
-- **[SIMD-0488]: Rent-Adjusted Stake Delegations**
+- **[SIMD-0392]: Runtime Adjustments for Rent Increase**
 
     Updates delegation calculation based on `Rent` sysvar parameters
 
@@ -53,7 +53,7 @@ This proposal depends on the following previously accepted proposals:
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
 [SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
 [SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/pull/291
-[SIMD-0488]: https://github.com/solana-foundation/solana-improvement-documents/pull/488
+[SIMD-0392]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0392-rent-increase-adaptations.md
 
 ## Alternatives Considered
 
@@ -185,7 +185,7 @@ the amount of rewards distributed to keep capitalization consistent.
 #### Stake Delegation Adjustment
 
 The new delegation amount for a stake account MUST account for individual
-delegator rewards, by adapting the calculation from [SIMD-0488]:
+delegator rewards, by adapting the calculation from [SIMD-0392]:
 
 ```
 post_delegation = min(
