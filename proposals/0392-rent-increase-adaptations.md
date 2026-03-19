@@ -55,7 +55,7 @@ For stake accounts, any meaningful user (on-chain programs, dapps, etc)
 typically assumes the following invariant:
 
 ```
-lamports - delegation - rent_exempt_reserve >= 0
+balance - delegation - rent_exempt_reserve >= 0 lamports
 ```
 
 If a rent lamport can also be a delegation lamport, at best programs or users
@@ -199,7 +199,7 @@ calculated with the following formula:
 ```
 post_delegation = min(
     pre_delegation + stake_rewards,
-    lamports + stake_rewards - rent_exempt_reserve
+    balance + stake_rewards - rent_exempt_reserve
 )
 ```
 
@@ -209,7 +209,7 @@ Where:
 - `pre_delegation`: the account's pre-reward delegated lamport amount
 - `stake_rewards`: the account's calculated stake reward lamport amount for the
   past epoch
-- `lamports`: the account's pre-reward lamports
+- `balance`: the account's pre-reward balance, in lamports
 - `rent_exempt_reserve`: the minimum lamport balance required for the stake
   account
 

@@ -190,7 +190,7 @@ delegator rewards, by adapting the calculation from [SIMD-0488]:
 ```
 post_delegation = min(
     delegation + stake_rewards,
-    lamports + stake_rewards + block_rewards - rent_exempt_reserve
+    balance + stake_rewards + block_rewards - rent_exempt_reserve
 )
 ```
 
@@ -201,7 +201,7 @@ stake account in that epoch. All other variables are the same as before:
 - `pre_delegation`: the account's pre-reward delegated lamport amount
 - `stake_rewards`: the account's calculated stake reward lamport amount for the
   past epoch
-- `lamports`: the account's pre-reward lamports
+- `balance`: the account's pre-reward balance, in lamports
 - `rent_exempt_reserve`: the minimum lamport balance required for the stake
   account
 
