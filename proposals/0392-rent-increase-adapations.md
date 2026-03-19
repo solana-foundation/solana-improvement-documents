@@ -1,8 +1,9 @@
 ---
 simd: '0392'
-title: Relax Post-Execution Minimum Balance Check
+title: Adapt Runtime for Rent Increases
 authors:
   - Igor Durovic (anza)
+  - Jon C (anza)
 category: Standard
 type: Core
 status: Idea
@@ -12,14 +13,25 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-To allow for non-disruptive rent increases, relax post-execution account
-minimum balance checks. The new lower-bound on post-exec balance is
+To allow for non-disruptive rent increases, the Solana runtime relaxes
+post-execution minimum balance checks and adjusts stake delegations during epoch
+rewards calculations.
+
+### Relax Post-Execution Minimum Balance Check
+
+During transaction execution, the new lower-bound on post-exec balance is
 `min(acc.pre_exec_balance, calculate_min_balance(acc.size()))`.
 
 This maintains the invariant that every account has a balance at or above the
 minimum balance requirement calculated at any point since the most recent
 allocation occurred. When enabled, only newly allocated accounts will be
 subject to rent increases.
+
+### Adjust Stake Delegations during Reward Calculation
+
+A new calculation is proposed to adjust stake delegation amounts during the
+epoch rewards payout system, based on the `Rent` sysvar parameters at the
+beginning of that epoch.
 
 Sidenote: this proposal doesn't include any mechanism for increasing rent,
 but when such a mechanism is added in the future it should cap the
@@ -31,10 +43,24 @@ need to be updated to be compatible.
 
 ## Motivation
 
+This proposal is a prerequisite for
+[SIMD-0438 (Rent Increase)](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0438-rent-increase-safeguard.md).
+
 In order to safely reduce rent there must be a mechanism available for
-non-disruptive rent increases. Without this change, a rent increase would
+non-disruptive rent increases. Without these changes, a rent increase would
 either place existing accounts in a gray area undefined by the protocol or
 prevent write-locking all accounts with balances below the new rent value. 
+
+For stake accounts, any meaningful user (on-chain programs, dapps, etc)
+typically assumes the following invariant:
+
+```
+lamports - delegation - rent_exempt_reserve >= 0
+```
+
+If a rent lamport can also be a delegation lamport, at best programs or users
+will abort operations due to incorrect values, at worst they might overestimate
+the value of a stake account and create a loss-of-funds scenario.
 
 ## New Terminology
 
@@ -53,7 +79,9 @@ prevent write-locking all accounts with balances below the new rent value.
 
 ## Detailed Design
 
-### Current behavior
+### Post-Execution Balance Checks
+
+#### Current behavior
 
 For all write-locked accounts, post-execution account balance checks
 currently verify:
@@ -70,7 +98,7 @@ If the rent price is increased then existing accounts may become sub-exempt,
 which isn't currently allowed in the protocol as rent paying accounts have been
 deprecated.
 
-### Proposed behavior
+#### Proposed behavior
 
 For all write-locked accounts, post-execution account balance checks MUST
 verify:
@@ -112,7 +140,7 @@ The owner check is intended to make reselling low-rent account state more
 difficult so a secondary market doesn't develop. See the security considerations
 section for more details.
 
-### Implementation details
+#### Implementation details
 
 - The pre-execution balance MUST be captured before any state is modified
   (e.g. before fee collection, instruction execution, etc). This same
@@ -130,7 +158,7 @@ section for more details.
   `min()` clause.
 - As before, 0 post-balance is allowed and equivalent to closing an account.
 
-### Edge cases
+#### Edge cases
 
 **Account creation:**
 
@@ -163,6 +191,42 @@ section for more details.
 - If the account owner changes, always enforce the current rent-exempt minimum
   for the post-exec size; the `min(pre_exec_balance, …)` clause does not apply.
 
+### Rent-Adjusted Stake Delegations
+
+During the epoch rewards calculation phase, a stake's updated delegation MUST be
+calculated with the following formula:
+
+```
+post_delegation = min(
+    pre_delegation + stake_rewards,
+    lamports + stake_rewards - rent_exempt_reserve
+)
+```
+
+Where:
+
+- `post_delegation`: the account's post-reward delegated lamport amount
+- `pre_delegation`: the account's pre-reward delegated lamport amount
+- `stake_rewards`: the account's calculated stake reward lamport amount for the
+  past epoch
+- `lamports`: the account's pre-reward lamports
+- `rent_exempt_reserve`: the minimum lamport balance required for the stake
+  account
+
+All arithmetic operations MUST be saturating and use unsigned 64-bit integers.
+
+The `rent_exempt_reserve` calculation MUST use current `Rent` sysvar parameters.
+Any updates to the `Rent` sysvar values MUST take place before epoch rewards
+calculation takes place.
+
+During distribution, the `delegation.stake` field (absolute offset `[156,164)`)
+in the stake account's data MUST be set to the new delegation amount, expressed
+as a little-endian unsigned 64-bit integer.
+
+If the new delegation amount is 0, then `delegation.deactivation_epoch`
+(absolute offset `[172,180)`) MUST be set to the rewarded epoch, expressed as a
+little-endian unsigned 64-bit integer.
+
 ## Alternatives Considered
 
 ### Always enforce current rent price post-execution
@@ -182,6 +246,13 @@ allocation. The benefit of a dedicated metadata field is that the invariant
 can be made stricter: every account's balance is bounded below by the rent
 price at the most recent allocation rather than the minimum rent price *since*
 the last allocation.
+
+### Fix Minimum Balance for Stake Accounts
+
+We could fix the minimum balance for stake accounts to the current minimum
+balance for 200 bytes. This approach breaks any existing on-chain programs or
+tooling that use the Rent sysvar to calculate the minimum balance of a stake
+account.
 
 ## Impact
 
@@ -215,10 +286,19 @@ the last allocation.
 
 ## Backwards Compatibility
 
-This is a **relaxation** of existing constraints:
+For post-execution balance checks, this is a **relaxation** of existing
+constraints:
 
 - The change makes the balance check less strict by allowing accounts to retain
   their original rent price when not upwards reallocating.
 - This is backwards compatible in the sense that transactions that currently
   succeed will continue to succeed.
 - However, it changes consensus rules and must be activated behind a feature gate.
+
+For stake accounts:
+
+- A stake delegation MAY decrease between epochs, so consumers MUST relax
+  assumptions that delegation amounts only increase or stay the same.
+- Consumers MUST allow for stake accounts to become inactive as a result of
+  reward distribution, without an explicit call to `Deactivate` or
+  `DeactivateDelinquent`.
