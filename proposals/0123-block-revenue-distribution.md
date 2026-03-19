@@ -195,17 +195,10 @@ post_delegation = min(
 ```
 
 Where `block_rewards` represents the individual block rewards earned by the
-stake account in that epoch. All other variables are the same as before:
+stake account in that epoch.
 
-- `post_delegation`: the account's post-reward delegated lamport amount
-- `pre_delegation`: the account's pre-reward delegated lamport amount
-- `stake_rewards`: the account's calculated stake reward lamport amount for the
-  past epoch
-- `balance`: the account's pre-reward balance, in lamports
-- `rent_exempt_reserve`: the minimum lamport balance required for the stake
-  account
-
-All arithmetic operations MUST be saturating and use unsigned 64-bit integers.
+All other variables are the same as before, as described in
+[SIMD-0392](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0392-rent-increase-adaptations.md#rent-adjusted-stake-delegations).
 
 ### Vote Program
 

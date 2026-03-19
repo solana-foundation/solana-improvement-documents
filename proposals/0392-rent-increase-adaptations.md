@@ -211,7 +211,7 @@ Where:
   past epoch
 - `balance`: the account's pre-reward balance, in lamports
 - `rent_exempt_reserve`: the minimum lamport balance required for the stake
-  account
+  account (more information below)
 
 All arithmetic operations MUST be saturating and use unsigned 64-bit integers.
 
