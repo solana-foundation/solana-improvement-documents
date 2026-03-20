@@ -30,7 +30,7 @@ This proposal depends on the following previously accepted proposals:
 - [SIMD-0189](https://github.com/solana-foundation/solana-improvement-documents/pull/189)
 - [SIMD-0377](https://github.com/solana-foundation/solana-improvement-documents/pull/377)
 
-which together form SBPFv3. There should be a new valid deployment target
+which together form SBPFv3. Thus, there will be a new valid deployment target
 before we deactivate the older ones.
 
 ## New Terminology
@@ -40,22 +40,26 @@ None.
 ## Detailed Design
 
 After the activation of the associated feature key a validator must fail to
-execute programs with any SBPF version other than v3, throwing the error
-message `InstructionError::InvalidAccountData`.
+deploy programs with any SBPF version other than v3. Loader-v3 instructions
+`DeployWithMaxDataLen` and `Upgrade` must throw the error
+`InstructionError::InvalidAccountData` when verifying the program data.
 
 ## Alternatives Considered
 
-None.
+Not deprecating some or all older SBPF versions.
 
 ## Impact
 
 dApp developers using outdated toolchains will have to update them and adjust
 their programs before they can re-/deploy them.
 
+Furthermore, testing frameworks and mock ups will have to be adapted to either
+deactivate this feature or bypass the entire deployment in order to continue
+to test older SBPF versions.
+
 ## Security Considerations
 
-What security implications/considerations come with implementing this feature?
-Are there any implementation-specific guidance or pitfalls?
+None.
 
 ## Backwards Compatibility
 
