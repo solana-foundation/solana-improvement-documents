@@ -16,8 +16,6 @@ Deactivate execution of loader-v1 and ABI-v0.
 
 ## Motivation
 
-See the related [SIMD discussion](https://github.com/solana-foundation/solana-improvement-documents/discussions/483).
-
 The trouble with ABIv0 is that it had no alignment padding in its serialization
 format and simply ignored any alignment requirements for syscall parameters.
 This has since become undefined behavior in Rust. Disabling execution of
@@ -33,18 +31,30 @@ None.
 
 After the activation of the associated feature key a validator must fail to
 execute programs owned by loader-v1, throwing the error message
-`InstructionError::UnsupportedProgramId`.
+`TransactionError::InvalidProgramForExecution` during transaction loading.
 
 ## Alternatives Considered
 
-- First bumping the CU cost of ABI-v0 significantly to get users off the
-Memo-v1 program.
-- Adapting the Memo Program v1 to ABI-v1 and redeploying it on loader-v3.
+Continuing to support this barely used functionality.
 
 ## Impact
 
-The only loader-v1 / ABIv0 program still in use today is Memo Program v1.
-Of which there has been a loader-v2 / ABIv1 replacement around for a long time.
+The only loader-v1 / ABIv0 program still in use today is Memo Program v1,
+of which there has been a loader-v2 / ABIv1 replacement around for a long time.
+Memo Program v1 usage often occurs in conjunction with Jupiter usage.
+
+One possibility to get users of this program would be to first bump the CU cost
+of ABI-v0 significantly in a separate SIMD. Though it is likely unnecessary and
+easier to ask them to change their transaction building.
+
+In case the remaining Memo Program v1 traffic can not be migrated to v2, it is
+conceivable to adapt the Memo Program v1 (which was written for ABI-v0) to
+ABI-v1 and redeploy it on loader-v3 similar to
+[SIMD-0418](https://github.com/solana-foundation/solana-improvement-documents/pull/418).
+
+All programs owned by loader-v1 would stop working forever with their locked
+funds effectively burned. This might be relevant for sleeper programs which
+have not seen any activity in years.
 
 ## Security Considerations
 
@@ -53,5 +63,5 @@ up together with the removal of alignment check skipping would be more complex.
 
 ## Drawbacks
 
-Slight inconvenience to last remaining users of the Memo Program v1. However,
-the issues this incurrs to validator implementations should outweigh this.
+Slight inconvenience to the last remaining users of the Memo Program v1 as well
+as bricking of any sleeper programs owned by loader-v1.
