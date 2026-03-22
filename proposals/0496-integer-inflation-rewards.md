@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Idea
 created: 2026-03-18
-feature: (to be assigned upon acceptance)
+feature: intsdD7D3LrPd9GAYgSvaUNJZc5ywoRKQfUeQrGCwtU
 ---
 
 ## Summary
@@ -39,7 +39,7 @@ removing `f64` from consensus-critical paths.
 
 - **Scaled integer**: A `u128` representing a real number multiplied by a
   fixed scale factor `S`. With `S = 2^60`, the value `0.08` is stored as
-  `round(0.08 * 2^60) = 92233720368547758`.
+  `round(0.08 * 2^60) = 92233720368547760`.
 
 ## Detailed Design
 
@@ -93,16 +93,34 @@ Given a non-negative, finite `f64` value `v`:
 4. If `shift < 0`, right-shift with round-to-nearest. Return 0 if the shift
    exceeds 127.
 
-A sample implementation is provided in the [Sample Implementations](#sample-implementations) section.
+A sample implementation is provided in the
+[Sample Implementations](#sample-implementations) section.
 
 For mainnet's `Inflation::default()`:
 
 | Field | f64 | Scaled u128 |
 |---|---|---|
-| `initial` | 0.08 | 92233720368547758 |
-| `terminal` | 0.015 | 17293822569102705 |
-| `1 - taper` | 0.85 | 980881958878066688 |
-| `foundation` | 0.05 | 57646075230342349 |
+| `initial` | 0.08 | 92233720368547760 |
+| `terminal` | 0.015 | 17293822569102704 |
+| `1 - taper` | 0.85 | 979983278915819904 |
+| `foundation` | 0.05 | 57646075230342352 |
+
+### Scaled variables
+
+The `Inflation` struct provides four `f64` fields. All scaled variables used
+below are derived from these fields via `f64_to_scaled`:
+
+```text
+initial_scaled     = f64_to_scaled(initial)
+terminal_scaled    = f64_to_scaled(terminal)
+decay_base_scaled  = f64_to_scaled(1.0 - taper)
+foundation_scaled  = f64_to_scaled(foundation)
+foundation_term_nanos = (foundation_term * NANOS_PER_YEAR as f64).round() as u128
+```
+
+`foundation_term` is an `f64` representing whole years (e.g. `7.0` on
+mainnet). The conversion multiplies by `NANOS_PER_YEAR` and rounds to the
+nearest integer.
 
 ### Reward calculation
 
@@ -133,7 +151,14 @@ total      = max(tapered, terminal_scaled)
 
 **Proposed (integer):**
 
-Decompose into integer and fractional year parts:
+Two edge cases bypass the series:
+
+- If `decay_base_scaled == S` (i.e. `taper == 0`), decay is `S` (no decay).
+- If `decay_base_scaled == 0` (i.e. `taper == 1.0`, as used by
+  `Inflation::new_fixed` and `Inflation::new_pico`), decay is `0` for any
+  positive year. The total rate falls to `terminal_scaled` immediately.
+
+Otherwise, decompose into integer and fractional year parts:
 
 ```text
 full_years = year_nanos / NANOS_PER_YEAR
@@ -205,7 +230,8 @@ This preserves the existing semantics of the foundation term.
 
 ```text
 epoch_duration_in_years = slots_in_epoch / slots_per_year
-validator_rewards = (validator_rate * capitalization * epoch_duration_in_years) as u64
+validator_rewards =
+    (validator_rate * capitalization * epoch_duration_in_years) as u64
 ```
 
 **Proposed (integer):**
