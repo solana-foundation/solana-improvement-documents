@@ -45,15 +45,19 @@ removing `f64` from consensus-critical paths.
 
 ### Overview
 
-The inflation reward for an epoch is:
+The reward pipeline has four stages:
 
-```text
-validator_rewards = validator_rate(num_slots) * capitalization * epoch_duration
-```
+1. **Total inflation rate** — compute the tapered annual rate for the current
+   slot.
+2. **Decay** — evaluate `(1 - taper) ^ year` for a fractional year.
+3. **Validator/foundation split** — subtract the foundation share from the
+   total rate.
+4. **Final lamport reward** — multiply the validator rate by capitalization
+   and epoch duration.
 
-where `validator_rate` incorporates the inflation schedule (initial rate,
-taper, terminal rate, foundation share). This proposal replaces every `f64`
-operation in that pipeline with exact `u128` arithmetic.
+This proposal replaces every `f64` operation in that pipeline with exact `u128`
+fixed-point arithmetic. For each stage below, we show the current `f64` logic
+and the new integer logic side by side.
 
 ### Fixed-point scale
 
@@ -77,30 +81,19 @@ NANOS_PER_YEAR = 31_556_925_993_600_000          (365.242199 days)
 The `Inflation` struct stores its fields as `f64`. These are set at genesis
 and never change. The naive conversion `(v * S as f64) as u128` silently
 loses precision because `S` exceeds `2^53`. Implementations MUST extract the
-mantissa and exponent directly from the IEEE-754 bit representation:
+mantissa and exponent directly from the IEEE-754 bit representation.
 
-```rust
-fn f64_to_scaled(v: f64) -> u128 {
-    assert!(v >= 0.0 && v.is_finite());
-    if v == 0.0 {
-        return 0;
-    }
-    let bits = v.to_bits();
-    let mantissa = (bits & 0x000F_FFFF_FFFF_FFFF)
-                 | 0x0010_0000_0000_0000; // 53 bits with implicit 1
-    let biased_exp = ((bits >> 52) & 0x7FF) as i32;
-    // v = mantissa * 2^(biased_exp - 1023 - 52)
-    // v * S = mantissa * 2^(biased_exp - 1023 - 52 + 60)
-    let shift = biased_exp - 1023 - 52 + 60;
+Given a non-negative, finite `f64` value `v`:
 
-    if shift >= 0 {
-        (mantissa as u128) << (shift as u32)
-    } else {
-        let right = (-shift) as u32;
-        ((mantissa as u128) + (1u128 << (right - 1))) >> right
-    }
-}
-```
+1. Extract the 53-bit mantissa (with implicit leading 1) and biased exponent
+   from the IEEE-754 bits.
+2. Compute `shift = biased_exp - 1023 - 52 + 60`.
+3. If `shift >= 0`, left-shift the mantissa. Saturate to `u128::MAX` if the
+   shift exceeds 75.
+4. If `shift < 0`, right-shift with round-to-nearest. Return 0 if the shift
+   exceeds 127.
+
+A sample implementation is provided in the [Sample Implementations](#sample-implementations) section.
 
 For mainnet's `Inflation::default()`:
 
@@ -111,15 +104,34 @@ For mainnet's `Inflation::default()`:
 | `1 - taper` | 0.85 | 980881958878066688 |
 | `foundation` | 0.05 | 57646075230342349 |
 
-### Total inflation rate
+### Reward calculation
+
+#### Total inflation rate
+
+**Current (f64):**
+
+```text
+year  = num_slots / slots_per_year
+total = max(terminal, initial * (1 - taper).powf(year))
+```
+
+**Proposed (integer):**
 
 ```text
 year_nanos = num_slots * NS_PER_SLOT
-tapered    = initial_scaled * compute_decay(year_nanos) / S
+tapered    = initial_scaled * compute_decay(decay_base_scaled, year_nanos) / S
 total      = max(tapered, terminal_scaled)
 ```
 
-### Decay: `(1 - taper) ^ year`
+#### Decay: `(1 - taper) ^ year`
+
+**Current (f64):**
+
+```text
+(1.0 - taper).powf(year)    // single f64 call
+```
+
+**Proposed (integer):**
 
 Decompose into integer and fractional year parts:
 
@@ -135,7 +147,142 @@ decay = int_part * frac_part / S
 
 If `remainder == 0`, skip the fractional part.
 
-#### `fixed_pow`: repeated squaring
+`fixed_pow` computes integer exponentiation by repeated squaring in
+fixed-point.
+
+`fixed_ln` computes the natural log of a scaled value in `[S/2, S]` (real
+values in [0.5, 1.0]) via the `atanh` series:
+
+```text
+ln(x) = 2 * atanh(z),  where z = (x - 1) / (x + 1)
+      = 2 * (z + z^3/3 + z^5/5 + ...)
+```
+
+**Convergence.** With `x` in `[0.5, 1.0]`, `z` falls in `[-1/3, 0]`. The
+k-th term satisfies `|term_k| <= (1/3)^(2k+1) / (2k+1)`. At `k = 19`:
+`(1/3)^39 < 2^{-60}`, so the term underflows `S` and the series has
+converged. Implementations MUST iterate until the term reaches zero or for at
+least 25 iterations.
+
+`fixed_exp` computes the exponential via Taylor series:
+
+```text
+exp(x) = 1 + x + x^2/2! + x^3/3! + ...
+       = sum of term_k, where term_k = term_{k-1} * x / (k * S)
+```
+
+**Convergence.** `|term_k| <= 0.163^k / k!`. At `k = 12`:
+`0.163^12 / 12! < 2^{-60}`, underflowing `S`. Implementations MUST iterate
+until the term reaches zero or for at least 35 iterations.
+
+Sample implementations of `fixed_pow`, `fixed_ln`, and `fixed_exp` are
+provided in the [Sample Implementations](#sample-implementations) section.
+
+#### Validator and foundation rates
+
+**Current (f64):**
+
+```text
+foundation_rate = if year < foundation_term { total * foundation } else { 0.0 }
+validator_rate  = total - foundation_rate
+```
+
+**Proposed (integer):**
+
+```text
+foundation_share = if year_nanos < foundation_term_nanos {
+    total * foundation_scaled / S
+} else { 0 }
+
+validator_rate = total - foundation_share
+```
+
+This preserves the existing semantics of the foundation term.
+
+#### Final reward in lamports
+
+**Current (f64):**
+
+```text
+epoch_duration_in_years = slots_in_epoch / slots_per_year
+validator_rewards = (validator_rate * capitalization * epoch_duration_in_years) as u64
+```
+
+**Proposed (integer):**
+
+```text
+epoch_nanos = slots_in_epoch * NS_PER_SLOT
+rate_cap    = muldiv(validator_scaled, capitalization, S)
+result      = muldiv(rate_cap, epoch_nanos, NANOS_PER_YEAR)
+```
+
+`muldiv(a, b, d)` computes `floor(a * b / d)` exactly, even when `a * b`
+overflows `u128`. One approach uses the identity:
+
+```text
+a * b / d = (a / d) * b + (a % d) * b / d
+```
+
+applied recursively when `a.checked_mul(b)` overflows. Any algorithm that
+yields `floor(a * b / d)` exactly is acceptable. A sample implementation is
+provided in the [Sample Implementations](#sample-implementations) section.
+
+### Feature activation
+
+Gated behind the `integer_inflation_rewards` feature flag, activated through
+the standard feature activation program as a standalone activation. When
+inactive, the existing `f64` path MUST be used. When active, the integer path
+MUST be used.
+
+All implementations MUST produce bit-for-bit identical
+`validator_rewards_lamports` for the same inputs. The arithmetic above fully
+determines the result — there is no tolerance band.
+
+### Sample Implementations
+
+The following Rust implementations are provided as reference. Any
+implementation that produces bit-for-bit identical results for the arithmetic
+specified above is acceptable.
+
+#### `f64_to_scaled`
+
+```rust
+fn f64_to_scaled(v: f64) -> u128 {
+    assert!(v >= 0.0 && v.is_finite());
+    if v == 0.0 {
+        return 0;
+    }
+    let bits = v.to_bits();
+    let mantissa = (bits & 0x000F_FFFF_FFFF_FFFF)
+                 | 0x0010_0000_0000_0000; // 53 bits with implicit 1
+    let biased_exp = ((bits >> 52) & 0x7FF) as i32;
+    // v = mantissa * 2^(biased_exp - 1023 - 52)
+    // v * S = mantissa * 2^(biased_exp - 1023 - 52 + 60)
+    let shift = biased_exp - 1023 - 52 + 60;
+
+    match shift >= 0 {
+        true => {
+            let shift = shift as u32;
+            if shift > 128 - 53 {
+                return u128::MAX;
+            }
+            (mantissa as u128) << shift
+        }
+        false => {
+            let right = (-shift) as u32;
+            if right >= 128 {
+                return 0;
+            }
+            // Round to nearest.
+            ((mantissa as u128) + (1u128 << (right - 1))) >> right
+        }
+    }
+}
+```
+
+#### `fixed_pow`
+
+Repeated squaring in fixed-point:
 
 ```rust
 fn fixed_pow(base_scaled: u128, exp: u128) -> u128 {
@@ -158,22 +305,9 @@ fn fixed_pow(base_scaled: u128, exp: u128) -> u128 {
 
 Since `base_scaled <= S`, each product fits in `u128`.
 
-#### `fixed_ln`: natural log via `atanh` series
+#### `fixed_ln`
 
-For `x` in `[S/2, S]` (i.e. real values in [0.5, 1.0]):
-
-```text
-ln(x) = 2 * atanh(z),  where z = (x - 1) / (x + 1)
-      = 2 * (z + z^3/3 + z^5/5 + ...)
-```
-
-Returns a signed `i128`.
-
-**Convergence.** With `x` in `[0.5, 1.0]`, `z` falls in `[-1/3, 0]`. The
-k-th term satisfies `|term_k| <= (1/3)^(2k+1) / (2k+1)`. At `k = 19`:
-`(1/3)^39 < 2^{-60}`, so the term underflows `S` and the series has
-converged. Implementations MUST iterate until the term reaches zero or for at
-least 25 iterations.
+Natural log via `atanh` series for `x` in `[S/2, S]`:
 
 ```rust
 fn fixed_ln(x_scaled: u128) -> i128 {
@@ -194,18 +328,9 @@ fn fixed_ln(x_scaled: u128) -> i128 {
 }
 ```
 
-#### `fixed_exp`: Taylor series
+#### `fixed_exp`
 
-For a signed scaled input (in practice, `|x| < |ln(0.85)| ~ 0.163`):
-
-```text
-exp(x) = 1 + x + x^2/2! + x^3/3! + ...
-       = sum of term_k, where term_k = term_{k-1} * x / (k * S)
-```
-
-**Convergence.** `|term_k| <= 0.163^k / k!`. At `k = 12`:
-`0.163^12 / 12! < 2^{-60}`, underflowing `S`. Implementations MUST iterate
-until the term reaches zero or for at least 35 iterations.
+Taylor series for a signed scaled input:
 
 ```rust
 fn fixed_exp(x_scaled: i128) -> u128 {
@@ -221,45 +346,23 @@ fn fixed_exp(x_scaled: i128) -> u128 {
 }
 ```
 
-### Validator and foundation rates
+#### `muldiv`
 
-```text
-foundation_share = total * foundation_scaled / S   (if year_nanos < foundation_term_nanos)
-                 = 0                                (otherwise)
+Computes `floor(a * b / d)` exactly even when `a * b` overflows `u128`:
 
-validator_rate = total - foundation_share
+```rust
+fn muldiv(a: u128, b: u128, d: u128) -> u128 {
+    match a.checked_mul(b) {
+        Some(product) => product / d,
+        None => {
+            // a * b / d = (a / d) * b + (a % d) * b / d
+            let quotient = a / d;
+            let remainder = a % d;
+            quotient * b + muldiv(remainder, b, d)
+        }
+    }
+}
 ```
-
-This preserves the existing semantics of the foundation term.
-
-### Final reward in lamports
-
-```text
-epoch_nanos = slots_in_epoch * NS_PER_SLOT
-rate_cap    = muldiv(validator_scaled, capitalization, S)
-result      = muldiv(rate_cap, epoch_nanos, NANOS_PER_YEAR)
-```
-
-`muldiv(a, b, d)` computes `floor(a * b / d)` exactly, even when `a * b`
-overflows `u128`. One approach uses the identity:
-
-```text
-a * b / d = (a / d) * b + (a % d) * b / d
-```
-
-applied recursively when `a.checked_mul(b)` overflows. Any algorithm that
-yields `floor(a * b / d)` exactly is acceptable.
-
-### Feature activation
-
-Gated behind the `integer_inflation_rewards` feature flag, activated through
-the standard feature activation program as a standalone activation. When
-inactive, the existing `f64` path MUST be used. When active, the integer path
-MUST be used.
-
-All implementations MUST produce bit-for-bit identical
-`validator_rewards_lamports` for the same inputs. The arithmetic above fully
-determines the result — there is no tolerance band.
 
 ## Alternatives Considered
 
