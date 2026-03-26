@@ -86,20 +86,20 @@ the VM without the overhead of additonal account loads or syscall invocation.
 
 ## Impact
 
-1. Improved programs composability
+1. Improved program composability
 2. Fewer stack allocations
 3. Reduced complexity of calculating rent exemption
-4. Reduced cost of resolving Rent/Clock values to 2 CUs
+4. Reduced cost of resolving sysvar values to 2 CUs
 
 ## Security Considerations
 
-1. We must ensure no intra-slot mutability of Sysvars.
+1. We must ensure no intra-slot mutability of any exposed globals.
 2. We must ensure static sysvar pointers remain synchronized with SysvarCache 
    at the slot boundary.
-3. Despite being 32-bit hashes, it is important that we cast them to u64 first 
-   as 50% of 32-bit murmur hashes sign extend to negative 64-bit addresses. If 
+3. Despite being 32-bit hashes, it is important that we cast to u64 first as
+   50% of 32-bit murmur hashes sign extend to negative 64-bit addresses. If 
    our toolchain reliably generated `mov32` without requiring inline assembly, 
-   this would be a better alternative, as it would save 8 bytes of binary size.
+   this would be more ideal, as it would save 8 bytes of binary size.
 
 ## Backwards Compatibility
 
