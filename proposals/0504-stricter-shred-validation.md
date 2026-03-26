@@ -1,5 +1,5 @@
 ---
-simd: '0465'
+simd: '0504'
 title: Stricter shred validation
 authors:
   - Philip Taffet (Firedancer)
