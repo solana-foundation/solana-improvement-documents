@@ -154,6 +154,7 @@ shreds for constructing equivocation proofs, and they MAY be served over
 repair or retransmitted via Turbine.
 
 ### A note on recovery
+
 The checks in Family 2 apply to both received and recovered
 shreds.  This implies that if a validator receives all needed data
 shreds it must still perform the reconstruction process and ensure that
