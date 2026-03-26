@@ -68,7 +68,7 @@ let lamports_per_byte: u64 = unsafe { *(SOL_RENT_SYSVAR as *const u64) };
 This produces the following bytecode:
 
 ```asm
-mov64 r3, 0x494df715 // SOL_RENT_SYSVAR
+lddw r3, 0x494df715 // SOL_RENT_SYSVAR
 ldxdw r3, [r3+0]
 ```
 
