@@ -37,7 +37,7 @@ The downsides of all of these approaches are threefold:
 
 If these globals were simply exposed to the VM, as is common in kernel BPF, 
 and resolved JIT, we could dramatically improve developer experience, whilst 
-and reduce the runtime overhead of accessing them to just 2 CUs. This is 
+also reducing the runtime overhead of accessing them to just 2 CUs. This is 
 generalizable to all Sysvars, however the majority of gains are realized by 
 simply implementing `Rent` and `Clock`.
 
