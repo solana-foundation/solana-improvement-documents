@@ -115,7 +115,7 @@ updated at each CPI call edge. The contents of this region are the following:
     - Pointer to data: `u64`
     - Length of data: `u64`
 
-Let `InstrucionAccount` contain the following fields:
+Let `InstructionAccount` contain the following fields:
 
   - Index to transaction account: `u16`
   - Signer flag: `u8` (1 for signer, 0 for non-singer)
