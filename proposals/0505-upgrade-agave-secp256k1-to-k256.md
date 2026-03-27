@@ -1,6 +1,6 @@
 ---
-simd: "0505"
-title: Upgrade Agave secp256k1 syscall precompile to k256 (Agave-specific)
+simd: "0506"
+title: Upgrade secp256k1 to k256 (Agave-specific)
 authors:
   - Sam Kim
   - Zhenfei Zhang
