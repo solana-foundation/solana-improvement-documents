@@ -167,10 +167,16 @@ Each of these memory regions contain the following for each instruction:
 ### VM initialization
 
 During the initilization of the virtual machine, the runtime must load the 
-value `0x400000000` in register `R1`, value `0x500000000` in register `R2`, 
-and value `0x600000000` in register `R3`. These values represent addresses for 
-programs to easily find the areas to read information about the transaction 
-and the instructions.
+following values to registers:
+
+1. Register R1: A pointer to the metadata of the instruction under execution.
+   (see section [Instruction area](#instruction-area)).
+2. Register R2: A pointer to the instruction accounts slice for the 
+   instruction under execution (see section 
+   [Instruction accounts area](#instruction-accounts-area)).
+3. Register R3: The number of instruction accounts for the instruction under 
+   execution.
+
 
 ### Changes to syscalls
 
@@ -193,7 +199,10 @@ parameters:
 The syscall must check if the address matches the base address of either a 
 writable account payload mapping or one of the scratchpad mappings and return 
 an error otherwise. Constrains for the maximum resizable limits must also be 
-verified (10 kb).
+verified for each region separetely.
+
+The `set_buffer_length` must charge a base cost (to be determined) plus the 
+same CU per byte ratio as the `memset` syscall.
 
 The verifier must reject SBPFv4 programs containing the `sol_invoke_signed_c` 
 and `sol_invoke_signed_rust`, since they are not compatible with ABIv2. A new 
