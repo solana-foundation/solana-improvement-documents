@@ -164,6 +164,20 @@ Each of these memory regions contain the following for each instruction:
       - Signer flag: `u8` (1 for signer, 0 for non-singer)
       - Writable flag: `u8` (1 for writable, 0 for readonly)
 
+### Sysvar accounts area
+
+For each existing (non deprecated) sysvar account, the runtime must map its
+payload at address `0x18800000000` plus `0x100000000` times the index of the
+sysvar in the following order:
+
+0. Clock
+1. Epoch rewards
+2. Epoch Schdule
+3. Last restart slot
+4. Rent
+5. Slot hashes
+6. Stake history
+
 ### VM initialization
 
 During the initilization of the virtual machine, the runtime must load the 
