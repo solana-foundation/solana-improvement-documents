@@ -61,15 +61,19 @@ gate triggers the upgrade at activation time.
 
 Before an upgrade can occur, the following steps must be completed:
 
-1. Verifiably build the ELF of the new BPF implementation.
-2. Generate a new keypair for the source buffer account.
-3. Create the buffer account and write the ELF bytes to it using the Loader
+1. Verifiably build the ELF of the new BPF implementation using a verified
+   build tool (e.g. `solana-verify`).
+2. Compute the SHA-256 hash of the resulting ELF bytes.
+3. Generate a new keypair for the source buffer account.
+4. Create the buffer account and write the ELF bytes to it using the Loader
    v3 `Write` instruction. The buffer account must be owned by the BPF
    Upgradeable Loader (Loader v3).
-4. Generate a new keypair for the feature gate.
-5. Create a new feature gate to upgrade the target program with the source
-   buffer, according to your validator implementation.
-6. Follow the existing process for activating features.
+5. Generate a new keypair for the feature gate.
+6. Create a new feature gate to upgrade the target program with the source
+   buffer, according to your validator implementation. The verified build
+   hash from step 2 must be included in the upgrade configuration
+   alongside the feature gate.
+7. Follow the existing process for activating features.
 
 ### Source Buffer Validation
 
@@ -81,6 +85,29 @@ account before proceeding. The source buffer account:
 - Must deserialize as `UpgradeableLoaderState::Buffer`.
 
 If any of these checks fail, the upgrade must not proceed.
+
+### Verified Build Hash
+
+Each Core BPF upgrade must include a verified build hash in its upgrade
+configuration. The verified build hash is the SHA-256 hash of the expected
+ELF bytes. This hash is computed during preparation and enshrined in the
+validator client alongside the feature gate and source buffer address.
+
+When the feature gate activates, after validating the source buffer account
+structure, the runtime must:
+
+1. Extract the ELF bytes from the source buffer account (all bytes after
+   the `UpgradeableLoaderState::Buffer` metadata header, excluding
+   trailing zero bytes).
+2. Compute the SHA-256 hash of these bytes.
+3. Compare the computed hash against the expected verified build hash.
+
+If the hashes do not match, the upgrade must not proceed.
+
+This ensures that the exact ELF bytes deployed in the buffer at preparation
+time are the same bytes used during the upgrade. No party can alter the
+buffer contents between preparation and feature activation without
+invalidating the hash.
 
 ### Target Program Validation
 
@@ -193,6 +220,13 @@ review, testnet validation, and coordinated mainnet activation.
 The source buffer account must be deployed and verified on-chain before the
 feature gate is activated. This allows the community to inspect and verify
 the exact ELF bytes that will be deployed.
+
+The verified build hash provides an additional layer of protection by
+cryptographically binding the upgrade to a specific set of ELF bytes. Even
+if the source buffer account's authority were compromised, the runtime will
+reject the upgrade if the buffer contents have been modified after the hash
+was enshrined. This prevents any party from sneaking unauthorized changes
+into a core program upgrade between preparation and activation.
 
 ## Backwards Compatibility
 
