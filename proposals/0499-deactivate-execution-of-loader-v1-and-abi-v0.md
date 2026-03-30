@@ -47,6 +47,16 @@ All programs owned by loader-v1 would stop working forever with their locked
 funds effectively burned. This might be relevant for sleeper programs which
 have not seen any activity in years.
 
+| Program | Newest Slot | Oldest Slot | Slot Span | Age | Distribution |
+| --- | --- | --- | --- | --- | --- |
+| Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo | 404990100 | 404989073 | 1027 | 0s | ▃▃▂▄▂▂▃▁▆█ |
+| 4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn | 380543824 | 71298312 | 309245512 | 113.2d | █▅▁      ▁ |
+| EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o | 403597839 | 380173287 | 23424552 | 6.4d | █▁▁   ▆▁ ▁ |
+| BJ3jrUzddfuSrZHXSCxMUUQsjKEyLmuuyZebkcaFp2fg | 380321574 | 56516079 | 323805495 | 114.2d | █▂   ▁   ▁ |
+| TokenSVp5gheXUvJ6jGWGeCsgPKgnE3YgdGKRVCMY9o | 318471951 | 31181988 | 287289963 | 400.5d | █   ▁ ▁▁   |
+| J4zdjSD86JsUqnF1qPfQLiD9hhkCU9fRbUAJp9cFoUJJ | 333280982 | 70723587 | 262557395 | 332.0d | █      ▁   |
+| BrEAK7zGZ6dM71zUDACDqJnekihmwF15noTddWTsknjC | 298961846 | 298250292 | 711554 | 490.9d | █          |
+
 ## Security Considerations
 
 None.
