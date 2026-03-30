@@ -45,6 +45,10 @@ This proposal depends on the following previously accepted proposals:
 
 ## New Terminology
 
+This SIMD defines the constant `MAX_SHREDS_PER_SLOT` which is currently
+set to `32,768 = 2^15`.  This constant itself is not new, but this SIMD
+gives it a protocol-level name.
+
 
 ## Detailed Design
 
@@ -62,10 +66,10 @@ second family of constraints.
 The checks performed on a shred are revised to the following:
 
 1. The shred is validly signed
-2. `shred_index < 32,768`
+2. `shred_index < MAX_SHREDS_PER_SLOT`
 3. `fec_set_index <= shred_index < fec_set_index + 32`
 4. `fec_set_index` is a multiple of 32
-5. `fec_set_index <= 32,736`
+5. `fec_set_index <= MAX_SHREDS_PER_SLOT - 32`
 6. `variant` is chained or chained-resigned
 7. Merkle height MUST be equal to 6
 
@@ -92,13 +96,13 @@ immediately ignored or discarded.
 
 
 For reference, the existing checks are the following, with differences
-from the new checks at the end.
+from the new checks noted at the end.
 
 1. The shred is validly signed
-2. `shred_index < 32,768`
+2. `shred_index < MAX_SHREDS_PER_SLOT`
 3. `fec_set_index <= shred_index < fec_set_index + 32`
 4. `fec_set_index` is a multiple of 32
-5. `fec_set_index <= 32,736`
+5. `fec_set_index <= MAX_SHREDS_PER_SLOT - 32`
 6. `variant` is chained or chained-resigned
 
 For data shreds:
@@ -117,7 +121,7 @@ For coding shreds:
 13. `position < 32`
 14. `position <= shred_index`
 15. `num_data_shreds == 32` and `num_coding_shreds == 32`
-16. `shred_index - position <= 32,736`
+16. `shred_index - position <= MAX_SHREDS_PER_SLOT - 32`
 
 Note: A proof that the existing checks, excluding the signature check,
 are equivalent (necessary and sufficient) to those enforced by the
@@ -126,6 +130,8 @@ available [here](https://github.com/firedancer-io/agave/blob/ptaffet/shred-proof
 
 Check 7 is new.  Check 12 is just updated with the fixed Merkle height.
 Check 16 is new, but combined with check 5 implies the old check 16.
+Check 5 is implied by a combination of checks 2, 3, and 4, but is
+included explicitly for clarity.
 
 ### Family 2: FEC-level checks
 
@@ -155,12 +161,13 @@ repair or retransmitted via Turbine.
 
 ### A note on recovery
 
-The checks in Family 2 apply to both received and recovered
-shreds.  This implies that if a validator receives all needed data
-shreds it must still perform the reconstruction process and ensure that
-all shreds are valid before voting on the block.  This extra work is
-necessary to eliminate the possibility of divergence based on whether a
-validator received or recovered a shred.
+The checks in Family 2 apply to both received and recovered shreds.
+This implies that even if a validator receives all needed data shreds it
+MUST ensure the coding shreds are also valid according to this SIMD, and
+it MUST NOT vote on the block if the FEC set fails the check in family
+2.
+This extra work is necessary to eliminate the possibility of divergence
+based on whether a validator received or recovered a shred.
 
 
 ## Alternatives Considered
