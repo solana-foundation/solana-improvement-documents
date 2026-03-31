@@ -42,8 +42,8 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-The `Close` instruction will be updated to include an optional boolean input. If
-not provided, the default will be `false`.
+The Loader V3 `Close` instruction will be updated to include an optional boolean
+input. If not provided, the default will be `false`.
 
 ```
 Close { tombstone: bool }
@@ -85,17 +85,23 @@ metadata. The program account will then be assigned to itself, creating a
 permanent tombstone for the program.
 
 ```
-                         Close { tombstone }
-                                |
-                    +-----------+-----------+
-                    |                       |
-             tombstone=false          tombstone=true
-                    |                       |
-           Clear data & resize      Clear data & resize
-           Withdraw all lamports    Retain rent-exempt min
-                    |                       |
-           Account → GC'd           Owner → self (tombstone)
-           Address reclaimable      Address permanently locked
+                           Close { tombstone }
+                                  |
+                      +-----------+-----------+
+                      |                       |
+               tombstone=false          tombstone=true
+                      |                       |
+              Deployed this slot?        Clear data & resize
+               /            \           Retain rent-exempt min
+             Yes             No               |
+              |               |         Owner → self (tombstone)
+         FAIL (reject)  Clear data &    Address permanently locked
+                        resize
+                        Withdraw all
+                        lamports
+                              |
+                        Account → GC'd
+                        Address reclaimable
 ```
 
 In both workflows, the programdata account will be defunded and set to
