@@ -144,8 +144,7 @@ is activated.
 
 1. All shreds in a FEC set MUST have the same signature
 2. All shreds in a FEC set MUST have the same chained Merkle root
-3. All shreds in a FEC set MUST have the same {chained/unchained} and {retransmitter
-   signed/retransmitter unsigned} status
+3. All shreds in a FEC set MUST have the same shred type
 4. All shreds in a FEC set MUST have the same `slot`
 5. All shreds in a FEC set MUST have the same shred version
 6. All shreds in a FEC set MUST have the same `fec_set_index`
@@ -155,9 +154,9 @@ is activated.
 A validator MUST NOT vote for a block containing any FEC set unless it
 satisfies all of these checks.  A validator SHOULD NOT replay the
 transactions in a FEC set unless it satisfies all of these checks.
-Notwithstanding the Family 1 restrictions, a validator SHOULD use these
-shreds for constructing equivocation proofs, and they SHOULD be served over
-repair or retransmitted via Turbine.
+Other than as specified by the Family 1 restrictions, a validator SHOULD
+use these shreds for constructing equivocation proofs, and they SHOULD
+be served over repair or retransmitted via Turbine.
 
 ### A note on recovery
 
