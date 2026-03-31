@@ -16,9 +16,9 @@ extends:
 ## Summary
 
 Shred validation currently allows certain shreds that seem like they
-should be invalid.  This leads to lots of corner cases, where a new
-client base their behavior on what Agave implicitly allows rather than
-easily specified behavior.
+should be invalid.  This leads to lots of corner cases when a new
+client bases their behavior on what Agave implicitly allows rather than
+easily specified behavior. This SIMD provides the spec.
 
 ## Motivation
 
@@ -143,7 +143,7 @@ able to produce multiple valid signatures for the same Merkle root after
 is activated.
 
 1. All shreds in a FEC set MUST have the same signature
-2. All shreds in a FEC set MUST have the same parent Merkle root
+2. All shreds in a FEC set MUST have the same chained Merkle root
 3. All shreds in a FEC set MUST have the same {chained/unchained} and {retransmitter
    signed/retransmitter unsigned} status
 4. All shreds in a FEC set MUST have the same `slot`
@@ -154,9 +154,9 @@ is activated.
 
 A validator MUST NOT vote for a block containing any FEC set unless it
 satisfies all of these checks.  A validator SHOULD NOT replay the
-transacactions in a FEC set unless it satisfies all of these checks.
-Notwithstanding the Family 1 restrictions, a validator MAY use these
-shreds for constructing equivocation proofs, and they MAY be served over
+transactions in a FEC set unless it satisfies all of these checks.
+Notwithstanding the Family 1 restrictions, a validator SHOULD use these
+shreds for constructing equivocation proofs, and they SHOULD be served over
 repair or retransmitted via Turbine.
 
 ### A note on recovery
