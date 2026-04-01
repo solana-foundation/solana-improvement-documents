@@ -67,9 +67,7 @@ should look like `85 00 00 00 11 1a fc b6`.
 
 Consequently, system calls in the Solana SDK and in any related compiler tools 
 must be registered as function pointers, whose address is the murmur32 hash of 
-their name. The bytecode verifier must enforce that the immediate value of a 
-syscall instruction points to a valid syscall, and throw 
-`VerifierError::InvalidSyscall` otherwise.
+their name.
 
 This new instruction comes together with modifications in the semantics of 
 the instruction opcode `0x85` with source register set to one, which  must 
