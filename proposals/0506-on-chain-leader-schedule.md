@@ -2,7 +2,7 @@
 simd: '0506'
 title: On-Chain Leader Schedule
 authors:
-  - sam0x17 (Anza)
+  - sam0x17
 category: Standard
 type: Core
 status: Review
