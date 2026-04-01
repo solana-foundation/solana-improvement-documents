@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0506'
 title: On-Chain Leader Schedule
 authors:
   - sam0x17 (Anza)
