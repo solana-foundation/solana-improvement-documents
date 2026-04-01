@@ -2,7 +2,7 @@
 simd: '0173'
 title: SBPF instruction encoding improvements
 authors:
-  - Alexander Meißner
+  - Tony Wattley
 category: Standard
 type: Core
 status: Review
