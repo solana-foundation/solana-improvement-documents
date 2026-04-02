@@ -70,12 +70,13 @@ u32 first for early detection, then u32, u64, u16, u16).
 
 ```
 ┌───────────────────────────────────────────────────────┐
-│ Header (20 bytes, naturally aligned)                  │
+│ Header (32 bytes)                                     │
 │   version: u32          — format version (currently 1)│
 │   num_leader_spans: u32 — leader spans in schedule    │
 │   epoch: u64            — epoch this schedule is for  │
 │   num_leaders: u16      — unique entries in table     │
 │   slots_per_span: u16   — slots per leader span       │
+│   _reserved: [u8; 12]   — reserved, must be zero      │
 ├───────────────────────────────────────────────────────┤
 │ Identity Table (num_leaders × 64 bytes)               │
 │   entries: [(Pubkey, Pubkey); num_leaders]            │
@@ -87,6 +88,11 @@ u32 first for early detection, then u32, u64, u16, u16).
 │   — index into Identity Table per leader span         │
 └───────────────────────────────────────────────────────┘
 ```
+
+The header is padded to 32 bytes so that the Identity Table starts on a
+32-byte boundary, enabling zero-copy access to Pubkey entries without
+unaligned reads. The 12 reserved bytes must be zero and are available for
+future use.
 
 The `version` field is the first field in the header, enabling clients to read
 the first four bytes to detect incompatible format changes and fail gracefully
@@ -116,7 +122,7 @@ With mainnet parameters (432,000 slots/epoch, ~2,000 active validators):
 
 | Component | Calculation | Size |
 |-----------|------------|------|
-| Header | fixed | 20 bytes |
+| Header | fixed | 32 bytes |
 | Identity Table | 2,000 × 64 bytes | 128 KB |
 | Schedule | 108,000 × 2 bytes | 216 KB |
 | **Total per account** | | **~344 KB** |
