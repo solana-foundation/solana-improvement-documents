@@ -1,5 +1,5 @@
 ---
-simd: '0506'
+simd: '0511'
 title: On-Chain Leader Schedule
 authors:
   - sam0x17
