@@ -64,9 +64,9 @@ Three accounts are maintained: one for the **previous epoch**, one for the
 self-describing binary layout with the identity table (including vote
 addresses) and the schedule index array.
 
-All multi-byte integers are little-endian. Header fields are ordered by
-descending alignment (u32, u32, u64, u16, u16) so the layout is naturally
-aligned with no padding.
+All multi-byte integers are little-endian. Header fields are ordered so that
+each field falls on its natural alignment boundary without padding (version
+u32 first for early detection, then u32, u64, u16, u16).
 
 ```
 ┌───────────────────────────────────────────────────────┐
