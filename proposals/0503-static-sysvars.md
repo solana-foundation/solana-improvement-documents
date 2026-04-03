@@ -13,26 +13,26 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Leverage existing memory translation infrastructure of JIT compilation to enable
-static resolution of sysvars.
+Leverage existing memory translation infrastructure of JIT compilation to 
+enable static resolution of sysvars.
 
 ## Motivation
 
 In order to access Sysvar values, developers currently have three options:
 
 1. Invoke a specific getter syscall
-2. Invoke the get_sysvar syscall, or
-3. Include a Sysvar account in their program.
+2. Invoke the `get_sysvar` syscall, or
+3. Include a `Sysvar` account in their program inputs.
 
-The downsides of all of these approaches are threefold:
+The downsides of these approaches are threefold:
 
 1. Sysvar values are globals that are always available to the validator, but 
    aren't exposed as globals during execution. This is a clunky anti-pattern 
-   resulting in degraded developer experience.
-2. Invoking a syscall to access a global requires both a stack allocation and 
+   resulting in degraded developer experience and performance.
+2. Invoking a syscall to access a Sysvar requires both a stack allocation and 
    halting execution – an immense amount of overhead just to read a value that 
    is already readily available.
-3. Having to pass in an account to access a global results in a 10kb penalty 
+3. Having to pass in an account to access a Sysvar results in a >10KiB penalty 
    to data serialization and has negative implications for composability.
 
 If these globals were simply exposed to the VM, as is common in kernel BPF, 
@@ -43,9 +43,9 @@ simply implementing `Rent` and `Clock`.
 
 ## New Terminology
 
-Static Sysvars - A static global variable pointing to current sysvar values, 
-accessible within the VM by a pointer to its murmur hash code resolved during 
-JIT compilation.
+Static Sysvars - Pointers to sysvar values exposed directly in VM memory at
+addresses derived from their murmur hash codes, readable without syscall
+invocation or account deserialization.
 
 ## Detailed Design
 
@@ -86,8 +86,9 @@ This proposal introduces a new read-only VM memory region for static sysvars:
 | Static Sysvars | `0x500000000..0x600000000` | Read-only |
 
 This is the fifth memory region in the SBPF virtual address space, following
-the existing regions for readonly data (`0x1`), stack (`0x2`), heap (`0x3`),
-and serialized input (`0x4`).
+the existing regions for readonly data (`0x100000000`), stack
+(`0x200000000`), heap (`0x300000000`), and serialized input
+(`0x400000000`).
 
 The virtual address of a static sysvar is computed as:
 
@@ -99,10 +100,9 @@ Where `MM_STATIC_SYSVARS` is `0x05 << 32` (`0x500000000`).
 
 ### JIT Resolution
 
-The JIT maintains an array of host pointers, one per supported sysvar, backed
-by the `SysvarCache`. When the JIT encounters a memory access targeting the
-`0x500000000` region, it resolves the murmur hash portion of the address to
-the corresponding host pointer and emits a direct native load.
+The VM maintains an array of host pointers, one per supported sysvar, backed
+by the `SysvarCache`. The memory translation layer resolves addresses in the
+`0x500000000` region to the corresponding host pointer in the sysvar cache.
 
 At the slot boundary, the `SysvarCache` is instantiated or copied with current
 sysvar values. The pointer array is updated accordingly. This incurs a small
