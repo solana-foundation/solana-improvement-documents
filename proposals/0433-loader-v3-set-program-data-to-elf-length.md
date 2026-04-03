@@ -16,8 +16,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 This SIMD proposes changing the default behavior of program upgrades to
 automatically resize the program data account to match the length of the ELF
 being deployed. If the new ELF is smaller, surplus lamports are refunded to the
-spill account. If the new ELF is larger, the account is extended using lamports
-from the buffer account.
+spill account. If the new ELF is larger, the account is extended accordingly.
 
 ## Motivation
 
@@ -30,16 +29,24 @@ loading overhead.
 
 Additionally, upgrading a program to a larger ELF requires issuing a separate
 `ExtendProgram` instruction prior to `Upgrade`. This additional step increases
-operational complexity and has been a recurring point of debate in proposals
-such as SIMD-0164 and SIMD-0431. Moreover, because `ExtendProgram` is
-permissionless, reducing reliance on it - or eliminating it entirely - would be
-particularly attractive from both a security and workflow perspective.
+operational complexity and has been a recurring point of debate in other
+proposals.
 
 ## New Terminology
 
-[SIMD-0164: ExtendProgramChecked loader-v3 instruction](https://github.com/solana-foundation/solana-improvement-documents/pull/164)
-[SIMD-0430: Loader V3: Relax Program Buffer Constraints](https://github.com/solana-foundation/solana-improvement-documents/pull/430)
-[SIMD-0431: Loader V3: Permissioned Extend Program](https://github.com/solana-foundation/solana-improvement-documents/pull/431)
+N/A
+
+## Dependencies
+
+This proposal depends on the following previously accepted proposal:
+
+- **[SIMD-0430]: Loader V3: Relax Program Buffer Constraints**
+
+    Introduces the `close_buffer` flag for `DeployWithMaxDataLen` and
+    `Upgrade` instructions, which determines whether the buffer account is
+    closed after the operation
+
+[SIMD-0430]: https://github.com/solana-foundation/solana-improvement-documents/pull/430
 
 ## Detailed Design
 
@@ -56,22 +63,19 @@ rent requirement will be refunded to the spill account.
 ### Growing (New ELF is Larger)
 
 If the new ELF is larger than the current program data account's ELF region,
-the account will be extended to accommodate the new ELF. The additional rent
-required must have been credited to the program data account before `Upgrade`
-was invoked. If not, the upgrade will fail with `InsufficientFunds`.
+the account will be extended to accommodate the new ELF.
 
-Similar to shrinking, any remaining lamports after satisfying rent will be
-refunded to the spill account.
+When `close_buffer` is `true`, the buffer account's lamports and the program
+data account's existing lamports are combined to meet the new rent-exempt
+minimum. If the combined lamports are insufficient, the upgrade will fail with
+`InsufficientFunds`.
 
-### Buffer Account Lamports
+When `close_buffer` is `false`, the program data account's existing lamports
+must already meet the new rent-exempt minimum. If not, the upgrade will fail
+with `InsufficientFunds`.
 
-Regardless of SIMD-0430, after the current proposal, buffer accounts will no
-longer be debited or credited lamports during `Upgrade`. This is true for all
-ELF sizing cases - shrinking, growing, or remaining exactly the same.
-
-As mentioned in the previous section, any additional rent exemption required
-for growing an ELF region must be credited to the program data account before
-`Upgrade` is invoked.
+In both cases, any lamports in excess of the rent-exempt minimum are refunded
+to the spill account.
 
 ### Feature Gate
 
