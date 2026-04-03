@@ -1,6 +1,6 @@
 ---
 simd: '0511'
-title: On-Chain Leader Schedule
+title: On-Chain Leader Schedule and Epoch Stakes
 authors:
   - sam0x17
 category: Standard
@@ -12,10 +12,11 @@ feature: (fill in with feature tracking issues once accepted)
 
 ## Summary
 
-Store the leader schedule for the previous, current, and next epochs in
-on-chain accounts, enabling downstream consumers to subscribe to account
-updates for real-time schedule delivery and permissionless on-chain skip rate
-computation.
+Store the leader schedule and epoch stakes (vote account to delegated stake
+mapping) for the previous, current, and next epochs in on-chain accounts.
+This enables subscription-based access for indexers, permissionless on-chain
+skip rate computation, and a general-purpose on-chain view of the stake
+distribution.
 
 ## Motivation
 
@@ -36,13 +37,21 @@ combining the leader schedule account with the slot history sysvar. This
 enables fully on-chain stake delegation strategies based on validator
 performance, without relying on off-chain oracles.
 
-**For off-chain analytics:** Analytics pipelines can subscribe to the leader
-schedule accounts and the slot history sysvar for a fully reactive approach to
-performance monitoring, without polling RPC endpoints.
+**For stake distribution visibility:** The epoch stakes — the mapping from vote
+account to delegated lamports — are a fundamental input to consensus but are
+not currently accessible on-chain. Making this mapping available enables
+programs to reason about the stake distribution directly: verifying quorum
+thresholds, building stake-weighted governance, or computing the leader
+schedule client-side from its inputs.
 
-The leader schedule is already deterministically computed by every validator from
-epoch vote account stakes. This proposal simply makes that data available as
-account state.
+**For off-chain analytics:** Analytics pipelines can subscribe to the leader
+schedule and epoch stakes accounts alongside the slot history sysvar for a
+fully reactive approach to performance monitoring, without polling RPC
+endpoints.
+
+The leader schedule and epoch stakes are already deterministically computed by
+every validator. This proposal simply makes that data available as account
+state.
 
 ## New Terminology
 
@@ -54,6 +63,9 @@ epoch.
 **Leader span:** A contiguous group of slots assigned to a single leader
 (currently 4 slots, i.e. `NUM_CONSECUTIVE_LEADER_SLOTS`). The schedule is
 indexed by leader span rather than by individual slot.
+
+**Epoch stakes account:** A system-managed account that stores the mapping
+from vote account to delegated stake (in lamports) for a single epoch.
 
 ## Detailed Design
 
@@ -70,13 +82,14 @@ u32 first for early detection, then u32, u64, u16, u16).
 
 ```
 ┌───────────────────────────────────────────────────────┐
-│ Header (32 bytes)                                     │
-│   version: u32          — format version (currently 1)│
-│   num_leader_spans: u32 — leader spans in schedule    │
-│   epoch: u64            — epoch this schedule is for  │
-│   num_leaders: u16      — unique entries in table     │
-│   slots_per_span: u16   — slots per leader span       │
-│   _reserved: [u8; 12]   — reserved, must be zero      │
+│ Header (64 bytes)                                     │
+│   version: u32              — format version (1)      │
+│   num_leader_spans: u32     — leader spans in schedule│
+│   epoch: u64                — epoch this schedule is  │
+│   num_leaders: u16          — unique entries in table  │
+│   slots_per_span: u16       — slots per leader span   │
+│   _reserved: [u8; 12]       — reserved, must be zero  │
+│   epoch_stakes_hash: [u8; 32] — hash of input stakes  │
 ├───────────────────────────────────────────────────────┤
 │ Identity Table (num_leaders × 64 bytes)               │
 │   entries: [(Pubkey, Pubkey); num_leaders]            │
@@ -89,10 +102,18 @@ u32 first for early detection, then u32, u64, u16, u16).
 └───────────────────────────────────────────────────────┘
 ```
 
-The header is padded to 32 bytes so that the Identity Table starts on a
-32-byte boundary, enabling zero-copy access to Pubkey entries without
-unaligned reads. The 12 reserved bytes must be zero and are available for
-future use.
+The header is 64 bytes so that all sections start on 32-byte boundaries,
+enabling zero-copy access to Pubkey entries without unaligned reads. The 12
+reserved bytes between `slots_per_span` and `epoch_stakes_hash` must be zero
+and are available for future use.
+
+The `epoch_stakes_hash` field contains the SHA-256 hash of the epoch stakes
+that were input to the leader schedule computation (the ChaCha20
+stake-weighted shuffle). This allows consumers to verify that a given schedule
+was derived from the expected stake distribution, without requiring the full
+epoch stakes to be available on-chain. The hash is computed over the
+stake-sorted `(vote_account, stake)` pairs in the same order used by the
+schedule computation.
 
 The `version` field is the first field in the header, enabling clients to read
 the first four bytes to detect incompatible format changes and fail gracefully
@@ -122,7 +143,7 @@ With mainnet parameters (432,000 slots/epoch, ~2,000 active validators):
 
 | Component | Calculation | Size |
 |-----------|------------|------|
-| Header | fixed | 32 bytes |
+| Header | fixed | 64 bytes |
 | Identity Table | 2,000 × 64 bytes | 128 KB |
 | Schedule | 108,000 × 2 bytes | 216 KB |
 | **Total per account** | | **~344 KB** |
@@ -144,31 +165,80 @@ maximum is well below this.
 were to exceed this limit, a future SIMD could introduce a new version with
 wider indices.
 
+### Epoch Stakes Account Structure
+
+Three additional accounts store the epoch stakes: one for each of the
+**previous**, **current**, and **next** epochs. Each account contains a
+sorted mapping from vote account to delegated stake.
+
+```
+┌───────────────────────────────────────────────────────┐
+│ Header (32 bytes)                                     │
+│   version: u32          — format version (currently 1)│
+│   num_entries: u32      — vote accounts in table      │
+│   epoch: u64            — epoch these stakes are for  │
+│   total_stake: u64      — sum of all delegated stake  │
+│   _reserved: [u8; 8]    — reserved, must be zero      │
+├───────────────────────────────────────────────────────┤
+│ Entries (num_entries × 40 bytes)                      │
+│   entries: [(Pubkey, u64); num_entries]               │
+│   — (vote account, delegated stake in lamports),      │
+│     sorted by vote account pubkey byte order          │
+└───────────────────────────────────────────────────────┘
+```
+
+The header is 32 bytes so that the entries section starts on a 32-byte
+boundary for Pubkey alignment. The `total_stake` field is a convenience —
+consumers can verify it by summing the individual entries.
+
+Each entry is 40 bytes: a 32-byte vote account pubkey followed by an 8-byte
+little-endian stake value. Entries are sorted by vote account pubkey to
+enable binary search.
+
+#### Epoch Stakes Size Analysis
+
+With mainnet parameters (~2,000 vote accounts):
+
+| Component | Calculation | Size |
+|-----------|------------|------|
+| Header | fixed | 32 bytes |
+| Entries | 2,000 × 40 bytes | 80 KB |
+| **Total per account** | | **~80 KB** |
+| **Total (3 accounts)** | | **~240 KB** |
+
+The `epoch_stakes_hash` in the leader schedule header is the SHA-256 hash
+of the epoch stakes account data for the corresponding epoch (excluding the
+header). This allows consumers to cross-reference the two account types and
+verify that the leader schedule was derived from the published stakes.
+
 ### Account Addresses
 
-The three accounts live at well-known addresses derived as Program Derived
+All six accounts live at well-known addresses derived as Program Derived
 Addresses (PDAs) from the owning program:
 
 ```
-previous_schedule = PDA(leader_schedule_program_id, ["previous_schedule"])
-current_schedule  = PDA(leader_schedule_program_id, ["current_schedule"])
-next_schedule     = PDA(leader_schedule_program_id, ["next_schedule"])
+previous_schedule     = PDA(program_id, ["previous_schedule"])
+current_schedule      = PDA(program_id, ["current_schedule"])
+next_schedule         = PDA(program_id, ["next_schedule"])
+previous_epoch_stakes = PDA(program_id, ["previous_epoch_stakes"])
+current_epoch_stakes  = PDA(program_id, ["current_epoch_stakes"])
+next_epoch_stakes     = PDA(program_id, ["next_epoch_stakes"])
 ```
 
 Using PDAs rather than vanity-ground addresses ensures the addresses are
 deterministic and verifiable. The seeds are fixed strings — the account
 **contents** rotate at epoch boundaries, not the addresses. This means
-consumers subscribe to exactly three stable addresses.
+consumers subscribe to exactly six stable addresses.
 
 ### Owner Program
 
-These accounts are owned by a new native program, the **Leader Schedule
+All six accounts are owned by a new native program, the **Leader Schedule
 program**, with program ID `TBD` (to be derived/assigned before this SIMD is
 finalized). This program:
 
 - Rejects all instructions (the accounts are read-only from the perspective of
   transactions)
-- Serves only as the owner for the three leader schedule accounts
+- Serves as the owner for the leader schedule and epoch stakes accounts
 - Is updated exclusively by the runtime at epoch boundaries
 
 ### Runtime Behavior
@@ -177,13 +247,14 @@ finalized). This program:
 
 At each epoch boundary (when `parent.epoch() < new.epoch()`), the runtime:
 
-1. Copies the contents of `current_schedule` into `previous_schedule`
-2. Copies the contents of `next_schedule` into `current_schedule`
+1. Rotates both account sets: current -> previous, next -> current
+2. Serializes the epoch stakes for `current_epoch + 1` (the vote account to
+   stake mapping) and writes to `next_epoch_stakes`
 3. Computes the leader schedule for `current_epoch + 1` using the same
    stake-weighted shuffle (`LeaderSchedule::new()`) that already populates the
    `LeaderScheduleCache`
-4. Serializes the new schedule into the binary format described above
-5. Writes the result to `next_schedule`
+4. Serializes the new schedule (with `epoch_stakes_hash` from step 2) and
+   writes to `next_schedule`
 
 Account lamport balances are set to the rent-exempt minimum (or 1 lamport,
 whichever is greater) on each write.
@@ -196,15 +267,15 @@ This integrates into the existing epoch-boundary processing in
 
 On the first epoch boundary after feature activation:
 
-1. All three accounts are created with the rent-exempt balance (minimum 1
+1. All six accounts are created with the rent-exempt balance (minimum 1
    lamport, since zero-lamport accounts are treated as non-existent by the
    runtime)
-2. `previous_schedule` is left empty (no prior epoch data is available)
-3. `current_schedule` is populated with the current epoch's leader schedule
-4. `next_schedule` is populated with the next epoch's leader schedule, if vote
-   account stakes for that epoch are available. If not yet available, the
-   `next_schedule` account is left empty and will be populated at the next
-   epoch boundary
+2. Previous accounts (`previous_schedule`, `previous_epoch_stakes`) are left
+   empty (no prior epoch data is available)
+3. Current accounts are populated with the current epoch's data
+4. Next accounts are populated with the next epoch's data, if vote account
+   stakes for that epoch are available. If not yet available, the next
+   accounts are left empty and will be populated at the next epoch boundary
 
 Consumers **must** check the `epoch` field in the header before using the
 account data. An empty account (zero data length) indicates that no schedule
@@ -276,6 +347,18 @@ is from off-chain consumers who need subscription-based access. A syscall could
 be proposed in a follow-up SIMD if on-chain demand materializes; the runtime
 already has the data structures to support it.
 
+### Epoch Stakes Only (No Leader Schedule)
+
+Since the leader schedule is deterministically derived from the epoch stakes,
+one could argue that only epoch stakes need to be on-chain. However, the
+leader schedule computation (ChaCha20 stake-weighted shuffle with ~108,000
+samples) is too expensive to run in a program — it would far exceed
+transaction CU limits. Without the precomputed schedule on-chain, use cases
+like permissionless skip rate cranking would be impossible. Off-chain
+consumers could compute the schedule from epoch stakes, but this proposal
+serves both audiences. The epoch stakes accounts (~80 KB each) are a modest
+addition alongside the leader schedule accounts.
+
 ### Two Epochs (Current, Next)
 
 An earlier draft of this proposal used only two accounts (current + next). Three
@@ -312,8 +395,8 @@ current validator count — the space savings are worthwhile.
 
 ## Impact
 
-**Validator operators:** Validators will create and maintain three additional
-accounts (~1.03 MB total) after the feature is activated. The accounts are
+**Validator operators:** Validators will create and maintain six additional
+accounts (~1.27 MB total) after the feature is activated. The accounts are
 updated once per epoch boundary, adding negligible overhead to epoch
 processing. No configuration changes are required.
 
@@ -323,15 +406,16 @@ may shift to reading the on-chain accounts directly, reducing load on these
 endpoints.
 
 **Indexers and Geyser plugin operators:** This is the primary beneficiary.
-Indexers can subscribe to three stable account addresses to receive leader
-schedule updates at epoch boundaries via Geyser or websocket
-`accountSubscribe`, replacing RPC polling.
+Indexers can subscribe to six stable account addresses to receive leader
+schedule and stake distribution updates at epoch boundaries via Geyser or
+websocket `accountSubscribe`, replacing RPC polling.
 
-**On-chain program developers:** Programs can read the leader schedule accounts
-to access the schedule for the previous, current, or next epoch. The binary
-format supports zero-copy access. The most concrete use case is permissionless
-skip rate computation by combining the previous epoch's schedule with the slot
-history sysvar.
+**On-chain program developers:** Programs can read the leader schedule and
+epoch stakes accounts to access the schedule or stake distribution for the
+previous, current, or next epoch. The binary formats support zero-copy access.
+Concrete use cases include permissionless skip rate computation (combining the
+previous epoch's schedule with the slot history sysvar), stake-weighted
+governance, and quorum verification.
 
 **Core contributors:** This proposal introduces a new pattern for
 runtime-managed accounts (non-sysvar, owned by a native program that rejects
@@ -343,16 +427,16 @@ cache.
 
 ### Account Size
 
-Each account is ~344 KB at current mainnet parameters. This is comparable in
-size to large existing accounts (programs, etc.) and well within the 10 MB
-limit. The combined footprint of ~1.03 MB for three accounts is modest relative
-to overall validator memory usage.
+Leader schedule accounts are ~344 KB each and epoch stakes accounts are ~80 KB
+each at current mainnet parameters. The combined footprint of ~1.27 MB for all
+six accounts is modest relative to overall validator memory usage and well
+within per-account limits.
 
 ### Capitalization Impact
 
 Creating these accounts at feature activation increases total capitalization by
-the rent-exempt minimum for ~1.03 MB of account data. At current rent
-parameters this is approximately 7 SOL. This is a one-time, small increase
+the rent-exempt minimum for ~1.27 MB of account data. At current rent
+parameters this is approximately 9 SOL. This is a one-time, small increase
 that occurs at the epoch boundary when the feature activates. No ongoing
 lamport changes occur beyond minor adjustments if account sizes change between
 epochs.
@@ -363,7 +447,7 @@ The accounts are protected by two independent mechanisms:
 
 1. **Program-level:** The owning native program rejects all instructions, so no
    transaction can modify the accounts through program invocation.
-2. **Transaction-level:** The program ID and all three PDA addresses are added
+2. **Transaction-level:** The program ID and all six PDA addresses are added
    to the reserved account keys list (gated on the same feature). This prevents
    any transaction from acquiring a write lock on these accounts, even if a
    malicious program were to claim ownership.
