@@ -13,7 +13,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Leverage existing static linking infrastructure of JIT compilation to enable 
+Leverage existing memory translation infrastructure of JIT compilation to enable
 static resolution of sysvars.
 
 ## Motivation
@@ -53,10 +53,15 @@ As with static syscalls, we define the hash code for a sysvar as the murmur32
 hash of its respective name:
 
 ```rust
+const MM_STATIC_SYSVARS: u64 = 0x05 << 32;
 // murmur3(SOL_RENT_SYSVAR) = 0x494df715
-const SOL_RENT_SYSVAR: *const u8 = 0x494df715u64 as *const u8;
+const SOL_RENT_SYSVAR: *const u8 =
+    (0x494df715u64 & 0xffffffff | MM_STATIC_SYSVARS)
+    as *const u8;
 // murmur3(SOL_CLOCK_SYSVAR) = 0xff395088
-const SOL_CLOCK_SYSVAR: *const u8 = 0xff395088u64 as *const u8;
+const SOL_CLOCK_SYSVAR: *const u8 =
+    (0xff395088u64 & 0xffffffff | MM_STATIC_SYSVARS)
+    as *const u8;
 ```
 
 We cast this value to a pointer, which is then consumed in a program:
@@ -68,21 +73,81 @@ let lamports_per_byte: u64 = unsafe { *(SOL_RENT_SYSVAR as *const u64) };
 This produces the following bytecode:
 
 ```asm
-lddw r3, 0x494df715 // SOL_RENT_SYSVAR
+lddw r3, 0x5494df715 // SOL_RENT_SYSVAR
 ldxdw r3, [r3+0]
 ```
 
-In this case, the murmur hash value of `0x494df715` is then resolved JIT to a 
-memory address containing the current `Rent` sysvar value. The same applies to 
-other sysvar accounts, such as the murmur hash of `0xff395088` for `Clock`.
+### Memory Region
 
-Ergo, we can safely and performantly expose any available global variable to 
-the VM without the overhead of additonal account loads or syscall invocation.
+This proposal introduces a new read-only VM memory region for static sysvars:
+
+| Region | Address Range | Permissions |
+|--------|--------------|-------------|
+| Static Sysvars | `0x500000000..0x600000000` | Read-only |
+
+This is the fifth memory region in the SBPF virtual address space, following
+the existing regions for readonly data (`0x1`), stack (`0x2`), heap (`0x3`),
+and serialized input (`0x4`).
+
+The virtual address of a static sysvar is computed as:
+
+```
+address = MM_STATIC_SYSVARS | (murmur32(name) & 0xFFFFFFFF)
+```
+
+Where `MM_STATIC_SYSVARS` is `0x05 << 32` (`0x500000000`).
+
+### JIT Resolution
+
+The JIT maintains an array of host pointers, one per supported sysvar, backed
+by the `SysvarCache`. When the JIT encounters a memory access targeting the
+`0x500000000` region, it resolves the murmur hash portion of the address to
+the corresponding host pointer and emits a direct native load.
+
+At the slot boundary, the `SysvarCache` is instantiated or copied with current
+sysvar values. The pointer array is updated accordingly. This incurs a small
+per-slot setup cost but introduces zero runtime overhead per-access — each
+sysvar read is a single native memory load.
+
+An access to an address in the static sysvar region whose murmur hash does
+not correspond to a known sysvar must produce an access violation, identical
+to dereferencing an unmapped address in any other region.
+
+### Supported Sysvars
+
+The following sysvars are supported through the static sysvar interface. All
+sysvars present in the `SysvarCache` are eligible for exposure.
+
+| Sysvar | Canonical Name | murmur32 | Size (bytes) |
+|--------|---------------|----------|--------------|
+| Rent | `SOL_RENT_SYSVAR` | `0x494df715` | 17 |
+| Clock | `SOL_CLOCK_SYSVAR` | `0xff395088` | 40 |
+| EpochSchedule | `SOL_EPOCH_SCHEDULE_SYSVAR` | TBD | 33 |
+| LastRestartSlot | `SOL_LAST_RESTART_SLOT_SYSVAR` | TBD | 8 |
+| EpochRewards | `SOL_EPOCH_REWARDS_SYSVAR` | TBD | 49 |
+
+Unless specified otherwise, any new sysvars added to the `SysvarCache` in the
+future also become accessible through this interface by registering their
+murmur32 hash.
 
 ## Alternatives Considered
 
-- Leverage JIT intrinsics to provide similar syscall functionality.
-- Don't improve the existing design of sysvars/syscalls.
+### Unified Syscall (SIMD-0127)
+
+SIMD-0127 introduced `sol_get_sysvar`, a single syscall that retrieves
+arbitrary byte ranges from any sysvar. While this reduced syscall bloat, it
+still requires a syscall invocation per access — incurring stack allocation,
+VM exit, and CU costs proportional to the data length. Static sysvars
+eliminate this overhead entirely, reducing sysvar reads to native memory
+loads.
+
+### VM Memory Region (as rejected by SIMD-0127)
+
+SIMD-0127 considered and rejected a memory-mapped region approach, citing
+address translation complexity, dependency on direct mapping, and full data
+copies per VM instantiation. Static sysvars avoid all three: the JIT
+resolves addresses at compile time via a pointer array into the existing
+`SysvarCache`, so no runtime address translation or data copying occurs.
 
 ## Impact
 
@@ -93,13 +158,17 @@ the VM without the overhead of additonal account loads or syscall invocation.
 
 ## Security Considerations
 
-1. We must ensure no intra-slot mutability of any exposed globals.
-2. We must ensure static sysvar pointers remain synchronized with SysvarCache 
-   at the slot boundary.
-3. Despite being 32-bit hashes, it is important that we cast to u64 first as
-   50% of 32-bit murmur hashes sign extend to negative 64-bit addresses. If 
-   our toolchain reliably generated `mov32` without requiring inline assembly, 
-   this would be more ideal, as it would save 8 bytes of binary size.
+1. **Intra-slot immutability.** Static sysvar pointers are updated from the
+   `SysvarCache` at the slot boundary, before any program execution begins,
+   and must remain immutable for the duration of the slot.
+
+2. **Sign extension.** SDK constants must mask the murmur32 hash to 32 bits
+   (`& 0xFFFFFFFF`) before OR'ing with `MM_STATIC_SYSVARS` to prevent sign
+   extension from producing addresses outside the `0x500000000` region.
+
+3. **Invalid address access.** Programs can construct arbitrary addresses in
+   the `0x500000000` region. Accesses to addresses that do not correspond to
+   a registered sysvar hash must produce an access violation.
 
 ## Backwards Compatibility
 
