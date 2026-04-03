@@ -1,5 +1,5 @@
 ---
-simd: '0506'
+simd: '0512'
 title: Sha512 Syscall
 authors:
   - Dean Little (Blueshift)
