@@ -45,7 +45,7 @@ be `true`.
 
 ```
 DeployWithMaxDataLen {
-  max_data_len: u32,
+  max_data_len: u64,
   close_buffer: bool, // New
 }
 Upgrade {
