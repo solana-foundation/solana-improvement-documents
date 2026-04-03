@@ -40,11 +40,12 @@ No new terminology is introduced by this proposal.
 ## Detailed Design
 
 The `DeployWithMaxDataLen` and `Upgrade` instructions will be updated to include
-an optional boolean input. If not provided, the default will be `true`.
+an optional `close_buffer` boolean input. If not provided, the default will
+be `true`.
 
 ```
 DeployWithMaxDataLen {
-  max_data_len: u32,
+  max_data_len: u64,
   close_buffer: bool, // New
 }
 Upgrade {
@@ -60,7 +61,15 @@ be closed (lamports transferred to a designated recipient and account data
 zeroed).
 
 For a value of `false`, the buffer account is not modified, enabling reuse for
-future deployments. Additionally, constraints on the buffer are relaxed:
+future deployments. Since the buffer is not closed, its lamports are not
+transferred to the spill account. Instead, the program data account must
+already contain sufficient lamports to satisfy rent requirements. In practice,
+this means the deployer or upgrader must pre-fund the program data account
+(e.g. via a transfer in a preceding instruction) before invoking the deploy or
+upgrade. The net rent cost to the end user remains the same as in the
+`close_buffer=true` case, since the user did not pay for the buffer.
+
+Additionally, constraints on the buffer are relaxed:
 
 - No buffer authority signature is required.
 - No buffer ownership check is required.
@@ -111,7 +120,22 @@ the account data (after the header).
 ## Impact
 
 This change enables more flexible program deployment workflows, unlocking new 
-use cases for developers.
+use cases for developers. Some examples include:
+
+- **Emergency abort programs**: Protocols under attack can deploy an
+  [emergency abort program][sbpf-asm-abort] from a pre-staged buffer to
+  immediately halt all flows through their program, without needing to prepare
+  a buffer during the incident.
+- **Verified open-source deployments**: Developers can publish verified builds
+  of shared open-source program implementations as reusable buffers, allowing
+  users who wish to fork the program to deploy it directly without building
+  and uploading the binary themselves.
+- **Education and onboarding**: Education centers can make buffers available
+  for programs used in lesson plans, so students can easily deploy necessary
+  components to test their implementations on higher networks (e.g. devnet,
+  mainnet-beta).
+
+[sbpf-asm-abort]: https://github.com/deanmlittle/sbpf-asm-abort
 
 ## Security Considerations
 
