@@ -36,7 +36,9 @@ N/A
 ### Syscall Signature
 
 The syscall follows the same interface as `sol_sha256`, `sol_keccak256`,
-and `sol_blake3`.
+and `sol_blake3`. See here for more details:
+
+https://docs.rs/solana-sha256-hasher/3.1.0/src/solana_sha256_hasher/lib.rs.html#62-75
 
 The syscall computes SHA-512 over the provided byte slices as if they were
 a single contiguous input, writing the 64-byte digest to `result`.
@@ -48,11 +50,16 @@ The syscall aborts the virtual machine if any of these conditions are true:
 - Not all bytes in each slice `[bytes[i].addr, bytes[i].addr + bytes[i].len)`
   are readable.
 - Not all bytes in `[result, result + 64)` are writable.
-- `bytes_len` exceeds the configured maximum number of slices.
+- `bytes_len` exceeds the configured maximum number of slices. The current
+  default is 20,000, as per `SVMTransactionExecutionBudget`. See here:
+https://github.com/anza-xyz/agave/blob/289aa4ea46889a1535962b727c0656d4d25527dc/program-runtime/src/execution_budget.rs#L82
 
 ### Compute Unit Usage
 
-Compute costs follow the same model and parameters as `sol_sha256`.
+Compute costs follow the same model and parameters as `sol_sha256`. 
+
+See here for more details: 
+https://github.com/anza-xyz/agave/blob/master/syscalls/src/lib.rs#L168-L169
 
 ## Alternatives Considered
 
