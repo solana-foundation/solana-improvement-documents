@@ -154,7 +154,12 @@ is activated.
 5. All shreds in a FEC set MUST have the same shred version
 6. All shreds in a FEC set MUST have the same `fec_set_index`
 7. All data shreds in a FEC set MUST have the same `parent_offset`
-8. All shreds in a FEC set MUST satisfy all the constraints in Family 1
+8. If any data shred does not have the maximum value of the `size` field as
+   determined by check 12 in the first family, then all shreds in the
+   same FEC set with a larger shred_index MUST have the minimum value of
+   `size` (as determined by check 12), and the flags field of final
+   shred in the FEC set MUST have the batch complete bit set.
+9. All shreds in a FEC set MUST satisfy all the constraints in Family 1
 
 Under TowerBFT, a validator MUST NOT vote for a block containing any FEC
 set unless it satisfies all of these checks.  Under Alpenglow, a
