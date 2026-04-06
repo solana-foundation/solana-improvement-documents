@@ -70,7 +70,8 @@ The checks performed on a shred are revised to the following:
 3. `fec_set_index <= shred_index < fec_set_index + 32`
 4. `fec_set_index` is a multiple of 32
 5. `fec_set_index <= MAX_SHREDS_PER_SLOT - 32`
-6. `variant` is chained or chained-resigned
+6. `variant` is chained (`0x9` and `0x6`) or chained-resigned (`0xB` and
+   `0x7`)
 7. Merkle height MUST be equal to 6
 
 For data shreds:
@@ -80,8 +81,9 @@ For data shreds:
 10. `parent_offset <= slot`
 11. For slot 0 only, `parent_offset` MUST be equal to 0.  Otherwise,
    `parent_offset` MUST NOT be equal to 0.
-12. For chained data shreds, `88 <= size <= 1051`.  For chained-resigned
-  data shreds, `88 <= size <= 987`.
+12. The `size` field in the data header, must satisfy one of the
+    following: for chained data shreds, `88 <= size <= 1051`;  for
+    chained-resigned data shreds, `88 <= size <= 987`.
 
 For coding shreds:
 
@@ -103,7 +105,10 @@ from the new checks noted at the end.
 3. `fec_set_index <= shred_index < fec_set_index + 32`
 4. `fec_set_index` is a multiple of 32
 5. `fec_set_index <= MAX_SHREDS_PER_SLOT - 32`
-6. `variant` is chained or chained-resigned
+6. `variant` is chained (`0x9` and `0x6`) or chained-resigned (`0xB` and
+   `0x7`)
+7. *This point intentionally left blank to align existing checks with new
+   checks.*
 
 For data shreds:
 
@@ -151,8 +156,10 @@ is activated.
 7. All data shreds in a FEC set MUST have the same `parent_offset`
 8. All shreds in a FEC set MUST satisfy all the constraints in Family 1
 
-A validator MUST NOT vote for a block containing any FEC set unless it
-satisfies all of these checks.  A validator SHOULD NOT replay the
+Under TowerBFT, a validator MUST NOT vote for a block containing any FEC
+set unless it satisfies all of these checks.  Under Alpenglow, a
+validator MUST vote skip for a block containing an FEC set that fails to
+satisfy all of these checks.  A validator SHOULD NOT replay the
 transactions in a FEC set unless it satisfies all of these checks.
 Other than as specified by the Family 1 restrictions, a validator SHOULD
 use these shreds for constructing equivocation proofs, and they SHOULD
