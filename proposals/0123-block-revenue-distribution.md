@@ -45,10 +45,15 @@ This proposal depends on the following previously accepted proposals:
     Introduces a new instruction type for setting commission rates in basis
     points
 
-[SIMD-0180]: https://github.com/solana-foundation/solana-improvement-documents/pull/180
-[SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
-[SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
-[SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/pull/291
+- **[SIMD-0392]: Runtime Adjustments for Rent Increase**
+
+    Updates delegation calculation based on `Rent` sysvar parameters
+
+[SIMD-0180]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0180-vote-account-leader-schedule.md
+[SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0185-vote-account-v4.md
+[SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0232-custom-commission-collector.md
+[SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0291-commission-rate-in-basis-points.md
+[SIMD-0392]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0392-rent-increase-adaptations.md
 
 ## Alternatives Considered
 
@@ -61,7 +66,7 @@ they will have to manage themselves. [SIMD-0022] aims to make this experience
 better for stakers by allowing stake accounts to separately delegate any
 unstaked balance in their accounts.
 
-[SIMD-0022]: https://github.com/solana-foundation/solana-improvement-documents/pull/22
+[SIMD-0022]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0022-multi-stake.md
 
 ### Out of protocol reward distribution 
 
@@ -175,7 +180,25 @@ rewards distribution, the delegated vote account for each rewarded stake account
 must have its `pending_delegator_rewards` field and its balance deducted with
 the amount of rewards distributed to keep capitalization consistent.
 
-[SIMD-0118]: https://github.com/solana-foundation/solana-improvement-documents/pull/118
+[SIMD-0118]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0118-partitioned-epoch-reward-distribution.md
+
+#### Stake Delegation Adjustment
+
+The new delegation amount for a stake account MUST account for individual
+delegator rewards, by adapting the calculation from [SIMD-0392]:
+
+```
+post_delegation = min(
+    delegation + stake_rewards,
+    balance + stake_rewards + block_rewards - rent_exempt_reserve
+)
+```
+
+Where `block_rewards` represents the individual block rewards earned by the
+stake account in that epoch.
+
+All other variables are the same as before, as described in
+[SIMD-0392](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0392-rent-increase-adaptations.md#rent-adjusted-stake-delegations).
 
 ### Vote Program
 
