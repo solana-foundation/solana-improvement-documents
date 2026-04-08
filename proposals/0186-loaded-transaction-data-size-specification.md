@@ -89,11 +89,20 @@ Transactions may include a
 a lower data size limit for the transaction. Otherwise, the default limit is
 64MiB (`64 * 1024 * 1024` bytes).
 
-If a transaction exceeds its data size limit, a loading failure occurs. This
-SIMD does not change any aspect of how such a failure is handled. At time of
-writing, such a transaction would be excluded from the ledger. When
-`enable_transaction_loading_failure_fees` is enabled, it will be written to the
-ledger and charged fees as a processed, failed transaction.
+If a transaction loading failure occurs due to exceeding its requested data size
+limit, its loaded transaction data size is defined as that requested data size
+limit.
+
+If transaction account loading completes successfully, but a transaction loading
+failure occurs subsequently due to the rules defined in "Sidebar: Program ID and
+Loader Validation," its calculated loaded transaction data size is used.
+
+The loaded transaction data size of a committed no-op transaction, as would be
+introduced by
+[SIMD-290](https://github.com/solana-foundation/solana-improvement-documents/pull/290)
+and
+[SIMD-297](https://github.com/solana-foundation/solana-improvement-documents/pull/297)
+is intentionally left unspecified.
 
 Adding required loaders to transaction data size is abolished. They are treated
 the same as any other account: counted if used in a manner described by 1, not
