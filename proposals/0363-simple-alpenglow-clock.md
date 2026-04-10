@@ -142,7 +142,7 @@ static NANOSECOND_CLOCK_ACCOUNT: LazyLock<Pubkey> = LazyLock::new(|| {
 
 where `Pubkey::find_program_address` is a part of `solana-address-1.0.0`. In
 practice, the `Pubkey` ends up having value
-`BKRDmw2hTDSxQK4mitpK7eCWkNUvCvnaWqm1NZmGDTUm`.
+`HQcg2uM8uUqfRprvypQGcU7qucUZJY3odWjJVYce2a6C`.
 
 The clock sysvar is updated at the end of each block by simply dividing the
 nanosecond timestamp by `1_000_000_000` and rounding down (i.e., integer
