@@ -100,6 +100,13 @@ consequences should be listed.
 How will all clients verify that they have correctly implemented this change?
 
 Some examples:
-- The change will be accompanied by a ledger from a localnet cluster demonstrating the behaviour prior to activation, the feature activation, and change in functionality caused by the activation. An example of how to create such a ledger: https://github.com/febo/p-token-migration
-- The change will be accompanied by a pcap which contains the packets that are handled differently after
-the feature gate is activated.
+
+- The change will be accompanied by a ledger from a
+  localnet cluster demonstrating the behaviour prior to
+  activation, the feature activation, and change in
+  functionality caused by the activation. An example of
+  how to create such a ledger:
+  https://github.com/febo/p-token-migration
+- The change will be accompanied by a pcap which contains
+  the packets that are handled differently after the
+  feature gate is activated.
