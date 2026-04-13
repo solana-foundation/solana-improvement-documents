@@ -70,6 +70,7 @@ Which validator components are affected by this change?
 | Gossip                          |                                     |
 | Turbine                         |                                     |
 | Snapshots                       |                                     |
+| On-Chain Core BPF Programs      |                                     |
 | Other (please describe)         |                                     |
 
 ## Alternatives Considered
