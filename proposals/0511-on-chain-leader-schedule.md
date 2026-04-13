@@ -13,10 +13,11 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 Store the leader schedule and epoch stakes (vote account to delegated stake
-mapping) for the previous, current, and next epochs in on-chain accounts.
+mapping) for each epoch in dedicated on-chain accounts, keyed by epoch number.
 This enables subscription-based access for indexers, permissionless on-chain
 skip rate computation, and a general-purpose on-chain view of the stake
-distribution.
+distribution. All epochs from feature activation forward remain accessible
+as persistent account state.
 
 ## Motivation
 
@@ -58,23 +59,26 @@ state.
 **Leader schedule account:** A system-managed account (not a sysvar — see
 [Alternatives Considered](#alternatives-considered)) that stores the unique
 leader identity/vote-account pairs and the slot-to-leader mapping for a single
-epoch.
+epoch. One such account is written per epoch, addressed by a PDA derived from
+the epoch number.
 
 **Leader span:** A contiguous group of slots assigned to a single leader
 (currently 4 slots, i.e. `NUM_CONSECUTIVE_LEADER_SLOTS`). The schedule is
 indexed by leader span rather than by individual slot.
 
 **Epoch stakes account:** A system-managed account that stores the mapping
-from vote account to delegated stake (in lamports) for a single epoch.
+from vote account to delegated stake (in lamports) for a single epoch. One
+such account is written per epoch, addressed by a PDA derived from the
+epoch number.
 
 ## Detailed Design
 
 ### Account Structure
 
-Three accounts are maintained: one for the **previous epoch**, one for the
-**current epoch**, and one for the **next epoch**. Each account contains a
-self-describing binary layout with the identity table (including vote
-addresses) and the schedule index array.
+A separate leader schedule account is written for each epoch, addressed by a
+PDA derived from the epoch number (see [Account Addresses](#account-addresses)).
+Each account contains a self-describing binary layout with the identity table
+(including vote addresses) and the schedule index array.
 
 All multi-byte integers are little-endian. Header fields are ordered so that
 each field falls on its natural alignment boundary without padding (version
@@ -147,17 +151,21 @@ With mainnet parameters (432,000 slots/epoch, ~2,000 active validators):
 | Identity Table | 2,000 × 64 bytes | 128 KB |
 | Schedule | 108,000 × 2 bytes | 216 KB |
 | **Total per account** | | **~344 KB** |
-| **Total (3 accounts)** | | **~1.03 MB** |
 
 The identity table uses 64 bytes per entry (32-byte identity + 32-byte vote
 account). Note that `num_leaders` may exceed the number of unique validator
 identities if any identity operates multiple vote accounts.
 
-With `u16` indices, the identity table supports up to 65,535 unique entries.
-At 65,535 entries × 64 bytes = 4 MB for the identity table alone. The
-theoretical maximum account size is ~4.2 MB, well within the 10 MB account
-data limit. With Alpenglow's cap of 2,000 voting validators, the practical
-maximum is well below this.
+The leader schedule program **MUST** reject any epoch whose identity table
+would exceed 2,000 entries, matching the validator admission cap enforced
+elsewhere in the protocol. This bounds the maximum leader schedule account
+size to the values shown above and gives consumers a firm upper limit for
+buffer allocation.
+
+With `u16` indices, the identity table format supports up to 65,535 unique
+entries, leaving substantial headroom above the 2,000 cap. If a future SIMD
+raises the validator cap beyond this limit, a new format version with wider
+indices could be introduced.
 
 **Note on index width:** This proposal uses `u16` indices (2 bytes) rather than
 `u32` (4 bytes), saving 216 KB per account at current mainnet parameters. The
@@ -167,9 +175,9 @@ wider indices.
 
 ### Epoch Stakes Account Structure
 
-Three additional accounts store the epoch stakes: one for each of the
-**previous**, **current**, and **next** epochs. Each account contains a
-sorted mapping from vote account to delegated stake.
+A separate epoch stakes account is written for each epoch, also addressed by
+a PDA derived from the epoch number. Each account contains a sorted mapping
+from vote account to delegated stake.
 
 ```
 ┌───────────────────────────────────────────────────────┐
@@ -204,7 +212,10 @@ With mainnet parameters (~2,000 vote accounts):
 | Header | fixed | 32 bytes |
 | Entries | 2,000 × 40 bytes | 80 KB |
 | **Total per account** | | **~80 KB** |
-| **Total (3 accounts)** | | **~240 KB** |
+
+The epoch stakes account **MUST** contain at most 2,000 entries, matching the
+validator admission cap. Combined with the leader schedule account, each epoch
+contributes approximately 424 KB of new on-chain state.
 
 The `epoch_stakes_hash` in the leader schedule header is the SHA-256 hash
 of the epoch stakes account data for the corresponding epoch (excluding the
@@ -213,22 +224,32 @@ verify that the leader schedule was derived from the published stakes.
 
 ### Account Addresses
 
-All six accounts live at well-known addresses derived as Program Derived
-Addresses (PDAs) from the owning program:
+Accounts live at Program Derived Addresses (PDAs) keyed by epoch number:
 
 ```
-previous_schedule     = PDA(program_id, ["previous_schedule"])
-current_schedule      = PDA(program_id, ["current_schedule"])
-next_schedule         = PDA(program_id, ["next_schedule"])
-previous_epoch_stakes = PDA(program_id, ["previous_epoch_stakes"])
-current_epoch_stakes  = PDA(program_id, ["current_epoch_stakes"])
-next_epoch_stakes     = PDA(program_id, ["next_epoch_stakes"])
+schedule(epoch)     = PDA(program_id, [b"schedule",     epoch.to_le_bytes()])
+epoch_stakes(epoch) = PDA(program_id, [b"epoch_stakes", epoch.to_le_bytes()])
 ```
 
-Using PDAs rather than vanity-ground addresses ensures the addresses are
-deterministic and verifiable. The seeds are fixed strings — the account
-**contents** rotate at epoch boundaries, not the addresses. This means
-consumers subscribe to exactly six stable addresses.
+The `epoch` value is encoded as 8 little-endian bytes (matching the on-wire
+`u64` representation of an epoch number).
+
+Every epoch has its own stable, deterministic address. Accounts are never
+modified in place once written, and never copied between addresses. A consumer
+that knows an epoch number can derive the address and read the data for any
+epoch that has been written since feature activation.
+
+This scheme eliminates the write amplification of a rolling `previous /
+current / next` layout (which would require rewriting the same data under
+different addresses every epoch boundary). It also naturally preserves
+historical schedules — any program or indexer can walk backward through epochs
+for retrospective analysis without needing an off-chain archive.
+
+Consumers subscribing to the current and upcoming epoch schedules can compute
+both addresses from the current epoch number (available via the `Clock`
+sysvar) and subscribe directly. Indexers that want to be notified of new
+epochs can subscribe to program-owned accounts via `programSubscribe` or
+equivalent Geyser filters.
 
 ### Owner Program
 
@@ -247,17 +268,17 @@ finalized). This program:
 
 At each epoch boundary (when `parent.epoch() < new.epoch()`), the runtime:
 
-1. Rotates both account sets: current -> previous, next -> current
-2. Serializes the epoch stakes for `current_epoch + 1` (the vote account to
-   stake mapping) and writes to `next_epoch_stakes`
-3. Computes the leader schedule for `current_epoch + 1` using the same
+1. Serializes the epoch stakes for `current_epoch + 1` (the vote account to
+   stake mapping) and creates the account at `epoch_stakes(current_epoch + 1)`
+2. Computes the leader schedule for `current_epoch + 1` using the same
    stake-weighted shuffle (`LeaderSchedule::new()`) that already populates the
    `LeaderScheduleCache`
-4. Serializes the new schedule (with `epoch_stakes_hash` from step 2) and
-   writes to `next_schedule`
+3. Serializes the new schedule (embedding the SHA-256 hash of the epoch stakes
+   written in step 1 as `epoch_stakes_hash`) and creates the account at
+   `schedule(current_epoch + 1)`
 
-Account lamport balances are set to the rent-exempt minimum (or 1 lamport,
-whichever is greater) on each write.
+Each newly created account is funded with the rent-exempt minimum and is never
+modified again. There is no copying or rotation between addresses.
 
 This integrates into the existing epoch-boundary processing in
 `process_new_epoch()`, after vote account stake snapshots are taken and
@@ -265,21 +286,33 @@ This integrates into the existing epoch-boundary processing in
 
 #### Feature Activation
 
-On the first epoch boundary after feature activation:
+On the first epoch boundary after feature activation, the runtime creates the
+accounts for the current and next epoch (if the next epoch's stakes are
+already available). No historical accounts are backfilled — data for epochs
+preceding feature activation is not available on-chain.
 
-1. All six accounts are created with the rent-exempt balance (minimum 1
-   lamport, since zero-lamport accounts are treated as non-existent by the
-   runtime)
-2. Previous accounts (`previous_schedule`, `previous_epoch_stakes`) are left
-   empty (no prior epoch data is available)
-3. Current accounts are populated with the current epoch's data
-4. Next accounts are populated with the next epoch's data, if vote account
-   stakes for that epoch are available. If not yet available, the next
-   accounts are left empty and will be populated at the next epoch boundary
+From that point forward, each epoch boundary writes exactly one new leader
+schedule account and one new epoch stakes account, as described above.
 
-Consumers **must** check the `epoch` field in the header before using the
-account data. An empty account (zero data length) indicates that no schedule
-is available for that slot yet.
+Consumers **MUST** check that an account exists (using e.g. `getAccountInfo`)
+before attempting to read it. Accounts for epochs prior to feature activation,
+or for epochs further in the future than the current leader schedule epoch,
+will not exist.
+
+#### State Growth
+
+Each epoch contributes approximately 424 KB of new on-chain account state
+(~344 KB for the leader schedule + ~80 KB for the epoch stakes). With
+approximately two epochs per day, annual growth is on the order of 310 MB.
+This is a deliberate tradeoff: preserving all history simplifies consumer
+logic, eliminates write amplification at epoch boundaries, and enables
+retrospective analysis (such as skip rate computation) without requiring
+off-chain archival.
+
+Future SIMDs may introduce a pruning mechanism if long-term state growth
+becomes a concern. Because each account is independently addressable by
+epoch, pruning can be added without breaking the address scheme for the
+remaining accounts.
 
 #### Consistency
 
@@ -359,20 +392,35 @@ consumers could compute the schedule from epoch stakes, but this proposal
 serves both audiences. The epoch stakes accounts (~80 KB each) are a modest
 addition alongside the leader schedule accounts.
 
-### Two Epochs (Current, Next)
+### Fixed-Seed Rolling Accounts (Previous / Current / Next)
 
-An earlier draft of this proposal used only two accounts (current + next). Three
-epochs were chosen instead because the previous epoch's schedule is required
-for permissionless on-chain skip rate computation. Without the previous epoch
-available on-chain, consumers would need to maintain their own off-chain
-schedule history, which undermines the self-contained nature of this proposal.
-The additional ~344 KB of state is a modest cost for enabling this use case.
+An earlier draft of this proposal used three fixed-seed PDAs per account type
+(`["previous_schedule"]`, `["current_schedule"]`, `["next_schedule"]`) and
+rotated their contents at each epoch boundary. This was rejected in favor of
+epoch-number-keyed seeds for several reasons:
 
-### Single Combined Account with Both Epochs
+- **Write amplification.** Rotation requires rewriting the same data under
+  different addresses every epoch, producing three writes per account type per
+  epoch instead of one.
+- **Bounded history.** A rolling layout only ever exposes three epochs. Any
+  consumer that needs older history (for retrospective skip rate analysis, for
+  example) would need to maintain their own archive, defeating a core
+  motivation of the proposal.
+- **Ambiguity at epoch boundaries.** A `current_schedule` account has an
+  implicit epoch binding that changes on every epoch boundary, creating a
+  race between the runtime write and any consumer reading the account. With
+  epoch-keyed addresses, the account for a given epoch is written once and
+  is unambiguous.
 
-Storing both epochs in one account would halve the number of accounts but
-roughly double the account size. Separate accounts allow programs to load only
-the epoch they need, reducing per-transaction account data.
+Reviewers on the SIMD discussion (trent-nelson, brooksprumo, joncinque) all
+converged on epoch-keyed addressing as the cleaner design.
+
+### Single Combined Account per Epoch
+
+Storing the leader schedule and epoch stakes for a given epoch in a single
+account would reduce account count but increase per-account size. Keeping
+them separate allows programs to load only what they need, reducing
+per-transaction account data.
 
 ### Identity-Only Table (No Vote Addresses)
 
@@ -395,10 +443,11 @@ current validator count — the space savings are worthwhile.
 
 ## Impact
 
-**Validator operators:** Validators will create and maintain six additional
-accounts (~1.27 MB total) after the feature is activated. The accounts are
-updated once per epoch boundary, adding negligible overhead to epoch
-processing. No configuration changes are required.
+**Validator operators:** Validators will create two new accounts per epoch
+boundary (~424 KB combined) after the feature is activated, contributing
+approximately 310 MB per year of on-chain state growth. The accounts are
+written once at each epoch boundary and never modified thereafter, adding
+negligible overhead to epoch processing. No configuration changes are required.
 
 **RPC providers:** No immediate changes. Existing `getLeaderSchedule` and
 `getSlotLeaders` endpoints continue to function. Over time, client libraries
@@ -406,15 +455,16 @@ may shift to reading the on-chain accounts directly, reducing load on these
 endpoints.
 
 **Indexers and Geyser plugin operators:** This is the primary beneficiary.
-Indexers can subscribe to six stable account addresses to receive leader
-schedule and stake distribution updates at epoch boundaries via Geyser or
-websocket `accountSubscribe`, replacing RPC polling.
+Indexers can subscribe to the leader schedule program via `programSubscribe`
+(or the Geyser equivalent) to receive leader schedule and stake distribution
+updates at epoch boundaries, replacing RPC polling. Consumers that want only
+a specific epoch can subscribe to the corresponding epoch-keyed PDA directly.
 
 **On-chain program developers:** Programs can read the leader schedule and
-epoch stakes accounts to access the schedule or stake distribution for the
-previous, current, or next epoch. The binary formats support zero-copy access.
-Concrete use cases include permissionless skip rate computation (combining the
-previous epoch's schedule with the slot history sysvar), stake-weighted
+epoch stakes accounts for any epoch since feature activation by deriving the
+PDA from the epoch number. The binary formats support zero-copy access.
+Concrete use cases include permissionless skip rate computation (combining a
+past epoch's schedule with the slot history sysvar), stake-weighted
 governance, and quorum verification.
 
 **Core contributors:** This proposal introduces a new pattern for
@@ -425,32 +475,43 @@ cache.
 
 ## Security Considerations
 
-### Account Size
+### Account Size and Growth
 
-Leader schedule accounts are ~344 KB each and epoch stakes accounts are ~80 KB
-each at current mainnet parameters. The combined footprint of ~1.27 MB for all
-six accounts is modest relative to overall validator memory usage and well
-within per-account limits.
+Leader schedule accounts are bounded at ~344 KB each and epoch stakes accounts
+at ~80 KB each by the 2,000-validator admission cap. New accounts are created
+at each epoch boundary (~424 KB combined), yielding approximately 310 MB of
+annual state growth. This is a deliberate tradeoff discussed under [State
+Growth](#state-growth); pruning may be introduced in a follow-up SIMD if
+warranted.
 
 ### Capitalization Impact
 
-Creating these accounts at feature activation increases total capitalization by
-the rent-exempt minimum for ~1.27 MB of account data. At current rent
-parameters this is approximately 9 SOL. This is a one-time, small increase
-that occurs at the epoch boundary when the feature activates. No ongoing
-lamport changes occur beyond minor adjustments if account sizes change between
-epochs.
+Each epoch boundary mints the rent-exempt minimum for the two new accounts
+(~3 SOL per epoch at current rent parameters). Over a year this amounts to
+approximately 2,200 SOL transferred into rent-exempt account balances. These
+lamports are not burned — they remain in the leader schedule program's
+accounts indefinitely. If a future pruning SIMD is adopted, freed lamports
+could be returned to the treasury or burned.
 
 ### Read-Only Guarantees
 
-The accounts are protected by two independent mechanisms:
+The accounts are owned by a native program that rejects all instructions.
+There is no code path by which a transaction can modify them — the only
+writer is the runtime itself, acting at epoch boundaries.
 
-1. **Program-level:** The owning native program rejects all instructions, so no
-   transaction can modify the accounts through program invocation.
-2. **Transaction-level:** The program ID and all six PDA addresses are added
-   to the reserved account keys list (gated on the same feature). This prevents
-   any transaction from acquiring a write lock on these accounts, even if a
-   malicious program were to claim ownership.
+Because each epoch's accounts are addressed by a deterministic PDA, the set
+of currently-reserved addresses is unbounded over time and cannot be
+enumerated statically. The program ID itself is added to the reserved account
+keys list to prevent any transaction from acquiring a write lock on the
+program, and all accounts owned by this program inherit the rejection
+behavior through the owner check. This is sufficient because:
+
+1. No valid transaction can mutate an account whose owner program rejects
+   every instruction.
+2. The runtime's writes happen outside of transaction processing and are
+   therefore unaffected by the account-lock scheduler.
+3. Any validator that diverged from the deterministic computation would
+   produce a different bank hash and fail consensus.
 
 Combined, these provide the same integrity guarantee as sysvar accounts.
 
@@ -459,6 +520,29 @@ Combined, these provide the same integrity guarantee as sysvar accounts.
 The leader schedule computation is deterministic (same epoch + same stakes =
 same schedule). All validators will produce identical account contents for the
 same epoch, ensuring consensus on account state.
+
+## Future Work
+
+The following items are explicitly out of scope for this SIMD but are
+enabled by it and may be addressed in follow-up proposals:
+
+- **Snapshot manifest slimming.** Once epoch stakes are available as on-chain
+  account state, the duplicate copy currently stored in the snapshot manifest
+  (and potentially the bank) could be removed, reducing snapshot size and
+  simplifying bank construction. This was flagged by topointon-jump on the
+  SIMD discussion as a natural follow-up.
+- **State pruning.** If long-term growth becomes a concern, a future SIMD
+  could define a maximum retention window (e.g. the most recent N epochs)
+  and return rent to the treasury when old accounts are closed.
+- **Leader schedule syscall.** A dedicated `sol_get_slot_leader(slot)`
+  syscall would allow programs to query individual slots without loading a
+  ~344 KB account. This is deferred because no concrete use case has been
+  identified that justifies the added surface area, but the data is now
+  available should one emerge.
+- **On-chain stake visibility across consensus changes.** Post-Alpenglow,
+  when epoch stakes become the canonical input and delegation trees are
+  removed from snapshots, this SIMD's accounts provide a natural home for
+  that data in permanent on-chain form.
 
 ## Backwards Compatibility
 
