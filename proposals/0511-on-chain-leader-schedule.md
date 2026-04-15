@@ -50,6 +50,18 @@ schedule and epoch stakes accounts alongside the slot history sysvar for a
 fully reactive approach to performance monitoring, without polling RPC
 endpoints.
 
+**For snapshot integrity:** The leader schedule and epoch stakes are currently
+stored in the snapshot manifest as validator-local data that is not covered
+by the bank hash. A snapshot with a corrupted or maliciously modified leader
+schedule will load successfully and the node will not discover the corruption
+until later in startup, when the schedule is used to validate blocks or
+produce shreds. By contrast, accounts inside the accounts database are part
+of the bank hash that validators vote on, so any corruption of the leader
+schedule or epoch stakes accounts is detected immediately at snapshot load
+time, before any consensus decisions are made. Making these data structures
+into regular accounts closes a gap in snapshot verification that exists
+today.
+
 The leader schedule and epoch stakes are already deterministically computed by
 every validator. This proposal simply makes that data available as account
 state.
@@ -526,11 +538,13 @@ same epoch, ensuring consensus on account state.
 The following items are explicitly out of scope for this SIMD but are
 enabled by it and may be addressed in follow-up proposals:
 
-- **Snapshot manifest slimming.** Once epoch stakes are available as on-chain
-  account state, the duplicate copy currently stored in the snapshot manifest
-  (and potentially the bank) could be removed, reducing snapshot size and
-  simplifying bank construction. This was flagged by topointon-jump on the
-  SIMD discussion as a natural follow-up.
+- **Snapshot manifest slimming.** Once epoch stakes and the leader schedule
+  are available as on-chain account state (and therefore covered by the bank
+  hash), the duplicate copies currently stored in the snapshot manifest can
+  be removed entirely. This is a follow-up SIMD, not part of this one — but
+  the verifiability benefit (described in [Motivation](#motivation)) is
+  immediate and does not require the manifest copies to be removed. Removing
+  them later reduces snapshot size and simplifies bank construction.
 - **State pruning.** If long-term growth becomes a concern, a future SIMD
   could define a maximum retention window (e.g. the most recent N epochs)
   and return rent to the treasury when old accounts are closed.
