@@ -40,9 +40,10 @@ None.
 ## Detailed Design
 
 After the activation of the associated feature key a validator must fail to
-deploy programs with any SBPF version other than v3. Loader-v3 instructions
-`DeployWithMaxDataLen` and `Upgrade` must throw the error
-`InstructionError::InvalidAccountData` when verifying the program data.
+deploy, upgrade or finalize programs with any SBPF version other than v3.
+Loader-v3 instructions `DeployWithMaxDataLen`, `Upgrade` and `Finalize` must
+throw the error `InstructionError::InvalidAccountData` when verifying the
+program data.
 
 Core program migrations and upgrades are exempt from this,
 in order not to interfere with other SIMDs.
