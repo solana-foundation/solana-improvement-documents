@@ -44,6 +44,9 @@ deploy programs with any SBPF version other than v3. Loader-v3 instructions
 `DeployWithMaxDataLen` and `Upgrade` must throw the error
 `InstructionError::InvalidAccountData` when verifying the program data.
 
+Core program migrations and upgrades are exempt from this,
+in order not to interfere with other SIMDs.
+
 ## Alternatives Considered
 
 Not deprecating some or all older SBPF versions.
