@@ -41,9 +41,11 @@ None.
 
 After the activation of the associated feature key a validator must fail to
 deploy, upgrade or finalize programs with any SBPF version other than v3.
-Loader-v3 instructions `DeployWithMaxDataLen`, `Upgrade` and `Finalize` must
-throw the error `InstructionError::InvalidAccountData` when verifying the
-program data.
+Loader V3 instructions `DeployWithMaxDataLen` and `Upgrade` must return
+`InstructionError::InvalidAccountData` when verifying the buffer's program data
+used to deploy or upgrade from. Loader V3 instruction `Finalize` must return
+`InstructionError::InvalidAccountData` when verifying the program data of the
+program attempting to be finalized.
 
 Core program migrations and upgrades are exempt from this,
 in order not to interfere with other SIMDs.
@@ -60,6 +62,19 @@ their programs before they can re-/deploy them.
 Furthermore, testing frameworks and mock ups will have to be adapted to either
 deactivate this feature or bypass the entire deployment in order to continue
 to test older SBPF versions.
+
+### Currently Deployed SBPF Versions per Loader (Mainnet)
+
+Analysis performed using Blueshift's [program-sync] tool.
+
+| Loader                 | SBPFv0 | SBPFv1 | SBPFv2 |
+| ---------------------- | ------ | ------ | ------ |
+| Loader-v1 (Finalized)  | 136    | 0      | 0      |
+| Loader-v2 (Finalized)  | 315    | 0      | 0      |
+| Loader-v3 (Finalized)  | 422    | 0      | 0      |
+| Loader-v3 (Upgradable) | 17279  | 12     | 41     |
+
+[program-sync]: https://github.com/blueshift-gg/program-sync
 
 ## Security Considerations
 
