@@ -55,7 +55,9 @@ document are to be interpreted as described in [RFC
 
 ### Edge Cases
 
-Which edge cases will this change affect? Enumerate these below.
+Which edge cases should the implementors of this change be aware of? Enumerate
+these below. This may includes topics such as extreme max/min/zero values,
+unusual states and scenarios that require particular attention.
 
 ### Validator Components Affected
 
