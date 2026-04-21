@@ -89,13 +89,16 @@ Transactions may include a
 a lower data size limit for the transaction. Otherwise, the default limit is
 64MiB (`64 * 1024 * 1024` bytes).
 
-If a transaction loading failure occurs due to exceeding its requested data size
-limit, its loaded transaction data size is defined as that requested data size
-limit.
+If transaction account loading fails by exceeding the requested data size limit,
+the final loaded transaction data size is defined as the requested data size
+limit itself. This ensures that account load order is *not* part of
+consensus: validator clients may load accounts in any order, in serial or
+parallel, and arrive at the same failure result.
 
-If transaction account loading completes successfully, but a transaction loading
-failure occurs subsequently due to the rules defined in "Sidebar: Program ID and
-Loader Validation," its calculated loaded transaction data size is used.
+*After* all transaction accounts have been loaded, the actual loaded size as
+defined by the the four rules of "Detailed Design" above is used for the
+transaction. This means that a post-account loading failure, such as described
+by "Sidebar: Program ID and Loader Validation," reports the actual loaded size.
 
 The loaded transaction data size of a committed no-op transaction, as would be
 introduced by
