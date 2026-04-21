@@ -40,15 +40,23 @@ None.
 ## Detailed Design
 
 After the activation of the associated feature key a validator must fail to
-deploy, upgrade or finalize programs with any SBPF version other than v3.
-Loader V3 instructions `DeployWithMaxDataLen` and `Upgrade` must return
-`InstructionError::InvalidAccountData` when verifying the buffer's program data
-used to deploy or upgrade from. Loader V3 instruction `Finalize` must return
-`InstructionError::InvalidAccountData` when verifying the program data of the
-program attempting to be finalized.
+(re-)deploy or finalize programs with any SBPF version older than SBPFv3.
 
-Core program migrations and upgrades are exempt from this,
-in order not to interfere with other SIMDs.
+Currently loader-v3 is the only loader with program management enabled, thus
+this means for each of the following loader-v3 instructions:
+
+- deployment: `DeployWithMaxDataLen`
+- redeployment: `Upgrade`
+- finalization: `SetAuthority` and `SetAuthorityChecked` with no new authority
+
+must return `InstructionError::InvalidAccountData` when the ELF contains
+a SBPFv0, SBPFv1 or SBPFv2 program. While `InitializeBuffer`, `Write`,
+`ExtendProgram` and `Close` remain unaffected.
+
+In order not to interfere with other SIMDs, all core program migrations
+(SIMD-0418) and upgrades (SIMD-0495) are exempt from this. These core programs,
+while owned by loader-v3, are not using the program management instructions of
+loader-v3 anyway.
 
 ## Alternatives Considered
 
@@ -57,7 +65,7 @@ Not deprecating some or all older SBPF versions.
 ## Impact
 
 dApp developers using outdated toolchains will have to update them and adjust
-their programs before they can re-/deploy them.
+their programs before they can re-/deploy or finalize them.
 
 Furthermore, testing frameworks and mock ups will have to be adapted to either
 deactivate this feature or bypass the entire deployment in order to continue
