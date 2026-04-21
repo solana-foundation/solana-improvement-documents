@@ -191,6 +191,15 @@ section for more details.
 - If the account owner changes, always enforce the current rent-exempt minimum
   for the post-exec size; the `min(pre_exec_balance, …)` clause does not apply.
 
+**Reward collector accounts:**
+
+- Inflation and block reward collector accounts no longer need to hold at least
+  the rent-exempt minimum balance during reward deposit. Instead, a collector
+  account with any lamports can be assumed to have been created by respecting
+  the rent-exempt minimum at that time. For that reason, the rent-exempt minimum
+  check must only be performed on a collector account with 0 lamports prior to
+  the reward deposit.
+
 ### Rent-Adjusted Stake Delegations
 
 During the epoch rewards calculation phase, a stake's updated delegation MUST be
