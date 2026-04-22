@@ -106,7 +106,7 @@ updated at each CPI call edge. The contents of this region are the following:
   - Reserved filed for alignment and potential future usage: `u16`
   - Index in transaction of program account to be executed: `u16`
   - CPI nesting level: `u16`
-  - Index of parent instruction (`u32::MAX` for top-level instructions): `u16`
+  - Index of parent instruction (`u16::MAX` for top-level instructions): `u16`
   - Reference to a slice of instruction accounts `&[InstructionAccount]`, 
     consisting of:
     - Pointer to slice: `u64`
