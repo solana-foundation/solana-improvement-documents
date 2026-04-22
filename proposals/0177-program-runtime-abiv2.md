@@ -73,6 +73,9 @@ return data. The contents of this memory region are the following:
 - The CPI scratchpad: `&[u8]`, which consists of:
   - Pointer to CPI scratchpad: `u64`
   - Length of CPI scratchpad: `u64`
+- The CPI accounts scratchpad: `&[InstructionAccount]`, which consists of:
+    - Pointer to slice: `u64`
+    - Number of elements in slice: `u64`
 - Index of current executing instruction: `u32`
 - Total number of instructions in transaction (including CPIs and top level 
   instructions): `u32`
@@ -164,6 +167,11 @@ Each of these memory regions contain the following for each instruction:
       - Signer flag: `u8` (1 for signer, 0 for non-singer)
       - Writable flag: `u8` (1 for writable, 0 for readonly)
 
+One extra writable mapping must be created after the last instruction accounts 
+area to be the CPI scratch pad, i.e. at address `0x14800000000` plus 
+`0x100000000` times the number of instructions in the transaction. Its purpose 
+is for programs to write CPI accounts directly to it and avoid copies.
+
 #### Sysvar accounts area
 
 For each existing (non deprecated) sysvar account, the runtime must map its
@@ -227,13 +235,6 @@ syscall `sol_invoke_signed_v2` must replace them. The parameters for
 `sol_invoke_signed_v2` are the following:
 
 - Index in transaction of program ID to be called: `u64`.
-- A pointer to a slice `&[InstructionAccount]`, with each element 
-  `InstructionAccount` 
-  containing, as previously mentioned:
-  - Index to transaction account: `u16`
-    - Signer flag: `u8` (1 for signer, 0 for non-singer)
-    - Writable flag: `u8` (1 for writable, 0 for readonly)
-- The length of the `&[InstructionAccount]` slice.
 - A pointer to the singer seeds of type `&[&[&[u8]]]`.
 - The length of the outer signer seeds slice in `&[&[&[u8]]]`.
 
@@ -256,16 +257,37 @@ data it holds.
 
 ### CPIs
 
-With ABIv2 and the new `sol_invoke_signed_v2` syscall, CPIs must be managed 
+#### Program side
+
+The workflow for cross program invokation on the program side will change. 
+Instead of programs themselves allocating memory on the heap or the stack for 
+CPI instruction data and CPI accounts, the program runtime must already 
+provide the pointers for programs to write to.
+
+The CPI data scratchpad is a region in the 
+[Instruction payload area](#instruction-payload-area), right after the space 
+reserved for the last intruction in the instruction trace.
+In other words, `0x10800000000` plus `0x100000000` times the number of 
+instructions in the transaction.
+
+Likewise, the CPI accounts must be written to a runtime provided region 
+residing in the [Instruction accounts area](#instruction-accounts-area) 
+at `0x14800000000` plus `0x100000000` times the number of instructions in the 
+transaction.
+
+Both the aforementioned regions must begin with size zero, and programs must 
+resize them before writing to them using the `set_buffer_length` syscall.
+
+#### Runtime side
+
+With the new `sol_invoke_signed_v2` syscall, CPIs must be managed 
 differently. At each CPI call, the runtime must perform the following actions:
 
-1. Verify that all account indexes received in the `InstructionAccount` array 
+1. Verify that all account indexes received in the `InstructionAccount` area 
    belong in the current executing instruction. Likewise, the prgram ID index 
    that should be called must also undergo the same verification.
 2. Verify that accounts have the correct signer and writer flags set, avoiding 
    privelege promotion.
-2. Append the slice `&[InstructionAccount]` passed as a parameter to the 
-   array kept at address `0x700000000`.
 3. Append a new instruction at the end of the serialization array kept at 
    `0x600000000`.
 4. Transform the caller CPI scratchpad into a readonly instruction payload 
@@ -284,7 +306,6 @@ When the CPI returns, the runtime must do the following:
 2. Change the read and write permission for the account payload regions, 
    according to potential changes in account ownership.
 3. Update the index of current executing instruction.
-4. No changes must be done in addresses `0x600000000` and `0x700000000`.
 
 ### Changes to CU metering
 
