@@ -243,7 +243,16 @@ For all fields, if the bit(s) are not set, the minimum allowed value is used:
 - If bit 3 is not set the requested accounts data size limit is 0. This is 
   different from the current requested accounts data size limit defaulting today
   to 64MiB (MAX_LOADED_ACCOUNTS_DATA_SIZE_BYTES).
-- If bit 4 is not set the requested heap size is 32768 (MIN_HEAP_FRAME_BYTES).
+- A requested accounts data size limit of 0, whether the default because bit 3
+  is unset or because the user-supplied value for bit 3 is 0, is treated for
+  cost-model purposes as reserving 1 page of loaded account data, or 32KiB.
+  This does not change the transaction budget request itself and only clarifies
+  the cost-model handling of 0.
+- If bit 4 is not set the requested heap size is 32KiB
+  (MIN_HEAP_FRAME_BYTES).
+- If bit 4 is set, the requested heap size MUST be a multiple of 1KiB and in
+  the inclusive range [32KiB, 256KiB]. Values outside of these bounds are
+  sanitization failures.
 
 ## Alternatives Considered
 
