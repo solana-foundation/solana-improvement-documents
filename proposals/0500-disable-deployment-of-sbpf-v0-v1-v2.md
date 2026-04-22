@@ -49,8 +49,9 @@ this means for each of the following loader-v3 instructions:
 - redeployment: `Upgrade`
 - finalization: `SetAuthority` and `SetAuthorityChecked` with no new authority
 
-must return `InstructionError::InvalidAccountData` when the ELF contains
-a SBPFv0, SBPFv1 or SBPFv2 program. While `InitializeBuffer`, `Write`,
+must return `InstructionError::InvalidAccountData` when the ELF (in the buffer
+account for re-/deployments and in the programdata account for finalization)
+contains a SBPFv0, SBPFv1 or SBPFv2 program. While `InitializeBuffer`, `Write`,
 `ExtendProgram` and `Close` remain unaffected.
 
 In order not to interfere with other SIMDs, all core program migrations
