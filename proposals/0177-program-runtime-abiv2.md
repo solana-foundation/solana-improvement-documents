@@ -126,7 +126,7 @@ Let `InstructionAccount` contain the following fields:
 A writable memory region starting at `0x700000000` must be mapped in for the
 return-data scratchpad.
 
-### Accounts area
+#### Accounts area
 
 For each unique (meaning deduplicated) instruction account the payload must
 be mapped in at `0x800000000` plus `0x100000000` times the index of the
@@ -139,7 +139,7 @@ The runtime must only map the payload for accounts that belong in the current
 executing instruction. The payload for accounts belonging to sibling instructions
 must NOT be mapped.
 
-### Instruction payload area
+#### Instruction payload area
 
 For each instruction, the runtime must map its payload at address 
 `0x10800000000` plus `0x100000000` times the index of the instruction in the 
@@ -150,7 +150,7 @@ area to be the CPI scratch pad, i.e. at address `0x10800000000` plus
 `0x100000000` times the number of instructions in the transaction. Its purpose  
 is for programs to write CPI instruction data directly to it and avoid copies.
 
-### Instruction accounts area
+#### Instruction accounts area
 
 For each instruction, the runtime must map an array of `InstructionAccount`
 (as previously defined) at address `0x14800000000` plus `0x100000000` times 
@@ -164,7 +164,7 @@ Each of these memory regions contain the following for each instruction:
       - Signer flag: `u8` (1 for signer, 0 for non-singer)
       - Writable flag: `u8` (1 for writable, 0 for readonly)
 
-### Sysvar accounts area
+#### Sysvar accounts area
 
 For each existing (non deprecated) sysvar account, the runtime must map its
 payload at address `0x18800000000` plus `0x100000000` times the index of the
@@ -190,6 +190,9 @@ following values to registers:
    [Instruction accounts area](#instruction-accounts-area)).
 3. Register R3: The number of instruction accounts for the instruction under 
    execution.
+4. Register R4: A pointer to the instruction payload of the instruction under 
+   execution (see section [Instruction payload area](#instruction-payload-area)).
+5. Register R5: The payload lenght for the instruction under execution.
 
 
 ### Changes to syscalls
@@ -259,6 +262,8 @@ differently. At each CPI call, the runtime must perform the following actions:
 1. Verify that all account indexes received in the `InstructionAccount` array 
    belong in the current executing instruction. Likewise, the prgram ID index 
    that should be called must also undergo the same verification.
+2. Verify that accounts have the correct signer and writer flags set, avoiding 
+   privelege promotion.
 2. Append the slice `&[InstructionAccount]` passed as a parameter to the 
    array kept at address `0x700000000`.
 3. Append a new instruction at the end of the serialization array kept at 
