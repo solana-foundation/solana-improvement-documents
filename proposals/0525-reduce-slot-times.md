@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0525'
 title: Reduce Slot Times
 authors:
   - Brennan Watt (Anza)
@@ -82,13 +82,21 @@ stored `slots_per_year` value by `old_slot_ms / new_slot_ms` at each feature
 activation rather than recomputing from SDK constants.
 `rent_collector.slots_per_year` MUST be updated with the same value.
 
-| Target slot time | Feature gate | `ns_per_slot` | Tick duration | 4-slot leader span | Epoch duration | `slots_per_year` |
-|------------------|--------------|---------------|---------------|--------------------|----------------|------------------|
-| 400ms | current | `400_000_000` | `6_250_000ns` | 1.6s | 48h | `78_892_314.984` |
-| 350ms | `reduce_slot_time_to_350ms` | `350_000_000` | `5_468_750ns` | 1.4s | 42h | `90_162_645.696` |
-| 300ms | `reduce_slot_time_to_300ms` | `300_000_000` | `4_687_500ns` | 1.2s | 36h | `105_189_753.312` |
-| 250ms | `reduce_slot_time_to_250ms` | `250_000_000` | `3_906_250ns` | 1.0s | 30h | `126_227_703.974` |
-| 200ms | `reduce_slot_time_to_200ms` | `200_000_000` | `3_125_000ns` | 0.8s | 24h | `157_784_629.968` |
+| Target | Feature gate |
+|--------|--------------|
+| 400ms | current |
+| 350ms | `reduce_slot_time_to_350ms` |
+| 300ms | `reduce_slot_time_to_300ms` |
+| 250ms | `reduce_slot_time_to_250ms` |
+| 200ms | `reduce_slot_time_to_200ms` |
+
+| Target | ns/slot | tick ns | span | epoch | slots/year |
+|--------|---------|---------|------|-------|------------|
+| 400ms | 400000000 | 6250000 | 1.6s | 48h | 78892314.984 |
+| 350ms | 350000000 | 5468750 | 1.4s | 42h | 90162645.696 |
+| 300ms | 300000000 | 4687500 | 1.2s | 36h | 105189753.312 |
+| 250ms | 250000000 | 3906250 | 1.0s | 30h | 126227703.974 |
+| 200ms | 200000000 | 3125000 | 0.8s | 24h | 157784629.968 |
 
 Note that none of the above table values (except for `slots_per_year` for
 inflation) are explicitly in protocol and may deviate from reality, but they are
@@ -100,17 +108,29 @@ Integer values are scaled by `floor(current_400ms_value * target_slot_ms /
 400)`. Flooring is used whenever the proportional value is fractional so the
 new value does not exceed the intended wall-clock budget.
 
-| Value | 400ms | 350ms | 300ms | 250ms | 200ms |
-|-------|-------|-------|-------|-------|-------|
-| Hashes per tick, non-Alpenglow | `62_500` | `54_687` | `46_875` | `39_062` | `31_250` |
-| Target signatures per slot | `20_000` | `17_500` | `15_000` | `12_500` | `10_000` |
-| Max block CUs | `60_000_000` | `52_500_000` | `45_000_000` | `37_500_000` | `30_000_000` |
-| Max writable account CUs | `24_000_000` | `21_000_000` | `18_000_000` | `15_000_000` | `12_000_000` |
-| Max vote CUs | `36_000_000` | `31_500_000` | `27_000_000` | `22_500_000` | `18_000_000` |
-| Max accounts data size delta | `100_000_000` | `87_500_000` | `75_000_000` | `62_500_000` | `50_000_000` |
-| Max data shreds per slot | `32_768` | `28_672` | `24_576` | `20_480` | `16_384` |
-| Max coding shreds per slot | `32_768` | `28_672` | `24_576` | `20_480` | `16_384` |
-| PER stake accounts written per slot | `4_096` | `3_584` | `3_072` | `2_560` | `2_048` |
+| Limit | 400ms | 350ms | 300ms |
+|-------|-------|-------|-------|
+| Hashes/tick | 62500 | 54687 | 46875 |
+| Target sigs/slot | 20000 | 17500 | 15000 |
+| Max block CUs | 60000000 | 52500000 | 45000000 |
+| Max writable acct CUs | 24000000 | 21000000 | 18000000 |
+| Max vote CUs | 36000000 | 31500000 | 27000000 |
+| Max data delta | 100000000 | 87500000 | 75000000 |
+| Max data shreds | 32768 | 28672 | 24576 |
+| Max coding shreds | 32768 | 28672 | 24576 |
+| PER stake writes | 4096 | 3584 | 3072 |
+
+| Limit | 250ms | 200ms |
+|-------|-------|-------|
+| Hashes/tick | 39062 | 31250 |
+| Target sigs/slot | 12500 | 10000 |
+| Max block CUs | 37500000 | 30000000 |
+| Max writable acct CUs | 15000000 | 12000000 |
+| Max vote CUs | 22500000 | 18000000 |
+| Max data delta | 62500000 | 50000000 |
+| Max data shreds | 20480 | 16384 |
+| Max coding shreds | 20480 | 16384 |
+| PER stake writes | 2560 | 2048 |
 
 The `hashes_per_tick` value MUST NOT be reduced by these feature gates when
 Alpenglow is active. Alpenglow's low-power PoH path should keep its active
@@ -190,17 +210,25 @@ Implementations should pay special attention to:
 
 ### Validator Components Affected
 
-| Validator Component | Impact |
-|---------------------|--------|
-| Transaction Execution (Runtime) | Bank timing fields, inflation slot-to-time conversion, fee-rate governor, cost tracker, block data size limits, and PER distribution limits change by feature gate. |
-| Virtual Machine | No direct VM semantic change. Programs may observe finer slot-time granularity through sysvars and RPC-derived timing. |
-| Block Packing | Leaders must pack smaller per-slot CU, account CU, vote CU, accounts-data, shred, and PER write budgets. |
-| Consensus | Feature-gated slot duration changes are consensus critical. Leader windows remain 4 slots but become shorter in wall-clock time. |
-| Gossip | Vote and epoch-slot traffic increase per wall-clock time as slots get faster. |
-| Turbine | The per-slot data and coding shred limits are reduced proportionally. |
-| Snapshots | Snapshot restore must reconstruct active runtime limits. Snapshot interval policy is not changed by this proposal. |
-| On-Chain Core BPF Programs | No direct program interface change. Programs that interpret slot distance as wall-clock time may need updates. |
-| Other | SDKs, RPC clients, explorers, and off-chain systems that use static slot-time constants will temporarily disagree with chain reality. |
+- Transaction Execution (Runtime): Bank timing fields, inflation slot-to-time
+  conversion, fee-rate governor, cost tracker, block data size limits, and PER
+  distribution limits change by feature gate.
+- Virtual Machine: No direct VM semantic change. Programs may observe finer
+  slot-time granularity through sysvars and RPC-derived timing.
+- Block Packing: Leaders must pack smaller per-slot CU, account CU, vote CU,
+  accounts-data, shred, and PER write budgets.
+- Consensus: Feature-gated slot duration changes are consensus critical. Leader
+  windows remain 4 slots but become shorter in wall-clock time.
+- Gossip: Vote and epoch-slot traffic increase per wall-clock time as slots get
+  faster.
+- Turbine: The per-slot data and coding shred limits are reduced
+  proportionally.
+- Snapshots: Snapshot restore must reconstruct active runtime limits. Snapshot
+  interval policy is not changed by this proposal.
+- On-Chain Core BPF Programs: No direct program interface change. Programs that
+  interpret slot distance as wall-clock time may need updates.
+- Other: SDKs, RPC clients, explorers, and off-chain systems that use static
+  slot-time constants will temporarily disagree with chain reality.
 
 ## Alternatives Considered
 
@@ -347,7 +375,7 @@ feature activations and include blocks near each activation boundary.
 
 1. Agave exploratory implementation for halving slot times:
    https://github.com/anza-xyz/agave/pull/10740
-2. SIMD discussion for reducing slot times:
-   https://github.com/solana-foundation/solana-improvement-documents/discussions/469
+2. SIMD discussion #469 in the SIMD repository:
+   https://github.com/solana-foundation/solana-improvement-documents
 3. Agave exploratory implementation for changing leader span and epoch length:
    https://github.com/anza-xyz/agave/pull/12154
