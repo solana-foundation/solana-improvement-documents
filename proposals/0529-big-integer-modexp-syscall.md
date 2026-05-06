@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Idea
 created: 2026-05-01
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: expH2ppKPW2ANEdEmAjfhSEcnBQJfmoX4FjuNpe9ttg
 ---
 
 ## Summary
