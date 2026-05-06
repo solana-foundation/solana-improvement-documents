@@ -1,8 +1,8 @@
 ---
-simd: '0462'
+simd: '0529'
 title: Big Integer ModExp Syscall
 authors:
-  - TBD
+  - SK, ZZ
 category: Standard
 type: Core
 status: Idea
@@ -12,7 +12,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Add a `sol_bigint_modexp` syscall that computes modular exponentiation over
+Add a `sol_big_mod_exp` syscall that computes modular exponentiation over
 unsigned big integers:
 
 ```text
@@ -99,24 +99,24 @@ document are to be interpreted as described in [RFC 2119] and [RFC 8174].
 Add the following syscall:
 
 ```rust
-define_syscall!(fn sol_bigint_modexp(
+define_syscall!(fn sol_big_mod_exp(
     endianness: u64,
-    params_addr: *const BigIntModExpParams
+    params_addr: *const BigModExpParams
 ) -> u64);
 ```
 
 `endianness` MUST be one of:
 
 ```rust
-pub const BIGINT_ENDIANNESS_BE: u64 = 0;
-pub const BIGINT_ENDIANNESS_LE: u64 = 1;
+pub const BIG_MOD_EXP_ENDIANNESS_BE: u64 = 0;
+pub const BIG_MOD_EXP_ENDIANNESS_LE: u64 = 1;
 ```
 
 The syscall reads a parameter block from VM memory:
 
 ```rust
 #[repr(C)]
-pub struct BigIntModExpParams {
+pub struct BigModExpParams {
     pub base_addr: u64,
     pub base_len: u64,
     pub exponent_addr: u64,
@@ -152,11 +152,11 @@ if all input bytes were read before any result byte is written.
 The initial maximum supported size is:
 
 ```rust
-pub const BIGINT_MODEXP_MAX_BYTES: u64 = 512;
+pub const BIG_MOD_EXP_MAX_BYTES: u64 = 512;
 ```
 
 Each of `base_len`, `exponent_len`, and `modulus_len` MUST be less than or
-equal to `BIGINT_MODEXP_MAX_BYTES`. This covers 4096-bit RSA moduli and keeps
+equal to `BIG_MOD_EXP_MAX_BYTES`. This covers 4096-bit RSA moduli and keeps
 the first version within a predictable compute envelope. Larger operands can be
 introduced by a later SIMD after benchmarking and validator implementation
 experience.
@@ -173,7 +173,7 @@ The syscall returns:
 The syscall MUST abort the virtual machine if any of the following are true:
 
 - `endianness` is not a supported value.
-- Any input length is greater than `BIGINT_MODEXP_MAX_BYTES`.
+- Any input length is greater than `BIG_MOD_EXP_MAX_BYTES`.
 - Any pointer plus length calculation overflows.
 - Any required VM memory range is not readable or writable as required.
 - The transaction does not have enough remaining compute units.
@@ -213,15 +213,15 @@ else:
 
 iteration_count = max(adjusted_exponent_length, 1)
 
-cost = bigint_modexp_base_cost
+cost = big_mod_exp_base_cost
      + ceil(
          multiplication_complexity * iteration_count
-         / bigint_modexp_cu_divisor
+         / big_mod_exp_cu_divisor
        )
      + memory_cost(base_len + exponent_len + modulus_len + result_len)
 ```
 
-`bigint_modexp_base_cost` and `bigint_modexp_cu_divisor` are consensus
+`big_mod_exp_base_cost` and `big_mod_exp_cu_divisor` are consensus
 cost-model constants that MUST be set from implementation benchmarks before
 activation. The computation of `cost` MUST use integer arithmetic wide enough
 to avoid overflow. If the calculated cost exceeds `u64::MAX`, the syscall MUST
@@ -256,7 +256,7 @@ The syscall MUST be feature-gated and unavailable before activation. Validator
 implementations MUST agree on:
 
 - the syscall name and ABI,
-- `BIGINT_MODEXP_MAX_BYTES`,
+- `BIG_MOD_EXP_MAX_BYTES`,
 - return and abort behavior,
 - the concrete compute cost constants, and
 - the arithmetic test vectors.
