@@ -56,8 +56,7 @@ This maximizes byte-level compatibility with Ethereum tooling, but it is a poor
 fit for Solana syscalls. EIP-198 uses 32-byte length prefixes, treats calldata
 as infinitely right-padded with zero bytes, and ignores excess bytes. Solana
 syscalls should instead use explicit VM memory ranges and fail deterministically
-on invalid memory accesses. SDKs can provide an EIP-198 compatibility wrapper
-that converts packed EIP input into the syscall parameters.
+on invalid memory accesses.
 
 ### Precompile Or Native Program
 
@@ -271,9 +270,6 @@ separation.
 Validators add a new variable-cost syscall backed by bigint arithmetic. The
 bounded input size, deterministic edge-case behavior, and benchmarked compute
 cost are required to keep execution predictable.
-
-SDKs should expose ergonomic helpers for both native parameter blocks and
-EIP-198-style packed inputs.
 
 ## Security Considerations
 
