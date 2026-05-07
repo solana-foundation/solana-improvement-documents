@@ -104,8 +104,8 @@ expected to be useful for ensuring expected timing is understood.
 
 ### Scaled Per-Slot Values
 
-Integer values are scaled by `floor(current_400ms_value * target_slot_ms /
-400)`. Flooring is used whenever the proportional value is fractional so the
+Integer values are scaled by `trunc(current_400ms_value * target_slot_ms /
+400)`. Truncating is used whenever the proportional value is fractional so the
 new value does not exceed the intended wall-clock budget.
 
 | Limit | 400ms | 350ms | 300ms |
