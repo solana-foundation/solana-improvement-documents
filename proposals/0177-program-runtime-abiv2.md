@@ -82,6 +82,11 @@ return data. The contents of this memory region are the following:
 - Number of CPIs in trace (under execution and finished): `u32`
 - The number of transaction accounts: `u32`
 
+##### Payer information
+
+As accounts in this area sorted by their index in transaction, the payer 
+account must always be the account at index zero, as we surface runtime's
+internal account ordering for programs.
 
 #### Account metadata area
 
