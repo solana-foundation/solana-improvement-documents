@@ -128,6 +128,8 @@ Let `InstructionAccount` contain the following fields:
   - Index to transaction account: `u16`
   - Signer flag: `u8` (1 for signer, 0 for non-signer)
   - Writable flag: `u8` (1 for writable, 0 for readonly)
+  - Pointer to the account metadata: `u64` (see [Account metadata area]
+    (#account-metadata-area)).
 
 #### Return data scratchpad
 
@@ -169,8 +171,9 @@ Each of these memory regions contain the following for each instruction:
 - For each account in instruction:
   - `InstructionAccount`, consisting of:
     - Index to transaction account: `u16`
-      - Signer flag: `u8` (1 for signer, 0 for non-singer)
-      - Writable flag: `u8` (1 for writable, 0 for readonly)
+    - Signer flag: `u8` (1 for signer, 0 for non-singer)
+    - Writable flag: `u8` (1 for writable, 0 for readonly)
+    - Pointer to the account metadata: `u64` (see [Account metadata area](#account-metadata-area)).
 
 One extra writable mapping must be created after the last instruction accounts 
 area to be the CPI scratch pad, i.e. at address `0x14800000000` plus 
@@ -297,7 +300,9 @@ differently. At each CPI call, the runtime must perform the following actions:
 
 1. Verify that all account indexes received in the `InstructionAccount` area 
    belong in the current executing instruction. Likewise, the prgram ID index 
-   that should be called must also undergo the same verification.
+   that should be called must also undergo the same verification. The pointer 
+   field in `InstructionAccount` must be filled by runtime, so programs may 
+   leave it blank.
 2. Verify that accounts have the correct signer and writer flags set, avoiding 
    privelege promotion.
 3. Append a new instruction at the end of the serialization array kept at 
@@ -318,6 +323,11 @@ When the CPI returns, the runtime must do the following:
 2. Change the read and write permission for the account payload regions, 
    according to potential changes in account ownership.
 3. Update the index of current executing instruction.
+
+CPIs between ABIv0/v1 and ABIv2 program must be allowed, but costs will difer.
+A CPI from an ABIv2 to another ABIv2 program must cost less than a CPI from an 
+ABIv2 to an ABIv0/v1 program, due to the decreased work overhead from program 
+runtime.
 
 ### Changes to CU metering
 
