@@ -243,6 +243,10 @@ This proposal intentionally does not change:
 - Repair delay, including the 250ms repair defer threshold.
 - Vote costs.
 - Blockhash queue and status cache max entries.
+- Gossip `DEFAULT_MS_PER_SLOT` heuristics, including the CRDS entry
+  eviction/retention window, the freshness threshold for accepting pull
+  responses, and the scoring policy for which CRDS values to include in pull
+  responses.
 
 Note that some of these are out of protocol (Agave client defaults), but are
 included here for completeness.
@@ -281,7 +285,9 @@ Implementations should pay special attention to:
 - Consensus: Feature-gated slot duration changes are consensus critical. Leader
   windows remain 4 slots but become shorter in wall-clock time.
 - Gossip: Vote and epoch-slot traffic increase per wall-clock time as slots get
-  faster.
+  faster. Gossip uses of `DEFAULT_MS_PER_SLOT` to derive epoch duration for CRDS
+  entry retention, pull-response freshness, and pull-response value scoring
+  continue to use 400ms for the slot time portion of these calculations.
 - Turbine: The per-slot data and coding shred limits are reduced
   proportionally after the one-epoch effectiveness delay, so shred filtering and
   bank execution enforce the same slot-aware limits.
