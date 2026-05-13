@@ -196,6 +196,27 @@ validator restarting after activation or after an effective transition must
 produce and validate the same limits as a validator that remained online across
 the transition.
 
+Snapshot serialization MUST also persist the effective timing values in the
+snapshot manifest. This proposal does not add new manifest fields, but the
+existing `ns_per_slot`, `hashes_per_tick`, `slots_per_year`, and
+`target_signatures_per_slot` manifest values MUST change in snapshots taken at
+or after a slot-time feature's effective slot. Snapshots taken before the
+effective slot, including during the one-epoch delay after activation, MUST keep
+the previous effective values. For non-Alpenglow banks, snapshot manifests MUST
+serialize the following values:
+
+| Effective target | `ns_per_slot` | `hashes_per_tick` | `slots_per_year` | `target_signatures_per_slot` |
+|------------------|---------------|-------------------|------------------|------------------------------|
+| 400ms | 400000000 | 62500 | 78892314.984 | 20000 |
+| 350ms | 350000000 | 54687 | 90162645.696 | 17500 |
+| 300ms | 300000000 | 46875 | 105189753.312 | 15000 |
+| 250ms | 250000000 | 39062 | 126227703.974 | 12500 |
+| 200ms | 200000000 | 31250 | 157784629.968 | 10000 |
+
+When Alpenglow is active, the `hashes_per_tick` manifest value MUST retain
+Alpenglow's active hashing behavior (set to `None`) instead of using the reduced
+table value.
+
 Inflation calculations MUST account for slot ranges that cross one or more
 effective slot-time transitions. Historical slots before an effective transition
 use the previous `slots_per_year`; slots at or after the effective transition
@@ -264,7 +285,9 @@ Implementations should pay special attention to:
 - Turbine: The per-slot data and coding shred limits are reduced
   proportionally after the one-epoch effectiveness delay, so shred filtering and
   bank execution enforce the same slot-aware limits.
-- Snapshots: Snapshot restore must reconstruct effective runtime limits. Snapshot
+- Snapshots: Snapshot manifests must persist the effective `ns_per_slot`,
+  `hashes_per_tick`, `slots_per_year`, and `target_signatures_per_slot` values,
+  and snapshot restore must reconstruct effective runtime limits. Snapshot
   interval policy is not changed by this proposal.
 - On-Chain Core BPF Programs: No direct program interface change. Programs that
   interpret slot distance as wall-clock time may need updates.
@@ -412,6 +435,9 @@ Each validator implementation MUST include tests or fixtures that demonstrate:
   for every target slot time in the tables above.
 - Correct snapshot restore behavior after each feature gate is active and after
   each gate becomes effective.
+- Correct snapshot manifest serialization before activation, during the
+  one-epoch delay, and after the effective transition for `ns_per_slot`,
+  `hashes_per_tick`, `slots_per_year`, and `target_signatures_per_slot`.
 - Correct shred validation before activation, during the one-epoch delay, and
   after the effective transition.
 - Correct inflation behavior for slot ranges and epochs that span effective
