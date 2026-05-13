@@ -205,13 +205,21 @@ effective slot, including during the one-epoch delay after activation, MUST keep
 the previous effective values. For non-Alpenglow banks, snapshot manifests MUST
 serialize the following values:
 
-| Effective target | `ns_per_slot` | `hashes_per_tick` | `slots_per_year` | `target_signatures_per_slot` |
-|------------------|---------------|-------------------|------------------|------------------------------|
-| 400ms | 400000000 | 62500 | 78892314.984 | 20000 |
-| 350ms | 350000000 | 54687 | 90162645.696 | 17500 |
-| 300ms | 300000000 | 46875 | 105189753.312 | 15000 |
-| 250ms | 250000000 | 39062 | 126227703.974 | 12500 |
-| 200ms | 200000000 | 31250 | 157784629.968 | 10000 |
+| Effective target | `ns_per_slot` | `hashes_per_tick` |
+|------------------|---------------|-------------------|
+| 400ms | 400000000 | 62500 |
+| 350ms | 350000000 | 54687 |
+| 300ms | 300000000 | 46875 |
+| 250ms | 250000000 | 39062 |
+| 200ms | 200000000 | 31250 |
+
+| Effective target | `slots_per_year` | `target_signatures_per_slot` |
+|------------------|------------------|------------------------------|
+| 400ms | 78892314.984 | 20000 |
+| 350ms | 90162645.696 | 17500 |
+| 300ms | 105189753.312 | 15000 |
+| 250ms | 126227703.974 | 12500 |
+| 200ms | 157784629.968 | 10000 |
 
 When Alpenglow is active, the `hashes_per_tick` manifest value MUST retain
 Alpenglow's active hashing behavior (set to `None`) instead of using the reduced
