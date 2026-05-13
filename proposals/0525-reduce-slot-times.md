@@ -20,11 +20,17 @@ steps:
 3. 250ms slots
 4. 200ms slots
 
-Each step keeps `ticks_per_slot` fixed at 64, keeps leader windows fixed at
-4 slots, and keeps epochs fixed at 432,000 slots. Per-slot work limits are
-reduced in proportion to the target slot time so the corresponding wall-clock
-rate remains approximately unchanged. `slots_per_year` is increased by the
-inverse ratio so inflation remains unchanged from a wall-clock perspective.
+Each step keeps `ticks_per_slot` fixed at 64, keeps leader windows fixed at 4
+slots, and keeps epochs fixed at 432,000 slots. Per-slot work limits are reduced
+in proportion to the target slot time so the corresponding wall-clock rate
+remains approximately unchanged. `slots_per_year` is increased by the inverse
+ratio so inflation remains unchanged from a wall-clock perspective. Precise
+values are called out below.
+
+Each feature gate becomes effective one epoch after activation. For example, a
+feature that gets applied during transition from epoch N to N+1 takes effect for
+slots starting in epoch N+2. This is so Turbine can cleanly apply the reduced
+shred limits.
 
 ## Motivation
 
@@ -64,9 +70,24 @@ IDs are TBD:
 ## Detailed Design
 
 Each feature gate selects a new target slot duration. Implementations MUST use
-the active target slot duration for the bank being produced or verified. If
-multiple slot-time feature gates are active, implementations MUST select the
-lowest active target slot duration.
+the effective target slot duration for the bank being produced or verified. If
+multiple slot-time feature gates are effective, implementations MUST select the
+lowest effective target slot duration.
+
+### Feature Activation Delay
+
+Feature activation and feature effectiveness are separate for this proposal. A
+slot-time feature gate MUST take effect on a one-epoch delay. If a gate first
+becomes active in epoch `E`, all slots in epoch `E` MUST continue using the
+previous effective slot-time parameters, and the new target slot duration and
+derived limits MUST first apply at the first slot of epoch `E + 1`.
+
+This delay is required because these gates reduce the maximum data and coding
+shreds per slot. Turbine and shred-fetch filtering can enforce shred limits
+outside the bank execution path, so they cannot rely on an execution-time
+feature transition being perfectly synchronized with block production and
+validation. The one-epoch delay gives validators an epoch of advance notice
+before network shred filtering starts enforcing the reduced limits.
 
 The feature gates SHOULD be activated in order. Activating them in order is not
 required for value derivation, however. Integer limits are normative table
@@ -77,10 +98,10 @@ previous stage, because that can accumulate rounding error.
 ### Timing Values
 
 The `slots_per_year` values below use the Mainnet-Beta bank value of
-`78_892_314.984`, as the 400ms baseline. Implementations SHOULD scale the bank's
-stored `slots_per_year` value by `old_slot_ms / new_slot_ms` at each feature
-activation rather than recomputing from SDK constants.
-`rent_collector.slots_per_year` MUST be updated with the same value.
+`78_892_314.984`, as the 400ms baseline. Implementations MUST scale the bank's
+stored `slots_per_year` value according to the table below at each effective
+slot-time transition. `rent_collector.slots_per_year` MUST be updated with the
+same value.
 
 | Target | Feature gate |
 |--------|--------------|
@@ -142,10 +163,22 @@ feature by applying the same ratios to the active 400ms baseline. For example,
 if a future block-limit feature changes `MAX_BLOCK_UNITS`, the slot-time stages
 must use the new block limit multiplied by the target slot-time ratio.
 
+For 100M CUs feature (SIMD-0286), the limits would look like so (anything not
+mentioned below would match the tables above):
+| Limit | 400ms | 350ms | 300ms |
+|-------|-------|-------|-------|
+| Max block CUs | 100000000 | 87500000 | 75000000 |
+| Max writable acct CUs | 40000000 | 35000000 | 30000000 |
+
+| Limit | 250ms | 200ms |
+|-------|-------|-------|
+| Max block CUs | 62500000 | 50000000 |
+| Max writable acct CUs | 25000000 | 20000000 |
+
 ### Runtime Changes
 
-When a slot-time feature gate activates for a bank, the bank and its descendants
-MUST use the target values above for:
+When a slot-time feature gate becomes effective for a bank after the one-epoch
+delay, the bank and its descendants MUST use the target values above for:
 
 - `ns_per_slot`
 - `slots_per_year`
@@ -158,19 +191,22 @@ MUST use the target values above for:
 - partitioned epoch rewards stake-account stores per block
 
 Snapshot restore and bank deserialization MUST reconstruct all non-persisted
-runtime values from the active feature set and the bank's slot. A validator
-restarting after activation must produce and validate the same limits as a
-validator that remained online across activation.
+runtime values from the effective slot-time stage and the bank's slot. A
+validator restarting after activation or after an effective transition must
+produce and validate the same limits as a validator that remained online across
+the transition.
 
 Inflation calculations MUST account for slot ranges that cross one or more
-slot-time feature activations. Historical slots before an activation use the
-previous `slots_per_year`; slots after the activation use the new
+effective slot-time transitions. Historical slots before an effective transition
+use the previous `slots_per_year`; slots at or after the effective transition
+use the new
 `slots_per_year`. This preserves issuance from a wall-clock perspective even
 though the number of slots per epoch remains unchanged.
 
-Shred validation MUST be slot-aware. Shreds for slots before a feature
-activation are validated with the previous shred limit, and shreds for slots at
-or after activation are validated with the newly active limit.
+Shred validation MUST be slot-aware. Shreds for slots before a feature's
+effective slot are validated with the previous shred limit, including shreds in
+the one-epoch delay period after activation. Shreds for slots at or after the
+effective slot are validated with the newly effective limit.
 
 ### Notable Non-Changes
 
@@ -194,19 +230,23 @@ included here for completeness.
 
 Implementations should pay special attention to:
 
-- Feature gates activated at genesis, where the bank starts directly at a
-  reduced target slot time.
+- Feature gates activated at genesis, where the feature is active from slot 0
+  but the reduced target slot time is not effective until epoch 1 unless genesis
+  explicitly defines the reduced target as the baseline.
 - Feature gates activated after snapshots, where runtime-only values must be
   rebuilt during restore.
-- Multiple active slot-time gates, where the lowest active target slot time
-  wins.
+- Multiple active slot-time gates, where the lowest target slot time whose
+  one-epoch delay has elapsed wins.
+- The activation epoch for each slot-time gate, where bank execution, block
+  packing, broadcast, shred-fetch, and shred validation must continue using the
+  previously effective limits.
 - Alpenglow activation, where `hashes_per_tick` must not be reduced by these
   feature gates.
 - Integer rounding, especially the 350ms and 250ms `hashes_per_tick` values.
-- Inflation calculations for epochs and rewards that span feature activation
+- Inflation calculations for epochs and rewards that span effective transition
   slots.
-- Shreds received around an activation boundary, which must be validated using
-  the feature set active for the shred's slot.
+- Shreds received around activation and effective-transition boundaries, which
+  must be validated using the effective slot-time stage for the shred's slot.
 
 ### Validator Components Affected
 
@@ -222,8 +262,9 @@ Implementations should pay special attention to:
 - Gossip: Vote and epoch-slot traffic increase per wall-clock time as slots get
   faster.
 - Turbine: The per-slot data and coding shred limits are reduced
-  proportionally.
-- Snapshots: Snapshot restore must reconstruct active runtime limits. Snapshot
+  proportionally after the one-epoch effectiveness delay, so shred filtering and
+  bank execution enforce the same slot-aware limits.
+- Snapshots: Snapshot restore must reconstruct effective runtime limits. Snapshot
   interval policy is not changed by this proposal.
 - On-Chain Core BPF Programs: No direct program interface change. Programs that
   interpret slot distance as wall-clock time may need updates.
@@ -303,8 +344,8 @@ do not need to encode cluster reality.
 ## Security Considerations
 
 This is a consensus-breaking change and MUST be feature-gated. Validators that
-do not implement the active slot-time gate may produce or accept blocks, shreds,
-or rewards using the wrong limits.
+do not implement the effective slot-time stage, including the one-epoch delay,
+may produce or accept blocks, shreds, or rewards using the wrong limits.
 
 Shorter slots reduce the time available for leader handoff, block propagation,
 replay, and vote landing. The staged rollout is part of the safety mechanism:
@@ -317,7 +358,13 @@ reductions, shorter slots would increase validator resource requirements and
 could harm liveness.
 
 Inflation code must use wall-clock-equivalent slot accounting. Failing to scale
-`slots_per_year`, or mishandling activation boundaries, could change issuance.
+`slots_per_year`, or mishandling effective-transition boundaries, could change
+issuance.
+
+Validators must not enforce a reduced shred limit during a feature's one-epoch
+delay period. Doing so could cause Turbine or shred-fetch filtering to drop
+valid shreds before execution and block validation have switched to the new
+limits.
 
 ## Drawbacks
 
@@ -348,7 +395,7 @@ the running cluster uses 350ms, 300ms, 250ms, or 200ms banks. Some short-term
 light breakage in clients that use these constants is tolerable in order to
 ship the staged reduction sooner.
 
-A longer-term compatibility solution is to expose the active timing and limit
+A longer-term compatibility solution is to expose the effective timing and limit
 parameters on chain or through a stable RPC surface, allowing SDKs and clients
 to query cluster reality instead of depending on compile-time constants.
 
@@ -356,20 +403,24 @@ to query cluster reality instead of depending on compile-time constants.
 
 Each validator implementation MUST include tests or fixtures that demonstrate:
 
-- Activation of each feature gate from a 400ms baseline.
+- Activation of each feature gate from a 400ms baseline, including the
+  one-epoch delay before the gate becomes effective.
 - Correct bank values for `ns_per_slot`, `slots_per_year`,
   `rent_collector.slots_per_year`, non-Alpenglow `hashes_per_tick`, and
   `target_signatures_per_slot`.
 - Correct block, writable-account, vote, accounts-data, shred, and PER limits
   for every target slot time in the tables above.
-- Correct snapshot restore behavior after each feature gate is active.
-- Correct shred validation for slots before and after an activation boundary.
-- Correct inflation behavior for slot ranges and epochs that span activation.
+- Correct snapshot restore behavior after each feature gate is active and after
+  each gate becomes effective.
+- Correct shred validation before activation, during the one-epoch delay, and
+  after the effective transition.
+- Correct inflation behavior for slot ranges and epochs that span effective
+  transitions.
 - Correct Alpenglow interaction, specifically that Alpenglow hashing behavior
   is not reduced by these feature gates.
 
 The change should be accompanied by localnet ledgers that cross all four
-feature activations and include blocks near each activation boundary.
+feature activations and their delayed effective-transition boundaries.
 
 ## References
 
