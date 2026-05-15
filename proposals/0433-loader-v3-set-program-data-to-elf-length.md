@@ -14,9 +14,11 @@ feature: (fill in with feature key and github tracking issues once accepted)
 ## Summary
 
 This SIMD proposes changing the default behavior of program upgrades to
-automatically resize the program data account to match the length of the ELF
-being deployed. If the new ELF is smaller, surplus lamports are refunded to the
-spill account. If the new ELF is larger, the account is extended accordingly.
+automatically resize the program data account so that its ELF region matches
+the length of the ELF being deployed. The total account size remains the
+program data metadata header plus the ELF length. If the new ELF is smaller,
+surplus lamports are refunded to the spill account. If the new ELF is larger,
+the account is extended accordingly.
 
 ## Motivation
 
@@ -51,8 +53,12 @@ This proposal depends on the following previously accepted proposal:
 ## Detailed Design
 
 The `Upgrade` instruction will be updated to automatically resize the program
-data account to match the length of the ELF in the buffer being deployed. This
-applies in both directions: the account may grow or shrink as needed.
+data account so that its ELF region matches the length of the ELF in the
+buffer being deployed. The program data account retains its existing metadata
+header (`UpgradeableLoaderState::ProgramData`, containing the slot and
+upgrade authority), so the resulting account size is
+`PROGRAMDATA_METADATA_SIZE + elf_length`. This applies in both directions: the
+account may grow or shrink as needed.
 
 ### Shrinking (New ELF is Smaller)
 
