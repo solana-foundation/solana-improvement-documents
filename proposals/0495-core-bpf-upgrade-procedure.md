@@ -75,6 +75,11 @@ Before an upgrade can occur, the following steps must be completed:
    alongside the feature gate.
 7. Follow the existing process for activating features.
 
+These preparation steps are off-chain and cannot be enforced by the protocol.
+They are the responsibility of the upgrade proposer and should be verified as
+part of the code review process for integrating the upgrade feature gate into
+each validator client implementation.
+
 ### Source Buffer Validation
 
 When the feature gate activates, the runtime must validate the source buffer
@@ -171,7 +176,8 @@ completes:
 ### Program Availability
 
 In the slot immediately following the feature activation, the program will
-not be invocable. This status will last one slot, then the program will be
+not be invocable. This one-slot cooldown applies to every fork that has the
+feature activation slot as an ancestor. After the cooldown, the program is
 fully operational. The program ID does not change.
 
 ### Feature Gates
@@ -184,20 +190,24 @@ triggers the upgrade when activated.
 ### Standard Loader v3 Upgrade Instruction
 
 Core BPF programs with `None` as their upgrade authority cannot use the
-standard Loader v3 `Upgrade` instruction. Even if an upgrade authority were
-set, using the standard instruction would require a single signer to hold
-the authority, which is inappropriate for programs critical to network
-operations. The feature-gated approach ensures upgrades go through the same
-consensus process as other protocol changes.
+standard Loader v3 `Upgrade` instruction. Even where an upgrade authority is
+set, performing a Core BPF upgrade through the standard instruction would
+mean the change takes effect on whatever slot the transaction lands in,
+rather than at a coordinated activation slot. The feature-gated approach
+ensures upgrades go through the same consensus process as other protocol
+changes and activate at a deterministic slot across all validators.
 
 ### Governance-Based Upgrade Authority
 
 An alternative would be to assign a multisig or governance program as the
-upgrade authority. This was rejected because multisig operations are slow
-and difficult to coordinate with the timing of feature gate activations,
-which must occur at the exact same slot across all validators. It also
-introduces additional complexity and dependencies on external programs for
-what are consensus-critical operations.
+upgrade authority. This was rejected because consensus-critical program
+upgrades must take effect at a deterministic slot across all validators, and
+the activation point should be governed by the same mechanism as the rest of
+the protocol's behavioral changes. Coupling the upgrade to the feature gate
+itself avoids introducing a separate authority surface for code that runs in
+consensus. As feature gate activation evolves toward multisig authority, this
+proposal naturally inherits those properties without requiring a distinct
+governance path.
 
 ## Impact
 
