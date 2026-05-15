@@ -274,7 +274,9 @@ define_syscall!(fn sol_curve_pairing_map(
 ```
 
 The `num_pairs` parameter specifies the number of G1/G2 pairs to be processed.
-The `g1_points` and `g2_points` parameters are pointers to memory buffers.
+To ensure bounded execution time and prevent excessive compute consumption,
+num_pairs is strictly bounded to a maximum of 8. The `g1_points` and `g2_points`
+parameters are pointers to memory buffers.
 
 The syscall will read `num_pairs` from each buffer. It must read:
 
