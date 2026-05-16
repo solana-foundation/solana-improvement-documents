@@ -85,8 +85,6 @@ the runtime. A generic ModExp syscall keeps those protocol choices in programs.
   `(base ^ exponent) mod modulus`.
 - **Big integer**: A non-negative integer encoded as a variable-length byte
   string.
-- **Effective exponent bits**: The EIP-style count derived from the bit length
-  of the exponent and used for compute metering.
 
 ## Detailed Design
 
@@ -160,7 +158,8 @@ parsing, reduction and multiplication size, and the returned vector length. The
 predictable compute envelope. Larger operands can be introduced by a later SIMD
 after benchmarking and validator implementation experience.
 
-Zero-length inputs are valid and are interpreted as the integer `0`.
+Zero-length `base` and `exponent` inputs are valid and are interpreted as the
+integer `0`. `modulus_len` MUST be greater than zero.
 
 ### Return Value
 
@@ -173,6 +172,8 @@ The syscall MUST abort the virtual machine if any of the following are true:
 - Any input length is greater than `BIG_MOD_EXP_MAX_BYTES`.
 - Any pointer plus length calculation overflows.
 - Any required VM memory range is not readable as required.
+- `modulus_len == 0`.
+- The decoded modulus value is even.
 - The transaction does not have enough remaining compute units.
 
 ### Arithmetic Semantics
@@ -181,55 +182,49 @@ All inputs are unsigned integers. Leading zeroes in big-endian inputs and
 trailing zeroes in little-endian inputs are allowed and do not change the
 integer value.
 
-If `modulus_len == 0`, the syscall returns `Vec::new()`.
+The decoded modulus value MUST be odd. This requirement rejects zero and all
+even moduli, allowing implementations to rely on reduction algorithms that
+require an odd modulus.
 
-If `modulus_len > 0` and the numerical value of `modulus` is zero, the syscall
-MUST return `modulus_len` zero bytes. This matches the Ethereum ModExp
-convention used by execution tests.
-
-If `modulus` is nonzero and `exponent` is zero, the result is
-`1 mod modulus`, encoded in exactly `modulus_len` bytes.
+If `exponent` is zero, the result is `1 mod modulus`, encoded in exactly
+`modulus_len` bytes.
 
 ### Compute Metering
 
-The syscall MUST charge compute before performing the exponentiation.
-
-Metering MUST be based on the operand sizes and effective exponent bits, using
-the same shape as Ethereum's repriced ModExp cost model in [EIP-2565], but with
-Solana compute unit constants.
+The syscall MUST charge compute before performing the exponentiation. Metering
+MUST be determined by the modulus size bucket, where:
 
 ```text
-max_len = max(base_len, modulus_len)
-words = ceil(max_len / 8)
-multiplication_complexity = max(words * words, 1)
-
-if exponent == 0:
-    adjusted_exponent_length = 0
-else:
-    adjusted_exponent_length = bit_length(exponent) - 1
-
-iteration_count = max(adjusted_exponent_length, 1)
-input_bytes = base_len + exponent_len + modulus_len
-output_bytes = modulus_len
-
-cost = big_mod_exp_base_cost
-     + ceil(
-         multiplication_complexity * iteration_count
-         / big_mod_exp_cu_divisor
-       )
-     + memory_cost(input_bytes + output_bytes)
+modulus_bits = modulus_len * 8
 ```
 
-`big_mod_exp_base_cost` and `big_mod_exp_cu_divisor` are consensus
-cost-model constants that MUST be set from implementation benchmarks before
-activation. The computation of `cost` MUST use integer arithmetic wide enough
-to avoid overflow. If the calculated cost exceeds `u64::MAX`, the syscall MUST
-abort.
+The bucket is based on `modulus_len`, not the numerical bit length of the
+modulus value, so leading or trailing zeroes do not reduce the cost.
 
-The cost model intentionally meters with the full exponent bit length instead
-of EIP-198's "first 32 exponent bytes" approximation. The syscall must read the
-full exponent to compute the result, and the maximum exponent length is bounded,
-so exact metering is deterministic and inexpensive.
+The following placeholder constants define the initial bucket schedule. The
+concrete compute unit values MUST be set from implementation benchmarks before
+activation.
+
+| Modulus size | Compute cost placeholder |
+| --- | --- |
+| `1..=32` bits | `big_mod_exp_cu_le_32_bits` |
+| `33..=64` bits | `big_mod_exp_cu_33_to_64_bits` |
+| `65..=128` bits | `big_mod_exp_cu_65_to_128_bits` |
+| `129..=256` bits | `big_mod_exp_cu_129_to_256_bits` |
+| `257..=384` bits | `big_mod_exp_cu_257_to_384_bits` |
+| `385..=512` bits | `big_mod_exp_cu_385_to_512_bits` |
+| `513..=1024` bits | `big_mod_exp_cu_513_to_1024_bits` |
+| `1025..=2048` bits | `big_mod_exp_cu_1025_to_2048_bits` |
+| `2049..=4096` bits | `big_mod_exp_cu_2049_to_4096_bits` |
+
+The selected bucket constant is the syscall cost. The bucket constants MUST be
+priced for the worst-case valid inputs in that modulus-size range, including
+the maximum permitted `base_len` and `exponent_len`, returned output allocation,
+and slower exponentiation cases. Runtime can vary for inputs with the same
+modulus size, and dense exponents can require more multiplications than sparse
+exponents in common variable-time exponentiation algorithms. Benchmarks used to
+set the constants MUST include these slower valid cases, such as all-ones
+exponents.
 
 ### Test Vectors
 
@@ -242,8 +237,8 @@ Implementations MUST include tests for:
   - `modulus =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f`
   - result is 32 bytes ending in `0x01`
-- Empty base and empty exponent with modulus `0x02`, returning `0x01`.
-- Empty base and empty exponent with modulus `0x00`, returning `0x00`.
+- Empty base and empty exponent with modulus `0x03`, returning `0x01`.
+- Zero and even moduli aborting the virtual machine.
 - Big-endian and little-endian encodings of the same values producing
   equivalent integer results.
 - Returned vector length and padding for both endiannesses.
@@ -274,13 +269,16 @@ cost are required to keep execution predictable.
 ## Security Considerations
 
 Underpricing is the main risk. Modular exponentiation has input-dependent cost,
-especially as modulus size and exponent bit length increase. The compute cost
-constants MUST be benchmarked across validator implementations and should leave
-margin for slower valid inputs, including even moduli and dense exponents.
+especially as modulus size, exponent length, and exponent density change. Since
+metering uses only the modulus-size bucket, the compute cost constants MUST be
+benchmarked across validator implementations and should leave margin for
+worst-case valid inputs in each bucket, including maximum-length exponents,
+dense exponents, and odd moduli that are slow for the selected implementation.
 
-The syscall MUST NOT expose library-specific error behavior. All byte strings
-within the length limit are valid unsigned integers, and the specified zero
-modulus behavior avoids implementation-dependent division-by-zero handling.
+The syscall MUST NOT expose library-specific error behavior. All valid byte
+strings within the length limit are unsigned integers with an odd decoded
+modulus. Rejecting zero and even moduli avoids implementation-dependent
+division-by-zero handling and slower even-modulus reduction paths.
 
 The syscall is not suitable for secret exponents. On-chain program data is
 public, and validator implementations are not required to execute bigint
@@ -291,6 +289,5 @@ padding scheme checks, such as RSASSA-PKCS1-v1_5 or RSA-PSS, outside the
 syscall. Raw modular exponentiation alone is not signature verification.
 
 [EIP-198]: https://eips.ethereum.org/EIPS/eip-198
-[EIP-2565]: https://eips.ethereum.org/EIPS/eip-2565
 [RFC 2119]: https://www.ietf.org/rfc/rfc2119.txt
 [RFC 8174]: https://www.ietf.org/rfc/rfc8174.txt
