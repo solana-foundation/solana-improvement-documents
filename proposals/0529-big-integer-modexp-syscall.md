@@ -21,8 +21,9 @@ result = (base ^ exponent) mod modulus
 
 The syscall is analogous to Ethereum's ModExp precompile specified by
 [EIP-198], but exposes a Solana-native syscall interface instead of the EVM
-precompile ABI. Inputs and outputs are fixed byte slices, encoded either as
-big-endian or little-endian unsigned integers.
+precompile ABI. Inputs are fixed byte slices, and the output is returned as a
+fixed-width byte vector encoded either as a big-endian or little-endian unsigned
+integer.
 
 ## Motivation
 
@@ -95,13 +96,13 @@ document are to be interpreted as described in [RFC 2119] and [RFC 8174].
 
 ### Syscall Interface
 
-Add the following syscall:
+Add the following program-facing syscall function:
 
 ```rust
-define_syscall!(fn sol_big_mod_exp(
+pub fn sol_big_mod_exp(
     endianness: u64,
-    params_addr: *const BigModExpParams
-) -> u64);
+    params: &BigModExpParams,
+) -> Vec<u8>;
 ```
 
 `endianness` MUST be one of:
@@ -116,20 +117,18 @@ The syscall reads a parameter block from VM memory:
 ```rust
 #[repr(C)]
 pub struct BigModExpParams {
-    pub base_addr: u64,
+    pub base: *const u8,
     pub base_len: u64,
-    pub exponent_addr: u64,
+    pub exponent: *const u8,
     pub exponent_len: u64,
-    pub modulus_addr: u64,
+    pub modulus: *const u8,
     pub modulus_len: u64,
-    pub result_addr: u64,
-    pub result_len: u64,
 }
 ```
 
-All fields are unsigned 64-bit values. Implementations MUST interpret this
-structure according to the stable sBPF ABI. No padding bytes are included
-beyond the fields shown above.
+Pointer fields are VM pointers to byte slices. Length fields are unsigned
+64-bit values. Implementations MUST interpret this structure according to the
+stable sBPF ABI. No padding bytes are included beyond the fields shown above.
 
 The syscall computes:
 
@@ -137,14 +136,12 @@ The syscall computes:
 result = (base ^ exponent) mod modulus
 ```
 
-and writes the result to `[result_addr, result_addr + result_len)`.
-`result_len` MUST equal `modulus_len`. The output is encoded using the same
-endianness as the inputs and is padded to exactly `modulus_len` bytes. For
-big-endian output, padding bytes are leading zeroes. For little-endian output,
-padding bytes are trailing zeroes.
-
-Input buffers and the result buffer MAY overlap. Implementations MUST behave as
-if all input bytes were read before any result byte is written.
+and returns the result as `Vec<u8>`. The returned vector length MUST equal
+`modulus_len`. The output is encoded using the same endianness as the inputs
+and is padded to exactly `modulus_len` bytes. For big-endian output, padding
+bytes are leading zeroes. For little-endian output, padding bytes are trailing
+zeroes. No separate result length is provided because the output length is
+fully determined by `modulus_len`.
 
 ### Length Limits
 
@@ -155,26 +152,27 @@ pub const BIG_MOD_EXP_MAX_BYTES: u64 = 512;
 ```
 
 Each of `base_len`, `exponent_len`, and `modulus_len` MUST be less than or
-equal to `BIG_MOD_EXP_MAX_BYTES`. This covers 4096-bit RSA moduli and keeps
-the first version within a predictable compute envelope. Larger operands can be
-introduced by a later SIMD after benchmarking and validator implementation
-experience.
+equal to `BIG_MOD_EXP_MAX_BYTES`. This single bound is intentionally applied to
+all three operands. `exponent_len` bounds the number of exponent bits that can
+drive repeated multiplication, while `base_len` and `modulus_len` bound operand
+parsing, reduction and multiplication size, and the returned vector length. The
+512-byte limit covers 4096-bit RSA moduli and keeps the first version within a
+predictable compute envelope. Larger operands can be introduced by a later SIMD
+after benchmarking and validator implementation experience.
 
 Zero-length inputs are valid and are interpreted as the integer `0`.
 
-### Return Values
+### Return Value
 
-The syscall returns:
-
-- `0`: success
-- `1`: invalid syscall input, such as `result_len != modulus_len`
+The function returns the result bytes directly on success. There are no
+non-fatal error return values.
 
 The syscall MUST abort the virtual machine if any of the following are true:
 
 - `endianness` is not a supported value.
 - Any input length is greater than `BIG_MOD_EXP_MAX_BYTES`.
 - Any pointer plus length calculation overflows.
-- Any required VM memory range is not readable or writable as required.
+- Any required VM memory range is not readable as required.
 - The transaction does not have enough remaining compute units.
 
 ### Arithmetic Semantics
@@ -183,11 +181,11 @@ All inputs are unsigned integers. Leading zeroes in big-endian inputs and
 trailing zeroes in little-endian inputs are allowed and do not change the
 integer value.
 
-If `modulus_len == 0`, the syscall writes no bytes and returns success.
+If `modulus_len == 0`, the syscall returns `Vec::new()`.
 
 If `modulus_len > 0` and the numerical value of `modulus` is zero, the syscall
-MUST write `modulus_len` zero bytes and return success. This matches the
-Ethereum ModExp convention used by execution tests.
+MUST return `modulus_len` zero bytes. This matches the Ethereum ModExp
+convention used by execution tests.
 
 If `modulus` is nonzero and `exponent` is zero, the result is
 `1 mod modulus`, encoded in exactly `modulus_len` bytes.
@@ -211,13 +209,15 @@ else:
     adjusted_exponent_length = bit_length(exponent) - 1
 
 iteration_count = max(adjusted_exponent_length, 1)
+input_bytes = base_len + exponent_len + modulus_len
+output_bytes = modulus_len
 
 cost = big_mod_exp_base_cost
      + ceil(
          multiplication_complexity * iteration_count
          / big_mod_exp_cu_divisor
        )
-     + memory_cost(base_len + exponent_len + modulus_len + result_len)
+     + memory_cost(input_bytes + output_bytes)
 ```
 
 `big_mod_exp_base_cost` and `big_mod_exp_cu_divisor` are consensus
@@ -246,7 +246,7 @@ Implementations MUST include tests for:
 - Empty base and empty exponent with modulus `0x00`, returning `0x00`.
 - Big-endian and little-endian encodings of the same values producing
   equivalent integer results.
-- Overlapping input and output buffers.
+- Returned vector length and padding for both endiannesses.
 - Each VM abort condition listed above.
 
 ### Feature Activation
