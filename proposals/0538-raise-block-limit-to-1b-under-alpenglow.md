@@ -1,5 +1,5 @@
 ---
-simd: '0513'
+simd: '0538'
 title: Raise Block Limit to 1B CUs Under Alpenglow
 authors:
   - Igor Durovic (Anza)
@@ -15,9 +15,10 @@ feature: (fill in with feature key and github tracking issues once accepted)
 After Alpenglow is activated, raise the `Max Block Units` limit to `1_000_000_000`
 compute units so that the block CU limit no longer acts as the primary bound on
 replay time. Instead, replay time is bounded by Alpenglow timeouts and the
-resulting skip behavior. This proposal also depends on <insert new SIMD> that
-introduces a latent feature gate capable of restoring the legacy block CU limit
-if needed.
+resulting skip behavior. This proposal also depends on
+[SIMD-0539](https://github.com/solana-foundation/solana-improvement-documents/pull/539),
+which introduces a latent feature gate capable of restoring the legacy block CU
+limit if needed.
 
 ## Dependencies
 
@@ -28,12 +29,12 @@ This proposal depends on the following accepted proposal:
   Alpenglow introduces timeout-based skip behavior, which becomes the primary
   protocol-level bound on replay time.
 
-This proposal also depends on a future SIMD:
+This proposal also depends on:
 
-- **SIMD-TBD: Latent legacy block limit safeguard**
+- **[SIMD-0539]: [Legacy Block CU Limit Safeguard](https://github.com/solana-foundation/solana-improvement-documents/pull/539)**
 
-  This future SIMD will introduce a latent feature gate that, when activated,
-  reduces `Max Block Units` back to the legacy level.
+  This SIMD introduces a latent feature gate that, when activated, reduces
+  `Max Block Units` back to the legacy level.
 
 ## Motivation
 
@@ -79,11 +80,11 @@ Activation requirements:
 
 - This SIMD must not activate before Alpenglow is active on the network.
 - This SIMD should not activate until the latent safeguard feature gate from
-  SIMD-TBD is implemented and shipped in validator clients.
+  SIMD-0539 is implemented and shipped in validator clients.
 
 Safeguard requirements:
 
-- SIMD-TBD will define a latent feature gate that restores `Max Block Units` to
+- SIMD-0539 defines a latent feature gate that restores `Max Block Units` to
   the legacy value.
 - The gate is expected to remain inactive during normal operation.
 - If network conditions deteriorate, the gate provides a protocol-level path to
