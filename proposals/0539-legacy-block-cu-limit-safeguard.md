@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0539'
 title: Legacy Block CU Limit Safeguard
 authors:
   - Igor Durovic (Anza)
