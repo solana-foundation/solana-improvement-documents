@@ -216,18 +216,21 @@ following values to registers:
 Changes to the account metadata must now be communicated with specific 
 syscalls, as detailed below:
 
-- `sol_assign_owner`: Dst account, new owner as `&[u8; 32]`
-- `sol_transfer_lamports`: Dst account, src account, amount as `u64`
-
-The account parameters are the index of the account in the transaction.
+- `sol_assign_owner(u64, *const [u8; 32])`.
+   - `u64`: Index in transaction of the account whose owner is changing,
+   - `*const [u8; 32]`: Pointer to the public key of the new owner.
+- `sol_transfer_lamports(u64, u64, u64)`: 
+   - `u64`: Index in transaction of the destination account.
+   - `u64`: Index in transaction of the source account.
+   - `u64`: Lamports amount.
 
 Changes to the account payload length and all the scratchpads sections 
 introduced in this SIMD (the return-data scratchpad and the CPI scratchpad) 
-must be communicated via a new sycall `set_buffer_length`, with the following 
-parameters:
+must be communicated via a new sycall `set_buffer_length(u64, u64)`, with the 
+following parameters:
 
-- Base address of region to be resized: `u64`
-- New length of region: `u64`
+- `u64`: Base address of region to be resized.
+- `u64`: New length of region.
 
 The syscall must check if the address matches the base address of either a 
 writable account payload mapping or one of the scratchpad mappings and return 
