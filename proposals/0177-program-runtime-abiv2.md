@@ -128,8 +128,6 @@ Let `InstructionAccount` contain the following fields:
   - Index to transaction account: `u16`
   - Signer flag: `u8` (1 for signer, 0 for non-signer)
   - Writable flag: `u8` (1 for writable, 0 for readonly)
-  - Pointer to the account metadata: `u64` (see [Account metadata area]
-    (#account-metadata-area)).
 
 #### Return data scratchpad
 
@@ -173,7 +171,6 @@ Each of these memory regions contain the following for each instruction:
     - Index to transaction account: `u16`
     - Signer flag: `u8` (1 for signer, 0 for non-singer)
     - Writable flag: `u8` (1 for writable, 0 for readonly)
-    - Pointer to the account metadata: `u64` (see [Account metadata area](#account-metadata-area)).
 
 One extra writable mapping must be created after the last instruction accounts 
 area to be the CPI scratch pad, i.e. at address `0x14800000000` plus 
@@ -303,9 +300,7 @@ differently. At each CPI call, the runtime must perform the following actions:
 
 1. Verify that all account indexes received in the `InstructionAccount` area 
    belong in the current executing instruction. Likewise, the prgram ID index 
-   that should be called must also undergo the same verification. The pointer 
-   field in `InstructionAccount` must be filled by runtime, so programs may 
-   leave it blank.
+   that should be called must also undergo the same verification.
 2. Verify that accounts have the correct signer and writer flags set, avoiding 
    privelege promotion.
 3. Append a new instruction at the end of the serialization array kept at 
