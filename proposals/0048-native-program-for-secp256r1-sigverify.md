@@ -27,7 +27,7 @@ doesn't just airgap your private key with a hardware wallet (which even then
 remains as a single point of failure). Arguably, multi-signature wallets fit
 into this equation as they enable the dependency on multiple private keys.
 However in practice the UX takes too much of a hit, as having to sign a
-transaction a minimum of 3 seperate times and having to write down 3 seed
+transaction a minimum of 3 separate times and having to write down 3 seed
 phrases is too cumbersome. It would be ideal to have an authetication form that
 relies on a more familiar second factor, such as a users mobile device.
 
