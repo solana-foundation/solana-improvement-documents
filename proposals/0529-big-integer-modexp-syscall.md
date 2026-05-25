@@ -103,7 +103,12 @@ Add the following program-facing syscall function:
 ```rust
 pub fn sol_big_mod_exp(
     endianness: u64,
-    params: &BigModExpParams,
+    base: *const u8,
+    exponent: *const u8,
+    exponent_len: u64,
+    modulus: *const u8,
+    modulus_len: u64,
+    result: *mut u8,
 );
 ```
 
@@ -114,27 +119,11 @@ pub const BIG_MOD_EXP_ENDIANNESS_BE: u64 = 0;
 pub const BIG_MOD_EXP_ENDIANNESS_LE: u64 = 1;
 ```
 
-The syscall reads a parameter block from VM memory:
-
-```rust
-#[repr(C)]
-pub struct BigModExpParams {
-    pub base: *const u8,
-    pub base_len: u64,
-    pub exponent: *const u8,
-    pub exponent_len: u64,
-    pub modulus: *const u8,
-    pub modulus_len: u64,
-    pub result: *mut u8,
-    pub result_len: u64,
-}
-```
-
 Pointer fields are VM pointers to byte slices. `base`, `exponent`, and
 `modulus` point to readable input buffers. `result` points to a writable output
-buffer. Length fields are unsigned 64-bit values. Implementations MUST
-interpret this structure according to the stable sBPF ABI. No padding bytes are
-included beyond the fields shown above.
+buffer. Length fields are unsigned 64-bit values. The `base`, `modulus`, and
+`result` ranges are exactly `modulus_len` bytes. The `exponent` range is
+exactly `exponent_len` bytes.
 
 The syscall computes:
 
@@ -142,10 +131,16 @@ The syscall computes:
 result = (base ^ exponent) mod modulus
 ```
 
-and writes the result to `result`. `result_len` MUST equal `modulus_len`. The
-output is encoded using the same endianness as the inputs and is padded to
-exactly `modulus_len` bytes. For big-endian output, padding bytes are leading
-zeroes. For little-endian output, padding bytes are trailing zeroes.
+and writes exactly `modulus_len` bytes to `result`. The output is encoded using
+the same endianness as the inputs and is padded to exactly `modulus_len` bytes.
+For big-endian output, padding bytes are leading zeroes. For little-endian
+output, padding bytes are trailing zeroes.
+
+Callers with a base integer encoded in fewer than `modulus_len` bytes MUST pad
+the base to `modulus_len` bytes before invoking the syscall, using leading
+zeroes for big-endian inputs and trailing zeroes for little-endian inputs.
+Callers with a base integer that would require more than `modulus_len` bytes
+MUST reduce it modulo `modulus` before invoking the syscall.
 
 The `result` range MAY overlap the input ranges. Implementations MUST behave as
 if all input bytes were read from VM memory before any result byte is written.
@@ -158,17 +153,19 @@ The initial maximum supported size is:
 pub const BIG_MOD_EXP_MAX_BYTES: u64 = 512;
 ```
 
-Each of `base_len`, `exponent_len`, and `modulus_len` MUST be less than or
-equal to `BIG_MOD_EXP_MAX_BYTES`. This single bound is intentionally applied to
-all three operands. `exponent_len` bounds the number of exponent bits that can
-drive repeated multiplication, while `base_len` and `modulus_len` bound operand
-parsing, reduction and multiplication size, and the output length. The
-512-byte limit covers 4096-bit RSA moduli and keeps the first version within a
-predictable compute envelope. Larger operands can be introduced by a later SIMD
-after benchmarking and validator implementation experience.
+Each of `exponent_len` and `modulus_len` MUST be less than or equal to
+`BIG_MOD_EXP_MAX_BYTES`. This bound is applied to the explicit encoded exponent
+length and to the shared base, modulus, and result length. `exponent_len`
+bounds the number of exponent bits that can drive repeated multiplication,
+while `modulus_len` bounds operand parsing, reduction and multiplication size,
+and the output length. The 512-byte limit covers 4096-bit RSA moduli and keeps
+the first version within a predictable compute envelope. Larger operands can be
+introduced by a later SIMD after benchmarking and validator implementation
+experience.
 
-Zero-length `base` and `exponent` inputs are valid and are interpreted as the
-integer `0`. `modulus_len` MUST be greater than zero.
+Zero-length `exponent` inputs are valid and are interpreted as the integer `0`.
+The base integer `0` is represented as a `modulus_len`-byte zero buffer.
+`modulus_len` MUST be greater than zero.
 
 ### Output And Abort Behavior
 
@@ -178,9 +175,9 @@ values.
 The syscall MUST abort the virtual machine if any of the following are true:
 
 - `endianness` is not a supported value.
-- Any input length is greater than `BIG_MOD_EXP_MAX_BYTES`.
-- `result_len != modulus_len`.
-- Any pointer plus dynamic or fixed length calculation overflows.
+- `exponent_len` or `modulus_len` is greater than `BIG_MOD_EXP_MAX_BYTES`.
+- Any pointer plus length calculation overflows, including `base + modulus_len`,
+  `modulus + modulus_len`, and `result + modulus_len`.
 - Any required VM memory range is not readable or writable as required.
 - `modulus_len == 0`.
 - The decoded modulus value is less than or equal to `1`.
@@ -192,24 +189,24 @@ The syscall MUST abort the virtual machine if any of the following are true:
 Implementations MUST perform validation, compute charging, and arithmetic in
 the following order:
 
-1. Read the parameter block from VM memory, aborting if it is not readable.
-2. Validate `endianness`.
-3. Validate all explicit length fields, including maximum length checks and
-   `result_len == modulus_len`, and nonzero `modulus_len`.
-4. Validate pointer plus length calculations for overflow.
-5. Validate required input VM memory ranges are readable and the output VM
+1. Validate `endianness`.
+2. Validate all length fields, including maximum length checks and nonzero
+   `modulus_len`.
+3. Validate pointer plus length calculations for overflow, including
+   `base + modulus_len`, `modulus + modulus_len`, and `result + modulus_len`.
+4. Validate required input VM memory ranges are readable and the output VM
    memory range is writable.
-6. Read all input bytes from VM memory, decode the modulus, and validate that it
+5. Read all input bytes from VM memory, decode the modulus, and validate that it
    is odd and greater than `1`.
-7. Determine the compute cost.
-8. Abort if the transaction does not have enough remaining compute units.
-9. Charge compute.
-10. Perform the exponentiation and write the result.
+6. Determine the compute cost.
+7. Abort if the transaction does not have enough remaining compute units.
+8. Charge compute.
+9. Perform the exponentiation and write the result.
 
-Aborts from steps 1 through 8 MUST NOT charge the syscall compute cost. After
-step 9 succeeds, the charged compute units are consumed even if an
+Aborts from steps 1 through 7 MUST NOT charge the syscall compute cost. After
+step 8 succeeds, the charged compute units are consumed even if an
 implementation-level failure aborts the virtual machine. Implementations MUST
-NOT perform arithmetic before completing step 9.
+NOT perform arithmetic before completing step 8.
 
 ### Arithmetic Semantics
 
@@ -222,7 +219,7 @@ rejects zero, one, and all even moduli, allowing implementations to rely on
 reduction algorithms that require an odd non-degenerate modulus.
 
 If `exponent` is zero, the result is `1 mod modulus`, encoded in exactly
-`modulus_len` bytes. This defines the empty-base, empty-exponent case as
+`modulus_len` bytes. This defines the zero-base, empty-exponent case as
 `0^0 mod modulus = 1` for every valid modulus.
 
 ### Compute Metering
@@ -232,7 +229,7 @@ Metering MUST follow the EIP-198 operation complexity model, adapted to Solana
 compute units.
 
 ```text
-max_operand_len = max(base_len, modulus_len)
+max_operand_len = modulus_len
 effective_exponent_length =
     max(adjusted_exponent_length, BIG_MOD_EXP_MIN_EXPONENT_LENGTH)
 operation_complexity =
@@ -286,9 +283,9 @@ big-endian integer in exactly `exponent_len` bytes.
 
 The formula is based on encoded lengths, not the minimal numerical byte length
 of any decoded value, so leading or trailing zeroes do not reduce
-`max_operand_len` or `exponent_len`. The same formula applies to RSA
-verification use cases. For example, an RSA-2048 verification with exponent
-`65537` uses `max_operand_len = 256`, `adjusted_exponent_length = 16`, and
+`modulus_len` or `exponent_len`. The same formula applies to RSA verification
+use cases. For example, an RSA-2048 verification with exponent `65537` uses
+`modulus_len = 256`, `adjusted_exponent_length = 16`, and
 `effective_exponent_length = BIG_MOD_EXP_MIN_EXPONENT_LENGTH`.
 
 ### Benchmark Methodology
@@ -310,20 +307,20 @@ activation. The benchmark report SHOULD include:
 Implementations MUST include tests for:
 
 - The EIP-198 example:
-  - `base = 0x03`
+  - `base =
+    0x0000000000000000000000000000000000000000000000000000000000000003`
   - `exponent =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e`
   - `modulus =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f`
   - `result =
     0x0000000000000000000000000000000000000000000000000000000000000001`
-- Empty base and empty exponent with modulus `0x03`, writing `0x01`.
-- Empty base and empty exponent with modulus `0x01` aborting the virtual
+- Zero base and empty exponent with modulus `0x03`, writing `0x01`.
+- Zero base and empty exponent with modulus `0x01` aborting the virtual
   machine.
 - Zero, one, and even moduli aborting the virtual machine.
 - Big-endian and little-endian encodings of the same values producing
   equivalent integer results.
-- `result_len != modulus_len` aborting the virtual machine.
 - Output length and padding for both endiannesses.
 - Each VM abort condition listed above.
 
