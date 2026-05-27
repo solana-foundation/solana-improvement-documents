@@ -102,7 +102,6 @@ Add the following program-facing syscall function:
 
 ```rust
 pub fn sol_big_mod_exp(
-    endianness: u64,
     base_addr: *const u8,
     base_len: u64,
     exponent_addr: *const u8,
