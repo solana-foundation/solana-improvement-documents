@@ -21,9 +21,9 @@ result = (base ^ exponent) mod modulus
 
 The syscall is analogous to Ethereum's ModExp precompile specified by
 [EIP-198], but exposes a Solana-native syscall interface instead of the EVM
-precompile ABI. Inputs are fixed byte slices, and the output is written as a
-fixed-width byte vector into caller-provided VM memory and encoded either as a
-big-endian or little-endian unsigned integer.
+precompile ABI. Inputs and output are fixed byte slices encoded as
+little-endian unsigned integers, with the output written into caller-provided VM
+memory.
 
 ## Motivation
 
@@ -102,7 +102,6 @@ Add the following program-facing syscall function:
 
 ```rust
 pub fn sol_big_mod_exp(
-    endianness: u64,
     base: *const u8,
     exponent: *const u8,
     exponent_len: u64,
@@ -110,13 +109,6 @@ pub fn sol_big_mod_exp(
     modulus_len: u64,
     result: *mut u8,
 );
-```
-
-`endianness` MUST be one of:
-
-```rust
-pub const BIG_MOD_EXP_ENDIANNESS_BE: u64 = 0;
-pub const BIG_MOD_EXP_ENDIANNESS_LE: u64 = 1;
 ```
 
 Pointer fields are VM pointers to byte slices. `base`, `exponent`, and
@@ -132,15 +124,13 @@ result = (base ^ exponent) mod modulus
 ```
 
 and writes exactly `modulus_len` bytes to `result`. The output is encoded using
-the same endianness as the inputs and is padded to exactly `modulus_len` bytes.
-For big-endian output, padding bytes are leading zeroes. For little-endian
-output, padding bytes are trailing zeroes.
+the same little-endian representation as the inputs and is padded to exactly
+`modulus_len` bytes with trailing zeroes.
 
 Callers with a base integer encoded in fewer than `modulus_len` bytes MUST pad
-the base to `modulus_len` bytes before invoking the syscall, using leading
-zeroes for big-endian inputs and trailing zeroes for little-endian inputs.
-Callers with a base integer that would require more than `modulus_len` bytes
-MUST reduce it modulo `modulus` before invoking the syscall.
+the base to `modulus_len` bytes with trailing zeroes before invoking the
+syscall. Callers with a base integer that would require more than `modulus_len`
+bytes MUST reduce it modulo `modulus` before invoking the syscall.
 
 The `result` range MAY overlap the input ranges. Implementations MUST behave as
 if all input bytes were read from VM memory before any result byte is written.
@@ -174,7 +164,6 @@ values.
 
 The syscall MUST abort the virtual machine if any of the following are true:
 
-- `endianness` is not a supported value.
 - `exponent_len` or `modulus_len` is greater than `BIG_MOD_EXP_MAX_BYTES`.
 - Any pointer plus length calculation overflows, including `base + modulus_len`,
   `modulus + modulus_len`, and `result + modulus_len`.
@@ -189,30 +178,28 @@ The syscall MUST abort the virtual machine if any of the following are true:
 Implementations MUST perform validation, compute charging, and arithmetic in
 the following order:
 
-1. Validate `endianness`.
-2. Validate all length fields, including maximum length checks and nonzero
+1. Validate all length fields, including maximum length checks and nonzero
    `modulus_len`.
-3. Validate pointer plus length calculations for overflow, including
+2. Validate pointer plus length calculations for overflow, including
    `base + modulus_len`, `modulus + modulus_len`, and `result + modulus_len`.
-4. Validate required input VM memory ranges are readable and the output VM
+3. Validate required input VM memory ranges are readable and the output VM
    memory range is writable.
-5. Read all input bytes from VM memory, decode the modulus, and validate that it
+4. Read all input bytes from VM memory, decode the modulus, and validate that it
    is odd and greater than `1`.
-6. Determine the compute cost.
-7. Abort if the transaction does not have enough remaining compute units.
-8. Charge compute.
-9. Perform the exponentiation and write the result.
+5. Determine the compute cost.
+6. Abort if the transaction does not have enough remaining compute units.
+7. Charge compute.
+8. Perform the exponentiation and write the result.
 
-Aborts from steps 1 through 7 MUST NOT charge the syscall compute cost. After
-step 8 succeeds, the charged compute units are consumed even if an
+Aborts from steps 1 through 6 MUST NOT charge the syscall compute cost. After
+step 7 succeeds, the charged compute units are consumed even if an
 implementation-level failure aborts the virtual machine. Implementations MUST
-NOT perform arithmetic before completing step 8.
+NOT perform arithmetic before completing step 7.
 
 ### Arithmetic Semantics
 
-All inputs are unsigned integers. Leading zeroes in big-endian inputs and
-trailing zeroes in little-endian inputs are allowed and do not change the
-integer value.
+All inputs are little-endian unsigned integers. Trailing zeroes are allowed and
+do not change the integer value.
 
 The decoded modulus value MUST be odd and greater than `1`. This requirement
 rejects zero, one, and all even moduli, allowing implementations to rely on
@@ -266,10 +253,9 @@ mult_complexity(x):
 ```
 
 `adjusted_exponent_length` MUST be computed using the EIP-198 rules over the
-encoded exponent. For big-endian inputs, the rules apply directly to the
-exponent bytes. For little-endian inputs, implementations MUST compute the same
-value that would be obtained by re-encoding the decoded exponent as a
-big-endian integer in exactly `exponent_len` bytes.
+decoded exponent. Implementations MUST compute the same value that would be
+obtained by viewing the little-endian exponent in most-significant-byte-first
+order across exactly `exponent_len` bytes.
 
 - If `exponent_len <= 32` and all exponent bits are zero, then
   `adjusted_exponent_length = 0`.
@@ -278,13 +264,13 @@ big-endian integer in exactly `exponent_len` bytes.
   set bit.
 - If `exponent_len > 32`, then `adjusted_exponent_length` is
   `8 * (exponent_len - 32)` plus the zero-based index of the highest set bit in
-  the most significant 32 bytes of the fixed-width big-endian exponent. If
-  those most significant 32 bytes are all zero, the index term is zero.
+  the most significant 32 bytes of the fixed-width exponent. If those most
+  significant 32 bytes are all zero, the index term is zero.
 
 The formula is based on encoded lengths, not the minimal numerical byte length
-of any decoded value, so leading or trailing zeroes do not reduce
-`modulus_len` or `exponent_len`. The same formula applies to RSA verification
-use cases. For example, an RSA-2048 verification with exponent `65537` uses
+of any decoded value, so trailing zeroes do not reduce `modulus_len` or
+`exponent_len`. The same formula applies to RSA verification use cases. For
+example, an RSA-2048 verification with exponent `65537` uses
 `modulus_len = 256`, `adjusted_exponent_length = 16`, and
 `effective_exponent_length = BIG_MOD_EXP_MIN_EXPONENT_LENGTH`.
 
@@ -306,22 +292,20 @@ activation. The benchmark report SHOULD include:
 
 Implementations MUST include tests for:
 
-- The EIP-198 example:
+- The EIP-198 example, encoded as little-endian inputs and output:
   - `base =
-    0x0000000000000000000000000000000000000000000000000000000000000003`
+    0x0300000000000000000000000000000000000000000000000000000000000000`
   - `exponent =
-    0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e`
+    0x2efcfffffeffffffffffffffffffffffffffffffffffffffffffffffffffffff`
   - `modulus =
-    0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f`
+    0x2ffcfffffeffffffffffffffffffffffffffffffffffffffffffffffffffffff`
   - `result =
-    0x0000000000000000000000000000000000000000000000000000000000000001`
+    0x0100000000000000000000000000000000000000000000000000000000000000`
 - Zero base and empty exponent with modulus `0x03`, writing `0x01`.
 - Zero base and empty exponent with modulus `0x01` aborting the virtual
   machine.
 - Zero, one, and even moduli aborting the virtual machine.
-- Big-endian and little-endian encodings of the same values producing
-  equivalent integer results.
-- Output length and padding for both endiannesses.
+- Little-endian input decoding and output padding.
 - Each VM abort condition listed above.
 
 ### Feature Activation
