@@ -132,7 +132,6 @@ new value does not exceed the intended wall-clock budget.
 | Limit | 400ms | 350ms | 300ms |
 |-------|-------|-------|-------|
 | Hashes/tick | 62500 | 54687 | 46875 |
-| Target sigs/slot | 20000 | 17500 | 15000 |
 | Max block CUs | 60000000 | 52500000 | 45000000 |
 | Max writable acct CUs | 24000000 | 21000000 | 18000000 |
 | Max vote CUs | 36000000 | 31500000 | 27000000 |
@@ -144,7 +143,6 @@ new value does not exceed the intended wall-clock budget.
 | Limit | 250ms | 200ms |
 |-------|-------|-------|
 | Hashes/tick | 39062 | 31250 |
-| Target sigs/slot | 12500 | 10000 |
 | Max block CUs | 37500000 | 30000000 |
 | Max writable acct CUs | 15000000 | 12000000 |
 | Max vote CUs | 22500000 | 18000000 |
@@ -184,7 +182,6 @@ delay, the bank and its descendants MUST use the target values above for:
 - `slots_per_year`
 - `rent_collector.slots_per_year`
 - non-Alpenglow `hashes_per_tick`
-- `fee_rate_governor.target_signatures_per_slot`
 - cost tracker block limits
 - block accounts data size delta
 - broadcast and shred-fetch shred limits
@@ -198,12 +195,11 @@ the transition.
 
 Snapshot serialization MUST also persist the effective timing values in the
 snapshot manifest. This proposal does not add new manifest fields, but the
-existing `ns_per_slot`, `hashes_per_tick`, `slots_per_year`, and
-`target_signatures_per_slot` manifest values MUST change in snapshots taken at
-or after a slot-time feature's effective slot. Snapshots taken before the
-effective slot, including during the one-epoch delay after activation, MUST keep
-the previous effective values. For non-Alpenglow banks, snapshot manifests MUST
-serialize the following values:
+existing `ns_per_slot`, `hashes_per_tick`, and `slots_per_year` manifest values
+MUST change in snapshots taken at or after a slot-time feature's effective slot.
+Snapshots taken before the effective slot, including during the one-epoch delay
+after activation, MUST keep the previous effective values. For non-Alpenglow
+banks, snapshot manifests MUST serialize the following values:
 
 | Effective target | `ns_per_slot` | `hashes_per_tick` |
 |------------------|---------------|-------------------|
@@ -213,13 +209,13 @@ serialize the following values:
 | 250ms | 250000000 | 39062 |
 | 200ms | 200000000 | 31250 |
 
-| Effective target | `slots_per_year` | `target_signatures_per_slot` |
-|------------------|------------------|------------------------------|
-| 400ms | 78892314.984 | 20000 |
-| 350ms | 90162645.696 | 17500 |
-| 300ms | 105189753.312 | 15000 |
-| 250ms | 126227703.974 | 12500 |
-| 200ms | 157784629.968 | 10000 |
+| Effective target | `slots_per_year` |
+|------------------|------------------|
+| 400ms | 78892314.984 |
+| 350ms | 90162645.696 |
+| 300ms | 105189753.312 |
+| 250ms | 126227703.974 |
+| 200ms | 157784629.968 |
 
 When Alpenglow is active, the `hashes_per_tick` manifest value MUST retain
 Alpenglow's active hashing behavior (set to `None`) instead of using the reduced
@@ -250,6 +246,7 @@ This proposal intentionally does not change:
 - Timely Vote Credits grace.
 - Repair delay, including the 250ms repair defer threshold.
 - Vote costs.
+- `fee_rate_governor.target_signatures_per_slot`.
 - Blockhash queue and status cache max entries.
 - Gossip `DEFAULT_MS_PER_SLOT` heuristics, including the CRDS entry
   eviction/retention window, the freshness threshold for accepting pull
@@ -284,8 +281,8 @@ Implementations should pay special attention to:
 ### Validator Components Affected
 
 - Transaction Execution (Runtime): Bank timing fields, inflation slot-to-time
-  conversion, fee-rate governor, cost tracker, block data size limits, and PER
-  distribution limits change by feature gate.
+  conversion, cost tracker, block data size limits, and PER distribution limits
+  change by feature gate.
 - Virtual Machine: No direct VM semantic change. Programs may observe finer
   slot-time granularity through sysvars and RPC-derived timing.
 - Block Packing: Leaders must pack smaller per-slot CU, account CU, vote CU,
@@ -300,9 +297,9 @@ Implementations should pay special attention to:
   proportionally after the one-epoch effectiveness delay, so shred filtering and
   bank execution enforce the same slot-aware limits.
 - Snapshots: Snapshot manifests must persist the effective `ns_per_slot`,
-  `hashes_per_tick`, `slots_per_year`, and `target_signatures_per_slot` values,
-  and snapshot restore must reconstruct effective runtime limits. Snapshot
-  interval policy is not changed by this proposal.
+  `hashes_per_tick`, and `slots_per_year` values, and snapshot restore must
+  reconstruct effective runtime limits. Snapshot interval policy is not changed
+  by this proposal.
 - On-Chain Core BPF Programs: No direct program interface change. Programs that
   interpret slot distance as wall-clock time may need updates.
 - Other: SDKs, RPC clients, explorers, and off-chain systems that use static
@@ -443,15 +440,14 @@ Each validator implementation MUST include tests or fixtures that demonstrate:
 - Activation of each feature gate from a 400ms baseline, including the
   one-epoch delay before the gate becomes effective.
 - Correct bank values for `ns_per_slot`, `slots_per_year`,
-  `rent_collector.slots_per_year`, non-Alpenglow `hashes_per_tick`, and
-  `target_signatures_per_slot`.
+  `rent_collector.slots_per_year`, and non-Alpenglow `hashes_per_tick`.
 - Correct block, writable-account, vote, accounts-data, shred, and PER limits
   for every target slot time in the tables above.
 - Correct snapshot restore behavior after each feature gate is active and after
   each gate becomes effective.
 - Correct snapshot manifest serialization before activation, during the
   one-epoch delay, and after the effective transition for `ns_per_slot`,
-  `hashes_per_tick`, `slots_per_year`, and `target_signatures_per_slot`.
+  `hashes_per_tick`, and `slots_per_year`.
 - Correct shred validation before activation, during the one-epoch delay, and
   after the effective transition.
 - Correct inflation behavior for slot ranges and epochs that span effective
