@@ -90,7 +90,7 @@ system program :
 - `offset`, an unaligned eight-byte little-endian unsigned integer indicating
   the offset from which to read the proof
 - `slot`, an unaligned eight-byte little-endian unsigned integer indicating the
-  slot in which the violation occured
+  slot in which the violation occurred
 - `node_pubkey`, an unaligned 32 byte array representing the public key of the
   node which committed the violation
 - `reporter`, an unaligned 32 byte array representing the account to credit
@@ -262,7 +262,7 @@ struct ProofReport {
 
   slot: Slot,                      // Unaligned unsigned eight-byte little endian
                                    // integer representing the slot in which the
-                                   // violation occured
+                                   // violation occurred
 
   violation_type: u8,              // Byte representing the violation type
 }
