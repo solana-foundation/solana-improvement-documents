@@ -428,41 +428,25 @@ compatibility concerns.
 
 ---
 
-## Update — 2026-05-31
+## Revival note (2026-05-31)
 
-Picking this up. — sls_0x / Parad0x Labs
-(https://github.com/Parad0x-Labs/dna-x402)
-
-### Why
-
-We built x402 payment receipts for AI agents on Solana. The application
-layer is live on mainnet: `receipt_anchor`
-(`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`) anchors 32-byte
-receipt hashes in hourly Merkle buckets on-chain. The missing piece is
-block-level inclusion proof so downstream verifiers do not have to trust
-an RPC.
-
-We also have `dark_bn254_gate`
-(`GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd`) live on mainnet — a
-Groth16 BN254 verifier using the native `alt_bn128_pairing` syscall at
-~200k CU. This is the on-chain primitive for the ZK extension below.
+Revived by sls_0x (Parad0x Labs) after the proposal went stagnant in 2024.
+Motivation: x402 micropayment receipts for AI agents need a block-level
+inclusion proof so a downstream verifier does not have to trust an RPC.
+Deployment context and mainnet program references are in the PR
+description rather than this spec body.
 
 ### Planned extension: ZK inclusion proof (separate discussion)
 
-Beyond the hash-chain proof above, we intend to propose an optional
-Groth16/BN254 Merkle inclusion proof: prove a transaction's inclusion
-without revealing its position in the block. The on-chain verifier
-primitive already exists — `dark_bn254_gate` is live on mainnet and runs
-the BN254 pairing via `alt_bn128_pairing` at ~200k CU.
-
-This is **not specified in this PR.** It depends on design choices that
-belong in a dedicated SIMD discussion, not a final-spec change. The open
-questions we have identified so far:
+An optional Groth16/BN254 Merkle inclusion proof — prove a transaction's
+inclusion without revealing its position — is under consideration as a
+*separate* future proposal. It is **not specified in this PR** and depends
+on design choices that belong in a dedicated SIMD discussion. Open
+questions to resolve first:
 
 - **Fixed vs. variable depth.** Groth16 constraint systems are fixed at
-  ceremony time, but block transaction counts vary widely. A single
-  circuit needs a fixed maximum depth with a defined padding and overflow
-  rule.
+  ceremony time, but block transaction counts vary widely. A circuit needs
+  a fixed maximum depth with a defined padding and overflow rule.
 - **Hash function.** SHA-256 matches the existing tree but is expensive in
   a circuit (~27k constraints/hash). A ZK-friendly hash such as Poseidon is
   far cheaper but needs a canonical byte-to-field encoding and a separate
@@ -470,9 +454,6 @@ questions we have identified so far:
 - **Header commitment.** The tree root must be committed in a block-header
   field for light clients to trust it. Which field is validator-side and
   needs Anza / Firedancer input.
-- **Trusted setup.** A new circuit needs its own multi-party ceremony; our
-  existing ceremonies are for different circuits.
+- **Trusted setup.** A new circuit needs its own multi-party ceremony.
 
-We will bring this as a separate discussion with a complete design once
-those are resolved, per the SIMD process. The working sketch, our existing
-circuits, and ceremony transcripts live in the DNA x402 repo linked above.
+These will be raised as a dedicated SIMD discussion per the process.
