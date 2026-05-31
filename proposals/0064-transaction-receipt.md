@@ -464,15 +464,21 @@ circuit, one ceremony, covers all valid block sizes within that bound. Blocks
 exceeding the depth limit fall back to the SIMD-0064 hash-chain inclusion proof
 (Sections 4–6 of this document), which has no depth constraint.
 
-**Hash function (open question — needs working group input):**
-The SIMD-0064 receipt tree uses SHA-256. SHA-256 inside a Groth16 circuit costs
-~27k constraints per hash. A ZK-friendly hash (e.g. Poseidon over BN254) is
-~100x cheaper but produces a different root that diverges from the existing
-SHA-256 tree — cannot reuse that root. Two paths: (a) keep SHA-256,
-accept the higher constraint count, reuse the existing tree root; (b) add a
-parallel Poseidon commitment to the block header alongside the SHA-256 hash.
-The right choice depends on what validators can feasibly commit in the header.
-We are not deciding this here.
+**Hash function and tree compatibility:**
+The existing SIMD-0064 receipt tree pads non-power-of-2 leaf counts by
+duplicating the last real leaf (not with H(0)). A fixed-depth ZK tree
+using H(0) padding therefore produces a different root for virtually all
+blocks. Reusing the existing SIMD-0064 tree root in the ZK circuit is not
+feasible without changing the SIMD-0064 tree construction, which is a
+breaking change.
+
+The ZK extension therefore requires a **separate, dedicated receipt tree**
+committed in the block header alongside the existing one. The dedicated
+tree uses fixed-depth H(0) padding (defined above) and a TBD hash
+function. Inside the Groth16 circuit, SHA-256 costs ~27k constraints per
+hash; Poseidon over BN254 is ~100x cheaper. Either works if the header
+commits to the same root. The hash function choice is a question for the
+working group.
 
 **Block-header commitment (requires validator input):**
 The circuit takes the receipt tree root as a public input. For a verifier to
