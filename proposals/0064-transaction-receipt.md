@@ -430,37 +430,45 @@ compatibility concerns.
 
 ## Update — 2026-05-31
 
-Picking this up. — sls_0x / Parad0x Labs (https://github.com/Parad0x-Labs/dna-x402)
+Picking this up. — sls_0x / Parad0x Labs
+(https://github.com/Parad0x-Labs/dna-x402)
 
 ### Why
 
-We built x402 payment receipts for AI agents on Solana. The application layer
-is live on mainnet: `receipt_anchor` (`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`)
-anchors 32-byte receipt hashes in hourly Merkle buckets on-chain. The missing
-piece is block-level inclusion proof so downstream verifiers do not have to trust
+We built x402 payment receipts for AI agents on Solana. The application
+layer is live on mainnet: `receipt_anchor`
+(`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`) anchors 32-byte
+receipt hashes in hourly Merkle buckets on-chain. The missing piece is
+block-level inclusion proof so downstream verifiers do not have to trust
 an RPC.
 
-We also have `dark_bn254_gate` (`GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd`)
-live on mainnet — a Groth16 BN254 verifier using the native `alt_bn128_pairing`
-syscall at ~200k CU. This is the on-chain primitive for the ZK extension below.
+We also have `dark_bn254_gate`
+(`GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd`) live on mainnet — a
+Groth16 BN254 verifier using the native `alt_bn128_pairing` syscall at
+~200k CU. This is the on-chain primitive for the ZK extension below.
 
 ### Proposed optional extension: Groth16 Merkle inclusion proof
 
-Intent to specify — not a finished spec. Open questions are called out explicitly.
+Intent to specify — not a finished spec. Open questions called out below.
 
 **Variable block size — fixed MAX_DEPTH:**
 Groth16 circuits are parameterised at ceremony time and cannot change after the
 fact. Solana block transaction counts vary widely, so the circuit must target a
 hardcoded maximum depth. Proposed: `MAX_DEPTH = 20` (up to 2^20 ≈ 1M
-transactions per block). Smaller blocks pad empty leaves with `H(0)`. One
+transactions per block). Smaller blocks pad empty leaves with `H(0)` where
+`H(0)` is defined as the hash function applied to a 32-byte all-zero input.
+This resolves deterministically: `SHA-256(0x00...00)` or
+`Poseidon(0, 0)` depending on the hash function chosen above. All
+implementations must agree on this value or Merkle roots will diverge. One
 circuit, one ceremony, covers all valid block sizes within that bound. Blocks
-exceeding the depth limit fall back to the existing hash-chain proof variant.
+exceeding the depth limit fall back to the SIMD-0064 hash-chain inclusion proof
+(Sections 4–6 of this document), which has no depth constraint.
 
 **Hash function (open question — needs working group input):**
 The SIMD-0064 receipt tree uses SHA-256. SHA-256 inside a Groth16 circuit costs
 ~27k constraints per hash. A ZK-friendly hash (e.g. Poseidon over BN254) is
 ~100x cheaper but produces a different root that diverges from the existing
-SHA-256 tree — it cannot reuse that root directly. Two paths: (a) keep SHA-256,
+SHA-256 tree — cannot reuse that root. Two paths: (a) keep SHA-256,
 accept the higher constraint count, reuse the existing tree root; (b) add a
 parallel Poseidon commitment to the block header alongside the SHA-256 hash.
 The right choice depends on what validators can feasibly commit in the header.
@@ -483,14 +491,14 @@ participant destroyed their toxic waste, the setup is sound. For a settlement
 use case we would run a larger public ceremony before deploying.
 
 **Proposed public inputs:**
-- `receipt_tree_root` — root of the fixed-depth receipt tree (hash function TBD, see above)
-- `tx_hash` — the leaf value as defined in SIMD-0064: `H(TransactionReceiptData)` where H
-  is the same hash function used to build the tree. Using the SIMD-0064 leaf definition
-  means any verifier can compute `tx_hash` independently from a transaction they observe
-  on-chain, without out-of-band context. If the hash function resolves to Poseidon, this
-  is `Poseidon(TransactionReceiptData)`; if SHA-256, `SHA-256(TransactionReceiptData)`.
-  The private witness supplies the Merkle auth-path (sibling hashes and direction bits
-  for each of the MAX_DEPTH levels) that connects this leaf to `receipt_tree_root`.
+
+- `receipt_tree_root` — root of the fixed-depth receipt tree
+  (hash function TBD, see above)
+- `tx_hash` — the leaf value per SIMD-0064: `H(TransactionReceiptData)`
+  using the same H as the tree. Any verifier can recompute this from an
+  observed transaction without out-of-band context.
+  Private witness: Merkle auth-path (MAX_DEPTH sibling hashes + direction
+  bits) connecting this leaf to `receipt_tree_root`.
 - `block_header_hash` — binds the proof to a specific block
 
 **What we are not touching:**
@@ -502,7 +510,8 @@ We own the on-chain verifier and client SDK.
 
 1. Resolve hash function choice with the working group (SHA-256 vs Poseidon)
 2. Formalise `MAX_DEPTH` and the empty-leaf padding rule
-3. Define which block-header field carries the receipt tree root (needs validator input)
+3. Define which block-header field carries the receipt tree root
+   (needs validator input)
 4. Implement the fixed-depth Merkle inclusion circuit (Circom)
 5. Run a public multi-party ceremony for the new circuit
 6. Produce test vectors against devnet blocks
