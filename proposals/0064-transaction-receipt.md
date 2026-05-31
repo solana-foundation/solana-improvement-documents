@@ -503,13 +503,11 @@ use case we would run a larger public ceremony before deploying.
 - `tx_hash` — the leaf value of the dedicated ZK receipt tree.
   If SHA-256: `sha256(0x00 || R)` matching the SIMD-0064 leaf exactly,
   where R is the serialised `TransactionReceiptData`.
-  If Poseidon: the byte string R is chunked into 31-byte blocks,
-  each interpreted as a little-endian BN254 Fr field element (standard
-  for BN254 Poseidon implementations such as iden3/circomlibjs and
-  the Poseidon syscall in SIMD-0359). Domain separation uses a
-  capacity element of 1 (distinct from the nullifier domain). Two
-  implementations must agree on this encoding or roots diverge; this
-  is an open question if Poseidon is chosen.
+  If Poseidon: a byte-to-field-element encoding must be agreed before
+  this path can be implemented. Poseidon operates on field elements,
+  not byte strings; different chunking schemes produce different roots.
+  Specifying a canonical encoding for R -> [Fr] is a prerequisite open
+  question gating the Poseidon path.
   Private witness: MAX_DEPTH sibling hashes and direction bits
   connecting this leaf to `receipt_tree_root`.
 - `block_header_hash` — binds the proof to a specific block
