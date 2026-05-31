@@ -447,84 +447,32 @@ We also have `dark_bn254_gate`
 Groth16 BN254 verifier using the native `alt_bn128_pairing` syscall at
 ~200k CU. This is the on-chain primitive for the ZK extension below.
 
-### Proposed optional extension: Groth16 Merkle inclusion proof
+### Planned extension: ZK inclusion proof (separate discussion)
 
-Intent to specify — not a finished spec. Open questions called out below.
+Beyond the hash-chain proof above, we intend to propose an optional
+Groth16/BN254 Merkle inclusion proof: prove a transaction's inclusion
+without revealing its position in the block. The on-chain verifier
+primitive already exists — `dark_bn254_gate` is live on mainnet and runs
+the BN254 pairing via `alt_bn128_pairing` at ~200k CU.
 
-**Variable block size — fixed MAX_DEPTH:**
-Groth16 circuits are parameterised at ceremony time and cannot change after the
-fact. Solana block transaction counts vary widely, so the circuit must target a
-hardcoded maximum depth. Proposed: `MAX_DEPTH = 20` (up to 2^20 ≈ 1M
-transactions per block). Smaller blocks pad empty leaves with `H(0)` where
-`H(0)` is defined as the hash function applied to a 32-byte all-zero input.
-This resolves deterministically: `SHA-256(0x00...00)` or
-`Poseidon(0, 0)` depending on the hash function chosen above. All
-implementations must agree on this value or Merkle roots will diverge. One
-circuit, one ceremony, covers all valid block sizes within that bound. Blocks
-exceeding the depth limit fall back to the SIMD-0064 hash-chain inclusion proof
-(Sections 4–6 of this document), which has no depth constraint.
+This is **not specified in this PR.** It depends on design choices that
+belong in a dedicated SIMD discussion, not a final-spec change. The open
+questions we have identified so far:
 
-**Hash function and tree compatibility:**
-The existing SIMD-0064 receipt tree pads non-power-of-2 leaf counts by
-duplicating the last real leaf (not with H(0)). A fixed-depth ZK tree
-using H(0) padding therefore produces a different root for virtually all
-blocks. Reusing the existing SIMD-0064 tree root in the ZK circuit is not
-feasible without changing the SIMD-0064 tree construction, which is a
-breaking change.
+- **Fixed vs. variable depth.** Groth16 constraint systems are fixed at
+  ceremony time, but block transaction counts vary widely. A single
+  circuit needs a fixed maximum depth with a defined padding and overflow
+  rule.
+- **Hash function.** SHA-256 matches the existing tree but is expensive in
+  a circuit (~27k constraints/hash). A ZK-friendly hash such as Poseidon is
+  far cheaper but needs a canonical byte-to-field encoding and a separate
+  tree, since its padding differs from the existing leaf-duplication tree.
+- **Header commitment.** The tree root must be committed in a block-header
+  field for light clients to trust it. Which field is validator-side and
+  needs Anza / Firedancer input.
+- **Trusted setup.** A new circuit needs its own multi-party ceremony; our
+  existing ceremonies are for different circuits.
 
-The ZK extension therefore requires a **separate, dedicated receipt tree**
-committed in the block header alongside the existing one. The dedicated
-tree uses fixed-depth H(0) padding (defined above) and a TBD hash
-function. Inside the Groth16 circuit, SHA-256 costs ~27k constraints per
-hash; Poseidon over BN254 is ~100x cheaper. Either works if the header
-commits to the same root. The hash function choice is a question for the
-working group.
-
-**Block-header commitment (requires validator input):**
-The circuit takes the receipt tree root as a public input. For a verifier to
-trust that root, it must appear in a committed block-header field that light
-clients can verify. SIMD-0064 already requires validators to build the receipt
-tree at block production time — this extension additionally requires the root
-to be included in the header. Specifying which field is out of our scope and a
-prerequisite before this extension can be deployed end-to-end.
-
-**Ceremony (separate from our existing circuits):**
-Our existing `null_proof` circuit has a 2-party ceremony; the transcript is at
-https://github.com/Parad0x-Labs/dna-x402/blob/main/evidence/zk/ceremony-v2.json.
-That ceremony is for a different circuit. The Merkle inclusion circuit does not
-exist yet and requires a separate ceremony. Two-party trust model: if either
-participant destroyed their toxic waste, the setup is sound. For a settlement
-use case we would run a larger public ceremony before deploying.
-
-**Proposed public inputs:**
-
-- `receipt_tree_root` — root of the fixed-depth receipt tree
-  (hash function TBD, see above)
-- `tx_hash` — the leaf value of the dedicated ZK receipt tree.
-  If SHA-256: `sha256(0x00 || R)` matching the SIMD-0064 leaf exactly,
-  where R is the serialised `TransactionReceiptData`.
-  If Poseidon: a byte-to-field-element encoding must be agreed before
-  this path can be implemented. Poseidon operates on field elements,
-  not byte strings; different chunking schemes produce different roots.
-  Specifying a canonical encoding for R -> [Fr] is a prerequisite open
-  question gating the Poseidon path.
-  Private witness: MAX_DEPTH sibling hashes and direction bits
-  connecting this leaf to `receipt_tree_root`.
-- `block_header_hash` — binds the proof to a specific block
-
-**Validator changes required:**
-This extension requires validators to build a second, fixed-depth receipt
-tree at block production and commit its root to a block-header field.
-That is a validator-side change. We are not implementing it — we are
-defining the spec so Agave and Firedancer teams can decide if and how to
-adopt it. We own the on-chain verifier and client SDK.
-
-### What we are committing to
-
-1. Resolve hash function choice with the working group (SHA-256 vs Poseidon)
-2. Formalise `MAX_DEPTH` and the empty-leaf padding rule
-3. Define which block-header field carries the receipt tree root
-   (needs validator input)
-4. Implement the fixed-depth Merkle inclusion circuit (Circom)
-5. Run a public multi-party ceremony for the new circuit
-6. Produce test vectors against devnet blocks
+We will bring this as a separate discussion with a complete design once
+those are resolved, per the SIMD process. The working sketch, our existing
+circuits, and ceremony transcripts live in the DNA x402 repo linked above.
