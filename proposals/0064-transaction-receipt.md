@@ -500,17 +500,21 @@ use case we would run a larger public ceremony before deploying.
 
 - `receipt_tree_root` — root of the fixed-depth receipt tree
   (hash function TBD, see above)
-- `tx_hash` — the leaf value per SIMD-0064: `H(TransactionReceiptData)`
-  using the same H as the tree. Any verifier can recompute this from an
-  observed transaction without out-of-band context.
-  Private witness: Merkle auth-path (MAX_DEPTH sibling hashes + direction
-  bits) connecting this leaf to `receipt_tree_root`.
+- `tx_hash` — the leaf value of the dedicated ZK receipt tree.
+  SIMD-0064 defines its existing leaf as `sha256(0x00 || R)` where
+  R is the serialised `TransactionReceiptData`. The ZK tree uses the
+  same domain-separated construction: `H(0x00 || R)` with whatever H
+  is chosen above. This keeps the leaf encoding consistent with SIMD-0064
+  regardless of hash function. Private witness: MAX_DEPTH sibling hashes
+  and direction bits connecting this leaf to `receipt_tree_root`.
 - `block_header_hash` — binds the proof to a specific block
 
-**What we are not touching:**
-Agave or Firedancer internals. The validator side needs to (1) build the
-fixed-depth tree at block production and (2) commit the root to a header field.
-We own the on-chain verifier and client SDK.
+**Validator changes required:**
+This extension requires validators to build a second, fixed-depth receipt
+tree at block production and commit its root to a block-header field.
+That is a validator-side change. We are not implementing it — we are
+defining the spec so Agave and Firedancer teams can decide if and how to
+adopt it. We own the on-chain verifier and client SDK.
 
 ### What we are committing to
 
