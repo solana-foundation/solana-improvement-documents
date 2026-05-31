@@ -424,3 +424,59 @@ Further conerns include:
 
 This change does not impact the Solana ledger, and thus introduces no backwards
 compatibility concerns.
+
+---
+
+## Revival Notice — 2026-05-31
+
+**New implementation champions:** Parad0x Labs / sls_0x  
+**Status change:** Stagnant → Active (revival)  
+**Contact:** github.com/Parad0x-Labs / github.com/Parad0x-Labs/dna-x402
+
+### Why we're reviving this
+
+AI agents making micropayments via the x402 protocol need lightweight, trustless
+receipt verification. Today the only options are: trust an RPC, or run a full
+validator. SIMD-0064 provides a third path: a compact proof that a transaction
+was included in a specific block, verifiable by anyone holding the block header.
+
+We have an application-layer implementation already live on Solana mainnet:
+
+- **`receipt_anchor` program** (`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`):
+  accumulates 32-byte SHA-256 anchors into hourly-windowed `AnchorBucket` PDAs,
+  each holding a running Merkle root. This is the application layer that needs
+  SIMD-0064's block-level inclusion proof underneath it.
+
+- **`dark_bn254_gate` program** (`GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd`):
+  a live Groth16 BN254 verifier using Solana's native `alt_bn128_pairing` syscall.
+  This is the cryptographic primitive for the ZK extension described below.
+
+- **DNA x402 repo**: https://github.com/Parad0x-Labs/dna-x402
+
+### Proposed extension: Groth16 Merkle inclusion proof variant
+
+We propose adding an optional ZK variant alongside the existing hash-chain proof:
+
+- **Circuit:** proves `leaf ∈ Merkle-tree(block_entries)` without revealing the leaf position
+- **Public inputs:** block header hash, transaction hash, tree root
+- **Proof system:** Groth16 over BN254 — matches Solana's existing `alt_bn128` syscalls
+- **On-chain verification:** ~200k CU via the native precompile (demonstrated in `dark_bn254_gate`)
+- **Use case:** privacy-preserving payment channels and agent-to-agent settlements where
+  position metadata leaks are unacceptable
+
+### What we're committing to
+
+1. Update this SIMD with the ZK variant as a formally specified extension
+2. Implement the Merkle inclusion circuit (Circom, 2-party ceremony already completed
+   for our existing circuits — see `evidence/zk/ceremony-v2.json`)
+3. Produce RFC-style test vectors against devnet blocks
+4. Coordinate with Firedancer/Agave teams on the proof interface spec
+
+We are **not** proposing changes to Agave or Firedancer internals. Our scope is
+on-chain verification and the application SDK — we will define the proof interface
+that validators would need to produce, not implement the validator side.
+
+### Connection to grant application
+
+We have an open Solana Foundation grant application ($65k — external audit + ZK
+sprint + Squads multisig). This SIMD revival is part of that grant scope.
