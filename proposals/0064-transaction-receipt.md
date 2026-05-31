@@ -5,9 +5,10 @@ authors:
   - Anoushk Kharangate (Tinydancer)
   - Richard Patel (Jump)
   - Harsh Patel (Tinydancer)
+  - sls_0x (Parad0x Labs)
 category: Standard
 type: Core
-status: Stagnant
+status: Draft
 created: 2023-06-20
 feature: N/A
 ---
@@ -424,3 +425,35 @@ Further conerns include:
 
 This change does not impact the Solana ledger, and thus introduces no backwards
 compatibility concerns.
+
+---
+
+## Revival note (2026-05-31)
+
+Revived by sls_0x (Parad0x Labs) after the proposal went stagnant in 2024.
+Motivation: x402 micropayment receipts for AI agents need a block-level
+inclusion proof so a downstream verifier does not have to trust an RPC.
+Deployment context and mainnet program references are in the PR
+description rather than this spec body.
+
+### Planned extension: ZK inclusion proof (separate discussion)
+
+An optional Groth16/BN254 Merkle inclusion proof — prove a transaction's
+inclusion without revealing its position — is under consideration as a
+*separate* future proposal. It is **not specified in this PR** and depends
+on design choices that belong in a dedicated SIMD discussion. Open
+questions to resolve first:
+
+- **Fixed vs. variable depth.** Groth16 constraint systems are fixed at
+  ceremony time, but block transaction counts vary widely. A circuit needs
+  a fixed maximum depth with a defined padding and overflow rule.
+- **Hash function.** SHA-256 matches the existing tree but is expensive in
+  a circuit (~27k constraints/hash). A ZK-friendly hash such as Poseidon is
+  far cheaper but needs a canonical byte-to-field encoding and a separate
+  tree, since its padding differs from the existing leaf-duplication tree.
+- **Header commitment.** The tree root must be committed in a block-header
+  field for light clients to trust it. Which field is validator-side and
+  needs Anza / Firedancer input.
+- **Trusted setup.** A new circuit needs its own multi-party ceremony.
+
+These will be raised as a dedicated SIMD discussion per the process.
