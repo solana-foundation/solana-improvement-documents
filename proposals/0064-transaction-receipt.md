@@ -427,9 +427,9 @@ compatibility concerns.
 
 ---
 
-## Revival Notice — 2026-05-31
+## Update — 2026-05-31
 
-**New implementation champions:** Parad0x Labs / sls_0x  
+We built on top of this spec and are picking up the work. — Parad0x Labs / sls_0x  
 **Status change:** Stagnant → Active (revival)  
 **Contact:** github.com/Parad0x-Labs / github.com/Parad0x-Labs/dna-x402
 
