@@ -501,12 +501,17 @@ use case we would run a larger public ceremony before deploying.
 - `receipt_tree_root` — root of the fixed-depth receipt tree
   (hash function TBD, see above)
 - `tx_hash` — the leaf value of the dedicated ZK receipt tree.
-  SIMD-0064 defines its existing leaf as `sha256(0x00 || R)` where
-  R is the serialised `TransactionReceiptData`. The ZK tree uses the
-  same domain-separated construction: `H(0x00 || R)` with whatever H
-  is chosen above. This keeps the leaf encoding consistent with SIMD-0064
-  regardless of hash function. Private witness: MAX_DEPTH sibling hashes
-  and direction bits connecting this leaf to `receipt_tree_root`.
+  If SHA-256: `sha256(0x00 || R)` matching the SIMD-0064 leaf exactly,
+  where R is the serialised `TransactionReceiptData`.
+  If Poseidon: the byte string R is chunked into 31-byte blocks,
+  each interpreted as a little-endian BN254 Fr field element (standard
+  for BN254 Poseidon implementations such as iden3/circomlibjs and
+  the Poseidon syscall in SIMD-0359). Domain separation uses a
+  capacity element of 1 (distinct from the nullifier domain). Two
+  implementations must agree on this encoding or roots diverge; this
+  is an open question if Poseidon is chosen.
+  Private witness: MAX_DEPTH sibling hashes and direction bits
+  connecting this leaf to `receipt_tree_root`.
 - `block_header_hash` — binds the proof to a specific block
 
 **Validator changes required:**
