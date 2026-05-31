@@ -483,8 +483,14 @@ participant destroyed their toxic waste, the setup is sound. For a settlement
 use case we would run a larger public ceremony before deploying.
 
 **Proposed public inputs:**
-- `receipt_tree_root` — root of the fixed-depth receipt tree (hash function TBD)
-- `tx_hash` — hash of the transaction receipt being proved
+- `receipt_tree_root` — root of the fixed-depth receipt tree (hash function TBD, see above)
+- `tx_hash` — the leaf value as defined in SIMD-0064: `H(TransactionReceiptData)` where H
+  is the same hash function used to build the tree. Using the SIMD-0064 leaf definition
+  means any verifier can compute `tx_hash` independently from a transaction they observe
+  on-chain, without out-of-band context. If the hash function resolves to Poseidon, this
+  is `Poseidon(TransactionReceiptData)`; if SHA-256, `SHA-256(TransactionReceiptData)`.
+  The private witness supplies the Merkle auth-path (sibling hashes and direction bits
+  for each of the MAX_DEPTH levels) that connects this leaf to `receipt_tree_root`.
 - `block_header_hash` — binds the proof to a specific block
 
 **What we are not touching:**
