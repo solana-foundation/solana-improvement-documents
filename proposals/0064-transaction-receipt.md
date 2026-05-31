@@ -5,9 +5,10 @@ authors:
   - Anoushk Kharangate (Tinydancer)
   - Richard Patel (Jump)
   - Harsh Patel (Tinydancer)
+  - sls_0x (Parad0x Labs)
 category: Standard
 type: Core
-status: Stagnant
+status: Draft
 created: 2023-06-20
 feature: N/A
 ---
@@ -429,54 +430,73 @@ compatibility concerns.
 
 ## Update — 2026-05-31
 
-We built on top of this spec and are picking up the work. — Parad0x Labs / sls_0x  
-**Status change:** Stagnant → Active (revival)  
-**Contact:** github.com/Parad0x-Labs / github.com/Parad0x-Labs/dna-x402
+Picking this up. — sls_0x / Parad0x Labs (https://github.com/Parad0x-Labs/dna-x402)
 
-### Why we're reviving this
+### Why
 
-AI agents making micropayments via the x402 protocol need lightweight, trustless
-receipt verification. Today the only options are: trust an RPC, or run a full
-validator. SIMD-0064 provides a third path: a compact proof that a transaction
-was included in a specific block, verifiable by anyone holding the block header.
+We built x402 payment receipts for AI agents on Solana. The application layer
+is live on mainnet: `receipt_anchor` (`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`)
+anchors 32-byte receipt hashes in hourly Merkle buckets on-chain. The missing
+piece is block-level inclusion proof so downstream verifiers do not have to trust
+an RPC.
 
-We have an application-layer implementation already live on Solana mainnet:
+We also have `dark_bn254_gate` (`GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd`)
+live on mainnet — a Groth16 BN254 verifier using the native `alt_bn128_pairing`
+syscall at ~200k CU. This is the on-chain primitive for the ZK extension below.
 
-- **`receipt_anchor` program** (`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`):
-  accumulates 32-byte SHA-256 anchors into hourly-windowed `AnchorBucket` PDAs,
-  each holding a running Merkle root. This is the application layer that needs
-  SIMD-0064's block-level inclusion proof underneath it.
+### Proposed optional extension: Groth16 Merkle inclusion proof
 
-- **`dark_bn254_gate` program** (`GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd`):
-  a live Groth16 BN254 verifier using Solana's native `alt_bn128_pairing` syscall.
-  This is the cryptographic primitive for the ZK extension described below.
+Intent to specify — not a finished spec. Open questions are called out explicitly.
 
-- **DNA x402 repo**: https://github.com/Parad0x-Labs/dna-x402
+**Variable block size — fixed MAX_DEPTH:**
+Groth16 circuits are parameterised at ceremony time and cannot change after the
+fact. Solana block transaction counts vary widely, so the circuit must target a
+hardcoded maximum depth. Proposed: `MAX_DEPTH = 20` (up to 2^20 ≈ 1M
+transactions per block). Smaller blocks pad empty leaves with `H(0)`. One
+circuit, one ceremony, covers all valid block sizes within that bound. Blocks
+exceeding the depth limit fall back to the existing hash-chain proof variant.
 
-### Proposed extension: Groth16 Merkle inclusion proof variant
+**Hash function (open question — needs working group input):**
+The SIMD-0064 receipt tree uses SHA-256. SHA-256 inside a Groth16 circuit costs
+~27k constraints per hash. A ZK-friendly hash (e.g. Poseidon over BN254) is
+~100x cheaper but produces a different root that diverges from the existing
+SHA-256 tree — it cannot reuse that root directly. Two paths: (a) keep SHA-256,
+accept the higher constraint count, reuse the existing tree root; (b) add a
+parallel Poseidon commitment to the block header alongside the SHA-256 hash.
+The right choice depends on what validators can feasibly commit in the header.
+We are not deciding this here.
 
-We propose adding an optional ZK variant alongside the existing hash-chain proof:
+**Block-header commitment (requires validator input):**
+The circuit takes the receipt tree root as a public input. For a verifier to
+trust that root, it must appear in a committed block-header field that light
+clients can verify. SIMD-0064 already requires validators to build the receipt
+tree at block production time — this extension additionally requires the root
+to be included in the header. Specifying which field is out of our scope and a
+prerequisite before this extension can be deployed end-to-end.
 
-- **Circuit:** proves `leaf ∈ Merkle-tree(block_entries)` without revealing the leaf position
-- **Public inputs:** block header hash, transaction hash, tree root
-- **Proof system:** Groth16 over BN254 — matches Solana's existing `alt_bn128` syscalls
-- **On-chain verification:** ~200k CU via the native precompile (demonstrated in `dark_bn254_gate`)
-- **Use case:** privacy-preserving payment channels and agent-to-agent settlements where
-  position metadata leaks are unacceptable
+**Ceremony (separate from our existing circuits):**
+Our existing `null_proof` circuit has a 2-party ceremony; the transcript is at
+https://github.com/Parad0x-Labs/dna-x402/blob/main/evidence/zk/ceremony-v2.json.
+That ceremony is for a different circuit. The Merkle inclusion circuit does not
+exist yet and requires a separate ceremony. Two-party trust model: if either
+participant destroyed their toxic waste, the setup is sound. For a settlement
+use case we would run a larger public ceremony before deploying.
 
-### What we're committing to
+**Proposed public inputs:**
+- `receipt_tree_root` — root of the fixed-depth receipt tree (hash function TBD)
+- `tx_hash` — hash of the transaction receipt being proved
+- `block_header_hash` — binds the proof to a specific block
 
-1. Update this SIMD with the ZK variant as a formally specified extension
-2. Implement the Merkle inclusion circuit (Circom, 2-party ceremony already completed
-   for our existing circuits — see `evidence/zk/ceremony-v2.json`)
-3. Produce RFC-style test vectors against devnet blocks
-4. Coordinate with Firedancer/Agave teams on the proof interface spec
+**What we are not touching:**
+Agave or Firedancer internals. The validator side needs to (1) build the
+fixed-depth tree at block production and (2) commit the root to a header field.
+We own the on-chain verifier and client SDK.
 
-We are **not** proposing changes to Agave or Firedancer internals. Our scope is
-on-chain verification and the application SDK — we will define the proof interface
-that validators would need to produce, not implement the validator side.
+### What we are committing to
 
-### Connection to grant application
-
-We have an open Solana Foundation grant application ($65k — external audit + ZK
-sprint + Squads multisig). This SIMD revival is part of that grant scope.
+1. Resolve hash function choice with the working group (SHA-256 vs Poseidon)
+2. Formalise `MAX_DEPTH` and the empty-leaf padding rule
+3. Define which block-header field carries the receipt tree root (needs validator input)
+4. Implement the fixed-depth Merkle inclusion circuit (Circom)
+5. Run a public multi-party ceremony for the new circuit
+6. Produce test vectors against devnet blocks
