@@ -155,11 +155,12 @@ includes `beta_g2` and `gamma_g2` — verification key points that live
 in G2. The final pairing check computes:
 
 ```
-e(A, B) * e(alpha_g1, neg(beta_g2)) * e(L, neg(gamma_g2)) == 1
+e(A, B) * e(alpha_g1, neg(beta_g2)) * e(L, neg(gamma_g2)) * e(C, neg(delta_g2)) == 1
 ```
 
-`alpha_g1` and `L` are G1 points and can be computed with existing
-syscalls. `beta_g2` and `gamma_g2` are G2 points. Without native G2
+`A`, `C`, `alpha_g1`, and `L` (the linear combination of IC points)
+are G1 and use existing syscalls. `beta_g2`, `gamma_g2`, `delta_g2`
+are all G2 points. Without native G2
 arithmetic, an on-chain Groth16 verifier must hardcode those constants
 at deploy time and cannot support variable verification keys. The same
 constraint applies to KZG-based proof systems (PLONK, Marlin) that use
@@ -168,12 +169,13 @@ G2 commitments.
 ### What we are doing
 
 1. **Reference implementation** — BPF program exercising
-   `ALT_BN128_G2_ADD`, `ALT_BN128_G2_SUB`, and
-   `ALT_BN128_G2_MUL` against known test vectors. BN254 G2 test vectors
-   come from EIP-196/197 (not EIP-2537, which covers BLS12-381).
-   Additional vectors from the Ethereum `bn256` test suite
-   (https://github.com/ethereum/tests/tree/develop/GeneralStateTests)
-   will be used to validate the implementation.
+   `ALT_BN128_G2_ADD`, `ALT_BN128_G2_SUB`, and `ALT_BN128_G2_MUL`.
+   Test vectors from the `go-ethereum` bn256 library
+   (https://github.com/ethereum/go-ethereum/tree/master/crypto/bn256)
+   and the Ethereum consensus test suite
+   (https://github.com/ethereum/tests). Note: EIP-196/197 only define
+   G1 operations; G2 test vectors come from the go-ethereum
+   implementation directly.
 2. **Test vectors** — We will provide a comprehensive set of test
    vectors (valid points, infinity, out-of-subgroup inputs) covering
    both big-endian and little-endian encodings per SIMD-0284.
