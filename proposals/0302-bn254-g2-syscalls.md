@@ -155,7 +155,8 @@ includes `beta_g2` and `gamma_g2` — verification key points that live
 in G2. The final pairing check computes:
 
 ```
-e(A, B) * e(alpha_g1, neg(beta_g2)) * e(L, neg(gamma_g2)) * e(C, neg(delta_g2)) == 1
+e(A, B) * e(alpha_g1, neg(beta_g2))
+         * e(L, neg(gamma_g2)) * e(C, neg(delta_g2)) == 1
 ```
 
 `A`, `C`, `alpha_g1`, and `L` (the linear combination of IC points)
