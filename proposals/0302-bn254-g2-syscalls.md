@@ -90,7 +90,9 @@ opcode values follow the same +128 convention as existing G1 LE ops:
 `ALT_BN128_ADD_LE = 128`, `ALT_BN128_SUB_LE = 129`,
 `ALT_BN128_MUL_LE = 130` already specified in [SIMD-0284].
 
+<!-- markdownlint-disable MD013 -->
 [SIMD-0284]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0284-alt-bn128-little-endian.md
+<!-- markdownlint-enable MD013 -->
 
 ### Validation and Subgroup Checks
 
