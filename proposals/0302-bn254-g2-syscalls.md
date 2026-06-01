@@ -73,13 +73,22 @@ pub const ALT_BN128_G2_MULTIPLICATION_OUTPUT_LEN: u64 =
 pub const ALT_BN128_G2_ADD: u64 = 4;
 pub const ALT_BN128_G2_SUB: u64 = 5;
 pub const ALT_BN128_G2_MUL: u64 = 6;
+
+// Little-endian variants (SIMD-0284 convention: BE opcode + 128)
+pub const ALT_BN128_G2_ADD_LE: u64 = 132; // 4 + 128
+pub const ALT_BN128_G2_SUB_LE: u64 = 133; // 5 + 128
+pub const ALT_BN128_G2_MUL_LE: u64 = 134; // 6 + 128
 ```
 
 ### Endianness
 
-Additional G2 operation support for little-endian formats should also
-be included, using the little-endian encoding conventions as specified
-in [SIMD-0284], consistent with existing BN128 syscalls.
+Additional G2 operation support for little-endian formats is included,
+using the little-endian encoding conventions from [SIMD-0284]. The LE
+opcode values follow the same +128 convention as existing G1 LE ops:
+`ALT_BN128_G2_ADD_LE = 132`, `ALT_BN128_G2_SUB_LE = 133`,
+`ALT_BN128_G2_MUL_LE = 134`. This is consistent with
+`ALT_BN128_ADD_LE = 128`, `ALT_BN128_SUB_LE = 129`,
+`ALT_BN128_MUL_LE = 130` already specified in [SIMD-0284].
 
 [SIMD-0284]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0284-alt-bn128-little-endian.md
 
@@ -162,8 +171,11 @@ G2 commitments.
 
 1. **Reference implementation** — We will write a reference BPF program
    exercising `ALT_BN128_G2_ADD`, `ALT_BN128_G2_SUB`, and
-   `ALT_BN128_G2_MUL` against known test vectors from the EIP-2537 and
-   EIP-196/197 test suites.
+   `ALT_BN128_G2_MUL` against known test vectors. BN254 G2 test vectors
+   come from EIP-196/197 (not EIP-2537, which covers BLS12-381).
+   Additional vectors from the Ethereum `bn256` test suite
+   (https://github.com/ethereum/tests/tree/develop/GeneralStateTests)
+   will be used to validate the implementation.
 2. **Test vectors** — We will provide a comprehensive set of test
    vectors (valid points, infinity, out-of-subgroup inputs) covering
    both big-endian and little-endian encodings per SIMD-0284.
