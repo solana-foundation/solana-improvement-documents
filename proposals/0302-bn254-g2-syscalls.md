@@ -140,16 +140,14 @@ None.
 
 ---
 
-## Revival note (2026-06-01)
+## Update (2026-06-01)
 
-Revived by sls_0x (Parad0x Labs) as implementation champions.
+Picking this up. — sls_0x (Parad0x Labs)
 
-### Why we care
-
-Parad0x Labs ships the `dark_bn254_gate` program on Solana mainnet
-(program ID: `GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd`). It uses
-the existing G1 syscalls (`ALT_BN128_ADD`, `ALT_BN128_MUL`,
-`ALT_BN128_PAIRING`) to verify BN254-based ZK proofs on-chain.
+We run `dark_bn254_gate` on Solana mainnet
+(`GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd`). It uses the existing
+G1 syscalls (`ALT_BN128_ADD`, `ALT_BN128_MUL`, `ALT_BN128_PAIRING`) to
+verify BN254-based ZK proofs on-chain.
 
 Running a complete Groth16 verifier requires arithmetic on both G1 and
 G2 points. Specifically, the verification key for a Groth16 proof
@@ -167,10 +165,10 @@ at deploy time and cannot support variable verification keys. The same
 constraint applies to KZG-based proof systems (PLONK, Marlin) that use
 G2 commitments.
 
-### What we commit to
+### What we are doing
 
-1. **Reference implementation** — We will write a reference BPF program
-   exercising `ALT_BN128_G2_ADD`, `ALT_BN128_G2_SUB`, and
+1. **Reference implementation** — BPF program exercising
+   `ALT_BN128_G2_ADD`, `ALT_BN128_G2_SUB`, and
    `ALT_BN128_G2_MUL` against known test vectors. BN254 G2 test vectors
    come from EIP-196/197 (not EIP-2537, which covers BLS12-381).
    Additional vectors from the Ethereum `bn256` test suite
