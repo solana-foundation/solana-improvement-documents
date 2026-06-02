@@ -11,7 +11,7 @@ created: 2025-06-12
 feature:
 supersedes:
 superseded-by:
-extends:
+extends: 0284-alt-bn128-little-endian.md
 ---
 
 ## Summary
@@ -138,7 +138,16 @@ sufficient.
 
 ## Security Considerations
 
-None.
+**Subgroup membership for G2 ADD and SUB:** The validation rules
+intentionally skip the subgroup check for `ALT_BN128_G2_ADD` and
+`ALT_BN128_G2_SUB` (consistent with BLS12-381 SIMD-0388). These
+operations are valid for any curve point, including small-subgroup
+points. Callers who pipeline G2 ADD/SUB outputs directly into a
+pairing without an intervening scalar multiplication **must** ensure
+the accumulated point is in the prime-order subgroup before the
+pairing call, or the pairing result may be incorrect. The subgroup
+check is enforced for `ALT_BN128_G2_MUL`, making it the safe entry
+point for pairing inputs derived from untrusted data.
 
 ---
 
