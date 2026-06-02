@@ -37,19 +37,21 @@ taper of `0.15` to the new value of `0.30`.
 if new_feature_activations
     .contains(&feature_set::double_disinflation_rate::id())
 {
-    let mut new_inflation = self.inflation.read().unwrap();
-    new_inflation.taper = inflation.taper * 2.0;
-    self.set_inflation(inflation)
+    let mut inflation = self.inflation.write().unwrap();
+    inflation.taper = 0.30;
 }
 ```
 
-After feature gate activation on all networks, the feature gate will be
-cleaned up from the Bank, followed by changing the `DEFAULT_TAPER` in
-`solana-inflation` to `0.30` as follows:
+The feature gate is retained permanently and not cleaned up. Inflation rewards
+are committed to bank hashes, so the effective taper must be a function of
+slot so that any node reconstructing the chain from genesis arrives at the
+same state. Removing the gate would cause a from-genesis replay that crosses
+the activation slot to recompute pre-activation epochs with the wrong taper.
 
-```rust
-const DEFAULT_TAPER: f64 = 0.30;
-```
+This proposal does not modify `DEFAULT_TAPER` in `solana-inflation`. That 
+constant is only consulted when a new genesis is constructed; it has no
+effect on already-running clusters, whose taper is carried in bank state
+and updated by the gate above.
 
 ## Alternatives Considered
 
@@ -57,7 +59,7 @@ const DEFAULT_TAPER: f64 = 0.30;
 - Invent a new inflation mechanism, previously deemed contentious and
   unpalatable.
 - Directly halve the inflation rate, resulting in a faster reduction to
-  inflation at the expense of a sudden drastic drop in validator profitability.
+  inflation at the expense of a sudden, drastic drop in validator profitability.
 
 ## Impact
 
@@ -73,7 +75,11 @@ forum post.
 
 ## Security Considerations
 
-N/A
+The taper transition is consensus-affecting because rewards are committed to
+bank hashes. The `double_disinflation_rate` feature gate, therefore, encodes
+a slot-dependent value (i.e., `0.15` before activation, and `0.30` at and
+after it) and must remain in the client for as long as any node may replay
+history across the activation slot; in practice, permanently.
 
 ## Backwards Compatibility
 
