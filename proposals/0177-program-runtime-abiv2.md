@@ -85,10 +85,10 @@ return data. The contents of this memory region are the following:
 ##### Payer information
 
 As accounts in this area sorted by their index in transaction, the payer
-account must always be the account at index zero, as we surface runtime's
-internal account ordering for programs.
+account must always be the account at index zero, as we surface the internal
+account ordering to programs.
 
-#### Account metadata area
+#### Transaction account metadata area
 
 This region starts at `0x500000000`, is readonly and holds the metadata for
 all accounts in the transaction. It is shared by all instructions running
@@ -134,7 +134,7 @@ Let `InstructionAccount` contain the following fields:
 A writable memory region starting at `0x700000000` must be mapped in for the
 return-data scratchpad.
 
-#### Accounts area
+#### Transaction accounts area
 
 For each unique (meaning deduplicated) instruction account the payload must
 be mapped in at `0x800000000` plus `0x100000000` times the index of the
@@ -176,20 +176,6 @@ One extra writable mapping must be created after the last instruction accounts
 area to be the CPI scratch pad, i.e. at address `0x14800000000` plus
 `0x100000000` times the number of instructions in the transaction. Its purpose
 is for programs to write CPI accounts directly to it and avoid copies.
-
-#### Sysvar accounts area
-
-For each existing (non deprecated) sysvar account, the runtime must map its
-payload at address `0x18800000000` plus `0x100000000` times the index of the
-sysvar in the following order:
-
-0. Clock
-1. Epoch rewards
-2. Epoch Schdule
-3. Last restart slot
-4. Rent
-5. Slot hashes
-6. Stake history
 
 ### VM initialization
 
@@ -268,6 +254,26 @@ trigger an access violation error.
 The management for the writable accounts payload must work similarly, except
 that they must not be initialized empty, but instead with the pre-existing
 data it holds.
+
+### Sysvar accounts
+
+For each of the following sysvars, the runtime must map load them as
+transaction accounts regardless of their pubkey being mentioned in the message:
+
+-1. Clock
+-2. Epoch rewards
+-3. Epoch Schdule
+-4. Last restart slot
+-5. Rent
+-6. Slot hashes
+-7. Stake history
+
+These must be mapped at the end of the transaction accounts area in that order,
+meaning at the end of the address space reserved for transaction accounts,
+leaving a gap to the other transaction accounts. Corresponding entries in the
+transaction account metadata area are to be serialized too. If some of these
+sysvars are mentioned in the message, they are to be filtered out and also be
+mapped at the end, such that the order and indices are remain stable.
 
 ### CPIs
 
