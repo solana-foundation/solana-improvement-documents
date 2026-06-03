@@ -37,8 +37,18 @@ taper of `0.15` to the new value of `0.30`.
 if new_feature_activations
     .contains(&feature_set::double_disinflation_rate::id())
 {
+    // Computed identically to the reward path; this is the activation year.
+    let year = self.slot_in_year_for_inflation();
     let mut inflation = self.inflation.write().unwrap();
+
+    // Rate on the existing (0.15) schedule at the activation year, which is
+    // the point the steeper schedule must pass through.
+    let anchor_rate = inflation.total(year);
+
+    // Switch to the doubled taper, then re-anchor `initial` so the curve is
+    // continuous here and declines at 30%/yr from this point forward.
     inflation.taper = 0.30;
+    inflation.initial = anchor_rate / (1.0 - inflation.taper).powf(year);
 }
 ```
 
@@ -48,7 +58,7 @@ slot so that any node reconstructing the chain from genesis arrives at the
 same state. Removing the gate would cause a from-genesis replay that crosses
 the activation slot to recompute pre-activation epochs with the wrong taper.
 
-This proposal does not modify `DEFAULT_TAPER` in `solana-inflation`. That 
+This proposal does not modify `DEFAULT_TAPER` in `solana-inflation`. That
 constant is only consulted when a new genesis is constructed; it has no
 effect on already-running clusters, whose taper is carried in bank state
 and updated by the gate above.
@@ -80,6 +90,41 @@ bank hashes. The `double_disinflation_rate` feature gate, therefore, encodes
 a slot-dependent value (i.e., `0.15` before activation, and `0.30` at and
 after it) and must remain in the client for as long as any node may replay
 history across the activation slot; in practice, permanently.
+
+## Conformance
+
+This change is consensus-affecting: epoch inflation rewards feed into bank
+capitalization and, therefore, the bank hash. Every client implementation
+*must* compute identical reward values across the activation boundary or risk
+diverging from the canonical chain.
+
+At the activation slot, clients *must* perform the following steps in order:
+
+- Compute `year` from the slot exactly as the reward path does
+- Compute `anchor_rate = total(year)` under `taper = 0.15`
+- Set `taper = 0.30`
+- Set `initial = anchor_rate / (1.0 - taper).powf(year)`
+
+All arithmetic uses IEEE-754 binary64, meaning clients must use the same
+decimal literals (i.e., `0.08`, `0.015`, `0.15`, and `0.30`), each taken to its
+nearest `f64`. Because `foundation = 0.0`, the rate applied to rewards is
+`validator(year) == total(year)`.
+
+For all subsequent slots, clients use the re-anchored `initial` in the
+following rate calculation:
+
+```text
+total(year) = max(0.015, initial * (1 - 0.30)^year)
+```
+
+Conformance requires bit-for-bit agreement on each `powf` evaluation.
+
+Conformance is verified by replaying a reference ledger spanning the activation
+slot and confirming byte-identical per-epoch reward capitalization and bank
+hashes. Agreement on the inflation rate alone is necessary, but clients must
+also allocate the resulting rewards identically. The reference ledger and test
+vectors would need to be produced by the future reference implementation, as
+they depend on the activation epoch.
 
 ## Backwards Compatibility
 
