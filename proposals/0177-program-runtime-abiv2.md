@@ -150,18 +150,18 @@ must NOT be mapped.
 #### Instruction payload area
 
 For each instruction, the runtime must map its payload at address
-`0x10800000000` plus `0x100000000` times the index of the instruction in the
+`0x100000000000` plus `0x100000000` times the index of the instruction in the
 transaction. All instruction payload mappings are readonly.
 
 One extra writable mapping must be created after the last instruction payload
-area to be the CPI scratch pad, i.e. at address `0x10800000000` plus
+area to be the CPI scratch pad, i.e. at address `0x100000000000` plus
 `0x100000000` times the number of instructions in the transaction. Its purpose
 is for programs to write CPI instruction data directly to it and avoid copies.
 
 #### Instruction accounts area
 
 For each instruction, the runtime must map an array of `InstructionAccount`
-(as previously defined) at address `0x14800000000` plus `0x100000000` times
+(as previously defined) at address `0x104000000000` plus `0x100000000` times
 the index of the instruction in the transaction. This mapped are is readonly.
 
 Each of these memory regions contain the following for each instruction:
@@ -173,7 +173,7 @@ Each of these memory regions contain the following for each instruction:
     - Writable flag: `u8` (1 for writable, 0 for readonly)
 
 One extra writable mapping must be created after the last instruction accounts
-area to be the CPI scratch pad, i.e. at address `0x14800000000` plus
+area to be the CPI scratch pad, i.e. at address `0x104000000000` plus
 `0x100000000` times the number of instructions in the transaction. Its purpose
 is for programs to write CPI accounts directly to it and avoid copies.
 
