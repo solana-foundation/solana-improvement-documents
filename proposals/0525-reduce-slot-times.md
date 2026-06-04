@@ -7,7 +7,11 @@ category: Standard
 type: Core
 status: Draft
 created: 2026-05-01
-feature: TBD
+feature:
+  - 350ms - iBRL2iJvhLssJveF1utbmmQGmjonmNYZALcJFEHTbUF
+  - 300ms - iBRLA3zvd6x9445cK1vS7xt8n6Y7DS3otfRcDdW8JRW
+  - 250ms - iBRLR6nG3fDi8YD4mpPTUVTgo5NaiYfZgrzokCfADP2
+  - 200ms - iBRLypKvvj9VEvwoTeRpbLhbW55NFR4T3GE9BUR8A16
 ---
 
 ## Summary
