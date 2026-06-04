@@ -18,28 +18,34 @@ simplify the address translation logic and allow for easy direct mapping.
 
 ## Motivation
 
-Direct mapping of the account payload data is enabled by SIMD-0219.
-However, there remains a big optimization potential for both programs and the
-program runtime:
-
-- Instruction data could be mapped directly as well
-- Return data could be mapped directly too
-- Account payload could be resized freely (no more 10 KiB growth limit)
-- CPI could become cheaper in terms of CU consumption
-- Most structures could be shared between programs and program runtime,
-requiring only a single serialization at the beginning of a transaction and
-only small adjustments after
-- Per instruction serialization before a program runs could be removed entriely
-- Per instruction deserialization after a program runs could be removed too
-- Deserialization inside the dApp could be reduced to a minimum
-- programs would only have to pay for what they use, not having to deserialize
-all instruction accounts which were passed in
-- Scanning sibling instructions would not require a syscall
-- Memory regions (and thus address translation) which SIMD-0219 made unaligned
-could be aligned (to 4 GiB) again
-
-All of these however do necessitate a major change in the layout how the
-program runtime and programs interface (ABI).
+- A better address space layout with lager alignment would allow for more
+performant address translation, which is currently the bottleneck in execution.
+- Programs should only have to pay for what they use. Work that can be done by
+either the program runtime (eager) or the program (lazy) should be moved to the
+program.
+- Some restrictions and limits (such as the 10 KiB account growth limit in CPI)
+could be lifted allowing precompiles and the remaining built-ins to be migrated
+to core programs.
+- The base CU cost of CPI could be significantly reduced as:
+  - Most structures (instruction data, instruction account setup, return data)
+  could be shared between programs and program runtime
+  - Per instruction de/serialization on the runtime side could be eliminated
+  - Deserialization inside the dApp could be reduced to a minimum
+- Protocol complexity can be reduced, especially of the CPI logic
+  - Work that only happens for CPI in ABIv0/v1:
+    - Copy the instruction accounts (account meta)
+    - Copy the transaction accounts (account info)
+    - Copy the instruction data
+    - Find the index of each provided pubkey by searching
+    - Serialize/deserialize the transaction and instruction accounts
+    - Verify the changes made by the callee
+    - Apply the changes made by the callee
+  - Work that happens for CPI in all ABIs:
+    - Derive the signers from the seeds
+    - Deduplicate the instruction accounts
+    - Consolidate the permissions of the instruction accounts
+    - Check for priviledge escalations in the instruction accounts
+    - Adjust access rights to memory mappings
 
 ## Alternatives Considered
 
