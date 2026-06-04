@@ -356,11 +356,24 @@ accounts which are of interest and only when necessary.
 
 ## Impact
 
-This change is expected to drastically reduce the CU costs as the cost will no
-longer depend on the length of the instruction account payloads or instruction
-data.
-
-From the dApp devs perspective almost all changes are hidden inside the SDK.
+- Full interoperability between all ABI versions in all directions (CPI between
+ABI v0, v1 and v2).
+- CU cost of instruction accounts and CPI will be reduced significantly.
+- Unrestricted account resizing will become possible, as long as all parent
+instructions are ABIv2 as well.
+- In turn this means the account creation pattern of resize-then-reassign can
+finally be corrected to become reassign-then-resize.
+- All transaction accounts (including sysvars) will become accessible to all
+instructions (read-only) all the time.
+- All top-level instructions (including not yet executed ones) will become
+visible all the time.
+- CPI caller restrictions will remain in place: Both for the callee program as
+well as instruction accounts.
+- ABIv0/v1 offered virtual address space stability across transactions if the
+instruction accounts were exactly the same (order and duplicates / aliasing).
+This is not the case in ABIv2 and relative instead of absolute addressing must
+be used for structures inside of account payloads.
+- dApps / SDKs will have to adapt to using syscalls to transfer lamports.
 
 ## Security Considerations
 
