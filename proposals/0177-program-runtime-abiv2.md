@@ -3,13 +3,12 @@ simd: '0177'
 title: Program Runtime ABI v2
 authors:
   - Alexander Meißner
-  - Lucas Stuernagel
+  - Lucas Steuernagel
 category: Standard
 type: Core
 status: Idea
 created: 2025-02-23
 feature: TBD
-extends: SIMD-0219
 ---
 
 ## Summary
