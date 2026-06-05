@@ -8,10 +8,11 @@ type: Core
 status: Draft
 created: 2026-05-01
 feature:
-  - 350ms - iBRL2iJvhLssJveF1utbmmQGmjonmNYZALcJFEHTbUF
-  - 300ms - iBRLA3zvd6x9445cK1vS7xt8n6Y7DS3otfRcDdW8JRW
-  - 250ms - iBRLR6nG3fDi8YD4mpPTUVTgo5NaiYfZgrzokCfADP2
-  - 200ms - iBRLypKvvj9VEvwoTeRpbLhbW55NFR4T3GE9BUR8A16
+  - 350ms - iBRL5RuWhw4yqaAZu96RUULHckHTZAoe2b77qaV38JZ
+  - 300ms - iBRLL3k18HST852F1Mf3Lv83waTNQmmqvKDxvYGwQFL
+  - 250ms - iBRLMc81UjRa8fn8A6eE8bJTnRbgQoPTynM51akENCV
+  - 200ms - iBRLjhJnkmDZgNoZRDMW11d8ZV7HvsL3vAyRjZB5npW
+extends: SIMD-0357
 ---
 
 ## Summary
@@ -30,6 +31,11 @@ in proportion to the target slot time so the corresponding wall-clock rate
 remains approximately unchanged. `slots_per_year` is increased by the inverse
 ratio so inflation remains unchanged from a wall-clock perspective. Precise
 values are called out below.
+
+For Alpenglow validators, each effective slot-time stage also scales the
+Validator Admission Ticket (VAT) so the admission cost remains approximately
+0.8 SOL per day: 1.6 SOL at 400ms, 1.4 SOL at 350ms, 1.2 SOL at 300ms, 1.0 SOL
+at 250ms, and 0.8 SOL at 200ms.
 
 Each feature gate becomes effective one epoch after activation. For example, a
 feature that gets applied during transition from epoch N to N+1 takes effect for
@@ -59,6 +65,12 @@ client teams verify that the slot, leader-window, and epoch timing assumptions
 continue to close without changing the leader schedule or epoch schedule at the
 same time.
 
+Because epochs remain fixed at 432,000 slots, each faster slot-time stage also
+shortens epoch wall-clock duration. SIMD-0357 charges VAT per admitted
+validator per epoch. Scaling VAT with the effective slot-time stage preserves
+the SIMD-0326 target of roughly 0.8 SOL per day instead of increasing the daily
+Alpenglow validator admission cost during the staged rollout.
+
 ## New Terminology
 
 No new protocol terminology is introduced.
@@ -70,6 +82,9 @@ IDs are TBD:
 - `reduce_slot_time_to_300ms`
 - `reduce_slot_time_to_250ms`
 - `reduce_slot_time_to_200ms`
+
+This proposal also uses the existing **Validator Admission Ticket** (VAT) term
+from SIMD-0326 and SIMD-0357.
 
 ## Detailed Design
 
@@ -126,6 +141,44 @@ same value.
 Note that none of the above table values (except for `slots_per_year` for
 inflation) are explicitly in protocol and may deviate from reality, but they are
 expected to be useful for ensuring expected timing is understood.
+
+### Validator Admission Ticket Scaling
+
+When the Alpenglow VAT mechanism specified by SIMD-0357 is active,
+implementations MUST burn the VAT amount for the slot-time stage effective at
+the slot where the burn is executed. Said differently, the VAT amount for
+feature activated during epoch E -> E+1 transition is used on the E+1 -> E+2
+transition for admission into E+3. Before Alpenglow VAT is active, this section
+has no effect.
+
+| Effective target | Epoch | VAT |
+|------------------|-------|-----|
+| 400ms | 48h | 1.6 SOL |
+| 350ms | 42h | 1.4 SOL |
+| 300ms | 36h | 1.2 SOL |
+| 250ms | 30h | 1.0 SOL |
+| 200ms | 24h | 0.8 SOL |
+
+SIMD-0357 performs VAT collection when a bank crosses an epoch boundary and
+computes the validator set for the next epoch. The VAT amount MUST be derived
+from the effective slot-time stage of the epoch being admitted, not merely from
+the current bank's slot-time stage.
+
+For each vote account considered during the SIMD-0357 admission procedure,
+implementations MUST:
+
+1. Determine the epoch being admitted.
+2. Determine the slot-time stage effective for that admitted epoch.
+3. Select the VAT amount from the table above.
+4. Require the vote account to hold at least the selected VAT amount plus the
+   required rent-exempt balance.
+5. Subtract the selected VAT amount from every admitted vote account.
+6. Record the subtraction in the bank and transfer the lamports to the
+   incinerator account, as specified by SIMD-0357.
+
+The SIMD-0357 maximum admitted validator count, sort order, tie handling, BLS
+public key requirement, vote-account funding source, and burn destination are
+unchanged.
 
 ### Scaled Per-Slot Values
 
@@ -190,6 +243,7 @@ delay, the bank and its descendants MUST use the target values above for:
 - block accounts data size delta
 - broadcast and shred-fetch shred limits
 - partitioned epoch rewards stake-account stores per block
+- Alpenglow VAT amount, if Alpenglow VAT is active
 
 Snapshot restore and bank deserialization MUST reconstruct all non-persisted
 runtime values from the effective slot-time stage and the bank's slot. A
@@ -249,7 +303,7 @@ This proposal intentionally does not change:
 - Grace ticks.
 - Timely Vote Credits grace.
 - Repair delay, including the 250ms repair defer threshold.
-- Vote costs.
+- Non-Alpenglow vote transaction costs.
 - `fee_rate_governor.target_signatures_per_slot`.
 - Blockhash queue and status cache max entries.
 - Gossip `DEFAULT_MS_PER_SLOT` heuristics, including the CRDS entry
@@ -279,14 +333,16 @@ Implementations should pay special attention to:
 - Integer rounding, especially the 350ms and 250ms `hashes_per_tick` values.
 - Inflation calculations for epochs and rewards that span effective transition
   slots.
+- Alpenglow VAT calculations for admitted epochs that cross feature activation
+  and effective-transition boundaries.
 - Shreds received around activation and effective-transition boundaries, which
   must be validated using the effective slot-time stage for the shred's slot.
 
 ### Validator Components Affected
 
 - Transaction Execution (Runtime): Bank timing fields, inflation slot-to-time
-  conversion, cost tracker, block data size limits, and PER distribution limits
-  change by feature gate.
+  conversion, cost tracker, block data size limits, PER distribution limits,
+  and Alpenglow VAT amounts change by feature gate.
 - Virtual Machine: No direct VM semantic change. Programs may observe finer
   slot-time granularity through sysvars and RPC-derived timing.
 - Block Packing: Leaders must pack smaller per-slot CU, account CU, vote CU,
@@ -347,6 +403,29 @@ wall-clock time, reaching approximately one day at 200ms slots. That tradeoff
 is acceptable for a staged rollout and gives the network faster feature
 activation cadence.
 
+This alternative would also preserve the original VAT amount per epoch, because
+epoch wall-clock duration would remain approximately unchanged. Since this
+proposal keeps epochs fixed at 432,000 slots, it instead scales VAT per epoch
+to preserve the same wall-clock admission cost.
+
+### Leave VAT At 1.6 SOL Per Epoch
+
+VAT could remain fixed at 1.6 SOL per admitted validator per epoch. This would
+require no change to the SIMD-0357 VAT amount, but it would increase the daily
+Alpenglow validator admission cost as epochs get shorter.
+
+At the 200ms stage, epochs last roughly 24 hours, so a fixed 1.6 SOL VAT would
+double the original SIMD-0326 daily VAT target. This proposal scales VAT at each
+stage instead.
+
+### Scale VAT Only At 200ms
+
+VAT could remain fixed through the 350ms, 300ms, and 250ms stages, then drop
+from 1.6 SOL to 0.8 SOL only once 200ms slots become effective. This would
+preserve the original daily VAT target at the final stage, but not during the
+intermediate stages. Those stages may run long enough that the temporary
+increase in daily VAT cost becomes meaningful for operators.
+
 ### Reduce Slots Per Leader Span While Keeping 400ms Slots
 
 A third alternative is to keep 400ms slots and reduce the leader span, for
@@ -374,10 +453,17 @@ execution, account writes, allocation, and Turbine data budgets close to the
 current wall-clock rate, but voting and gossip activity increase because there
 are more slots per wall-clock interval.
 
+Alpenglow validators get a lower VAT per admitted epoch as each slot-time stage
+becomes effective. From a wall-clock perspective, the target remains roughly
+0.8 SOL per day throughout the staged rollout. Validator operators should update
+vote-account funding alerts at each effective slot-time stage.
+
 Core contributors need to remove or audit static slot-time assumptions in
 runtime, consensus, Turbine, gossip, repair, RPC, CLI, tests, and client
-heuristics. Over time, these parameters should move on chain so SDK constants
-do not need to encode cluster reality.
+heuristics. Core contributors also need to update Alpenglow VAT collection tests
+so the VAT amount composes with the one-epoch slot-time effectiveness delay.
+Over time, these parameters should move on chain so SDK constants do not need
+to encode cluster reality.
 
 ## Security Considerations
 
@@ -399,6 +485,12 @@ Inflation code must use wall-clock-equivalent slot accounting. Failing to scale
 `slots_per_year`, or mishandling effective-transition boundaries, could change
 issuance.
 
+Alpenglow VAT collection must use the effective slot-time stage of the epoch
+being admitted. Applying a lower VAT amount too early could admit validators
+that should still be excluded under the previous funding requirement. Applying
+it too late could exclude validators that should be admitted under the lower
+funding requirement.
+
 Validators must not enforce a reduced shred limit during a feature's one-epoch
 delay period. Doing so could cause Turbine or shred-fetch filtering to drop
 valid shreds before execution and block validation have switched to the new
@@ -410,8 +502,10 @@ Faster leader spans make it harder for clients and searchers to target the
 right leader. Fanout can compensate, but it may reduce transaction privacy and
 increase network load.
 
-Vote costs are not changed. Validators therefore pay more vote fees per
-wall-clock time as slots get faster, doubling at 200ms slots.
+Non-Alpenglow vote transaction costs are not changed. Validators therefore pay
+more vote fees per wall-clock time as slots get faster, doubling at 200ms slots.
+Alpenglow VAT is scaled by this proposal, but this does not reduce
+non-Alpenglow vote transaction fees.
 
 Gossip traffic for votes and epoch slots increases with slot rate, also
 doubling at 200ms slots.
@@ -423,7 +517,7 @@ wall-clock time. This is accepted as part of the smaller initial change surface.
 ## Backwards Compatibility
 
 This proposal is not backwards compatible for validators. New feature gates
-change consensus-critical bank, block, and shred limits.
+change consensus-critical bank, block, shred, and Alpenglow VAT limits.
 
 The SDK constants will be out of sync with chain reality until the SDK is
 updated or the parameters are made available on chain. In particular, static
@@ -447,6 +541,8 @@ Each validator implementation MUST include tests or fixtures that demonstrate:
   `rent_collector.slots_per_year`, and non-Alpenglow `hashes_per_tick`.
 - Correct block, writable-account, vote, accounts-data, shred, and PER limits
   for every target slot time in the tables above.
+- Correct Alpenglow VAT amount for every target slot time in the tables above,
+  using the effective slot-time stage of the epoch being admitted.
 - Correct snapshot restore behavior after each feature gate is active and after
   each gate becomes effective.
 - Correct snapshot manifest serialization before activation, during the
@@ -456,6 +552,9 @@ Each validator implementation MUST include tests or fixtures that demonstrate:
   after the effective transition.
 - Correct inflation behavior for slot ranges and epochs that span effective
   transitions.
+- Correct Alpenglow VAT admission behavior for vote accounts funded with the
+  new VAT amount plus rent, but less than the previous VAT amount plus rent,
+  around each effective transition.
 - Correct Alpenglow interaction, specifically that Alpenglow hashing behavior
   is not reduced by these feature gates.
 
