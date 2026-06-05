@@ -102,21 +102,33 @@ Add the following program-facing syscall function:
 
 ```rust
 pub fn sol_big_mod_exp(
-    base_addr: *const u8,
-    base_len: u64,
-    exponent_addr: *const u8,
-    exponent_len: u64,
-    modulus_addr: *const u8,
-    modulus_len: u64,
-    result_addr: *mut u8,
+    params: *const BigModExpParams,
+    params_len: u64,
 );
 ```
 
-Pointer fields are VM pointers to byte slices. `base`, `exponent`, and
-`modulus` point to readable input buffers. `result` points to a writable output
-buffer. Length fields are unsigned 64-bit values. The `base`, `modulus`, and
-`result` ranges are exactly `modulus_len` bytes. The `exponent` range is
-exactly `exponent_len` bytes.
+Where `params` points to the following struct in VM memory:
+
+```rust
+#[repr(C)]
+pub struct BigModExpParams {
+    pub base: *const u8,
+    pub exponent: *const u8,
+    pub modulus: *const u8,
+    pub result: *mut u8,
+    pub modulus_len: u64,
+    pub exponent_len: u64,
+}
+```
+
+`params` is a VM pointer to a readable `BigModExpParams` struct. `params_len`
+MUST equal `size_of::<BigModExpParams>()` (48 bytes); the syscall MUST abort if
+it does not.
+
+All pointer fields inside the struct are VM pointers to byte slices. `base`,
+`exponent`, and `modulus` point to readable input buffers. `result` points to a
+writable output buffer. The `base`, `modulus`, and `result` ranges are exactly
+`modulus_len` bytes. The `exponent` range is exactly `exponent_len` bytes.
 
 The syscall computes:
 
@@ -165,9 +177,12 @@ values.
 
 The syscall MUST abort the virtual machine if any of the following are true:
 
+- `params_len` does not equal `size_of::<BigModExpParams>()` (48 bytes).
+- The `params` pointer does not refer to a readable VM memory range of
+  `params_len` bytes.
 - `exponent_len` or `modulus_len` is greater than `BIG_MOD_EXP_MAX_BYTES`.
 - Any pointer plus length calculation overflows, including `base + modulus_len`,
-  `modulus + modulus_len`, and `result + modulus_len`.
+  `exponent + exponent_len`, `modulus + modulus_len`, and `result + modulus_len`.
 - Any required VM memory range is not readable or writable as required.
 - `modulus_len == 0`.
 - The decoded modulus value is less than or equal to `1`.
@@ -179,23 +194,26 @@ The syscall MUST abort the virtual machine if any of the following are true:
 Implementations MUST perform validation, compute charging, and arithmetic in
 the following order:
 
-1. Validate all length fields, including maximum length checks and nonzero
+1. Validate `params_len` equals `size_of::<BigModExpParams>()`.
+2. Validate and read the `params` struct from VM memory.
+3. Validate all length fields, including maximum length checks and nonzero
    `modulus_len`.
-2. Validate pointer plus length calculations for overflow, including
-   `base + modulus_len`, `modulus + modulus_len`, and `result + modulus_len`.
-3. Validate required input VM memory ranges are readable and the output VM
+4. Validate pointer plus length calculations for overflow, including
+   `base + modulus_len`, `exponent + exponent_len`, `modulus + modulus_len`,
+   and `result + modulus_len`.
+5. Validate required input VM memory ranges are readable and the output VM
    memory range is writable.
-4. Read all input bytes from VM memory, decode the modulus, and validate that it
+6. Read all input bytes from VM memory, decode the modulus, and validate that it
    is odd and greater than `1`.
-5. Determine the compute cost.
-6. Abort if the transaction does not have enough remaining compute units.
-7. Charge compute.
-8. Perform the exponentiation and write the result.
+7. Determine the compute cost.
+8. Abort if the transaction does not have enough remaining compute units.
+9. Charge compute.
+10. Perform the exponentiation and write the result.
 
-Aborts from steps 1 through 6 MUST NOT charge the syscall compute cost. After
-step 7 succeeds, the charged compute units are consumed even if an
+Aborts from steps 1 through 8 MUST NOT charge the syscall compute cost. After
+step 9 succeeds, the charged compute units are consumed even if an
 implementation-level failure aborts the virtual machine. Implementations MUST
-NOT perform arithmetic before completing step 7.
+NOT perform arithmetic before completing step 9.
 
 ### Arithmetic Semantics
 
@@ -306,6 +324,7 @@ Implementations MUST include tests for:
 - Zero base and empty exponent with modulus `0x01` aborting the virtual
   machine.
 - Zero, one, and even moduli aborting the virtual machine.
+- An incorrect `params_len` aborting the virtual machine.
 - Little-endian input decoding and output padding.
 - Each VM abort condition listed above.
 
