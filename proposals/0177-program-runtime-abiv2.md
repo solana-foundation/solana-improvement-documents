@@ -49,7 +49,80 @@ to core programs.
 
 ## Alternatives Considered
 
-None.
+### Updating transaction account metadata via direct writing vs syscalls
+
+The ABIv0/v1 approach of letting programs modify the account metadata by
+writing to them directly can be implemented in three ways:
+
+- Serialization and deserialization, which incurs work for all accounts at
+every instruction boundary.
+- Many small mappings for each field of every account, which also have to be
+updated at every instruction boundary.
+- A memory access violation handler, which is very similar to the syscall
+approach except that it lacks proper error codes. Also, for wide fields such as
+the 32 bytes owner field it would result in multiple calls, thus being less
+efficient than a single syscall.
+
+Additionally, some fields must be verified after being written to, such as the
+lamports field which for readonly accounts can only increase, and others like
+the owner field can trigger additional changes such as a writable account
+turning into a readonly account. Because the program runtime does not know
+which field of which account was touched it has to check all of them, which is
+wasteful as most transactions do not touch all accounts.
+
+With using syscalls to update account metadata fields instead there is some
+overhead in the actual modification. It is however a lot less work in total as
+all the unaffected accounts don't incur any work.
+
+### Account visibility, when not passed as instruction account
+
+Since there is address space for all transaction accounts, the question arises
+what should happen to those which are not covered by at least one instruction
+account of the currently executing instruction.
+
+- Completely hide them, both the metadata and the payload. This would require
+many small mappings for every account, which have to be updated at every
+instruction boundary.
+- Hide only the payload, but show the metadata as readonly. This would require
+only a single memory mapping update per account at every instruction boundary.
+- Show both the metadata and the payload as readonly. This does not require any
+additional memory mapping updates at instruction boundaries.
+
+Since accounts are public and known to everybody anyway, there is no point in
+performing extra work to hide them. However, this also means that accounts can
+be read without being passed through the CPI stack as instruction accounts,
+which is particularly useful for sysvar accounts. Another consequence is that
+it becomes possible for a caller to reference readonly non-signer accounts by
+their index in the instruction data instead of going through the instruction
+accounts interface.
+
+### Representation of accounts when they are syscall parameters
+
+There are multiple options when it comes to passing accounts as syscall
+parameters:
+
+- as pubkey slice, which is what ABIv0/v1 does and is inefficient. It requires
+the runtime to resolve it to an account index, as that is what is used
+internally.
+- as reference / pointer, which also requires the runtime to convert them back
+to indices, but is a lot cheaper than the pubkey lookup. It has the advantage
+that it does not only work for accounts but other buffers such as the CPI
+scratchpads or the return data scratchpad too.
+- as index in transaction or as index in instruction. The runtime needs both,
+the index in instruction to verify the permissions and index in transaction to
+apply the change to the transaction account, but can convert them back and
+forth easily. Thus, the only question is whether the as index in transaction or
+as index in instruction is easier for programs to handle.
+
+### General purpose pubkey lookup mechanism
+
+Instead of just fixing sysvars at specific addresses it might be of more
+general interest to resolve a pubkey to transaction account index without
+having to scan the transaction account list. This might also be useful to
+programs which hold pubkeys in the payload of accounts and need to match them
+against the current transaction. Additionally, fixing account indices poses
+an obstacle to other protocol users of the SVM when expanding the set of
+sysvars as the same index can then collide in different protocols.
 
 ## New Terminology
 
