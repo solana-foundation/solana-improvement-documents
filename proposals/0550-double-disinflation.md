@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2026-06-02
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: (fill in with feature key and GitHub tracking issues once accepted)
 ---
 
 ## Summary
@@ -20,13 +20,12 @@ current -15% rate to -30%.
 While there is a significant appetite to reduce the nominal inflation rate of
 SOL, mechanism design has become a point of contention, ultimately leading to
 SIMD 228 failing to reach quorum. This SIMD represents a simplification of the
-idea, delivering predictable inflation reduction by simply doubling the
-disinflation rate.
+idea, delivering predictable inflation reduction by doubling the disinflation
+rate.
 
-This proposal is an updated version of an earlier SIMD
-([PR #411](https://github.com/solana-foundation/solana-improvement-documents/pull/411)),
-which was closed due to inactivity while waiting for new governance tooling to
-be ready.
+The same change was previously proposed as [SIMD-0411](https://github.com/solana-foundation/solana-improvement-documents/pull/411);
+SIMD-0550 brings it back now that governance tooling is ready and tokenomics
+is, again, an ecosystem focus.
 
 ## New Terminology
 
@@ -34,28 +33,27 @@ N/A
 
 ## Detailed Design
 
-Add a new feature gate to Agave called `double_disinflation_rate`. Upon feature
-gate activation, in the `Bank`, execute this function to double the current
-taper of `0.15` to the new value of `0.30`.
+Add a new feature gate to Agave called `double_disinflation_rate`. The inflation
+rate is computed from the elapsed time since genesis, so simply setting
+`taper = 0.30` would reshape the whole curve and drop the rate discontinuously
+at activation. To double the rate of decline from activation onward while
+keeping issuance continuous, the schedule is re-anchored at the activation slot:
+the rate the current (`taper = 0.15`) schedule yields at the activation `year`
+is recorded as `anchor_rate`, `taper` is set to `0.30`, and `initial` is
+recomputed so the steeper curve passes through `anchor_rate` at that `year`
+(`initial = anchor_rate / (1 - 0.30)^year`). This leaves `total(year)` unchanged
+at the activation slot, so the doubled disinflation takes effect going forward
+rather than as a step. The exact ordered computation and its determinism
+requirements are specified under Conformance; the reference implementation is
+tracked in the `feature` field.
 
-```rust
-if new_feature_activations
-    .contains(&feature_set::double_disinflation_rate::id())
-{
-    // Computed identically to the reward path; this is the activation year.
-    let year = self.slot_in_year_for_inflation();
-    let mut inflation = self.inflation.write().unwrap();
-
-    // Rate on the existing (0.15) schedule at the activation year, which is
-    // the point the steeper schedule must pass through.
-    let anchor_rate = inflation.total(year);
-
-    // Switch to the doubled taper, then re-anchor `initial` so the curve is
-    // continuous here and declines at 30%/yr from this point forward.
-    inflation.taper = 0.30;
-    inflation.initial = anchor_rate / (1.0 - inflation.taper).powf(year);
-}
-```
+Regarding activation timing, features activate on an epoch boundary: the gate
+fires on the E -> E+1 transition, and the re-anchored schedule governs rewards
+for E+1 and later. Rewards for the just-completed epoch E are computed at that
+boundary using the rate at the boundary slot. Because the re-anchor leaves that
+rate unchanged, epoch E settles identically to the pre-activation schedule and
+nothing is applied retroactively. Implementations *must not* apply the
+re-anchored schedule to any epoch before E+1.
 
 The feature gate is retained permanently and not cleaned up. Inflation rewards
 are committed to bank hashes, so the effective taper must be a function of
@@ -67,6 +65,25 @@ This proposal does not modify `DEFAULT_TAPER` in `solana-inflation`. That
 constant is only consulted when a new genesis is constructed; it has no
 effect on already-running clusters, whose taper is carried in bank state
 and updated by the gate above.
+
+### Validator Components Affected
+
+- Transaction Execution (Runtime): Epoch reward calculation only;
+  `taper`/`initial` are re-anchored at the activation slot, with no change to
+  per-transaction execution.
+- Virtual Machine: None.
+- Block Packing: None.
+- Consensus: Reward totals feed bank capitalization and the bank hash, so all
+  clients must compute identical values across the activation boundary.
+- Gossip: None.
+- Turbine: None.
+- Snapshots: `Inflation` must persist in the serialized bank fields so the
+  re-anchored values survive a restart.
+- On-Chain Core BPF Programs: None.
+- Other (please describe): RPC output (`getInflationRate`,
+  `getInflationGovernor`) reflects the new schedule; `getInflationGovernor`
+  returns the re-anchored `initial`. There is no API change. Adds the feature
+  `double_disinflation_rate`.
 
 ## Alternatives Considered
 
@@ -85,8 +102,8 @@ years, which is ~2.6% lower than the current disinflation schedule. With 41% of
 validators already opting for a 0% commission on emissions, this change would
 result in little realized reduction in revenue for many validators, with a soft
 taper so the remaining 59% do not experience any immediate significant shock to
-projected earnings. A more detailed breakdown can be found in the accompanying
-forum post.
+projected earnings. A more detailed breakdown can be found in the [accompanying
+forum post](https://forum.solana.com/t/simd-0550-proposal-to-double-disinflation/4874).
 
 ## Security Considerations
 
@@ -95,6 +112,10 @@ bank hashes. The `double_disinflation_rate` feature gate, therefore, encodes
 a slot-dependent value (i.e., `0.15` before activation, and `0.30` at and
 after it) and must remain in the client for as long as any node may replay
 history across the activation slot; in practice, permanently.
+
+## Backwards Compatibility
+
+This change is not backwards compatible and requires a feature gate activation.
 
 ## Conformance
 
@@ -130,7 +151,3 @@ hashes. Agreement on the inflation rate alone is necessary, but clients must
 also allocate the resulting rewards identically. The reference ledger and test
 vectors would need to be produced by the future reference implementation, as
 they depend on the activation epoch.
-
-## Backwards Compatibility
-
-This change is not backwards compatible and requires a feature gate activation.
