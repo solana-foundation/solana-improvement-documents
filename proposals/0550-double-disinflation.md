@@ -23,6 +23,11 @@ SIMD 228 failing to reach quorum. This SIMD represents a simplification of the
 idea, delivering predictable inflation reduction by simply doubling the
 disinflation rate.
 
+This proposal is an updated version of an earlier SIMD
+([PR #411](https://github.com/solana-foundation/solana-improvement-documents/pull/411)),
+which was closed due to inactivity while waiting for new governance tooling to
+be ready.
+
 ## New Terminology
 
 N/A
