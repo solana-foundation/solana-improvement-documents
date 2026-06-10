@@ -33,7 +33,7 @@ N/A
 
 ## Detailed Design
 
-Add a new feature gate to Agave called `double_disinflation_rate`. The inflation
+Add a new feature gate called `double_disinflation_rate`. The inflation
 rate is computed from the elapsed time since genesis, so simply setting
 `taper = 0.30` would reshape the whole curve and drop the rate discontinuously
 at activation. To double the rate of decline from activation onward while
