@@ -243,8 +243,15 @@ equivalent Geyser filters.
 ### Owner Program
 
 The accounts are owned by a new native program, the **Epoch Stakes
-program**, with program ID `TBD` (to be derived and assigned before this
-SIMD is finalized). The program:
+program**, with program ID:
+
+```
+EpochStakes11111111111111111111111111111111
+```
+
+This is a name-based address with no known private key, following the
+same convention as other native programs (`Stake11111111111111111111111111111111111111`,
+`Vote111111111111111111111111111111111111111`, etc.). The program:
 
 - Rejects all instructions (the accounts are read-only from the
   perspective of transactions).
