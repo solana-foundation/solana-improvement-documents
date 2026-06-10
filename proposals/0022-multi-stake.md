@@ -5,7 +5,7 @@ authors:
   - Jon Cinque (Solana Labs)
 category: Standard
 type: Core
-status: Accepted
+status: Withdrawn
 created: 2023-01-20
 feature: ()
 ---
