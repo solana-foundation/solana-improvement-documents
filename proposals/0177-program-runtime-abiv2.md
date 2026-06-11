@@ -279,6 +279,22 @@ following values to registers:
 
 ### Changes to syscalls
 
+#### Removed syscalls
+
+The following syscalls must throw an error when invoked in ABIv2:
+
+- `sol_get_processed_sibling_instruction`
+- `sol_get_return_data`
+- `sol_set_return_data`
+- `sol_invoke_signed_c`
+- `sol_invoke_signed_rust`
+- `sol_get_sysvar`
+- `sol_get_clock_sysvar`
+- `sol_get_epoch_schedule_sysvar`
+- `sol_get_rent_sysvar`
+- `sol_get_epoch_rewards_sysvar`
+- `sol_get_epoch_stake`
+
 #### Added syscalls
 
 Changes to the account metadata must now be communicated with specific
