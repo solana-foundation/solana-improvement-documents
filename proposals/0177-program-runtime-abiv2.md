@@ -135,16 +135,40 @@ v4 or above.
 
 ### Memory Regions
 
-#### Transaction metadata area
+The virtual address space layout is split into memory regions, each 4 GiB in
+size, starting at the following addresses:
 
-At the beginning of a transaction the program runtime must prepare a
-readonly memory region starting at `0x400000000`. This region is shared by all
-instructions running programs with support to new ABI. It must be updated as
-as instructions through out the transaction modify the CPI scratchpad or the
-return data. The contents of this memory region are the following:
+- `0x000000000`: SBPFv3 program read only data
+- `0x100000000`: SBPFv3 program byte code
+- `0x200000000`: SBPFv3 stack
+- `0x300000000`: SBPFv3 heap
+- `0x400000000`: [Transaction metadata](#transaction-metadata)
+- `0x500000000`: [Transaction account](#transaction-account)
+- `0x600000000`: [Instruction trace](#instruction-trace)
+- `0x700000000`: [Return data scratchpad](#return-data-scratchpad)
+- `0x800000000 + transaction_account_index * 0x100000000`: [Transaction account payload](#transaction-account-payload)
+- `0x100000000000 + instruction_index * 0x100000000`: [Instruction payload](#instruction-payload)
+- `0x104000000000 + instruction_index * 0x100000000`: [Instruction accounts](#instruction-accounts)
+- `0x108000000000`: END
 
-- Key of the program which wrote to the return-data scratchpad most
-  recently: `[u8; 32]`
+This limits the maximum number of the following we could ever support:
+
+- Accounts (including sysvars) in a transaction to 4088
+- Accounts in an instruction to 65536
+- Instructions in a transaction to 64
+- Bytes in the instruction payload to 4 GiB
+- Bytes in the account payload to 4 GiB
+
+#### Transaction metadata
+
+At the beginning of a transaction the program runtime must prepare a readonly
+memory region. This region is shared by all instructions running programs with
+support to new ABI. It must be updated as as instructions through out the
+transaction modify the CPI scratchpad or the return data. The contents of this
+memory region are the following:
+
+- Public key / address of the program which wrote to the return-data scratchpad
+  most recently: `[u8; 32]`
 - The return-data scratchpad: `&[u8]`, which is composed of:
   - Pointer to return-data scratchpad: `u64`
   - Length of return-data scratchpad: `u64`
@@ -160,33 +184,31 @@ return data. The contents of this memory region are the following:
 - Number of CPIs in trace (under execution and finished): `u32`
 - The number of transaction accounts: `u32`
 
-##### Payer information
-
 As accounts in this area sorted by their index in transaction, the payer
 account must always be the account at index zero, as we surface the internal
 account ordering to programs.
 
-#### Transaction account metadata area
+#### Transaction account
 
-This region starts at `0x500000000`, is readonly and holds the metadata for
-all accounts in the transaction. It is shared by all instructions running
-programs with support for ABIv2, and must be updated as instruction modify the
-metadata with the provided syscalls (see the `Changes to syscalls` section).
-The contents for this region are as follow:
+This memory region is readonly and holds the metadata for all accounts in the
+transaction. It is shared by all instructions running programs with support for
+ABIv2, and must be updated as instruction modify the metadata with the provided
+syscalls (see the `Changes to syscalls` section). The contents for this region
+are as follow:
 
-- For each transaction account:
-  - Key: `[u8; 32]`
-  - Owner: `[u8; 32]`
+- For each `TransactionAccount`:
+  - Public key / address of itself: `[u8; 32]`
+  - Public key / address of the owner: `[u8; 32]`
   - Lamports: `u64`
-  - Account payload: `&[u8]` which is composed of:
+  - [Transaction account payload](#transaction-account-payload): `&[u8]`
+  which consists of:
     - Pointer to account payload: `u64`
     - Account payload length: `u64`
 
-#### Instruction area
+#### Instruction trace
 
-For each transaction, the program runtime must also prepare two memory regions.
-The first one is a readonly region starting at `0x600000000`. It must be
-updated at each CPI call edge. The contents of this region are the following:
+This memory region is readonly and must be updated at each intruction
+invocation. The contents of this region are the following:
 
 - For each instruction in transaction:
   - Reserved filed for alignment and potential future usage: `u16`
@@ -197,63 +219,47 @@ updated at each CPI call edge. The contents of this region are the following:
     consisting of:
     - Pointer to slice: `u64`
     - Number of elements in slice: `u64`
-  - Instruction data `&[u8]`, which is composed of:
+  - Instruction payload `&[u8]`, which is composed of:
     - Pointer to data: `u64`
     - Length of data: `u64`
 
-Let `InstructionAccount` contain the following fields:
+#### Return data scratchpad
+
+This memory region holds the return-data of the transaction and starts out as
+readonly but can temporarily become writable until the next instruction edge.
+When it becomes writable the corresponding fields in
+[Transaction metadata](#transaction-metadata) must be updated.
+See [Scratchpad management](#scratchpad-management).
+
+#### Transaction account payload
+
+For each transaction account one separate memory region must be mapped to its
+data (as opposed to its metadata).
+
+Only if the instruction account has the writable flag set and is owned by the
+current program it is mapped in as writable. The writability of a region must
+be updated as programs through out the transaction modify the account metadata
+or as the program (and thus owner relation) changes between instructions.
+
+#### Instruction payload
+
+For each transaction account one separate readonly memory region must be mapped
+to its data (as opposed to its metadata).
+
+One additional writable memory region can be created after the last instruction
+as zero-copy CPI scratch pad. See [Scratchpad management](#scratchpad-management).
+
+#### Instruction accounts
+
+For each transaction account one separate readonly memory region must be mapped
+to the list of its `InstructionAccount`s, each consisting of:
 
 - Index to transaction account: `u16`
 - Signer flag: `u8` (1 for signer, 0 for non-signer)
 - Writable flag: `u8` (1 for writable, 0 for readonly)
 
-#### Return data scratchpad
-
-A writable memory region starting at `0x700000000` must be mapped in for the
-return-data scratchpad.
-
-#### Transaction accounts area
-
-For each unique (meaning deduplicated) instruction account the payload must
-be mapped in at `0x800000000` plus `0x100000000` times the index of the
-**transaction** account (not the index of the instruction account). Only if the
-instruction account has the writable flag set and is owned by the current
-program it is mapped in as a writable region. The writability of a region must
-be updated as programs through out the transaction modify the account metadata.
-
-The runtime must only map the payload for accounts that belong in the current
-executing instruction. The payload for accounts belonging to sibling instructions
-must NOT be mapped.
-
-#### Instruction payload area
-
-For each instruction, the runtime must map its payload at address
-`0x100000000000` plus `0x100000000` times the index of the instruction in the
-transaction. All instruction payload mappings are readonly.
-
-One extra writable mapping must be created after the last instruction payload
-area to be the CPI scratch pad, i.e. at address `0x100000000000` plus
-`0x100000000` times the number of instructions in the transaction. Its purpose
-is for programs to write CPI instruction data directly to it and avoid copies.
-
-#### Instruction accounts area
-
-For each instruction, the runtime must map an array of `InstructionAccount`
-(as previously defined) at address `0x104000000000` plus `0x100000000` times
-the index of the instruction in the transaction. This mapped are is readonly.
-
-Each of these memory regions contain the following for each instruction:
-
-- For each account in instruction:
-  - `InstructionAccount`, consisting of:
-    - Index to transaction account: `u16`
-    - Signer flag: `u8` (1 for signer, 0 for non-singer)
-    - Writable flag: `u8` (1 for writable, 0 for readonly)
-
-One extra writable mapping must be created after the last instruction accounts
-area to be the CPI scratch pad, i.e. at address `0x104000000000` plus
-`0x100000000` times the number of instructions in the transaction. Its purpose
-is for programs to write CPI accounts directly to it and avoid copies.
+One additional writable memory region can be created after the last instruction
+as zero-copy CPI scratch pad. See [Scratchpad management](#scratchpad-management).
 
 ### VM initialization
 
@@ -261,17 +267,19 @@ During the initilization of the virtual machine, the runtime must load the
 following values to registers:
 
 1. Register R1: A pointer to the metadata of the instruction under execution.
-   (see section [Instruction area](#instruction-area)).
+   (see section [Instruction trace](#instruction-trace)).
 2. Register R2: A pointer to the instruction accounts slice for the
    instruction under execution (see section
-   [Instruction accounts area](#instruction-accounts-area)).
+   [Instruction accounts](#instruction-accounts)).
 3. Register R3: The number of instruction accounts for the instruction under
    execution.
 4. Register R4: A pointer to the instruction payload of the instruction under
-   execution (see section [Instruction payload area](#instruction-payload-area)).
-5. Register R5: The payload lenght for the instruction under execution.
+   execution (see section [Instruction payload](#instruction-payload)).
+5. Register R5: The payload length for the instruction under execution.
 
 ### Changes to syscalls
+
+#### Added syscalls
 
 Changes to the account metadata must now be communicated with specific
 syscalls, as detailed below:
@@ -289,26 +297,24 @@ introduced in this SIMD (the return-data scratchpad and the CPI scratchpad)
 must be communicated via a new sycall `set_buffer_length(u64, u64)`, with the
 following parameters:
 
-- `u64`: Base address of region to be resized.
-- `u64`: New length of region.
+- `u64`: Base address of the memory region to be resized.
+- `u64`: New length of the memory region.
 
-The syscall must check if the address matches the base address of either a
+The syscall must start by charging a base cost (to be determined) plus the
+same CU per byte ratio as the `memset` syscall for the new length of the memory
+region. Then it must check if the address matches the base address of either a
 writable account payload mapping or one of the scratchpad mappings and return
 an error otherwise. Constrains for the maximum resizable limits must also be
 verified for each region separetely.
 
-The `set_buffer_length` must charge a base cost (to be determined) plus the
-same CU per byte ratio as the `memset` syscall.
+#### CPI
 
-The verifier must reject SBPFv4 programs containing the `sol_invoke_signed_c`
-and `sol_invoke_signed_rust`, since they are not compatible with ABIv2. A new
-syscall `sol_invoke_signed_v2` must replace them. The parameters for
-`sol_invoke_signed_v2` are the following:
+The parameters for `sol_invoke_signed_v2` are the following:
 
-- Index in transaction of program ID to be called: `u64`.
-- A pointer to the singer seeds of type `VmSlice<VmSlice<VmSlice<u8>>>`.
-- The length of the outer signer seeds slice in
-  `VmSlice<VmSlice<VmSlice<u8>>>`.
+1. Index of the [Transaction account](#transaction-account) of the callee: `u64`
+2. A pointer to the singer seeds of type `VmSlice<VmSlice<VmSlice<u8>>>`
+3. The length of the outer signer seeds slice in
+  `VmSlice<VmSlice<VmSlice<u8>>>`
 
 `VmSlice<T>` is a stable layout type defined to share slices between the guest
 and the host. It consists of:
@@ -316,22 +322,49 @@ and the host. It consists of:
 - `u64`: Pointer to the data.
 - `u64`: Length of data (number of elements `T`)
 
-Programs using `sol_get_return_data` and `sol_set_return_data` must be
-rejected by the verfier if ABI v2 is in use.
+With the new `sol_invoke_signed_v2` syscall, CPIs must be managed
+differently. At each CPI call, the runtime must perform the following actions:
+
+1. Verify that all account indexes received in the `InstructionAccount` area
+  belong in the current executing instruction. Likewise, the prgram ID index
+  that should be called must also undergo the same verification.
+2. Verify that accounts have the correct signer and writer flags set, avoiding
+  privelege promotion.
+3. Append a new instruction at the end of the
+  [Instruction-trace](#instruction-trace).
+4. Transform the caller CPI scratchpad into a readonly instruction payload
+  region visible for the callee.
+5. Change the read and write permission for the
+  [Transaction-account](#transaction-account) regions.
+6. Update the address for the callee CPI scratchpad, the index of current
+  executing instruction, and the number of instructions in transaction
+  in the [Transaction-metadata](#transaction-metadata).
+
+When the CPI returns, the runtime must do the following:
+
+1. Bump the address for the CPI scratchpad, and keep the one which was used for
+  the callee in its exisiting address assigned during CPI call.
+2. Change the read and write permission for the
+  [Transaction-account](#transaction-account) regions.
+3. Update the index of current executing instruction.
+
+CPIs between ABIv0/v1 and ABIv2 program must be allowed, but costs will difer.
+A CPI from an ABIv2 to another ABIv2 program must cost less than a CPI from an
+ABIv2 to an ABIv0/v1 program, due to the decreased work overhead from program
+runtime.
 
 ### Scratchpad management
 
-This SIMD introduces two scratch pad regions: the return-data scratchpad and
-the CPI scratchpad. At the beginning of every instruction, these scratchpads
-must be empty and their size must be zero.
+This SIMD introduces memory regions referred to as scratchpads:
 
-Programs must set the desired length for them using the `set_buffer_length`
-syscall. Reads and writes to a region beyond the scratchpad length must
-trigger an access violation error.
+1. The [return data scratchpad](#return-data-scratchpad)
+2. The last memory region of [Instruction payload](#instruction-payload)
+3. The last memory region of [Instruction accounts](#instruction-accounts)
 
-The management for the writable accounts payload must work similarly, except
-that they must not be initialized empty, but instead with the pre-existing
-data it holds.
+The first one becomes readonly at every instruction edge but retains its data
+and the other two are re-mapped to become empty at every instruction edge.
+Thus a program has to initialize them by calling the `set_buffer_length`
+syscall if it wishes to write to them.
 
 ### Sysvar accounts
 
@@ -340,75 +373,18 @@ transaction accounts regardless of their pubkey being mentioned in the message:
 
 -1. Clock
 -2. Epoch rewards
--3. Epoch Schdule
+-3. Epoch schedule
 -4. Last restart slot
 -5. Rent
 -6. Slot hashes
 -7. Stake history
 
-These must be mapped at the end of the transaction accounts area in that order,
-meaning at the end of the address space reserved for transaction accounts,
-leaving a gap to the other transaction accounts. Corresponding entries in the
-transaction account metadata area are to be serialized too. If some of these
-sysvars are mentioned in the message, they are to be filtered out and also be
-mapped at the end, such that the order and indices are remain stable.
-
-### CPIs
-
-#### Program side
-
-The workflow for cross program invokation on the program side will change.
-Instead of programs themselves allocating memory on the heap or the stack for
-CPI instruction data and CPI accounts, the program runtime must already
-provide the pointers for programs to write to.
-
-The CPI data scratchpad is a region in the
-[Instruction payload area](#instruction-payload-area), right after the space
-reserved for the last intruction in the instruction trace.
-In other words, `0x10800000000` plus `0x100000000` times the number of
-instructions in the transaction.
-
-Likewise, the CPI accounts must be written to a runtime provided region
-residing in the [Instruction accounts area](#instruction-accounts-area)
-at `0x14800000000` plus `0x100000000` times the number of instructions in the
-transaction.
-
-Both the aforementioned regions must begin with size zero, and programs must
-resize them before writing to them using the `set_buffer_length` syscall.
-
-#### Runtime side
-
-With the new `sol_invoke_signed_v2` syscall, CPIs must be managed
-differently. At each CPI call, the runtime must perform the following actions:
-
-1. Verify that all account indexes received in the `InstructionAccount` area
-   belong in the current executing instruction. Likewise, the prgram ID index
-   that should be called must also undergo the same verification.
-2. Verify that accounts have the correct signer and writer flags set, avoiding
-   privelege promotion.
-3. Append a new instruction at the end of the serialization array kept at
-   `0x600000000`.
-4. Transform the caller CPI scratchpad into a readonly instruction payload
-   region visible for the callee.
-5. Change the visibility and write permissions for the account payload
-   regions, according to the CPI accounts and their flags.
-6. Update the address for the callee CPI scratchpad, the index of current
-   executing transaction, and the number of instructions in transaction at
-   address `0x400000000`.
-
-When the CPI returns, the runtime must do the following:
-
-1. Update the address for the CPI scratchpad, and keep the previouly used one
-   in its exsiting address assigned during CPI call. The new CPI scratchpad
-   address is the same as the previous one plus `0x100000000`.
-2. Change the read and write permission for the account payload regions,
-   according to potential changes in account ownership.
-3. Update the index of current executing instruction.
-
-CPIs between ABIv0/v1 and ABIv2 program must be allowed, but costs will difer.
-A CPI from an ABIv2 to another ABIv2 program must cost less than a CPI from an
-ABIv2 to an ABIv0/v1 program, due to the decreased work overhead from program
-runtime.
+These must be mapped at the end of the address space reserved for
+[Transaction account payload](#transaction-account-payload), leaving a gap to
+the other transaction accounts. Corresponding
+[Transaction account](#transaction-account) must be serialized too. If some of
+these sysvars are mentioned in the message, they are to be filtered out and also
+be mapped at the end, such that the order and indices are remain stable.
 
 ### Changes to CU metering
 
@@ -416,16 +392,6 @@ CPI will no longer charge CUs for the length of account payloads. Instead TBD
 CUs will be charged for every instruction account. Also TBD CUs will be charged
 for the three new account metadata updating syscalls. TBD will be charged for
 resizing a scratchpad.
-
-### Lazy deserialization on the dApp side (inside the SDK)
-
-With this design a program SDK can (but no longer needs to) eagerly deserialize
-all account metadata at the entrypoint. Because this layout is strictly aligned
-and uses proper arrays, it is possible to directly calculate the offset of a
-single accounts metadata with only one indirect lookup and no need to scan all
-preceeding metadata. This allows a program SDK to offer a lazy interface which
-only interacts with the account metadata fields which are needed, only of the
-accounts which are of interest and only when necessary.
 
 ## Impact
 
@@ -446,7 +412,16 @@ well as instruction accounts.
 instruction accounts were exactly the same (order and duplicates / aliasing).
 This is not the case in ABIv2 and relative instead of absolute addressing must
 be used for structures inside of account payloads.
-- dApps / SDKs will have to adapt to using syscalls to transfer lamports.
+
+### Lazy deserialization on the dApp side (inside the SDK)
+
+With this design a program SDK can (but no longer needs to) eagerly deserialize
+all account metadata at the entrypoint. Because this layout is strictly aligned
+and uses proper arrays, it is possible to directly calculate the offset of a
+single accounts metadata with only one indirect lookup and no need to scan all
+preceeding metadata. This allows a program SDK to offer a lazy interface which
+only interacts with the account metadata fields which are needed, only of the
+accounts which are of interest and only when necessary.
 
 ## Security Considerations
 
@@ -458,3 +433,5 @@ Are there any implementation-specific guidance or pitfalls?
 This will require parallel code paths for serialization, deserialization, CPI
 call edges and CPI return edges. All of these will coexist with the exisiting
 ABI v0 and v1 for the forseeable future, until we decide to deprecate them.
+It might be possible to turn ABIv0/v1 de/serialization into a core program, but
+their CPI syscalls will be hard to port.
