@@ -423,6 +423,37 @@ preceeding metadata. This allows a program SDK to offer a lazy interface which
 only interacts with the account metadata fields which are needed, only of the
 accounts which are of interest and only when necessary.
 
+### Migration guide
+
+dApps / SDKs will have to adapt:
+
+- to calling `sol_transfer_lamports` instead of reading and adjusting the
+  lamports fields of both accounts separately.
+- to calling `sol_assign_owner` instead of writing to the account owner field
+  directly.
+- to calling `sol_set_return_data` instead of writing to the account length
+  field directly.
+- the fact that account metadata updates happen immediately (just like the
+  account payload) and are no longer delayed until the next instruction edge.
+- reading the [Instruction trace](#instruction-trace) directly instead of
+  calling `sol_get_processed_sibling_instruction`.
+- reading and writing the [return data scratchpad](#return-data-scratchpad)
+  directly instead of calling `sol_get_return_data`.
+- calling `set_buffer_length` instead of `sol_set_return_data`.
+- read sysvars from a
+  [Transaction account payload](#transaction-account-payload) memory region
+  instead of using the sysvar syscalls.
+- the CPI workflow to:
+  1. `set_buffer_length` the last
+    [Instruction accounts](#instruction-accounts) memory region.
+  2. write to the last [Instruction accounts](#instruction-accounts) memory
+  region.
+  3. `set_buffer_length` the last
+    [Instruction payload](#instruction-payload) memory region.
+  4. write to the last [Instruction payload](#instruction-payload) memory
+  region.
+  5. pass the callee program and signer seeds in `sol_invoke_signed_v2`.
+
 ## Security Considerations
 
 What security implications/considerations come with implementing this feature?
