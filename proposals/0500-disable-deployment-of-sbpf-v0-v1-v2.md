@@ -8,7 +8,6 @@ type: Core
 status: Idea
 created: 2026-03-17
 feature: TBD
-supersedes: 0161
 ---
 
 ## Summary
