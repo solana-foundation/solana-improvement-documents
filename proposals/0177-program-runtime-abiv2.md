@@ -211,7 +211,7 @@ This memory region is readonly and must be updated at each intruction
 invocation. The contents of this region are the following:
 
 - For each instruction in transaction:
-  - Reserved filed for alignment and potential future usage: `u16`
+  - Reserved field for alignment and potential future usage: `u16`
   - Index in transaction of program account to be executed: `u16`
   - CPI nesting level: `u16`
   - Index of parent instruction (`u16::MAX` for top-level instructions): `u16`
