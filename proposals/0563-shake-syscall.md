@@ -1,8 +1,8 @@
 ---
-simd: 'XXXX'
+simd: '0563'
 title: SHAKE-256 Syscall
 authors:
-  - (fill in with names of authors)
+  - SK, ZZ
 category: Standard
 type: Core
 status: Idea
