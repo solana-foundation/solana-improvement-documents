@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-11-19
-feature: (fill in with feature tracking issues once accepted)
+feature: DqbnFPASg7tHmZ6qfpdrt2M6MWoSeiicWPXxPhxqFCQ
 ---
 
 ## Summary
@@ -42,10 +42,9 @@ None.
 A new verification step must be included in message sanitization for message 
 formats legacy and v0. The verification step must examine every instruction in 
 a transaction, check if the former references more than 255 accounts, and 
-throw `SanitizationError::ValueOutOfBounds` otherwise. Transactions violating 
-such a restriction must be considered invalid and not included in a block. 
-Likewise, blocks containing transactions that violate such condition should be 
-declared dead.
+throw an error otherwise. Transactions violating such a restriction must be 
+considered invalid and not included in a block. Likewise, blocks containing 
+transactions that violate such condition should be declared dead.
 
 Transactions in the v1 format 
 ([SIMD-0385](https://github.com/solana-foundation/solana-improvement-documents/pull/385))

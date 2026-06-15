@@ -70,7 +70,7 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[WRITE]` Vote account to be updated with the new commission
     ///   1. `[SIGNER]` Withdraw authority
-    UpdateCommissionBps { // 17u32
+    UpdateCommissionBps { // 18u32
         commission_bps: u16,
         kind: CommissionKind,
     },
@@ -86,7 +86,7 @@ pub enum CommissionKind {
 #### UpdateCommissionBps
 
 A new instruction for setting a commission rate denominated in basis points will
-be added to the vote program with the enum discriminant value of `17u32` little
+be added to the vote program with the enum discriminant value of `18u32` little
 endian encoded in the first 4 bytes.
 
 Perform the following checks:

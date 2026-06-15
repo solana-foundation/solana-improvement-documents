@@ -5,12 +5,12 @@ authors:
   - Stanislav Ladyzhenskiy
 category: Standard
 type: Core
-status: Review
+status: Implemented
 created: 2025-08-11
-feature:
-supersedes:
-superseded-by:
-extends:
+feature: bnYzodLwmybj7e1HAe98yZrdJTd7we69eMMLgCXqKZm
+development:
+  - Anza - Implemented (https://github.com/anza-xyz/agave/pull/8747)
+  - Firedancer - Implemented (https://github.com/firedancer-io/firedancer/pull/7217)
 ---
 
 ## Summary
@@ -63,7 +63,7 @@ pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
 }
 ```
 
-The correct logic should check that the reminder is 0.
+The correct logic should check that the remainder is 0.
 
 ```rust
 pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {

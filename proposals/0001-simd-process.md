@@ -48,7 +48,7 @@ more errors, etc.)
 
 ## Proposal Types
 
-There are two types of proposals:
+There are three types of proposals:
 
 - A **Standard** Proposal describes any change that affects most or all Solana
 implementations, such as a change to the network protocol, consensus, proposed
@@ -71,6 +71,11 @@ community consensus and users are typically not free to ignore them. Examples
 include procedures, guidelines, changes to the decision-making process, and
 changes to the tools or environment used in Solana development. Any meta-SIMD is
 also considered a Process Proposals.
+
+- An **Advisory** Proposal is one that gives clarifying information about
+protocol features or notice of upcoming changes that don't require protocol
+breaking consensus like a Standard Proposal does. Examples include errata and
+deprecation notices.
 
 ## Proposal Lifecycle
 
