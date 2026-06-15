@@ -193,8 +193,8 @@ section for more details.
 
 ### Rent-Adjusted Stake Delegations
 
-During the epoch rewards calculation phase, a stake's updated delegation MUST be
-calculated with the following formula:
+During the epoch rewards distribution phase, a stake's updated delegation MUST
+be adjusted with the following formula:
 
 ```
 post_delegation = min(
@@ -209,7 +209,7 @@ Where:
 - `pre_delegation`: the account's pre-reward delegated lamport amount
 - `stake_rewards`: the account's calculated stake reward lamport amount for the
   past epoch
-- `balance`: the account's pre-reward balance, in lamports
+- `balance`: the account's balance at distribution time, in lamports
 - `rent_exempt_reserve`: the minimum lamport balance required for the stake
   account (more information below)
 
