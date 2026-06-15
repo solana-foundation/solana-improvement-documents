@@ -178,11 +178,11 @@ memory region are the following:
 - The CPI accounts scratchpad: `&[InstructionAccount]`, which consists of:
   - Pointer to slice: `u64`
   - Number of elements in slice: `u64`
-- Index of current executing instruction: `u32`
+- Index of current executing instruction: `u16`
 - Total number of instructions in transaction (including CPIs and top level
-  instructions): `u32`
-- Number of CPIs in trace (under execution and finished): `u32`
-- The number of transaction accounts: `u32`
+  instructions): `u16`
+- Number of CPIs in trace (under execution and finished): `u16`
+- The number of transaction accounts: `u16`
 
 As accounts in this area sorted by their index in transaction, the payer
 account must always be the account at index zero, as we surface the internal
