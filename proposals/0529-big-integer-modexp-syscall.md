@@ -21,8 +21,10 @@ result = (base ^ exponent) mod modulus
 
 The syscall is analogous to Ethereum's ModExp precompile specified by
 [EIP-198], but exposes a Solana-native syscall interface instead of the EVM
-precompile ABI. Inputs and output are byte slices encoded as little-endian
-unsigned integers, with the output written into caller-provided VM memory.
+precompile ABI. Unlike EIP-198, this syscall rejects even moduli, so it is not
+input-domain compatible with every EIP-198 ModExp call. Inputs and output are
+byte slices encoded as little-endian unsigned integers, with the output written
+into caller-provided VM memory.
 
 ## Motivation
 
@@ -123,15 +125,28 @@ pub struct BigModExpParams {
 }
 ```
 
-`params` is a VM pointer to a readable `BigModExpParams` struct. `result` is a
-VM pointer to a writable output buffer of exactly `modulus_len` bytes.
+`params` is a VM pointer to a readable 48-byte `BigModExpParams` record with
+the following ABI layout:
 
-All pointer fields inside the struct are VM pointers to readable byte slices
+| Offset | Size | Field          |
+| ------ | ---- | -------------- |
+| 0      | 8    | `base`         |
+| 8      | 8    | `base_len`     |
+| 16     | 8    | `exponent`     |
+| 24     | 8    | `exponent_len` |
+| 32     | 8    | `modulus`      |
+| 40     | 8    | `modulus_len`  |
+
+Each field is a 64-bit little-endian unsigned integer. The pointer fields
+`base`, `exponent`, and `modulus` are VM pointers to readable byte slices
 with the following lengths:
 
 1. `base` - `base_len` bytes
 2. `exponent` - `exponent_len` bytes
 3. `modulus` - `modulus_len` bytes
+
+`result` is a VM pointer to a writable output buffer of exactly `modulus_len`
+bytes.
 
 The syscall computes:
 
@@ -151,7 +166,7 @@ result = base mod modulus
 ```
 
 The `result` range MAY overlap the `params` range or input ranges.
-Implementations MUST behave as if the `params` struct and all input bytes were
+Implementations MUST behave as if the `params` record and all input bytes were
 read from VM memory before any result byte is written.
 
 ### Length Limits
@@ -183,7 +198,7 @@ values.
 The syscall MUST abort the virtual machine if any of the following are true:
 
 - The `params` pointer does not refer to a readable VM memory range of
-  `size_of::<BigModExpParams>()` (48 bytes).
+  48 bytes.
 - `base_len`, `exponent_len`, or `modulus_len` is greater than
   `BIG_MOD_EXP_MAX_BYTES`.
 - Any pointer plus length calculation overflows, including `base + base_len`,
@@ -199,7 +214,7 @@ The syscall MUST abort the virtual machine if any of the following are true:
 Implementations MUST perform validation, compute charging, and arithmetic in
 the following order:
 
-1. Validate and read the `params` struct from VM memory.
+1. Validate and read the `params` record from VM memory.
 2. Validate all length fields, including maximum length checks and nonzero
    `modulus_len`.
 3. Validate pointer plus length calculations for overflow, including
