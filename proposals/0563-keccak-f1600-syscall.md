@@ -267,7 +267,7 @@ invoke `sol_keccak_f1600` are unaffected. Existing syscalls are unchanged.
 Implementations MUST include cross-client conformance tests for:
 
 - A pinned Keccak-p[1600,24] / Keccak-f[1600] known-answer corpus under
-  `assets/simd-xxxx-keccak-f1600/`. The final accepted SIMD MUST include the
+  `assets/simd-0563-keccak-f1600/`. The final accepted SIMD MUST include the
   exact source URLs, normalized vector files, and SHA-256 checksums in that
   directory. The corpus MUST include the all-zero state, single-bit lane-order
   tests, byte-order tests, high-bit lane tests, random states, and repeated
