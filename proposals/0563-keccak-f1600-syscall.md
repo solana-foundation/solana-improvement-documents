@@ -148,15 +148,12 @@ unit that MUST be benchmarked.
 Successful calls are charged:
 
 ```text
-keccak_f1600_cost
+keccak_f1600_cost = 130
 ```
 
 `keccak_f1600_cost` covers fixed syscall-specific work, including validation
 and translation of the 200-byte state range, and one complete Keccak-f[1600]
-permutation. The final value for `keccak_f1600_cost` MUST be set by
-benchmarking and activated as a consensus parameter. The benchmark MUST measure
-one full Keccak-f[1600] application as the unit cost. The activated parameter
-MUST be greater than zero.
+permutation. The activated parameter MUST be greater than zero.
 
 Higher-level SHAKE, SHA3, Keccak-256, or transcript wrappers determine their
 total syscall cost by the number of Keccak-f[1600] permutations required by
@@ -279,7 +276,8 @@ Implementations MUST include cross-client conformance tests for:
 - Rejection of `state` pointers not aligned to `KECCAK_F1600_STATE_ALIGN`.
 - Rejection when the state range is not fully readable and writable.
 - Exact expected CU charges for successful calls and for validation failures
-  after `keccak_f1600_cost` has been deducted.
+  after `keccak_f1600_cost` has been deducted. With the proposed cost,
+  successful calls and post-debit validation failures consume exactly 130 CU.
 - FIPS 202 wrapper tests, implemented outside the syscall, showing that
   SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128, and SHAKE256 built on
   `sol_keccak_f1600` match pinned NIST CAVP or ACVTS vectors.
