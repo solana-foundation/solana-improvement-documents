@@ -19,6 +19,16 @@ Remove support for the secp256k1, secp256r1 and ed25519 precompiles.
 Precompiles are rigid, require special handling in validator implementations
 and their cross instruction referencing (in ed25519) is hacky.
 
+## Dependencies
+
+This proposal depends on the following proposals:
+
+- **[SIMD-0565]: Secp256r1 curve syscalls**
+
+    To provide an efficient alternative to the secp256r1 precompile.
+
+[SIMD-0565]: https://github.com/solana-foundation/solana-improvement-documents/pull/565
+
 ## New Terminology
 
 None.
@@ -35,6 +45,9 @@ With the activation of the feature gate their accounts must be deleted.
 
 After the activation of the feature gate:
 
+- Fee calculation must ignore them, thus not charge `lamports_per_signature`
+for them.
+- The cost tracker and other cost estimation heuristics should ignore them.
 - Every transaction invoking them with top-level instructions must
 throw `TransactionError::InvalidProgramForExecution` during transaction
 loading time.
@@ -71,6 +84,21 @@ level.
 44% of ed25519 invocations access sibling top-level instruction data. Meaning
 these would not be possible to fill in with an exact replacement right now
 (see [alternatives considered](#migrating-them-to-core-programs-on-chain)).
+
+With the cleanup, after the feature gate is activated on MNB, precompiles
+should also be removed from:
+
+- test validator genesis
+  - the program accounts of the precompiles
+- ledger tool:
+  - `fix_testnet_ed25519_precompile_account`
+- solana-sdk:
+  - `SanitizedMessage`
+  - `SVMStaticMessage`
+  - `TransactionSignatureDetails`
+  - `solana_sdk_ids`
+  - `PrecompileError`
+- tests, mockups, examples, documentation
 
 ## Security Considerations
 
