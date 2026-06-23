@@ -418,12 +418,15 @@ ABI v0, v1 and v2).
 instructions are ABIv2 as well.
 - In turn this means the account creation pattern of resize-then-reassign can
 finally be corrected to become reassign-then-resize.
-- All transaction accounts (including sysvars) will become accessible to all
-instructions (read-only) all the time.
+- All transaction accounts (including the payer and sysvars) will become
+accessible to all instructions (read-only) all the time.
 - All top-level instructions (including not yet executed ones) will become
 visible all the time.
+- Programs will see all previous instructions (including their own caller).
 - CPI caller restrictions will remain in place: Both for the callee program as
 well as instruction accounts.
+- CPI callee restrictions will remain in place: Precompiles and some loader
+instructions being inaccessible from CPI.
 - ABIv0/v1 offered virtual address space stability across transactions if the
 instruction accounts were exactly the same (order and duplicates / aliasing).
 This is not the case in ABIv2 and relative instead of absolute addressing must
