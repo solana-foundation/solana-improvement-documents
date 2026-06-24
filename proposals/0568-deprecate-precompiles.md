@@ -48,12 +48,8 @@ After the activation of the feature gate:
 - Fee calculation must ignore them, thus not charge `lamports_per_signature`
 for them.
 - The cost tracker and other cost estimation heuristics should ignore them.
-- Every transaction invoking them with top-level instructions must
-throw `TransactionError::InvalidProgramForExecution` during transaction
-loading time.
-- Every instruction invoking them with in CPI must
-throw `InstructionError::UnsupportedProgramId` instead of
-`CpiError::ProgramNotSupported` as they currently do.
+- The callee CPI restrictions for precompiles which throw
+`CpiError::ProgramNotSupported` must be removed.
 
 ### Validator Components Affected
 
@@ -114,7 +110,18 @@ Breaking change: All precompiles will become unavailable.
 
 ## Conformance
 
-The change will be tested by three transactions, each transaction calling one
-of the three precompiles before and after the feature activation.
+The change will be tested by twelve transactions, each transaction calling one
+of the three precompiles before and after the feature activation, at top level
+and in CPI.
+
+The excpected results **before** the feature activation are:
+
+- at top level: success
+- in CPI: `CpiError::ProgramNotSupported`
+
+The excpected results **after** the feature activation are:
+
+- at top level: `TransactionError::InvalidProgramForExecution`
+- in CPI: `InstructionError::UnsupportedProgramId`
 
 [to be filled in before merging]
