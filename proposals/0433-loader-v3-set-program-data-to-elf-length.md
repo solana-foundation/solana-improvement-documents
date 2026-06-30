@@ -98,10 +98,19 @@ upgrade itself.
 
 ## Impact
 
-This proposal results in a lower program footprint in Accounts DB, incentivizes
-developers to upgrade to newer, more performant libraries and SDKs, and enables
-the recovery of surplus lamports, including those accidentally sent to the
-program data address.
+Developers who over-provision program data accounts with additional free space
+will see that space reclaimed during upgrade. Anyone who intentionally
+over-provisions and expects that additional space to survive across upgrades
+will no longer be able to do so. However, those who accidentally over-provision,
+or those who are forced to do so - via minimum extension requirements, for
+example - will be able to reclaim part of their rent deposit.
+
+Additionally, this proposal incentivizes developers to upgrade to newer, more
+performant libraries and SDKs, and enables the recovery of surplus lamports,
+including those accidentally sent to the program data address.
+
+For validators/contributors: this proposal should result in a lower program
+footprint in Accounts DB.
 
 ## Security Considerations
 
@@ -120,5 +129,10 @@ Programs requiring larger growth must either:
 ## Backwards Compatibility
 
 This change modifies an existing Loader v3 instruction and therefore requires a
-feature gate for consensus safety. From an API and tooling perspective, the
-change is backwards compatible.
+feature gate for consensus safety.
+
+From an API and tooling perspective, interface-wise, the change is backwards
+compatible. However, rent and space management behavior has changed according
+to the [Impact](#impact) section above. Developers should double-check the
+spill accounts they'll use on upgrade to take advantage of potential rent
+refunds.
