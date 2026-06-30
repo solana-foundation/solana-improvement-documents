@@ -38,18 +38,6 @@ proposals.
 
 N/A
 
-## Dependencies
-
-This proposal depends on the following previously accepted proposal:
-
-- **[SIMD-0430]: Loader V3: Relax Program Buffer Constraints**
-
-    Introduces the `close_buffer` flag for `DeployWithMaxDataLen` and
-    `Upgrade` instructions, which determines whether the buffer account is
-    closed after the operation
-
-[SIMD-0430]: https://github.com/solana-foundation/solana-improvement-documents/pull/430
-
 ## Detailed Design
 
 The `Upgrade` instruction will be updated to automatically resize the program
@@ -60,28 +48,30 @@ upgrade authority), so the resulting account size is
 `PROGRAMDATA_METADATA_SIZE + elf_length`. This applies in both directions: the
 account may grow or shrink as needed.
 
-### Shrinking (New ELF is Smaller)
+**Shrinking:** If the new ELF is smaller than the current program data account's
+ELF region, the account will be retracted to the new size. Surplus lamports from
+the reduced rent requirement for the program data account will be refunded to
+the spill account.
 
-If the new ELF is smaller than the current program data account's ELF region,
-the account will be retracted to the new size. Surplus lamports from the reduced
-rent requirement will be refunded to the spill account.
+**Growing:** If the new ELF is larger than the current program data account's
+ELF region, the account will be extended to accommodate the new ELF. New
+lamports for the increased rent requirement are expected to be either credited
+to the program data account or available in the buffer account prior to the
+execution of the `Upgrade` instruction. If the available lamports are
+insufficient to satisfy the new rent requirement, the upgrade will fail.
 
-### Growing (New ELF is Larger)
+### Buffer Accounts
 
-If the new ELF is larger than the current program data account's ELF region,
-the account will be extended to accommodate the new ELF.
+Currently, the `Upgrade` instruction will:
 
-When `close_buffer` is `true`, the buffer account's lamports and the program
-data account's existing lamports are combined to meet the new rent-exempt
-minimum. If the combined lamports are insufficient, the upgrade will fail with
-`InsufficientFunds`.
+- Deallocate the buffer account for garbage collection.
+- Apply the buffer's lamports to the program data's new rent requirement, if
+  necessary.
+- Sweep the remaining buffer lamports to the spill account.
 
-When `close_buffer` is `false`, the program data account's existing lamports
-must already meet the new rent-exempt minimum. If not, the upgrade will fail
-with `InsufficientFunds`.
-
-In both cases, any lamports in excess of the rent-exempt minimum are refunded
-to the spill account.
+This behavior is unchanged by this proposal. For any proposals that may modify
+the behavior of buffer account closure, the same lamport requirements detailed
+in the **Growing** paragraph apply.
 
 ### Feature Gate
 
