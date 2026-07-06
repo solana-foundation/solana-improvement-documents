@@ -3,20 +3,22 @@ simd: '0290'
 title: Relax Fee Payer Constraint
 authors:
   - Andrew Fitzgerald (Anza)
+  - Hanako Mumei (Anza)
 category: Standard
 type: Core
-status: Review
+status: Accepted
 created: 2025-05-29
-feature:
+feature: FEEXbxUuKobtrt1qNK5pjtzbPQhsppBTrNNG74xu4mai
 ---
 
 ## Summary
 
-This proposal aims to relax the handling of invalid fee payers in Solana.
+This proposal aims to relax the handling of invalid fee payers for blockhash
+transactions in Solana.
 Currently, if a transaction with an invalid fee payer is included in a block,
 the entire block is rejected.
 This proposal suggests that instead of rejecting the entire block, the
-transaction with the invalid fee payer should simply skip execution.
+blockhash transaction with the invalid fee payer should simply skip execution.
 
 ## Motivation
 
@@ -39,14 +41,22 @@ A transaction can successfully pay fees if:
 - The fee payer account has exactly `fee` lamports.
 - The fee payer account has at least X + `rent_exempt_reserve` lamports.
 
-If the fee payer account does not meet either of these conditions, the transaction
-may be included in a block, but it must not be executed.
+If the fee payer account does not meet either of these conditions, the
+transaction may be included in a block, but it must not be executed.
 The transaction will have no effect on the state.
 
-Invalid fee payer transactions will count their requested,
-or default, compute units (CUs) towards block limits.
+Invalid fee payer transactions will count their requested, or default, cost
+units towards block limits.
 This is intended to make it strictly cheaper to process invalid fee payer
 transactions compared to valid fee payer transactions of the same construction.
+
+This SIMD only applies to blockhash transactions. Handling any failure of nonce
+transactions is more involved, and nonce transaction fee payer failure will be
+deferred to
+[SIMD-0297](https://github.com/solana-foundation/solana-improvement-documents/pull/297),
+which also relaxes the nonce account validity constraint.
+Fee payer failure for nonce transactions will be handled in identical manner
+to the above description.
 
 ## Alternatives Considered
 
