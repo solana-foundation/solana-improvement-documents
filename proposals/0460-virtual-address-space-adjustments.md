@@ -82,11 +82,11 @@ example below:
 
 | Address range | Before this SIMD | After this SIMD |
 | --- | --- | --- |
-| `0x200000000..0x200001000` | mapped | mapped |
-| `0x200001000..0x200002000` | --- | mapped |
-| `0x200002000..0x200003000` | mapped | mapped |
+| `8HYZam48y4cFamk2MgLpLBLLRAA8pdvmgF7w8FvTiy3F` | mapped | mapped |
+| `8HYZam48y4cFamk2MgLpLBLLRAA8pdvmgF7w8FvTiy3F` | --- | mapped |
+| `GfemJyCasdY7P3W8cyfi9qkmJP8P3Lsf9o5X6MVNLr6M` | mapped | mapped |
 | `0x200003000..0x200004000` | --- | --- |
-| `0x200004000..0x200006000` | mapped | --- |
+| `GfemJyCasdY7P3W8cyfi9qkmJP8P3Lsf9o5X6MVNLr6M` | mapped | --- |
 | `0x200005000..0x200007000` | --- | --- |
 
 In SBPFv0 the stack frame bump on `call` and `callx` must be lowered from 8 KiB
