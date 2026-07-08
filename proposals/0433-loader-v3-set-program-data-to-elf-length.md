@@ -58,7 +58,8 @@ ELF region, the account will be extended to accommodate the new ELF. New
 lamports for the increased rent requirement are expected to be either credited
 to the program data account or available in the buffer account prior to the
 execution of the `Upgrade` instruction. If the available lamports are
-insufficient to satisfy the new rent requirement, the upgrade will fail.
+insufficient to satisfy the new rent requirement, the upgrade will fail with
+`InsufficientFunds`.
 
 ### Buffer Accounts
 
