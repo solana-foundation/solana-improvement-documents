@@ -227,10 +227,18 @@ If the new delegation amount is 0, then `delegation.deactivation_epoch`
 (absolute offset `[172,180)`) MUST be set to the rewarded epoch, expressed as a
 little-endian unsigned 64-bit integer.
 
+Note that only stake accounts included in partitioned epoch rewards are updated.
+Changes in inclusion criteria are outlined in the [unrewarded stake accounts
+section](#unrewarded-stake-accounts-included-in-partitioned-epoch-rewards).
+
 #### Adjustment edge cases
 
 Given a new rent-exempt minimum `R`, increased at the epoch boundary, here are
-the possible outcomes for delegation amounts after distribution.
+the possible outcomes for delegation amounts after distribution. "Rewarded"
+means any stake account that receives inflation rewards, and "capped" refers to
+a stake account whose delegation increase is capped to its previous delegation
+plus inflation rewards (additional lamports are not included in the delegation
+increase).
 
 <!-- markdownlint-disable MD013 -->
 | Description | Total lamports before | Delegation before | Inflation reward | Extra lamports | Total lamports after | Delegation after |
