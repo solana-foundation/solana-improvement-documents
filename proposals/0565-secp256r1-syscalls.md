@@ -60,8 +60,8 @@ We propose extending the existing `sol_curve_*` syscall family to support
 
 ### Curve Specification and Encoding
 
-For the curve definition, the standard FIPS 186-4 specification for NIST P-256
-should be used.
+For the curve definition, the standard SP 800-186 specifications for NIST
+P-256 should be used.
 
 To maintain consistency with existing curve syscalls, points are serialized as
 fixed-size 64-byte arrays representing uncompressed affine coordinates. This
