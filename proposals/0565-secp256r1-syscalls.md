@@ -263,3 +263,16 @@ on Solana.
 
 The necessary security considerations such as point validation, memory safety,
 etc. are detailed in the Detailed Design section.
+
+To prevent Denial-of-Service (DoS) attacks, the Compute Unit (CU) cost for each
+`secp256r1` syscall must strictly align with the actual wall-clock execution time on
+validator hardware. If these cryptographic operations are underpriced, an attacker
+could exploit the cost tracker inaccuracy to artificially delay block production while
+remaining ostensibly under the 60 million CU block limit.
+
+Furthermore, the `sol_curve_multiscalar_mul` syscall requires a dynamic CU pricing
+model. Because it utilizes sub-linear optimization algorithms (e.g., Pippenger's
+algorithm), the computational cost does not scale linearly with respect to
+`points_len`. The cost tracker must accurately reflect this specific sub-linear
+scaling curve to prevent overcharging users for large batch operations, while still
+mathematically guaranteeing the validator cannot be stalled.
