@@ -81,9 +81,15 @@ variable-length format (e.g., representing the identity point as a single
 `0x00` byte), making it more error-prone for validator clients to handle.
 
 The exception to this rule is the `sol_curve_decompress` syscall. This
-syscall accepts a fixed 33-byte compressed SEC1 structure (a 1-byte parity
-prefix of `0x02` or `0x03` and a 32-byte X-coordinate) and translates
+syscall accepts a fixed 33-byte compressed structure (a 1-byte parity
+prefix of 0x02 or 0x03 followed by a 32-byte X-coordinate) and translates
 it into the 64-byte uncompressed representation.
+
+The byte-ordering of the 32-byte input X-coordinate, as well as the
+resulting 64-byte uncompressed output, is strictly determined by the endianness
+specified by the `curve_id` (`SECP256R1_LE` or `SECP256R1_BE`). Note that when
+using the `LE` identifier, the input X-coordinate must be little-endian, which
+deviates from the natively big-endian standard SEC1 format.
 
 ### New Curve ID Constants
 
@@ -214,10 +220,11 @@ define_syscall!(fn sol_curve_decompress(
 ) -> u64);
 ```
 
-It accepts a compressed SEC1 `secp256r1` point (33 bytes: a 1-byte
-parity marker 0x02 or 0x03 and a 32-byte X-coordinate). It calculates the
-valid Y-coordinate and outputs the standard uncompressed 64-byte affine
-representation to `result`.
+It accepts a 33-byte compressed `secp256r1` point (a 1-byte
+parity marker of `0x02` or `0x03` and a 32-byte X-coordinate). The endianness
+of both the input X-coordinate and the output 64-byte affine representation
+to `result` is dictated by the `curve_id` used. It calculates the valid
+Y-coordinate and outputs the standard uncompressed representation.
 
 Because the point at infinity has no affine X-coordinate and is represented
 in standard SEC1 as a single `0x00` byte, it cannot be encoded within
