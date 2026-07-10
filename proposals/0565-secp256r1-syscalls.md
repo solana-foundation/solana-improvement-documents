@@ -128,13 +128,19 @@ parameter will use the existing `ADD`, `SUB`, and `MUL` constants.
 
 Validation rules for `secp256r1` operands:
 
-1. Addition (`ADD`) and Subtraction (`SUB`): Input points must be validated to
-   ensure they reside on the curve. If the operation results in the point at
-   infinity (e.g. `P - P`), the syscall must write the canonical 64-byte
-   all-zero array to `result_point_addr`.
+1. Addition (`ADD`) and Subtraction (`SUB`): Both input points must undergo
+   full validation (field check, curve equation check). If either input
+   point is invalid, the syscall must immediately fail and return `1`. If
+   the operation succeeds and results in the point at infinity (e.g.,
+   `P - P`), the syscall must write the canonical 64-byte all-zero array
+   to `result_point_addr` and return `0`. Otherwise, it writes the resulting
+   affine point to `result_point_addr` and returns `0`.
 
 2. Scalar Multiplication (`MUL`): The point must undergo full validation
-   (field check, curve equation check). Since `secp256r1` has a cofactor of 1,
+   (field check, curve equation check). The scalar input must also be validated
+   to ensure it is strictly less than the curve's prime group order `n`. If
+   the scalar is out of range, or if point validation fails, the syscall
+   must immediately fail and return `1`. Since `secp256r1` has a cofactor of 1,
    any point on the curve is inherently in the correct prime-order subgroup,
    making subgroup checks mathematically trivial. Multiplying by a scalar of
    `0` must yield the canonical 64-byte all-zero array.
@@ -158,6 +164,19 @@ complex cryptographic equations efficiently. The implementation should leverage
 sub-linear optimization algorithms (e.g., Pippenger's algorithm) to reduce compute
 units (CU) compared to sequential scalar multiplications.
 
+Validation rules for MSM operands:
+
+1. Every point in the `points_addr` array must undergo full validation (field
+   check, curve equation check).
+2. Every scalar in the `scalars_addr` array must be validated to ensure it is
+   strictly less than the curve's prime group order `n`.
+
+If any point is invalid, or if any scalar is out of range, the syscall must
+immediately fail and return `1` without writing to `result_point_addr`. If
+the final sum results in the point at infinity, the syscall must write
+the canonical 64-byte all-zero array and return `0`. Otherwise, it writes
+the resulting affine point and returns `0`.
+
 ### Point Validation
 
 The `sol_curve_validate_point` syscall will be extended to support `secp256r1`.
@@ -180,7 +199,8 @@ The validation succeeds (returning `0`) if one of the following conditions is me
 2. On-Curve Point: The coordinates are valid field elements (strictly less than
    the prime modulus `p`) and satisfy the curve equation.
 
-If neither condition is met, the syscall must return `1`.
+If neither condition is met (e.g. either coordinate is `>= p`, or the point
+does not lie on the curve), the syscall must return `1`.
 
 ### Decompression Operations
 
@@ -199,15 +219,21 @@ parity marker 0x02 or 0x03 and a 32-byte X-coordinate). It calculates the
 valid Y-coordinate and outputs the standard uncompressed 64-byte affine
 representation to `result`.
 
-#### Identity Point:
+Because the point at infinity has no affine X-coordinate and is represented
+in standard SEC1 as a single `0x00` byte, it cannot be encoded within
+the fixed 33-byte layout required by this syscall. As such, decompression
+of the identity point is explicitly unsupported.
 
-Because the point at infinity has no affine X-coordinate and is in standard
-SEC1 as a single `0x00` byte, it cannot be encoded within the fixed 33-byte
-layout required by this syscall.
+The provided X-coordinate must be a valid field element (strictly less than
+the prime modulus `p`). The syscall must fail and return `1` if any of the
+following conditions are met:
 
-As such, decompression of the identity point is explicitly unsupported.
-If the 1-byte marker is not `0x02` or `0x03`, or if the calculated `Y^2`
-value is quadratic non-residue, the syscall must fail and return 1.
+1. The X-coordinate is `>= p`.
+2. The 1-byte prefix marker is not `0x02` or `0x03`.
+3. The calculated `Y^2` value is a quadratic non-residue.
+
+On success, the syscall writes the standard uncompressed 64-byte affine
+representation to `result` and returns `0`.
 
 ## Alternatives Considered
 
