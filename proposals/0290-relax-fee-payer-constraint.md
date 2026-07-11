@@ -31,19 +31,35 @@ validation/execution.
 
 ## New Terminology
 
-None.
+A Blockhash Transaction is defined as a transaction that uses a real blockhash,
+as opposed to a durable nonce, for its recent blockhash / lifetime specifier.
+
+A System Fee-Payer is defined as an account owned by the System Program with
+data length 0.
+
+A Nonce Fee-Payer is defined as an account owned by the System Program with data
+length 80 and the first eight bytes being `01 00 00 00 01 00 00 00` (a Current
+Initialized nonce) or `00 00 00 00 01 00 00 00` (a Legacy Initialized nonce).
+The remaining 72 bytes are arbitrary.
+
+A Nonce Fee-Payer is unrelated to the concept of a nonce transaction: a
+transaction that uses a Nonce Fee-Payer and uses a real blockhash is a Blockhash
+Transaction.
 
 ## Detailed Design
 
-A transaction has a statically determined fee `fee` lamports.
+Any transaction has a statically determined fee `fee` lamports.
 A transaction can successfully pay fees if:
 
-- The fee payer account has exactly `fee` lamports.
-- The fee payer account has at least X + `rent_exempt_reserve` lamports.
+- The fee-payer account is a System Fee-Payer or a Nonce Fee-Payer.
+- If it is a System Fee-Payer, it has exactly `fee` lamports, or has at least
+  `fee` + `rent_exempt_reserve` lamports.
+- If it is a Nonce Fee-Payer, it has at least `fee` + `rent_exempt_reserve`
+  lamports.
 
-If the fee payer account does not meet either of these conditions, the
-transaction may be included in a block, but it must not be executed.
-The transaction will have no effect on account state.
+If the fee payer account does not meet these conditions, the transaction may be
+included in a block, but it must not be executed. The transaction will have no
+effect on account state.
 
 Invalid fee payer transactions will count their requested, or default, cost
 units towards block limits.
