@@ -43,7 +43,7 @@ A transaction can successfully pay fees if:
 
 If the fee payer account does not meet either of these conditions, the
 transaction may be included in a block, but it must not be executed.
-The transaction will have no effect on the state.
+The transaction will have no effect on account state.
 
 Invalid fee payer transactions will count their requested, or default, cost
 units towards block limits.
@@ -55,8 +55,6 @@ transactions is more involved, and nonce transaction fee payer failure will be
 deferred to
 [SIMD-0297](https://github.com/solana-foundation/solana-improvement-documents/pull/297),
 which also relaxes the nonce account validity constraint.
-Fee payer failure for nonce transactions will be handled in identical manner
-to the above description.
 
 ## Alternatives Considered
 
@@ -71,7 +69,7 @@ Transactions that are unable to pay fees may be included in blocks.
 ## Security Considerations
 
 - Possible attack vector where a malicious leader can spam transactions with
-  invalid fee payers. Mitigation for this is charging full CUs for these.
+  invalid fee payers. Mitigation for this is charging full cost units for these.
 
 ## Drawbacks
 
