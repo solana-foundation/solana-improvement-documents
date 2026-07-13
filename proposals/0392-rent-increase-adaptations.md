@@ -240,17 +240,20 @@ a stake account whose delegation increase is capped to its previous delegation
 plus inflation rewards (additional lamports are not included in the delegation
 increase).
 
+NOTE: delegation values are bounded by the total lamports in the account, and
+cannot ever be greater.
+
 <!-- markdownlint-disable MD013 -->
 | Description | Total lamports before | Delegation before | Inflation reward | Extra lamports | Total lamports after | Delegation after |
 | --- | --- | --- | --- | --- | --- | --- |
-| Exempt, rewarded | R + 1 | 1 | 1 | 0 | R + 2 | 2 |
-| Exempt, capped | R + 1 | 1 | 1 | 1 | R + 3 | 2 |
-| Not adjusted, extra lamports cover rent difference | R | 1 | 0 | 1 | R + 1 | 1 |
-| Not adjusted, lamports cover rent difference, with inflation | R | 1 | 1 | 1 | R + 2 | 2 |
-| *NEW* Deactivated, rent-exempt after distribution | R | 1 | 0 | 0 | R | 0 |
-| *NEW* Deactivated, not rent-exempt after distribution | R - 1 | 1 | 0 | 0 | R - 1 | 0 |
-| *NEW* Adjusted, inflation covers rent difference | R | 1 | 1 | 0 | R + 1 | 1 |
-| *NEW* Adjusted, inflation partially covers rent difference | R - 1 | 1 | 2 | 0 | 2 |
+| Exempt, rewarded | R + X | X > 0 | Y > 0 | 0 | R + X + Y | X + Y |
+| Exempt, capped | R + X | X > 0 | Y > 0 | Z > 0 | R + X + Y + Z | X + Y |
+| Not adjusted, extra lamports cover rent difference | R | X > 0 | 0 | X | R + X | X |
+| Not adjusted, lamports cover rent difference, with inflation | R | X > 0 | Y > 0 | X | R + X + Y | X + Y |
+| *NEW* Deactivated, rent-exempt after distribution | R | X > 0 | 0 | 0 | R | 0 |
+| *NEW* Deactivated, not rent-exempt after distribution | X < R | Y > 0 | 0 | 0 | X | 0 |
+| *NEW* Adjusted, inflation covers rent difference | R | X > 0 | R - X | 0 | R + X | X |
+| *NEW* Adjusted, inflation partially covers rent difference | X < R | Y > R - X - Z | R - X > Z > 0 | 0 | X + Z | X + Z - R |
 <!-- markdownlint-restore -->
 
 #### Unrewarded stake accounts included in partitioned epoch rewards
