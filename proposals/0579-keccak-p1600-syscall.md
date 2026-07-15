@@ -2,17 +2,19 @@
 simd: '0579'
 title: Keccak-p[1600] Syscall
 authors:
-  - David Rubin (Jump), SK, ZZ
+  - David Rubin (Jump)
+  - SK
+  - ZZ
 category: Standard
 type: Core
 status: Idea
-created: 2026-07-98
+created: 2026-07-08
 feature: (fill in with feature key and github tracking issues once accepted)
 ---
 
 ## Summary
 
-Introduces a `sol_keccak_p1600` syscall that applies $Keccak\-p[1600, rounds]$
+Introduces a `sol_keccak_p1600` syscall that applies Keccak-p[1600, rounds]
 to a caller-provided 1600-bit (200 byte) state. The caller may chose between
 either 24 rounds, or 12 rounds, allowing for a wider range of supported
 usecases, such as SHAKE, TurboSHAKE, and Sponge/Duplex constructions.
@@ -21,7 +23,7 @@ usecases, such as SHAKE, TurboSHAKE, and Sponge/Duplex constructions.
 
 The initial motivation for this proposal was for using SHAKE-256 in on-chain
 programs, and was further expanded to support newer Keccak-based constructions
-that use fewer rounds. RFC 9861 defines TurboSHAKE128, TurboSHAKE256, KT128, 
+that use fewer rounds. RFC 9861 defines TurboSHAKE128, TurboSHAKE256, KT128,
 and KT256 on top of $Keccak-p[1600,12]$:
 
 https://www.rfc-editor.org/rfc/rfc9861.html
@@ -48,13 +50,13 @@ def append(state, data, sz):
 as predictable linear memory accesses and XORs are cheap.
 
 Protocols such as [Merlin](https://merlin.cool/), that have different bit-flags
-and seperators, also use the core $Keccak\-p[1600, rounds]$ function and 
+and seperators, also use the core Keccak-p[1600, rounds] function and
 would benefit from this syscall.
 
 ## New Terminology
 
-$Keccak\-p[1600, rounds]$: The Keccak permutation over a 1600-bit (200 byte)
-state using the first `rounds` round constants specified in FIPS 202.
+Keccak-p[1600, rounds]: The Keccak permutation over a 1600-bit (200 byte)
+state using the last `rounds` round constants specified in FIPS 202.
 
 ## Detailed Design
 
@@ -63,12 +65,15 @@ state using the first `rounds` round constants specified in FIPS 202.
 The syscall mutates one Keccak state in place:
 
 ```rust
+#[repr(u64)]
+enum Rounds {
+  Turbo = 12,
+  Full = 24,
+}
+
 define_syscall!(fn sol_keccak_p1600(
     state: *mut u64,
-    rounds: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
+    rounds: Rounds,
 ) -> u64)
 ```
 
@@ -77,7 +82,7 @@ Given `x` and `y` within $[0, 5)$, `state[x + 5 * y]` is the Keccak lane
 `A[x,y]`.
 
 `rounds` is the number of rounds to apply. It MUST be either `12` or `24`.
-Each syscall invocation applies $Keccak\-p[1600, rounds]$ to the provided
+Each syscall invocation applies Keccak-p[1600, rounds] to the provided
 state once, with the after-state written back to the same memory object.
 
 Returns 0 in all cases.
@@ -100,13 +105,13 @@ costs `70` CUs.
 An implementation MUST validate and meter calls in this order. If any
 condition is not met, the virtual machine is aborted.
 
-1. Validate that `rounds` is not either `12` or `24`.
+1. Validate that `rounds` is either `12` or `24`.
 2. Deduct `cost(rounds)` CUs from the budget. If the caller has insufficient
 remaining CUs, the virtual machine is aborted.
 3. Validate that `state` is aligned to `8`.
 4. Translate `[state, state + 200)` as a writable memory region. If any
 computation overflows the syscall MUST abort.
-5. Applies $Keccak\-p[1600, rounds]$ to the state and writes it back to
+5. Applies Keccak-p[1600, rounds] to the state and writes it back to
 the aforementioned writable memory region.
 
 ## Alternatives Considered
@@ -119,14 +124,14 @@ from re-using the underlying core permutation.
 
 ### BPF Implementation
 
-Programs can implement $Keccak\-p[1600, rounds]$ in BPF today, but at a
+Programs can implement Keccak-p[1600, rounds] in BPF today, but at a
 higher CU cost. This also forces each program to carry its own implementation
 of a common cryptographic primitive, and makes it harder for libraries to
 share one well-tested implementation.
 
 ## Impact
 
-Programs gain access to a faster and better tested $Keccak\-p[1600, rounds]$
+Programs gain access to a faster and better tested Keccak-p[1600, rounds]
 that can be re-used across many modern constructions and protocols.
 
 Existing `sol_keccak256` behavior is unchanged.
