@@ -90,24 +90,26 @@ that each field falls on its natural alignment boundary without padding,
 and the entries section starts on a 32-byte boundary for Pubkey alignment.
 
 ```
-┌───────────────────────────────────────────────────────────┐
-│ Header (32 bytes)                                         │
-│   version: u32          — format version (currently 1)    │
-│   num_entries: u32      — vote accounts in table          │
-│   epoch: u64            — epoch these stakes are for      │
-│   total_stake: u64      — sum of all delegated stake      │
-│   _reserved: [u8; 8]    — reserved, must be zero          │
-├───────────────────────────────────────────────────────────┤
-│ Entries (num_entries × 128 bytes)                         │
-│   For each entry, sorted by vote_pubkey byte order:       │
-│     vote_pubkey:           Pubkey  (32 bytes, offset   0) │
-│     node_pubkey:           Pubkey  (32 bytes, offset  32) │
-│     commission_collector:  Pubkey  (32 bytes, offset  64) │
-│     delegated_stake:       u64     ( 8 bytes, offset  96) │
-│     cumulative_credits:    u64     ( 8 bytes, offset 104) │
-│     commission:            u8      ( 1 byte,  offset 112) │
-│     _reserved:             [u8;15] (15 bytes, offset 113) │
-└───────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│ Header (32 bytes)                                                │
+│   version: u32          — format version (currently 1)           │
+│   num_entries: u32      — vote accounts in table                 │
+│   epoch: u64            — epoch these stakes are for             │
+│   total_stake: u64      — sum of all delegated stake             │
+│   _reserved: [u8; 8]    — reserved, must be zero                 │
+├──────────────────────────────────────────────────────────────────┤
+│ Entries (num_entries × 160 bytes)                                │
+│   For each entry, sorted by vote_pubkey byte order:              │
+│     vote_pubkey:                      Pubkey  (32 B, offset   0) │
+│     node_pubkey:                      Pubkey  (32 B, offset  32) │
+│     inflation_rewards_collector:      Pubkey  (32 B, offset  64) │
+│     block_revenue_collector:          Pubkey  (32 B, offset  96) │
+│     delegated_stake:                  u64     ( 8 B, offset 128) │
+│     cumulative_credits:               u64     ( 8 B, offset 136) │
+│     inflation_rewards_commission_bps: u16     ( 2 B, offset 144) │
+│     block_revenue_commission_bps:     u16     ( 2 B, offset 146) │
+│     _reserved:                        [u8;12] (12 B, offset 148) │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 The `version` field is the first field in the header, enabling clients to
@@ -125,10 +127,18 @@ sum the full table.
 
 #### Per-Entry Fields
 
-Each entry is 128 bytes. The 128-byte size keeps every entry on a 32-byte
-boundary (since the entries section starts at offset 32 and 128 is a
+Each entry is 160 bytes. The 160-byte size keeps every entry on a 32-byte
+boundary (since the entries section starts at offset 32 and 160 is a
 multiple of 32), preserving zero-copy `Pubkey` reads across the whole
 table. Entries are sorted by `vote_pubkey` to enable binary search.
+
+The collector and commission fields mirror the vote account v4 state
+introduced by [SIMD-0185] and consumed by [SIMD-0232]: v4 splits
+validator income into two streams (inflation rewards and block revenue),
+each with its own collector address and its own commission rate in basis
+points. This schema carries both streams so that it remains a complete
+replacement for the per-vote-account data the runtime reads at epoch
+boundaries after those SIMDs are active.
 
 - **`vote_pubkey`** — the vote account address. Primary key; entries are
   sorted by this field.
@@ -136,15 +146,22 @@ table. Entries are sorted by `vote_pubkey` to enable binary search.
   account. Required for any consumer that needs to map a vote account back
   to its operator (e.g. snapshot manifest replacement, governance UIs that
   display operator identity).
-- **`commission_collector`** — the address that collects validator
-  commission for this vote account. This field is reserved for the custom
-  commission collector account introduced by SIMD-0232. Until that SIMD
-  is active, runtime implementations **MUST** populate this field with
-  the same value as `node_pubkey`. After SIMD-0232 activation, runtime
-  implementations **MUST** populate this field with the per-vote-account
-  collector address as defined by that SIMD. The field is included now
-  rather than added in a future schema bump because any retroactive
-  expansion would force a v2 format and break consumers reading v1.
+- **`inflation_rewards_collector`** — the address that collects the
+  inflation rewards commission for this vote account, as defined by
+  SIMD-0185/SIMD-0232. For vote accounts whose state predates vote
+  account v4, runtime implementations **MUST** populate this field with
+  the same value as `vote_pubkey` (matching the SIMD-0185 migration
+  default: inflation rewards commission was previously collected into
+  the vote account itself).
+- **`block_revenue_collector`** — the address that collects block fee
+  revenue for this vote account, as defined by SIMD-0185/SIMD-0232. For
+  vote accounts whose state predates vote account v4, runtime
+  implementations **MUST** populate this field with the same value as
+  `node_pubkey` (matching the SIMD-0185 migration default: block revenue
+  was previously collected into the validator identity account). Both
+  collector fields are included now rather than added in a future schema
+  bump because any retroactive expansion would force a v2 format and
+  break consumers reading v1.
 - **`delegated_stake`** — total stake delegated to this vote account, in
   lamports. Sum of the individual stake delegations pointing at this vote
   account.
@@ -154,12 +171,23 @@ table. Entries are sorted by `vote_pubkey` to enable binary search.
   as of this epoch). Reward distribution computes credits earned *in*
   epoch N by diffing this field between the epoch-N and epoch-(N-1)
   accounts.
-- **`commission`** — validator commission as a percentage in `[0, 100]`
-  (matching the existing on-chain vote state representation).
-- **`_reserved`** — 15 zero bytes reserved for future use within this
+- **`inflation_rewards_commission_bps`** — inflation rewards commission
+  in basis points `[0, 10000]`, matching the vote account v4
+  representation. For vote accounts whose state predates v4, runtime
+  implementations **MUST** populate this field with the legacy `u8`
+  percentage commission multiplied by 100 (the SIMD-0185 migration rule).
+- **`block_revenue_commission_bps`** — block revenue commission in basis
+  points `[0, 10000]`, matching the vote account v4 representation. For
+  vote accounts whose state predates v4, runtime implementations **MUST**
+  populate this field with `10000` (the SIMD-0185 migration default:
+  100% of block revenue previously went to the validator).
+- **`_reserved`** — 12 zero bytes reserved for future use within this
   schema version. A future SIMD could repurpose these bytes for
   additional fields without bumping the version, provided it preserves
   read compatibility.
+
+[SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
+[SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
 
 #### Schema Rationale
 
@@ -173,9 +201,9 @@ expanding it across multiple SIMDs) is a deliberate choice:
    indexers) are reading these accounts, the entry layout becomes an ABI.
    Retroactive expansion would force a v2 format and either break v1
    consumers or require dual-version support indefinitely.
-2. **Cost is small.** Per-entry size grows from 40 bytes to 128 bytes,
-   per-account size from ~80 KB to ~250 KB, and annual state growth from
-   ~59 MB/year to ~178 MB/year. This is still well within the deliberate
+2. **Cost is small.** Per-entry size grows from 40 bytes to 160 bytes,
+   per-account size from ~80 KB to ~313 KB, and annual state growth from
+   ~59 MB/year to ~223 MB/year. This is still well within the deliberate
    tradeoff envelope for "preserve all history simplifies consumer logic
    and avoids write amplification."
 3. **Per-stake-delegation data is *not* included.** The complete
@@ -196,8 +224,8 @@ With mainnet parameters (~2,000 vote accounts):
 | Component | Calculation | Size |
 |-----------|------------|------|
 | Header | fixed | 32 bytes |
-| Entries | 2,000 × 128 bytes | ~250 KB |
-| **Total per account** | | **~250 KB** |
+| Entries | 2,000 × 160 bytes | ~313 KB |
+| **Total per account** | | **~313 KB** |
 
 The epoch stakes account **MUST** contain at most 2,000 entries, matching
 the validator admission cap enforced elsewhere in the protocol. This
@@ -205,7 +233,7 @@ bounds the maximum account size and gives consumers a firm upper limit
 for buffer allocation.
 
 At ~2 epochs per day, annual on-chain state growth from this proposal
-is approximately 178 MB/year. This is a deliberate tradeoff (see
+is approximately 223 MB/year. This is a deliberate tradeoff (see
 [State Growth](#state-growth)) — preserving all history simplifies
 consumer logic and avoids write amplification. The annual growth is
 small relative to overall validator state and can be pruned in a
@@ -298,9 +326,9 @@ the current leader schedule epoch, will not exist.
 
 #### State Growth
 
-Each epoch contributes ~250 KB of new on-chain account state. With
+Each epoch contributes ~313 KB of new on-chain account state. With
 approximately two epochs per day, annual growth is on the order of
-178 MB. This is a deliberate tradeoff: preserving all history simplifies
+223 MB. This is a deliberate tradeoff: preserving all history simplifies
 consumer logic, eliminates write amplification at epoch boundaries, and
 enables retrospective analysis without off-chain archival.
 
@@ -376,7 +404,7 @@ scope was deferred because:
   use cases materialize (see [Future Work](#future-work)).
 
 Keeping this SIMD focused on epoch stakes reduces scope, reduces total
-on-chain state growth (~178 MB/year vs. ~488 MB/year for the combined
+on-chain state growth (~223 MB/year vs. ~533 MB/year for the combined
 proposal), and matches the set of use cases that have concrete demand
 today.
 
@@ -431,8 +459,8 @@ design goal of "write once, never modify."
 ## Impact
 
 **Validator operators.** Validators will create one new account per
-epoch boundary (~250 KB) after the feature is activated, contributing
-approximately 178 MB per year of on-chain state growth. The account is
+epoch boundary (~313 KB) after the feature is activated, contributing
+approximately 223 MB per year of on-chain state growth. The account is
 written once at each epoch boundary and never modified thereafter,
 adding negligible overhead to epoch processing. No configuration
 changes are required.
@@ -468,17 +496,17 @@ sysvar cache.
 
 ### Account Size and Growth
 
-Each account is bounded at ~250 KB by the 2,000-validator admission cap.
+Each account is bounded at ~313 KB by the 2,000-validator admission cap.
 New accounts are created at each epoch boundary, yielding approximately
-178 MB of annual state growth. This is a deliberate tradeoff discussed
+223 MB of annual state growth. This is a deliberate tradeoff discussed
 under [State Growth](#state-growth); pruning may be introduced in a
 follow-up SIMD if warranted.
 
 ### Capitalization Impact
 
 Each epoch boundary mints the rent-exempt minimum for one new account
-(~1.75 SOL per epoch at current rent parameters for a ~250 KB account).
-Over a year this amounts to approximately 1,270 SOL transferred into
+(~2.23 SOL per epoch at current rent parameters for a ~313 KB account).
+Over a year this amounts to approximately 1,630 SOL transferred into
 rent-exempt account balances. These lamports are not burned — they
 remain in the epoch stakes program's accounts indefinitely. If a future
 pruning SIMD is adopted, freed lamports could be returned to the
@@ -550,7 +578,7 @@ naturally enabled by it or complement it:
   SIMD is scoped independently because its value depends on concrete
   on-chain use cases (e.g. permissionless skip-rate cranking
   programs). Leaving the leader schedule out of this SIMD keeps the
-  state growth bounded at ~178 MB/year and focuses the initial feature
+  state growth bounded at ~223 MB/year and focuses the initial feature
   on the use cases with existing demand.
 - **Leader contact info via Geyser (planned follow-up, not a SIMD).**
   Streaming leader TPU contact info (gossip-level endpoints that can
