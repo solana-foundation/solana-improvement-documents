@@ -52,6 +52,16 @@ This proposal depends on the following accepted proposals:
     would enforce the snapshot producer to include the block ID in the
     serialized bank.
 
+Furthermore, this forward proposal is a useful reference but not a
+dependency:
+
+- **[SIMD-0504]: Stricter Shred Validation**
+
+    Shred validation currently allows certain shreds that seem like they
+    should be invalid. This leads to lots of corner cases when a new
+    client bases their behavior on what Agave implicitly allows rather
+    than easily specified behavior. This SIMD provides the spec.
+
 ## New Terminology
 
 N/A
@@ -59,20 +69,27 @@ N/A
 ## Detailed Design
 
 In TowerBFT, clients MUST verify the chained merkle root of all FEC sets
-in a slot, both intra-slot and inter-slot. This includes all FEC sets
-when there are multiple blocks for a slot (equivocation).
+in a slot, both intra-slot and inter-slot. If there is equivocation ie.
+multiple blocks for a slot, clients MUST validate chains across all
+blocks for the slot. Note also that fields are at the shred-level not
+FEC-set level. For brevity, the spec below will refer to "every FEC set"
+which is equivalent to "every FEC set's shreds which have fields set to
+the same value" (covered by SIMD-0504).
 
-For intra-slot CMR verification, every FEC set in a slot MUST contain
-in the chained merkle root field the merkle root of its parent FEC set.
-The parent FEC set is defined as the FEC set with fec_set_idx - 32 away,
+For intra-slot CMR verification, every FEC set in a slot MUST contain in
+the chained merkle root field the merkle root of its parent FEC set. The
+parent FEC set is defined as the FEC set with fec_set_idx - 32 away,
 such that every slot begins with fec_set_idx 0 and ends with a
 fec_set_idx that is an arbitrary multiple of 32, though as of time of
 writing the maximum allowed FEC set idx is 32768 - 32 = 32736.
+Furthermore, every FEC set MUST have the same `parent_off` and MUST NOT
+have `slot_complete` set, except for the last FEC set.
 
-For inter-slot CMR verification, the first FEC set's chained merkle root
-MUST contain the merkle root of the parent slot's last FEC set merkle
-root. The parent slot is defined by the `parent_off` field for every
-shred in the FEC set. This provides chaining across slot boundaries.
+For inter-slot CMR verification, the child FEC set's chained merkle root
+MUST equal the merkle root of the parent slot's last FEC set ie. the FEC
+that sets `slot_complete`. The parent slot MUST equal the child slot -
+the child FEC set's `parent_off`. The child FEC set idx MUST be 0 and
+the parent FEC set MUST have `slot_complete` set.
 
 On detection of a chained merkle root conflict, the client MUST mark the
 slot dead. A chained merkle root violation can occur at any arbitrary
@@ -87,7 +104,7 @@ block contains an invalid chain but the other a valid chain, any client
 that observes the invalid chain MUST mark the slot as dead.
 
 In case the client observes the valid chain, verifies the slot fully,
-and later observes the invalid chain, the client MUST not mark the slot
+and later observes the invalid chain, the client MUST NOT mark the slot
 dead but instead ignore the FEC sets with the invalid chain.
 
 After marking dead, clients MUST continue to propagate shreds through
