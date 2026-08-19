@@ -99,7 +99,8 @@ writable on the transaction.
 4. The nonce account must exist, be owned by System Program, parse successfully
 as a Current Initialized nonce account, and the stored nonce value must match
 the transaction lifetime specifier.
-5. The nonce account authority must be a signer on the transaction.
+5. The nonce account authority must be a signer on the `AdvanceNonceAccount`
+instruction.
 
 The order of the above steps is non-strict: the failure of any condition results
 in the same outcome, an invalid nonce transaction that must not be committed to
