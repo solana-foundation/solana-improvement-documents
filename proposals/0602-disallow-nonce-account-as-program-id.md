@@ -83,6 +83,9 @@ avoids confusion.
 A Current Initialized Nonce Account is a valid nonce account that begins with
 the byte pattern `01 00 00 00 01 00 00 00`.
 
+A Reserved Key is one of the consensus-enforced keys that are never allowed to
+be writable, including but not limited to sysvars and builtin programs.
+
 ## Detailed Design
 
 The existing nonce validation for consensus proceeds according to these rules,
@@ -107,6 +110,14 @@ The new condition would likewise result in an invalid nonce transaction. The
 restriction cannot be part of sanitization because whether a transaction is a
 "nonce transaction" depends on the recent blockhashes at the time it is
 processed.
+
+This allows us to fully determine whether the nonce account is writable or read-
+only without resolving ALTs as a consequence of the fact that it would never be
+subject to program ID demotion. As an implementation note, we should still check
+that the nonce is not a reserved key or perform demotion on the static
+transaction; we _must_ do this if we decouple static validation from nonce-
+account-dependent validation. Otherwise it is an implementation detail because
+no reserved key account may ever be a valid nonce account.
 
 ## Alternatives Considered
 
@@ -135,6 +146,12 @@ reasonable and a viable alternative SIMD to this one, if so desired by others.
 This would brick 213 out of 2,205,707 ALTs that currently exist on Mainnet-Beta
 as of Epoch 1018, or 0.0097% of ALTs. It would however, unlike this SIMD,
 potentially affect real users.
+
+We could also remove program ID write-lock demotion from the protocol entirely.
+This would moot the issue by decoupling nonce writable status from ALT
+resolution. We may, but do not need to, remove reserved key demotion as well.
+The reserved key case is trivial to handle with regards to nonce accounts
+without involving ALTs.
 
 ## Impact
 
