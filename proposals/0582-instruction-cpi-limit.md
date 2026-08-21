@@ -14,13 +14,18 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 The protocol only allows a transaction to execute 64 instructions, accounting 
 for both top level and CPIs. Runtime counts executed instructions to determine 
-when to fail a transaction. This SIMD proposes counting the top level 
-instructions (executed or not) plus the executed CPIs. Consequently, 
-transactions that exceed the instruction trace length will fail early.
+when to fail a transaction. This SIMD proposes counting all top level 
+instructions (executed or not) plus the executed CPIs, as the runtime attempts 
+to add each instruction frame. Consequently, transactions that exceed the 
+instruction trace length will fail early.
 
 ## Motivation
 
-The primary motivator for this change is ABIv2 
+A motivation would be slightly speeding up transactions that are going 
+to fail regardless. This SIMD proposes failing offending transactions earlier, 
+increasing block space for well formed ones.
+
+The secondary motivator for this change is ABIv2 
 [SIMD-177](https://github.com/solana-foundation/solana-improvement-documents/pull/177).
 The new memory layout exposes all top level instructions for every instruction 
 in a transaction in pre-defined address spaces for exactly 64 instructions. 
@@ -29,19 +34,22 @@ two CPIs in a transaction with 63 top level instructions, would cause runtime
 to overwrite a memory region already reserved for other purposes, due to 
 the reservation of only 64 regions for instructions.
 
-A second motivation would be slightly speeding up transactions that are going 
-to fail regardless. This SIMD proposes failing offending transactions earlier, 
-increasing block space for well formed ones.
-
 ## New Terminology
 
 No new terminology introduced in this document.
 
 ## Detailed Design
 
-When pushing the instruction to be processed onto the execution stack, the 
-runtime must verify if the total number of top level instructions plus the 
-number of CPIs does not exceed the maximum allowed instructions in the trace.
+Currently, the total number of instructions (top-level + CPI) is checked 
+agains the limit as each instruction is executed. Consequently, a transaction 
+with 64 top-level instructions, whose first instruction performs a CPI, will 
+still have 62 out of the remaining 63 instruction to be executed before 
+exceed the limit.
+
+In the new design, when pushing the instruction to be processed onto the 
+execution stack, the runtime must verify if the total number of top level 
+instructions plus the number of CPIs does not exceed the maximum allowed 
+instructions in the trace.
 
 Below is a basic snippet of how this verification is recommended to look like:
 
@@ -53,11 +61,15 @@ if number_of_top_level_instructions_in_tx + number_of_cpis > 64 {
 
 It is worth pointing that the number of CPIs aforementioned already accounts 
 for the CPI that is about to be pushed onto the execution stack, if we are not 
-dealing with a top level instruction.
+dealing with a top level instruction. The number of CPIs is tallied whenever a 
+CPI is invoked, and can't be tracked ahead of time.
 
 ### Edge Cases
 
-No edge case appears prominent enought to listed.
+Transactions containing exactly 64 top-level instructions will fail as soon as 
+the first CPI is pushed onto the execution stack, instead of executing all 64 
+instruction budget the protocol provides. Likewise, any transaction with 
+64-X instructions, will fail as soon as X+1 CPIs are pushed onto the stack.
 
 ### Validator Components Affected
 
@@ -87,8 +99,12 @@ programs.
 
 ## Impact
 
-There must be no difference to dapp developers, except for the number of CUs 
-consumed by transactions that fail with instruction trace length exceeded.
+There is a potential impact on the error order. Transactions that would 
+exceed the instruction trace length, but are failing, for instance, because
+of an error in a CPI before reaching the instruction limit, will now fail 
+without such an error. As a consequence, developers may see different logs 
+in transactions. In addition, CU consumption will change for transactions 
+now halt earlier.
 
 Validators should see more block space as offending transactions will fail 
 earlier.
