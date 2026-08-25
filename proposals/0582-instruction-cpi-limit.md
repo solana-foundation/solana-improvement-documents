@@ -21,7 +21,7 @@ instruction trace length will fail early.
 
 ## Motivation
 
-A motivation would be slightly speeding up transactions that are going 
+The primary motivation is slightly speeding up transactions that are going 
 to fail regardless. This SIMD proposes failing offending transactions earlier, 
 increasing block space for well formed ones.
 
@@ -41,10 +41,10 @@ No new terminology introduced in this document.
 ## Detailed Design
 
 Currently, the total number of instructions (top-level + CPI) is checked 
-agains the limit as each instruction is executed. Consequently, a transaction 
+against the limit as each instruction is executed. Consequently, a transaction 
 with 64 top-level instructions, whose first instruction performs a CPI, will 
-still have 62 out of the remaining 63 instruction to be executed before 
-exceed the limit.
+still have 62 out of the remaining 63 instructions executed before 
+exceeding the limit.
 
 In the new design, when pushing the instruction to be processed onto the 
 execution stack, the runtime must verify if the total number of top level 
@@ -68,8 +68,9 @@ CPI is invoked, and can't be tracked ahead of time.
 
 Transactions containing exactly 64 top-level instructions will fail as soon as 
 the first CPI is pushed onto the execution stack, instead of executing all 64 
-instruction budget the protocol provides. Likewise, any transaction with 
-64-X instructions, will fail as soon as X+1 CPIs are pushed onto the stack.
+instructions in the budget provided by the protocol. Likewise, any transaction 
+with `64-X` instructions, will fail as soon as `X+1` CPIs are pushed onto the 
+stack.
 
 ### Validator Components Affected
 
@@ -89,13 +90,7 @@ Which validator components are affected by this change?
 
 ## Alternatives Considered
 
-We have considered revising the address layout for ABIv2 
-[SIMD-177](https://github.com/solana-foundation/solana-improvement-documents/pull/177)
-to acommodate extra spaces for CPIs executed in transactions with 64 top level 
-instructions or similar high numbers. We eliminated such alternative because 
-these transactions would always fail. The address layout acommodation wouldn't 
-benefit developers and would only increase complexity both for runtime and 
-programs.
+None.
 
 ## Impact
 
