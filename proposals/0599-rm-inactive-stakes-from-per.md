@@ -16,7 +16,9 @@ feature: RMsTKfD6hZnBhhNvgGBeKNrqCNkeoP3DYYxNtcuWtRg
 
 The partitioned epoch rewards process considers all stake accounts, including
 inactive stakes. Inactive stakes do not contribute to stake weight or rewards,
-so must be removed.
+so must not be included.
+
+Only activating, active, and deactivating stake accounts must be included.
 
 ## Motivation
 
