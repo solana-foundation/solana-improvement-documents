@@ -14,11 +14,13 @@ feature: RMsTKfD6hZnBhhNvgGBeKNrqCNkeoP3DYYxNtcuWtRg
 
 ## Summary
 
-The partitioned epoch rewards process considers all stake accounts, including
-inactive stakes. Inactive stakes do not contribute to stake weight or rewards,
-so must not be included.
+The partitioned epoch rewards process currently requires all stake accounts,
+including inactive stakes, to be considered when computing the lattice hash and
+rewards partition count. But inactive stakes do not contribute to stake weight
+or rewards, so they shouldn't be required.
 
-Only activating, active, and deactivating stake accounts must be included.
+This proposal changes the rewards process to only include activating, active,
+and deactivating stake accounts.
 
 ## Motivation
 
