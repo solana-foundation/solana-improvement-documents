@@ -112,6 +112,13 @@ epoch_reward =
 
 This two-step flooring is normative.
 
+#### Feature Activation and Reward Boundary
+
+The integer reward calculation applies immediately in the boundary bank. If
+the feature activates on epoch E -> E+1, rewards paid for epoch E during E+1
+must use fixed-point math. Rewards calculated by banks before this feature
+activation must use legacy calculation.
+
 ### Inflation Decay
 
 Floating-point exponentiation is replaced with scaled integer decay.
@@ -128,8 +135,23 @@ Scaled multiplication is:
 
 mul_scaled_floor(a, b) = floor(a * b / RATE_SCALE)
 
-Decay over n slots is computed with deterministic exponentiation by squaring
-using mul_scaled_floor.
+Decay over n slots must use right-to-left binary exponentiation with
+mul_scaled_floor at each multiplication:
+
+pseudocode:
+
+```
+  result = RATE_SCALE
+  while n > 0:
+      if n is odd:
+          result = mul_scaled_floor(result, base)
+      n = floor(n / 2)
+      if n > 0:
+          base = mul_scaled_floor(base, base)
+```
+
+Because `mul_scaled_floor` floors after each multiplication, clients must use
+this association order exactly.
 
 The annual validator rate is:
 
@@ -146,8 +168,8 @@ activation slot forward. No floating-point re-anchoring of initial is used.
 SIMD-0194 has already deprecated the rent exemption threshold on mainnet-beta
 since epoch 943.
 
-CLient implementations that need to replay the SIMD-0194 activation boundary
-must use an integer-equilalent conversion for the historical migration:
+Client implementations that need to replay the SIMD-0194 activation boundary
+must use an integer-equivalent conversion for the historical migration:
 
 if exemption_threshold == bytes(1.0):
     lamports_per_byte = lamports_per_byte
@@ -162,11 +184,45 @@ boundary.
 
 ## Impact
 
+No transaction or program interfaces are changed.
+
 Validator implementations must use the specified arithmetic and rounding rules
 after feature activation. Differences from the previous floating-point calculation
 may occur at rounding boundaries.
 
-No transaction or program interfaces are changed.
+### Expected epoch reward drift
+
+Using the following method to calculate legacy f64 epoch reward and fixed-point reward:
+
+- f64 path:
+
+```
+year = epoch_start_slot / slots_per_year_f64
+validator_rate = max(0.015, 0.08 * (1 - taper)^year)
+
+epoch_reward = trunc(validator_rate * capitalization * slots_in_epoch / slots_per_year_f64)
+```
+
+- fixed-point path:
+
+```
+slots_since_anchor = epoch_start_slot - anchor_slot
+decay = pow_scaled_floor(decay_per_slot, slots_since_anchor)
+validator_rate = max(TERMINAL_RATE, floor(INITIAL_RATE * decay / RATE_SCALE))
+annual_reward = floor(capitalization * validator_rate / RATE_SCALE)
+epoch_reward = floor(annual_reward * slots_in_epoch * slots_per_year_denominator
+                     / slots_per_year_numerator)
+```
+
+For a normalized capitalization of 1,000,000,000 SOL, 432,000-slot epochs, and the current
+400ms, 350ms, 300ms, 250ms, and 200ms slot-time regimes, the largest observed validator epoch
+reward difference over 6000 epochs is:
+
+- 15% taper: 31,831,625 lamports, or 0.031831625 SOL per epoch
+- 30% taper: 14,181,312 lamports, or 0.014181312 SOL per epoch
+
+The observed relative difference, `abs(fixed_point_epoch_reward - f64_epoch_reward) / f64_epoch_reward`,
+is below 2.1e-7.
 
 ## Security Considerations
 
@@ -176,6 +232,13 @@ divergence.
 
 Intermediate arithmetic must not overflow, and protocol constants must not be recomputed
 using floating-point arithmetic at runtime.
+
+### Sequencing with SIMD-0550
+
+This feature must be activated before or at the same epoch boundary as SIMD-0550.
+When SIMD-0550 activates, clients compute the SIMD-0550 activation anchor rate using
+pre-SIMD-0550 integer 15% taper schedule, then apply the integer 30% taper from the
+SIMD-0550 activation slot forward.
 
 ## Conformance
 
