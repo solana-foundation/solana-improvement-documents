@@ -32,20 +32,38 @@ ALT resolution, because the nonce must be marked writable on the transaction,
 and ALT resolution can change the outcome of write-lock demotion by bringing
 LoaderV3 into scope.
 
-The purpose of this SIMD is to sever that relationship fully:
+The purpose of this SIMD is to sever that relationship fully.
 
-* Nonce transaction nonce accounts already cannot come from ALTs.
-* Signers cannot come from ALTs, so we can verify authority without resolving.
+The relevant ruleset is presently as follows:
+
+* Nonce transaction nonce accounts cannot come from ALTs.
+* Signers cannot come from ALTs, so we can verify nonce authority without
+resolving.
 * Program IDs cannot come from ALTs.
-* Presently, a nonce account used as a program ID would be demoted to read-only,
-producing an invalid nonce transaction. However, an ALT with LoaderV3 would
-prevent that demotion, creating a consensus-relevant coupling between nonce
-transaction validation and ALT resolution.
+* Program IDs marked as writable are demoted to read-only, _unless_ LoaderV3 is
+a transaction account, including via an ALT, in which case this demotion is not
+performed.
 
-By banning nonces from being used as program IDs, we can determine whether a 
-transaction is a semantically valid nonce transaction with just the transaction
-bytes and the currently valid blockhashes, and we can fully validate the nonce
-transaction with both plus the nonce account, without needing to resolve ALTs.
+If the nonce account pubkey defined by the `AdvanceNonceAccount` instruction on
+a nonce transaction is also used as a program ID by any instruction on the
+transaction, there are two possible end-states via three conceptual paths:
+
+* LoaderV3 is not provided. In this case, the account is evaluated as read-only,
+and nonce validation fails no matter what the account state is. The transaction
+is discarded.
+* LoaderV3 is provided, but some other step in nonce validation fails, for
+instance if the account is not a valid nonce account, or the nonce authority is
+not a signer, etc. The transaction is discarded identically to the above case.
+* LoaderV3 is provided, _and_ all other nonce validation steps succeed. In this
+case, assuming a valid fee-payer, we will proceed to account loading and fail at
+(if not before) program ID validation, because no valid nonce account can also
+be a valid program. The transaction is committed and charged as fee-only.
+
+The final case is the one this SIMD aims to tackle. By banning nonces from being
+used as program IDs, we can determine whether a transaction is a semantically
+valid nonce transaction with just the transaction bytes and the currently valid
+blockhashes, and we can fully validate the nonce transaction with both plus the
+nonce account, without needing to resolve ALTs.
 
 There is a notional separation between nonce validation that depends only on the
 transaction bytes, versus nonce validation that depends on the stored on-chain
@@ -60,10 +78,10 @@ None, but for clarity:
 
 ALT refers to Address Lookup Table.
 
-A Nonce Transaction is defined as a transaction with a valid
-`AdvanceNonceAccount` instruction and _does not_ have a valid blockhash. A
-transaction with a valid blockhash is a Blockhash Transaction no matter what
-instructions it carries.
+A Nonce Transaction is defined as a transaction that _does not_ have a valid
+blockhash, and has as its first instruction an `AdvanceNonceAccount` call to the
+System Program. A transaction with a valid blockhash is a Blockhash Transaction
+no matter what instructions it carries.
 
 A Blockhash Transaction by definition does not have a nonce account. Therefore,
 the proposed rule does not apply to Blockhash Transactions.
@@ -104,7 +122,10 @@ instruction.
 
 The order of the above steps is non-strict: the failure of any condition results
 in the same outcome, an invalid nonce transaction that must not be committed to
-chain or else violate the nonce block constraint.
+chain or else violate the nonce block constraint. Naturally, nonce validation,
+along with fee-payer validation, determines whether a transaction is valid to
+pay fees, and must strictly come before any validation that intends to produce
+a fee-only outcome.
 
 We can very easily check that nonce account is not a program ID during point 3.
 The new condition would likewise result in an invalid nonce transaction. The
