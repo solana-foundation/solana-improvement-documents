@@ -17,7 +17,7 @@ Remove support for the secp256k1, secp256r1 and ed25519 precompiles.
 ## Motivation
 
 Precompiles are rigid, require special handling in validator implementations
-and their cross instruction referencing (in ed25519) is hacky.
+and their inter-instruction data referencing is hacky.
 
 ## Dependencies
 
@@ -60,10 +60,9 @@ These changes are limited to the program runtime component
 
 ### Migrating them to core programs on-chain
 
-The ed25519 one requires top-level instruction introspection, which is not
-available to programs on-chain without the Instructions sysvar. Thus it would
-require either breaking changes to the precompile or adding features to the
-SVM:
+Precompiles can use top-level instruction introspection, which is not available
+to programs on-chain without the Instructions sysvar. Thus it would require
+either breaking changes to the precompile or adding features to the SVM:
 
 - Require users to pass in all bytes to verify in the precompile instruction,
 forbidding cross referencing other instructions.
@@ -110,18 +109,23 @@ Breaking change: All precompiles will become unavailable.
 
 ## Conformance
 
-The change will be tested by twelve transactions, each transaction calling one
+The change will be tested by 18 transactions, each transaction calling one
 of the three precompiles before and after the feature activation, at top level
-and in CPI.
+with a valid signature, at top level with an valid signature and in CPI with a
+valid signature.
 
-The excpected results **before** the feature activation are:
+The expected results **before** the feature activation are:
 
-- at top level: success
-- in CPI: `CpiError::ProgramNotSupported`
+- at top level with a valid signature: success
+- at top level with an invalid signature: `PrecompileError::InvalidSignature`
+- in CPI with a valid signature: `CpiError::ProgramNotSupported`
 
-The excpected results **after** the feature activation are:
+The expected results **after** the feature activation are:
 
-- at top level: `TransactionError::InvalidProgramForExecution`
-- in CPI: `InstructionError::UnsupportedProgramId`
+- at top level with a valid signature:
+`TransactionError::InvalidProgramForExecution`
+- at top level with an invalid signature:
+`InstructionError::UnsupportedProgramId`
+- in CPI with a valid signature: `InstructionError::UnsupportedProgramId`
 
 [to be filled in before merging]
