@@ -95,11 +95,16 @@ TAPER_30      = Fraction { numerator: 30, denominator: 100 }
 Each protocol slot-time regime MUST define `slots_per_year` as an exact
 rational value. For any slot-time regimes already active or specified by prior
 features, this SIMD preserves their existing protocol values by converting the
-current decimal constants into exact rational constants. For example, the
-current 400ms and 350ms regimes are represented as:
+current decimal constants into exact rational constants. For known slot-time
+regimes, the value for `slots_per_year` are:
 
-78_892_314.984 == 78_892_314_984 / 1000
-90_162_645.696 == 90_162_645_696 / 1000
+|slot-time|slots_per_year|
+|---------|--------------|
+|400ms | 78_892_314_984 / 1000|
+|350ms | 90_162_645_696 / 1000|
+|300ms | 105_189_753_312 / 1000|
+|250ms | 126_227_703_974 / 1000|
+|200ms | 157_784_629_968 / 1000|
 
 Epoch inflation rewards are computed as:
 
@@ -129,7 +134,22 @@ decay_per_slot =
     round_to_nearest_even((1 - taper)^(1 / slots_per_year) * RATE_SCALE)
 
 These constants are part of the protocol specification. Validator clients MUST
-NOT derive them at runtime with floating-point arithmetic.
+NOT derive them at runtime with floating-point arithmetic. For each supported
+slot-time regimes and known taper, the value of `decay_per_slot` are:
+
+|slot-time|taper|decay_per_slot|
+|---------|-----|--------------|
+|400ms|FifteenPercent| 999_999_997_939_990|
+|350ms|FifteenPercent| 999_999_998_197_492|
+|300ms|FifteenPercent| 999_999_998_454_993|
+|250ms|FifteenPercent| 999_999_998_712_494|
+|200ms|FifteenPercent| 999_999_998_969_995|
+|400ms|ThirtyPercent| 999_999_995_478_965|
+|350ms|ThirtyPercent| 999_999_996_044_094|
+|300ms|ThirtyPercent| 999_999_996_609_224|
+|250ms|ThirtyPercent| 999_999_997_174_353|
+|200ms|ThirtyPercent| 999_999_997_739_482|
+
 
 Scaled multiplication is:
 
