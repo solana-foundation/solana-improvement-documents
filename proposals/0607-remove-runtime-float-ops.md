@@ -28,9 +28,9 @@ without relying on IEEE-754 behavior or platform math-library functions such as
 
 ### General-purpose rational arithmetic
 
-Use a general-purpose rational type for all fractional calculations. This provides
-exact arithmetic but adds unnecessary complexity and overhead compared with the
-bounded integer representation proposed here.
+Use a general-purpose rational type for all fractional calculations. This
+provides exact arithmetic but adds unnecessary complexity and overhead compared
+with the bounded integer representation proposed here.
 
 ## New Terminology
 
@@ -139,16 +139,16 @@ slot-time regimes and known taper, the value of `decay_per_slot` are:
 
 |slot-time|taper|decay_per_slot|
 |---------|-----|--------------|
-|400ms|FifteenPercent| 999_999_997_939_990|
-|350ms|FifteenPercent| 999_999_998_197_492|
-|300ms|FifteenPercent| 999_999_998_454_993|
-|250ms|FifteenPercent| 999_999_998_712_494|
-|200ms|FifteenPercent| 999_999_998_969_995|
-|400ms|ThirtyPercent| 999_999_995_478_965|
-|350ms|ThirtyPercent| 999_999_996_044_094|
-|300ms|ThirtyPercent| 999_999_996_609_224|
-|250ms|ThirtyPercent| 999_999_997_174_353|
-|200ms|ThirtyPercent| 999_999_997_739_482|
+|400ms|15%| 999_999_997_939_990|
+|350ms|15%| 999_999_998_197_492|
+|300ms|15%| 999_999_998_454_993|
+|250ms|15%| 999_999_998_712_494|
+|200ms|15%| 999_999_998_969_995|
+|400ms|30%| 999_999_995_478_965|
+|350ms|30%| 999_999_996_044_094|
+|300ms|30%| 999_999_996_609_224|
+|250ms|30%| 999_999_997_174_353|
+|200ms|30%| 999_999_997_739_482|
 
 
 Scaled multiplication is:
@@ -207,12 +207,13 @@ boundary.
 No transaction or program interfaces are changed.
 
 Validator implementations must use the specified arithmetic and rounding rules
-after feature activation. Differences from the previous floating-point calculation
-may occur at rounding boundaries.
+after feature activation. Differences from the previous floating-point
+calculation may occur at rounding boundaries.
 
 ### Expected epoch reward drift
 
-Using the following method to calculate legacy f64 epoch reward and fixed-point reward:
+Using the following method to calculate legacy f64 epoch reward and fixed-point
+reward:
 
 - f64 path:
 
@@ -220,7 +221,8 @@ Using the following method to calculate legacy f64 epoch reward and fixed-point 
 year = epoch_start_slot / slots_per_year_f64
 validator_rate = max(0.015, 0.08 * (1 - taper)^year)
 
-epoch_reward = trunc(validator_rate * capitalization * slots_in_epoch / slots_per_year_f64)
+epoch_reward = trunc(validator_rate * capitalization * slots_in_epoch /
+                     slots_per_year_f64)
 ```
 
 - fixed-point path:
@@ -234,15 +236,16 @@ epoch_reward = floor(annual_reward * slots_in_epoch * slots_per_year_denominator
                      / slots_per_year_numerator)
 ```
 
-For a normalized capitalization of 1,000,000,000 SOL, 432,000-slot epochs, and the current
-400ms, 350ms, 300ms, 250ms, and 200ms slot-time regimes, the largest observed validator epoch
-reward difference over 6000 epochs is:
+For a normalized capitalization of 1,000,000,000 SOL, 432,000-slot epochs, and
+the current 400ms, 350ms, 300ms, 250ms, and 200ms slot-time regimes, the largest
+observed validator epoch reward difference over 6000 epochs is:
 
 - 15% taper: 31,831,625 lamports, or 0.031831625 SOL per epoch
 - 30% taper: 14,181,312 lamports, or 0.014181312 SOL per epoch
 
-The observed relative difference, `abs(fixed_point_epoch_reward - f64_epoch_reward) / f64_epoch_reward`,
-is below 2.1e-7.
+The observed relative difference:
+`abs(fixed_point_epoch_reward - f64_epoch_reward) / f64_epoch_reward`, is below
+2.1e-7.
 
 ## Security Considerations
 
@@ -250,15 +253,15 @@ These calculations affect consensus-critical state. Implementations must use the
 specified arithmetic widths, constants, and rounding rules to avoid cross-client
 divergence.
 
-Intermediate arithmetic must not overflow, and protocol constants must not be recomputed
-using floating-point arithmetic at runtime.
+Intermediate arithmetic must not overflow, and protocol constants must not be
+recomputed using floating-point arithmetic at runtime.
 
 ### Sequencing with SIMD-0550
 
 This feature must be activated before or at the same epoch boundary as SIMD-0550.
-When SIMD-0550 activates, clients compute the SIMD-0550 activation anchor rate using
-pre-SIMD-0550 integer 15% taper schedule, then apply the integer 30% taper from the
-SIMD-0550 activation slot forward.
+When SIMD-0550 activates, clients compute the SIMD-0550 activation anchor rate
+using pre-SIMD-0550 integer 15% taper schedule, then apply the integer 30% taper
+from the SIMD-0550 activation slot forward.
 
 ## Conformance
 
