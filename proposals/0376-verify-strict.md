@@ -83,8 +83,7 @@ eight such points, including the identity.
 
 Switch to using the cofactored verification equation described in
 [ZIP-215](https://zips.z.cash/zip-0215) for Ed25519 EdDSA signature
-verification, retaining the encoding and small-order checks performed by
-`verify_strict`.
+verification, while making the encoding and small-order checks explicit.
 
 ### Algorithm:
 
@@ -108,13 +107,17 @@ $\bmod L$ to get scalar $h$.
 8(S \cdot B) - 8R - 8(h \cdot A) = \mathcal{O}
 ```
 
-Steps 1–5 are exactly the checks that RFC-8032 and `verify_strict` require of
-the inputs; the only relaxation introduced by this proposal is the
-multiplication of the verification equation in step 7 by the cofactor. That
-relaxation makes verification insensitive to a torsion component *added* to an
-otherwise valid $A$ or $R$, which is what permits a compatible batched
-verification, while step 5 continues to reject points that consist of nothing
-but torsion.
+Steps 1–5 define the input-validation policy for this proposal; they are not all
+inherited from a single existing verification rule. RFC-8032 requires canonical
+point decoding and a fully reduced $S$, but does not separately reject
+small-order $A$ or $R$. Existing `verify_strict` paths reject a non-reduced $S$
+and small-order $A$ and $R$, while their treatment of non-canonical point
+encodings depends on the `ed25519-dalek` version and call path.
+
+Step 7 is the principal relaxation: multiplying the verification equation by
+the cofactor makes verification insensitive to a torsion component *added* to
+an otherwise valid $A$ or $R$. This permits compatible batched verification,
+while step 5 continues to reject points that consist of nothing but torsion.
 
 Because steps 1 and 2 have already rejected non-canonical encodings, step 5 may
 be implemented either as a cofactor multiplication or as a comparison of the
@@ -272,17 +275,22 @@ verifications, instead of `verify_strict`.
 encodings remain valid.
 - A small class of signatures previously rejected may now be accepted: those
 where $A$ or $R$ carries a torsion component but is not itself small-order.
-- A small class of signatures previously accepted will now be rejected: those
-with a non-canonical encoding of $A$ or $R$. `ed25519-dalek`'s
-`CompressedEdwardsY::decompress` masks bit 255 and loads $y$ modulo
-$2^{255} - 19$ without rejecting $y \ge 2^{255} - 19$, so `verify_strict`
-accepts non-canonical encodings today. Such encodings cannot be produced by
-RFC-8032 `sign` and can only arise from purpose-built keys or signatures, but
-this is a genuine narrowing of the accepted set and is the reason this change
-requires a feature gate rather than being purely relaxing. Explicit canonicity
-checks are preferred here over inheriting `ed25519-dalek`'s decoding behaviour,
-since reproducing that implicit behaviour across validator implementations is
-precisely the problem this proposal sets out to remove.
+- Some verification paths may reject signatures that they previously accepted
+when $A$ or $R$ has a non-canonical encoding. This impact is path-dependent:
+`ed25519-dalek` 1.x decodes $A$ and $R$ permissively and compares curve points,
+whereas 2.x rejects a non-canonical $R$ by comparing the recomputed canonical
+encoding of $R$ with the signature bytes, while still decoding $A$
+permissively. Such encodings cannot be produced by RFC-8032 `sign` and can only
+arise from purpose-built keys or signatures. Implementations must therefore
+evaluate the existing acceptance set at each affected call site rather than
+assuming that all `verify_strict` paths behave identically.
+
+Explicit canonicity checks are preferred over inheriting version-dependent
+decoding behaviour, since reproducing implicit library behaviour across
+validator implementations is precisely the problem this proposal sets out to
+remove. A feature gate is required in every case because the cofactored
+equation also accepts signatures that the existing equation rejects, regardless
+of whether canonicity checks narrow a particular path's accepted set.
 
 Here is a proof that any signature that `verify_strict` accepts, and whose $A$
 and $R$ encodings are canonical, would be accepted by the new verification
