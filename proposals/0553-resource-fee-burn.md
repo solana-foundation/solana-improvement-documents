@@ -18,7 +18,7 @@ feature:
 We split the present static **5000-lamport per-signature fee** (2500 burned,
 2500 to the leader) into two components:
 
-- **Base inclusion fee** — static **2500 lamports** per transaction, paid
+- **Base inclusion fee** — static **2600 lamports** per transaction, paid
   entirely to the leader (see **Base Inclusion Fee**).
 - **Resource fee** — dynamic, **100% burned**. Computed from
   `requested_cost_units` and the resource fee rate (see **Resource Fee
@@ -71,7 +71,7 @@ dynamic tuning may follow).
 
 ## New Terminology
 
-- **Base inclusion fee** — static **2500 lamports** per transaction to the
+- **Base inclusion fee** — static **2600 lamports** per transaction to the
   block leader; renamed from "base fee". Pays for inclusion, not resource
   consumption. **Required** so the leader is paid even when the priority fee is
   zero; otherwise game-theoretic incentives would lead leaders to drop zero-prio
@@ -140,7 +140,7 @@ total_fee = base_inclusion_fee + priority_fee + resource_fee
 
 | Component          | Formula                          | Burn | Leader |
 | ------------------ | -------------------------------- | ---- | ------ |
-| Base inclusion fee | 2500                             | 0%   | 100%   |
+| Base inclusion fee | 2600                             | 0%   | 100%   |
 | Priority fee       | CU price × limit (existing)      | 0%   | 100%   |
 | Resource fee (new) | see **Resource Fee Calculation** | 100% | 0%     |
 
@@ -157,7 +157,7 @@ The "base fee" / "transaction fee" SHOULD be called **base inclusion fee** in
 documentation, RPC fields, and user-facing surfaces.
 
 ```text
-base_inclusion_fee = 2500
+base_inclusion_fee = 2600
 ```
 
 Leaders MUST receive a **nonzero reward for including a transaction even when
@@ -173,10 +173,12 @@ level. The scheduler cost model also counts signatures in `signature_cost`, so
 signature work is priced twice today: once in the per-signature base fee and
 again (relatively cheaply) in `requested_cost_units`.
 
-**This SIMD.** The base inclusion fee is a flat **2500 lamports** per
-transaction — not `2500 × num_signatures`. Signature verification is priced
+**This SIMD.** The base inclusion fee is a flat **2600 lamports** per
+transaction — not `2600 × num_signatures`. Signature verification is priced
 only through `signature_cost` inside `requested_cost_units` and therefore the
-resource fee.
+resource fee. The 2600-lamport constant (rather than 2500) compensates for
+dropping the `num_signatures` multiplier, so leader inclusion-fee income stays
+roughly even with today's `2500 × num_signatures` on typical traffic.
 
 **Follow-up path.**
 
@@ -314,11 +316,11 @@ respectively (base inclusion and priority fees are unchanged):
 <!-- markdownlint-disable MD013 MD060 -->
 | Activity | Today | After | Δ |
 | -------- | ----- | ----- | -- |
-| Vote (w/ CB ixns) | 5000 | 2500 + 1883 | -12.3% |
-| [High Prio Swap (DFlow)][dflow-tx] | 5000 + 2002500 | 2500 + 197720 + 2002500 | +9.72% |
-| [Mid Prio Swap (OKX)][okx-tx] | 5000 + 130980 | 2500 + 412160 + 130980 | +301% |
-| [Zero prio Pumpfun swap][pump-tx] | 5000 + 0 | 2500 + 159910 + 0 | +3150% |
-| [Zerofi oracle update][zerofi-tx] | 5000 + 2568 | 2500 + 1220 + 2568 | -16.9% |
+| Vote (w/ CB ixns) | 5000 | 2600 + 1883 | -10.3% |
+| [High Prio Swap (DFlow)][dflow-tx] | 5000 + 2002500 | 2600 + 197720 + 2002500 | +9.73% |
+| [Mid Prio Swap (OKX)][okx-tx] | 5000 + 130980 | 2600 + 412160 + 130980 | +301% |
+| [Zero prio Pumpfun swap][pump-tx] | 5000 + 0 | 2600 + 159910 + 0 | +3150% |
+| [Zerofi oracle update][zerofi-tx] | 5000 + 2568 | 2600 + 1220 + 2568 | -15.6% |
 <!-- markdownlint-enable MD013 MD060 -->
 
 At `resource_fee_rate` **1/2**, **low-resource-usage transactions win**: they pay
@@ -364,7 +366,7 @@ the bank epoch being simulated.
 ## Security Considerations
 
 **Minimum cost decreases** from 5000 lamports once the first gate is active.
-At the terminal **1/2** rate the floor is 3010 lamports for minimal transactions;
+At the terminal **1/2** rate the floor is 3110 lamports for minimal transactions;
 at **1/10** and **1/4** the floor is lower still. This lowers the lamport floor
 compared with today's flat 5000-lamport base fee and **reduces the cost of DoS
 spam** at that floor. Note that such spam would consist of transactions that are
