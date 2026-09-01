@@ -15,9 +15,12 @@ feature: (fill in with feature tracking issues once accepted)
 This proposal replaces the `verify_strict` semantics used in Solana, derived
 from Agave's usage of `ed25519-dalek`'s `verify_strict`, with the *cofactored*
 verification scheme described in
-[Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf): 
-- the cofactored verification equation of [ZIP-215](https://zips.z.cash/zip-0215), 
-- combined with explicit rejection of non-canonical encodings and of small-order $A$ and $R$.
+[Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf):
+
+- the cofactored verification equation of
+[ZIP-215](https://zips.z.cash/zip-0215),
+- combined with explicit rejection of non-canonical encodings and of
+small-order $A$ and $R$.
 
 In practice, this multiplies the verification equation by the cofactor, making
 verification insensitive to the torsion *components* of otherwise valid points,
