@@ -15,9 +15,10 @@ feature: (fill in with feature tracking issues once accepted)
 This proposal replaces the `verify_strict` semantics used in Solana, derived
 from Agave's usage of `ed25519-dalek`'s `verify_strict`, with the *cofactored*
 verification scheme described in
-[Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf): the cofactored
-verification equation of [ZIP-215](https://zips.z.cash/zip-0215), combined with
-explicit rejection of non-canonical encodings and of small-order $A$ and $R$.
+[Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf): 
+- the cofactored verification equation of [ZIP-215](https://zips.z.cash/zip-0215), 
+- combined with explicit rejection of non-canonical encodings and of small-order $A$ and $R$.
+
 In practice, this multiplies the verification equation by the cofactor, making
 verification insensitive to the torsion *components* of otherwise valid points,
 while continuing to reject points that are *entirely* torsion. This change
@@ -193,7 +194,7 @@ not fully reduced $\bmod\ L$ (step 3), and achieves SBS by rejecting
 small-order $A$ (step 5), matching the cofactored scheme analyzed in
 *Taming the many EdDSAs*.
 
-### Why small-order public keys must be rejected
+### Rejecting small-order public keys
 
 The cofactored equation annihilates every small-order component, so if
 small-order $A$ were accepted, a small-order public key would accept a forged
@@ -206,29 +207,12 @@ today, and step 5 of this proposal continues to reject it.
 
 This matters on Solana specifically because public keys are not only
 verification keys. The all-zero encoding is `Pubkey::default()`, is rendered as
-`11111111111111111111111111111111`, and is the System Program ID. Programs
-routinely store a raw public key in an `authority` or `owner` field and use
-`Pubkey::default()` to mean "authority disabled" or "uninitialized", relying on
-authorization checks of the form "the stored key equals the passed account key
-and that account is a signer". The safety of that pattern does not come from a
-secret key; it comes from the network's verifier making the value unsignable.
-
-Were the verifier to accept small-order $A$, such a program would receive
-`is_signer = true` for a key it had treated as impossible to sign for, with no
-application bug, leaked secret, or separate privilege escalation required. This
-is a change in what an application-level predicate *means*, produced entirely at
-the cryptographic layer, and it applies to any protocol matching the pattern
-above. Solana state already contains accounts whose authority field holds the
-all-zero key, so this is not a hypothetical class.
+`11111111111111111111111111111111`, and is the System Program ID. 
 
 Rejecting the torsion subgroup at the verifier removes this class of
 cross-layer collision for all eight canonical small-order encodings, not just
 the all-zero one, and does so without weakening the batching design that
 motivates the proposal.
-
-Application developers are still advised to make the invariant explicit and
-reject sentinel values as signer-authority inputs, rather than relying solely
-on the network's accepted signature set.
 
 ### Test Vectors
 
