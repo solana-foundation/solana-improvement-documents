@@ -16,8 +16,6 @@ Reject a Vote Program `Withdraw` instruction when the vote account and recipient
 resolve to the same address. After activation, every authorized self-withdrawal
 returns `InvalidArgument`. Other withdrawals are unchanged.
 
-Originating discussion: [#594]
-
 ## Motivation
 
 Currently, a Vote Program `Withdraw` instruction may use the same account as the
@@ -74,5 +72,4 @@ the same feature-gated behavior before activation.
 
 N/A
 
-[#594]: https://github.com/solana-foundation/solana-improvement-documents/discussions/594
 [Stake Program]: https://github.com/solana-program/stake/pull/96
