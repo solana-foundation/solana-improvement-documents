@@ -19,8 +19,6 @@ or its Vote Program owned data meets the uninitialized conditions below. All
 other validation, the instruction interface, and deactivation behavior remain
 unchanged.
 
-Originating discussion: [#592]
-
 ## Motivation
 
 `DeactivateDelinquent` allows anyone to begin cooldown on stake delegated to a
@@ -115,5 +113,3 @@ Only the recognized closed and uninitialized states bypass vote-state
 decoding. Malformed initialized formats and unknown nonzero discriminators
 retain their existing errors. This prevents an older Stake Program from
 treating an unsupported future vote-state version as delinquent.
-
-[#592]: https://github.com/solana-foundation/solana-improvement-documents/discussions/592
