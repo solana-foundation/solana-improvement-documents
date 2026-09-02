@@ -17,8 +17,6 @@ and recipient resolve to the same address. After validating the instruction
 accounts and nonce state, the System Program returns `InvalidArgument` when the
 addresses match. Other nonce withdrawals are unchanged.
 
-Originating discussion: [#598]
-
 ## Motivation
 
 Currently, a System Program `WithdrawNonceAccount` instruction may use the same
@@ -84,6 +82,5 @@ the same feature-gated behavior before activation.
 
 N/A
 
-[#598]: https://github.com/solana-foundation/solana-improvement-documents/discussions/598
 [SIMD-0609]: https://github.com/solana-foundation/solana-improvement-documents/pull/609
 [Stake Program]: https://github.com/solana-program/stake/pull/96
