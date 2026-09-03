@@ -6,7 +6,7 @@ authors:
   - frank
 category: Standard
 type: Core
-status: Unimplemented
+status: Draft
 created: 2026-08-28
 feature:
 development:
@@ -21,7 +21,10 @@ Sysvar pubkey:
 
 ## Motivation
 
-Currently it is not possible to identify the leader for a given slot fully onchain.  This information is needed for market makers to be able to update quotes based on swaps coming in on specific leaders (e.g. leader is malicious, very remote, or has historically unreliable scheduling characteristics).
+Currently it is not possible to identify the leader for a given slot fully
+onchain. This information is needed for market makers to update quotes based on
+swaps coming in on specific leaders (e.g. a leader is malicious, very remote,
+or has historically unreliable scheduling characteristics).
 
 ## New Terminology
 
@@ -46,41 +49,77 @@ pub struct CurrentLeader {
 }
 ```
 
-The `slot`, `epoch_start_timestamp`, `epoch`, `leader_schedule_epoch`, and `unix_timestamp` values stored here must be equivalent to the corresponding values stored on the `Clock`.  The `leader_identity` and `leader_vote` fields must be the block producer's identity pubkey & vote account pubkey for the current slot. The `next_leader_identity` and `next_leader_vote` fields must be the block producer's identity pubkey & vote account pubkey for slot `slot + 1`.
+The `slot`, `epoch_start_timestamp`, `epoch`, `leader_schedule_epoch`, and
+`unix_timestamp` values stored here must be equivalent to the corresponding
+values stored on the `Clock`. The `leader_identity` and `leader_vote` fields
+must be the block producer's identity pubkey and vote account pubkey for the
+current slot. The `next_leader_identity` and `next_leader_vote` fields must be
+the block producer's identity pubkey and vote account pubkey for slot
+`slot + 1`.
 
 ### Updating
 
-The fields which the Current Leader sysvar shares with the `Clock` must be updated in lockstep with the `Clock`.  Notably, post-Alpenglow, the `unix_timestamp` field must be updated via `BlockComponentProcessor::update_bank_from_footer_fields` (in Agave) to prevent conflicting `unix_timestamp` values.
+The fields which the Current Leader sysvar shares with the `Clock` must be
+updated in lockstep with the `Clock`. Notably, post-Alpenglow, the
+`unix_timestamp` field must be updated via
+`BlockComponentProcessor::update_bank_from_footer_fields` (in Agave) to prevent
+conflicting `unix_timestamp` values.
 
-The other fields in the Current Leader sysvar must be updated prior to transaction execution for a given slot. A prudent location to update these fields is immediately after the `Clock` is updated.
+The other fields in the Current Leader sysvar must be updated prior to
+transaction execution for a given slot. A prudent location to update these
+fields is immediately after the `Clock` is updated.
 
 ### Program Access
 
-No new syscall is introduced.  Programs may access the Current Leader sysvar via the `sol_get_sysvar` syscall or by passing in the `AccountInfo` explicitly.
+No new syscall is introduced. Programs may access the Current Leader sysvar via
+the `sol_get_sysvar` syscall or by passing in the `AccountInfo` explicitly.
 
 ### Mismatches
 
-Under TowerBFT, a validator which misimplements this sysvar and produces a block that has incorrect execution results / incorrect bankhash will throw a BHM and crash.  The remainder of the cluster will accept the correctly-executed block and proceed as normal.
+Under TowerBFT, a validator which misimplements this sysvar and produces a block
+that has incorrect execution results or an incorrect bankhash will throw a BHM
+and crash. The remainder of the cluster will accept the correctly-executed
+block and proceed as normal.
 
-In Alpenglow, the produced block will still BHM, but Alpenglow marks BHM as cluster-wide dead slot.
+In Alpenglow, the produced block will still BHM, but Alpenglow marks BHM as a
+cluster-wide dead slot.
 
 ### Leader & Vote Pubkeys
 
-For the duration of an epoch, the `leader_identity` / `leader_vote` / `next_leader_identity` / `next_leader_vote` fields must correspond to the canonical leader schedule generated for that epoch. This is to address mid-epoch `UpdateValidatorIdentity` changes and the fact that multiple vote accounts may correspond to the same identity.
+For the duration of an epoch, the `leader_identity`, `leader_vote`,
+`next_leader_identity`, and `next_leader_vote` fields must correspond to the
+canonical leader schedule generated for that epoch. This is to address
+mid-epoch `UpdateValidatorIdentity` changes and the fact that multiple vote
+accounts may correspond to the same identity.
 
 ## Alternatives Considered
-- Add fields to the current `Clock`.  This was rejected as many programs assert invariants like `clock.data().len() == 40` so adding fields would break these programs.
-- Only include leader identities. This was rejected as forcing the caller to also fetch the `Clock` to get the `(slot, leader)` pair is inefficient.
-- Only include current leader.  We opted to include both current & next as having knowledge of the next leader enables programs to compensate for, for example, the next leader having a history of outright censorship.  The program can then take actions to ensure that even if it is censored for the entire next leader window its state will be ok.
-- Full `LeaderSchedule` Sysvar containing the entire schedule for the current epoch.  This was rejected in order to avoid variable-length sysvars and because the account would be well over 200,000 bytes. Additionally, getting current slot from clock and then indexing in by window offset makes the look-up-current-leader operation cost O(500) CU instead of O(150) CU here.
+
+- Add fields to the current `Clock`. This was rejected as many programs assert
+  invariants like `clock.data().len() == 40`, so adding fields would break these
+  programs.
+- Only include leader identities. This was rejected as forcing the caller to
+  also fetch the `Clock` to get the `(slot, leader)` pair is inefficient.
+- Only include the current leader. We opted to include both current and next
+  because knowledge of the next leader enables programs to compensate for, for
+  example, the next leader having a history of outright censorship. A program
+  can then take actions to ensure that its state remains valid even if it is
+  censored for the entire next leader window.
+- A full `LeaderSchedule` sysvar containing the entire schedule for the current
+  epoch. This was rejected to avoid variable-length sysvars and because the
+  account would be well over 200,000 bytes. Additionally, getting the current
+  slot from `Clock` and indexing by window offset makes the current-leader
+  lookup cost `O(500)` CU instead of `O(150)` CU here.
 
 ## Impact
 
-Programs such as market makers may now use this sysvar to better update quotes based on specific & undesirable leader characteristics.  This will further improve the robustness of Solana's market-making environment.
+Programs such as market makers may now use this sysvar to better update quotes
+based on specific and undesirable leader characteristics. This will further
+improve the robustness of Solana's market-making environment.
 
 Programs will need to be recompiled and redeployed to adopt this feature.
 
-Similar to the `Clock`, programs relying on this sysvar may exhibit different behavior if simulated and executed at different slots.
+Similar to the `Clock`, programs relying on this sysvar may exhibit different
+behavior if simulated and executed at different slots.
 
 ## Security Considerations
 
@@ -88,4 +127,7 @@ None
 
 ## Backwards Compatibility
 
-Programs accessing this sysvar could not be used on Solana versions which do not implement it.  Existing programs that do not use this sysvar are not impacted at all.  Therefore, a feature gate should be used to enable this feature when the majority of the cluster is using the required version.
+Programs accessing this sysvar could not be used on Solana versions which do
+not implement it. Existing programs that do not use this sysvar are not
+impacted. Therefore, a feature gate should be used to enable this feature when
+the majority of the cluster is using the required version.
