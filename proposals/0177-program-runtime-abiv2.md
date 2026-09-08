@@ -243,8 +243,7 @@ or as the program (and thus owner relation) changes between instructions.
 
 #### Instruction payload
 
-For each transaction account one separate readonly memory region must be mapped
-to its data (as opposed to its metadata).
+For each instruction, one separate readonly memory region must be mapped for its payload.
 
 One additional writable memory region can be created after the last instruction
 as zero-copy CPI scratch pad. See [Scratchpad management](#scratchpad-management).
