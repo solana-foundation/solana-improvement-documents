@@ -51,8 +51,8 @@ $`S \cdot B - h \cdot A = R`$. Batch verification checks a random linear
 combination of the individual equations, so it agrees with per-signature
 verification only when the equation being combined is cofactored: the cofactor
 multiplication annihilates every torsion component, so the batch equation holds
-(with overwhelming probability) exactly when each individual cofactored equation holds. 
-Batched verification can
+(with overwhelming probability) exactly when each individual cofactored
+equation holds. Batched verification can
 reduce costs by ~40% for large signature batches, which is significant at
 Solana's scale, where validators process hundreds of thousands of signatures
 every block.
