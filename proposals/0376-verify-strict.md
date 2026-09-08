@@ -47,11 +47,12 @@ verification equation, which is better described,
 rather than the implicit behaviour found in the `ed25519-dalek` library.
 
 2. `verify_strict` uses the *cofactorless* verification equation
-$`S \cdot B - h \cdot A = R`$. Batch verification is inherently cofactored: it
-checks a random linear combination of the individual equations multiplied by the
-cofactor, and therefore cannot reproduce cofactorless accept/reject decisions.
-It is the cofactorless equation, not the point checks, that makes batch
-verification of `verify_strict` semantics impossible. Batched verification can
+$`S \cdot B - h \cdot A = R`$. Batch verification checks a random linear
+combination of the individual equations, so it agrees with per-signature
+verification only when the equation being combined is cofactored: the cofactor
+multiplication annihilates every torsion component, so the batch equation holds
+(with overwhelming probability) exactly when each individual cofactored equation holds. 
+Batched verification can
 reduce costs by ~40% for large signature batches, which is significant at
 Solana's scale, where validators process hundreds of thousands of signatures
 every block.
@@ -150,11 +151,10 @@ the batch, since those steps are per-signature and independent of the batch.
 
 - `ed25519-dalek`'s `verify`: Another option would be to just downgrade the
 check from `verify_strict` to `verify`. This would also be backwards compatible,
-however there are a few issues with this approach. It is not possible to
-perform a compatible batched verification of a cofactorless verification
-equation with some sort of incompatibility, leading back to the original issue.
-Our only option would be to define the protocol in terms of the batched
-verification equation's behaviour which is not preferable.
+however there are a few issues with this approach. `verify` is still
+cofactorless, so no batched verification is equivalent to it, leading back to
+the original issue. Our only option would be to define the protocol in terms of
+the batched verification equation's behaviour which is not preferable.
 
 - Unmodified ZIP-215: Earlier revisions of this proposal adopted ZIP-215
 verbatim, which additionally accepts non-canonical encodings and small-order
