@@ -109,7 +109,7 @@ complete execution state and is calculated from several components:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | last_blockhash             (32 bytes) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| accounts_lt_hash_checksum  (32 bytes) |
+| accounts_lt_hash         (2048 bytes) |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 ```
@@ -119,8 +119,8 @@ complete execution state and is calculated from several components:
 - `parent_bank_hash` - Hash of the parent bank's state (32 bytes)
 - `signature_count` - Total number of signatures processed in the bank (64 bits)
 - `last_blockhash` - The blockhash used for transaction processing (32 bytes)
-- `accounts_lt_hash_checksum` - Checksum of the accounts ledger tree (32 bytes)
-- `accounts` - Detailed account state information (variable size)
+- `accounts_lt_hash` - The accounts lattice hash, hashed in full as its
+  1024-element `u16` array (2048 bytes)
 
 **Optional Component:**
 
