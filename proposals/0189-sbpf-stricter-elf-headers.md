@@ -35,7 +35,7 @@ None.
 ## Detailed Design
 
 The following must go into effect if and only if a program indicates the
-SBPF-version v3 or higher in its program header (see SIMD-0161).
+SBPF-version v3 or higher in its program header.
 
 ### File header
 
@@ -55,7 +55,8 @@ otherwise `ElfParserError::OutOfBounds` must be thrown.
 - `e_entry` must be within the bounds of the second program header
 - `e_phoff` must be `size_of::<Elf64Ehdr>()` (64 bytes)
 - `e_shoff` is not checked
-- `e_flags` see SIMD-0161
+- `e_flags` must be the SBPF version (v3 or higher), meaning a value of 
+  `0x0003` is SBPFv3, `0x0004` is SBPFv4, etc.
 - `e_ehsize` must be `size_of::<Elf64Ehdr>()` (64 bytes)
 - `e_phnum` must be greater than or equal `0x0001`
 - `e_phoff + e_phnum * size_of::<Elf64Phdr>()` must be

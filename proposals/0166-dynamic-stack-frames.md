@@ -131,8 +131,8 @@ retrieving the caller’s frame pointer address to access those parameters.
 
 ### Identification of programs
 
-As per the description in SIMD-0161, programs compiled with dynamic stack 
-frames must contain the `0x01` flag on their ELF header `e_flags` field.
+Programs compiled with dynamic stack frames must indicate the SBPF version 
+`0x01` or higher in their ELF header `e_flags` field.
 
 ## Impact
 
