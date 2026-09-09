@@ -31,13 +31,11 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-This syscall is intended to be an account-less sysvar accessor
-and therefore use `sol_get_sysvar` internally similar to the
-sysvar-specific getter syscalls (`SolGetClockSysvar`,
-`SolGetLastRestartSlotSysvar`, etc.). Therefore an
-invalid `result` pointer will fail & halt execution.
+This syscall is intended to be an account-less sysvar accessor.
+It validates the complete 128 byte result pointer and returns
+a result in accordance with the details below.
 
-### Returned Value
+### Returned Result
 
 ```rust
 #[repr(C)]
@@ -57,7 +55,7 @@ current slot. The `next_leader_identity` and `next_leader_vote` fields must be
 the block producer's identity pubkey and vote account pubkey for slot
 `current_slot + 1`.
 
-### Returned Result
+### Returned Value
 
 The syscall itself returns `0` on success. If any validation condition fails,
 the syscall aborts VM execution without returning to the calling program.
