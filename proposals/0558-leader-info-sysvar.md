@@ -1,6 +1,6 @@
 ---
 simd: '0558'
-title: Leader Info Syscall
+title: Leader Info Sysvar
 authors:
   - cavey
   - frank
@@ -14,9 +14,9 @@ development:
 
 ## Summary
 
-Create a new syscall that returns the leader for the current & the next slot.
+Create a new accountless sysvar that returns the leader for the current & the next slot.
 
-`fn sol_get_leader(result: *mut u8) -> u64`
+`SysvarLeader1nfo111111111111111111111111111`
 
 ## Motivation
 
@@ -31,13 +31,13 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-This syscall is intended to be an account-less sysvar accessor
-and therefore use `sol_get_sysvar` internally similar to the
-sysvar-specific getter syscalls (`SolGetClockSysvar`,
-`SolGetLastRestartSlotSysvar`, etc.). Therefore an
-invalid `result` pointer will fail & halt execution.
-This also means that the data should be stored in the sysvar
-cache.
+This sysvar is intended to be accountless and therefore is only
+accessible via `sol_get_sysvar`.
+
+There is no new syscall introduced by this proposal.
+
+The `var_addr` pointer is validated by `sol_get_sysvar`. An
+invalid pointer halts execution without returning to the caller.
 
 ### Returned Result
 
@@ -51,7 +51,7 @@ pub struct LeaderInfo {
 }
 ```
 
-The `LeaderInfo` struct is written to the `result` formal by the syscall.
+The `LeaderInfo` struct is written to the `var_addr` formal by `sol_get_sysvar`.
 
 The `leader_identity` and `leader_vote` fields
 must be the block producer's identity pubkey and vote account pubkey for the
@@ -59,27 +59,11 @@ current slot. The `next_leader_identity` and `next_leader_vote` fields must be
 the block producer's identity pubkey and vote account pubkey for slot
 `current_slot + 1`.
 
-### Returned Value
-
-The syscall itself returns `0` on success. If any validation condition fails,
-the syscall aborts VM execution without returning to the calling program.
-
 ### Program Access
 
-Programs may access the `LeaderInfo` information via the `sol_get_leader` syscall.
+Programs may access the `LeaderInfo` sysvar via the `sol_get_sysvar` syscall.
 
-No sysvar is introduced.
-
-### CU Cost
-
-This syscall copies data into a caller-provided memory address similar to the
-sysvar-specific getter syscalls (`SolGetClockSysvar`,
-`SolGetLastRestartSlotSysvar`, etc.).
-
-We price this syscall in line with the cost model used by those
-syscalls (`100 + size_of::<T>() as u64`).
-
-Under this model, `sol_get_leader` costs `100 + 32 * 4 = 228 CU`.
+No new syscall is introduced.
 
 ### Leader & Vote Pubkeys
 
@@ -118,13 +102,13 @@ the next epoch.  This value comes from the next epoch's leader schedule.
 
 ## Impact
 
-Programs such as market makers may now use this syscall to better update quotes
+Programs such as market makers may now use this sysvar to better update quotes
 based on specific and undesirable leader characteristics. This will further
 improve the robustness of Solana's market-making environment.
 
 Programs will need to be recompiled and redeployed to adopt this feature.
 
-Similar to the `Clock`, programs relying on this syscall may exhibit different
+Similar to the `Clock`, programs relying on this sysvar may exhibit different
 behavior if simulated and executed at different slots.
 
 ## Security Considerations
@@ -133,7 +117,7 @@ None
 
 ## Backwards Compatibility
 
-Programs accessing this syscall could not be used on Solana versions which do
-not implement it. Existing programs that do not use this syscall are not
+Programs accessing this sysvar could not be used on Solana versions which do
+not implement it. Existing programs that do not use this sysvar are not
 impacted. Therefore, a feature gate should be used to enable this feature when
 the majority of the cluster is using the required version.
