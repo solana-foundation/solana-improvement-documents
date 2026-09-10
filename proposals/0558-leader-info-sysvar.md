@@ -14,7 +14,8 @@ development:
 
 ## Summary
 
-Create a new accountless sysvar that returns the leader for the current & the next slot.
+Create a new accountless sysvar that returns the leader for the current &
+the next slot.
 
 `SysvarLeader1nfo111111111111111111111111111`
 
