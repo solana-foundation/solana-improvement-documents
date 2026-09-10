@@ -31,9 +31,13 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-This syscall is intended to be an account-less sysvar accessor.
-It validates the complete 128 byte result pointer and returns
-a result in accordance with the details below.
+This syscall is intended to be an account-less sysvar accessor
+and therefore use `sol_get_sysvar` internally similar to the
+sysvar-specific getter syscalls (`SolGetClockSysvar`,
+`SolGetLastRestartSlotSysvar`, etc.). Therefore an
+invalid `result` pointer will fail & halt execution.
+This also means that the data should be stored in the sysvar
+cache.
 
 ### Returned Result
 
