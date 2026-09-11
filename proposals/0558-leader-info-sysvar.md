@@ -33,12 +33,11 @@ No new terminology is introduced by this proposal.
 ## Detailed Design
 
 This sysvar is intended to be accountless and therefore is only
-accessible via `sol_get_sysvar`.
+accessible via `sol_get_sysvar`, as described in [SIMD-0127](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0127-get-sysvar-syscall.md).
 
 There is no new syscall introduced by this proposal.
 
-The `var_addr` pointer is validated by `sol_get_sysvar`. An
-invalid pointer halts execution without returning to the caller.
+Control flow is specified in SIMD-0127.
 
 ### Returned Result
 
@@ -52,8 +51,6 @@ pub struct LeaderInfo {
 }
 ```
 
-The `LeaderInfo` struct is written to the `var_addr` formal by `sol_get_sysvar`.
-
 The `leader_identity` and `leader_vote` fields
 must be the block producer's identity pubkey and vote account pubkey for the
 current slot. The `next_leader_identity` and `next_leader_vote` fields must be
@@ -65,6 +62,11 @@ the block producer's identity pubkey and vote account pubkey for slot
 Programs may access the `LeaderInfo` sysvar via the `sol_get_sysvar` syscall.
 
 No new syscall is introduced.
+
+
+### CU Cost
+
+CU cost is specified in SIMD-0127.
 
 ### Leader & Vote Pubkeys
 
