@@ -17,7 +17,7 @@ development:
 Create a new accountless sysvar that returns the leader for the current &
 the next slot.
 
-`SysvarLeader1nfo111111111111111111111111111`
+`SysvarLeader1111111111111111111111111111111`
 
 ## Motivation
 
@@ -45,8 +45,8 @@ Control flow is specified in SIMD-0127.
 #[repr(C)]
 pub struct LeaderInfo {
     pub leader_identity: Pubkey,
-    pub leader_vote: Pubkey,
     pub next_leader_identity: Pubkey,
+    pub leader_vote: Pubkey,
     pub next_leader_vote: Pubkey
 }
 ```
