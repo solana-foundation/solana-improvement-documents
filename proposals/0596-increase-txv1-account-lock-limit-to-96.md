@@ -12,7 +12,9 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Increase the account lock limit for v1 transactions from 64 to 96. Legacy and
+Increase the maximum number of account addresses in a v1 transaction from 64
+to 96. This limit includes all addresses in the transaction's account list:
+signers, program IDs, and both writable and read-only accounts. Legacy and
 v0 transaction formats retain the 64-account limit.
 
 ## Motivation
