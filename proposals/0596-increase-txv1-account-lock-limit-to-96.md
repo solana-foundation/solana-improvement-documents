@@ -46,6 +46,10 @@ The `increase_tx_account_lock_limit` feature, which raises the account lock
 limit to 128, MUST be removed before this proposal's feature is introduced.
 The two features therefore have no precedence or interaction rules.
 
+Tests should verify that otherwise valid v1 transactions with 65–96 accounts
+are accepted only after feature activation, and that transactions with more
+than 96 accounts remain rejected.
+
 ## Alternatives Considered
 
 V1 transactions have a 4096-byte size limit and encode each account address
