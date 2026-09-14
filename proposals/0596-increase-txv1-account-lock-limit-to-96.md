@@ -42,6 +42,10 @@ if it contains such a transaction.
 
 Legacy and v0 transactions MUST remain limited to 64 account locks.
 
+The `increase_tx_account_lock_limit` feature, which raises the account lock
+limit to 128, MUST be removed before this proposal's feature is introduced.
+The two features therefore have no precedence or interaction rules.
+
 ## Alternatives Considered
 
 V1 transactions have a 4096-byte size limit and encode each account address
