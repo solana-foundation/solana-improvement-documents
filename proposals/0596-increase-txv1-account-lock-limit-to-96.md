@@ -36,7 +36,9 @@ None.
 
 Once the associated feature gate is activated, v1 transactions MUST be allowed
 to lock up to 96 accounts, inclusive. A v1 transaction with more than 96
-accounts MUST fail sanitization.
+accounts MUST fail sanitization. During block production, the leader MUST
+discard such a transaction. During replay, a validator MUST mark the block dead
+if it contains such a transaction.
 
 Legacy and v0 transactions MUST remain limited to 64 account locks.
 
