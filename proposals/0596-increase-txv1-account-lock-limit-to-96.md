@@ -23,6 +23,11 @@ The runtime limits v1 transactions to 64 account locks. Raising the limit allows
 v1 transactions to use more accounts while leaving room for signatures,
 instructions, and instruction data within the transaction size limit.
 
+For example, onchain swap routing can require accounts for multiple liquidity
+pools and the programs they use. A higher account limit allows a single
+transaction to access more pools, enabling more complex routes that can offer
+better execution prices.
+
 ## New Terminology
 
 None.
