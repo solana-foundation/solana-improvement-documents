@@ -9,7 +9,9 @@ category: Standard
 type: Core
 status: Review
 created: 2025-07-25
-feature: (fill in with feature key and github tracking issues once accepted)
+feature:
+  - A1pengvuM6JEcyNuTnMqepBKhwHE3N6PmUrdATGawhJS
+  - FLHoAWBDjNh6zwmJ5i1NKK4KyD8otAiv7XxvmnFnVnKH
 ---
 
 ## Summary

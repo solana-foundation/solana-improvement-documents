@@ -4,9 +4,9 @@ title: Vote Account Address Keyed Leader Schedule
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2024-10-03
-feature: (fill in with feature tracking issues once accepted)
+feature: 5JsG4NWH8Jbrqdd8uL6BNwnyZK3dQSoieRXG5vmofj9y
 ---
 
 ## Summary

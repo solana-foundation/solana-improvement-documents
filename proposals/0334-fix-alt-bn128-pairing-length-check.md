@@ -5,7 +5,7 @@ authors:
   - Stanislav Ladyzhenskiy
 category: Standard
 type: Core
-status: Implemented
+status: Activated
 created: 2025-08-11
 feature: bnYzodLwmybj7e1HAe98yZrdJTd7we69eMMLgCXqKZm
 development:

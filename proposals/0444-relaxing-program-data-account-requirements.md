@@ -5,7 +5,7 @@ authors:
   - febo (Anza)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2026-01-09
 feature: rexav5eNTUSNT1K2N7cfRjnthwhcP5BC25v2tA4rW4h
 ---

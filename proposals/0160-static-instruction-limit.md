@@ -5,9 +5,9 @@ authors:
   - Andrew Fitzgerald (anza)
 category: Standard
 type: Core
-status: Accepted
+status: Activated
 created: 2024-07-24
-feature:
+feature: 64ixypL1HPu8WtJhNSMb9mSgfFaJvsANuRkTbHyuLfnx
 supersedes:
 superseded-by:
 extends:

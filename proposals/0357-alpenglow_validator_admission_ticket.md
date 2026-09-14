@@ -6,9 +6,9 @@ authors:
   - Roger Wattenhofer (Anza)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-09-11
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: VAT9huvhPjRN9cyrPytq9rwvEJ3J4ADtjdncgZRyANJ
 ---
 
 ## Summary

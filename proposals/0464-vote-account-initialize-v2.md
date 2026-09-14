@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Review
 created: 2026-02-05
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: VoteAccount1nitia1izeV211111111111111111111
 ---
 
 ## Summary

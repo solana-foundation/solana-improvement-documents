@@ -4,9 +4,9 @@ title: Commission Rate in Basis Points
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-05-29
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: Eg7tXEwMZzS98xaZ1YHUbdRHsaYZiCsSaR6sKgxreoaj
 ---
 
 ## Summary

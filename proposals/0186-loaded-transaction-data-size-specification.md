@@ -5,9 +5,11 @@ authors:
   - Hanako Mumei
 category: Standard
 type: Core
-status: Accepted
+status: Activated
 created: 2024-10-20
-feature: (fill in with feature tracking issues once accepted)
+feature:
+  - DeS7sR48ZcFTUmt5FFEVDr1v1bh73aAbZiZq3SYr8Eh8
+  - LTDSzjZKFJMKHYpNycG1FrWwGGTaFFwqEFjB5GGLNVD
 ---
 
 ## Summary

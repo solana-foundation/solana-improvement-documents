@@ -5,7 +5,7 @@ authors:
   - Tao Zhu (Anza)
 category: Standard
 type: Core
-status: Implemented
+status: Activated
 created: 2024-10-03
 feature: B7H2caeia4ZFcpE3QcgMqbiWiBtWrdBRBSJ1DY6Ktxbq (https://github.com/anza-xyz/agave/issues/3993)
 supersedes:

@@ -5,10 +5,15 @@ authors:
   - Igor Durovic (anza)
 category: Standard
 type: Core
-status: Idea
+status: Activated
 created: 2025-12-22
 supersedes: '0436'
-feature: (fill in with feature key and github tracking issues once accepted)
+feature:
+  - 4a6f7o7iTcA8hRDCrPLkSatnt5Ykxiu36wo5p1Tt12wC
+  - 61BtM7BkDEE8Yq5fskEVAQT9mYA8qCejJWoLe5apqg81
+  - rntCigrTppP5JdZz7K8TyN9sMzLdAcXp8SejYpVpX6D
+  - rntD7invRBswCAdKtRsh1G4psKjrPdS3BKqtnA78C7N
+  - rntTjNZ9boq8owDxjGVFHPfWNQPDaKiM5JcjxmDGg47
 ---
 
 ## Summary

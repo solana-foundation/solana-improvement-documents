@@ -5,7 +5,7 @@ authors:
   - Alexander Meißner
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2024-09-06
 feature: F6UVKh1ujTEFK3en2SyAL3cdVnqko1FVEXWhmdLRu6WP
 extends: SIMD-0161

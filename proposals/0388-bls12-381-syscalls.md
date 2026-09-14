@@ -4,9 +4,9 @@ title: BLS12-381 Elliptic Curve Syscalls
 authors: Sam Kim (Anza)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-10-28
-feature: (fill in with feature tracking issues once accepted)
+feature: b1sgUiJ3qu7hYm3tNDyyqZNQd6gLGJmJppnLNa93PCQ
 ---
 
 ## Summary

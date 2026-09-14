@@ -4,9 +4,9 @@ title: Custom Commission Collector Account
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-01-24
-feature: (fill in with feature tracking issues once accepted)
+feature: 3HcSrCTGXTUnrTueHi4DAwNuMxZSsm5xui2Ax3mgxHqf
 ---
 
 ## Summary
