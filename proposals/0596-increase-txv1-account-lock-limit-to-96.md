@@ -44,7 +44,22 @@ Legacy and v0 transactions MUST remain limited to 64 account locks.
 
 ## Alternatives Considered
 
-None.
+V1 transactions have a 4096-byte size limit and encode each account address
+directly as 32 bytes, without address lookup tables. A limit of 96 accounts
+uses 3072 bytes for addresses, leaving 1024 bytes for signatures, headers,
+configuration, instructions, and instruction data. By comparison, 128 account
+addresses alone would consume the entire transaction size limit.
+
+The 96-account limit balances access to more accounts with room for the rest
+of the transaction. Transactions MUST still fit within the transaction size
+limit, so those with more signatures or instruction data may fit fewer than
+96 accounts.
+
+Extending the higher account limit to legacy and v0 transactions was also
+considered. The goal is to eventually remove support for these formats, so
+increasing their capabilities would encourage further use of formats intended for
+retirement. Limiting the increase to v1 encourages applications to migrate
+to the newer format.
 
 ## Impact
 
