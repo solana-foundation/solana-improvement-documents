@@ -64,6 +64,22 @@ for the CPI that is about to be pushed onto the execution stack, if we are not
 dealing with a top level instruction. The number of CPIs is tallied whenever a 
 CPI is invoked, and can't be tracked ahead of time.
 
+During the instruction push onto the instruction stack, the error precendence 
+must be as follows:
+
+1. `InstructionError::UnsupportedProgramId`.
+2. `InstructionError::ReentrancyNotAllowed`.
+3. `InstructionError::UnbalancedInstruction`.
+4. `InstructionError::MacInstructionTraceExceeded`.
+5. `InstructionError::CallDepth`
+6. `InstructionError::InvalidAccountOwner`.
+
+This proposal must not change the amount of CUs charged on CPI entry nor those 
+charged for instruction accounts and data, both of which will still be charged 
+in case runtime errors with maximum instruction length exceeded. On the other 
+hand, since the specific CPI that exceeds the maximum number of instructions 
+must not be executed, CUs for its execution must not be accounted for.
+
 ### Edge Cases
 
 Transactions containing exactly 64 top-level instructions will fail as soon as 
@@ -94,19 +110,17 @@ None.
 
 ## Impact
 
+Validators should see more block space as offending transactions will fail 
+earlier.
+
+## Security Considerations
+
 There is a potential impact on the error order. Transactions that would 
 exceed the instruction trace length, but are failing, for instance, because
 of an error in a CPI before reaching the instruction limit, will now fail 
 without such an error. As a consequence, developers may see different logs 
 in transactions. In addition, CU consumption will change for transactions 
 now halt earlier.
-
-Validators should see more block space as offending transactions will fail 
-earlier.
-
-## Security Considerations
-
-This proposal suggests a change basic enough to have a low security risk.
 
 ## Conformance
 
