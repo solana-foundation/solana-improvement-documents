@@ -8,6 +8,7 @@ type: Core
 status: Draft
 created: 2026-08-11
 feature: (fill in with feature key and github tracking issues once accepted)
+extends: SIMD-0385
 ---
 
 ## Summary
