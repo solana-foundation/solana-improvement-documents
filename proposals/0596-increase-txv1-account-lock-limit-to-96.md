@@ -84,3 +84,11 @@ unchanged.
 ## Backwards Compatibility
 
 The change only relaxes the limit for v1 transactions and is feature gated.
+
+## Conformance
+
+Shared transaction test vectors should be provided so all client implementations
+can verify that otherwise valid v1 transactions with 65–96 accounts are accepted
+only after feature activation, and that transactions with more than 96 accounts
+remain rejected. Each vector should specify the transaction, feature activation
+state, and expected acceptance or rejection result.
