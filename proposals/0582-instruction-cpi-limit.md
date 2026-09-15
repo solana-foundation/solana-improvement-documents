@@ -55,7 +55,7 @@ Below is a basic snippet of how this verification is recommended to look like:
 
 ```
 if number_of_top_level_instructions_in_tx + number_of_cpis > 64 {
-  return Err(InstructionError::InstructionTraceLengthExceeded);
+  return Err(InstructionError::MaxInstructionTraceLengthExceeded);
 }
 ```
 
@@ -80,8 +80,8 @@ Which validator components are affected by this change?
 |---------------------------------|-------------------------------------|
 | Transaction Execution (Runtime) | A condition is changing place       |
 | Virtual Machine                 | None                                |
-| Block Packing                   | None                                |
-| Consensus                       | None                                |
+| Block Packing                   | Different CU accounting             |
+| Consensus                       | Different CU accounting             |
 | Gossip                          | None                                |
 | Turbine                         | None                                |
 | Snapshots                       | None                                |
@@ -116,3 +116,5 @@ conformance module for transactions implemented in Agave PR
 [#13211](https://github.com/anza-xyz/agave/pull/13211), allowing for 
 differential fuzzing in an uniform interface.
 
+The conformance testing for the correct implementation of this proposal must 
+focus on the correct CU match between clients and the error order.
