@@ -14,7 +14,7 @@ development:
 
 ## Summary
 
-Create a new accountless sysvar that returns the leader for the current &
+Create a new sysvar that returns the leader for the current &
 the next slot.
 
 `SysvarLeader1111111111111111111111111111111`
@@ -32,7 +32,7 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-This sysvar is intended to be accountless and therefore is only
+This sysvar is both an on-chain account and
 accessible via `sol_get_sysvar`, as described in [SIMD-0127](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0127-get-sysvar-syscall.md).
 
 There is no new syscall introduced by this proposal.
@@ -59,14 +59,15 @@ the block producer's identity pubkey and vote account pubkey for slot
 
 ### Program Access
 
-Programs may access the `LeaderInfo` sysvar via the `sol_get_sysvar` syscall.
+Programs may access the `LeaderInfo` sysvar via the `sol_get_sysvar` syscall,
+or by passing the requisite `AccountInfo` into their instruction.
 
 No new syscall is introduced.
 
 
 ### CU Cost
 
-CU cost is specified in SIMD-0127.
+CU cost to access via `sol_get_sysvar` is specified in SIMD-0127.
 
 ### Leader & Vote Pubkeys
 
@@ -102,6 +103,8 @@ the next epoch.  This value comes from the next epoch's leader schedule.
   account would be well over 200,000 bytes. Additionally, getting the current
   slot from `Clock` and indexing by window offset makes the current-leader
   lookup cost `O(500)` CU instead of `O(228)` CU here.
+- A dedicated `sol_get_leader` syscall.  This was rejected to avoid a syscall
+  that would be deprecated with the introduction of static sysvars.
 
 ## Impact
 
