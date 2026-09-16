@@ -41,7 +41,7 @@ No new terminology introduced in this document.
 ## Detailed Design
 
 Currently, the total number of instructions (top-level + CPI) is checked 
-against the limit as each instruction is executed. Consequently, a transaction 
+against the limit as each instruction is executed. Hence, a transaction 
 with 64 top-level instructions, whose first instruction performs a CPI, will 
 still have 62 out of the remaining 63 instructions executed before 
 exceeding the limit.
@@ -70,12 +70,12 @@ must be as follows:
 1. `InstructionError::UnsupportedProgramId`.
 2. `InstructionError::ReentrancyNotAllowed`.
 3. `InstructionError::UnbalancedInstruction`.
-4. `InstructionError::MacInstructionTraceExceeded`.
+4. `InstructionError::MaxInstructionTraceExceeded`.
 5. `InstructionError::CallDepth`
 6. `InstructionError::InvalidAccountOwner`.
 
 This proposal must not change the amount of CUs charged on CPI entry nor those 
-charged for instruction accounts and data, both of which will still be charged 
+charged for instruction accounts and data, both of which will still be imposed 
 in case runtime errors with maximum instruction length exceeded. On the other 
 hand, since the specific CPI that exceeds the maximum number of instructions 
 must not be executed, CUs for its execution must not be accounted for.
@@ -125,7 +125,7 @@ now halt earlier.
 ## Conformance
 
 Once implemented, we will generate new fixtures for the correct conformance 
-testing between validator implementation. We are going to use the SVM 
+testing between validator implementations. We are going to use the SVM 
 conformance module for transactions implemented in Agave PR 
 [#13211](https://github.com/anza-xyz/agave/pull/13211), allowing for 
 differential fuzzing in an uniform interface.
