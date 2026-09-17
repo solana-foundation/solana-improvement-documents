@@ -70,11 +70,27 @@ No sysvar is introduced.
 
 The `sol_get_leader` syscall CU cost is defined as:
 
-$$\mathtt{sysvar\\_base\\_cost} + \max \left( \mathtt{mem\\_op\\_base\\_cost}, \left\lfloor \frac{128}{\mathtt{cpi\\_bytes\\_per\\_unit}} \right\rfloor \right)$$
+$$
+  \mathtt{sysvar\\_base\\_cost} +
+  \max \left(
+    \mathtt{mem\\_op\\_base\\_cost},
+    \left\lfloor
+      \frac{\mathit{sizeof}(\mathtt{LeaderInfo)}}
+      {\mathtt{cpi\\_bytes\\_per\\_unit}}
+    \right\rfloor
+  \right)
+$$
 
 As of mainnet epoch 1036, this is 110 CU, which matches `sol_get_sysvar`:
 
-$$100 + \max \left( \left\lfloor \frac{128}{250} \right\rfloor, 10 \right) = 100 + 10 = 110$$
+$$
+  100 +
+  \max \left(
+    \left\lfloor \frac{128}{250} \right\rfloor,
+    10
+  \right)
+= 110
+$$
 
 ### Leader & Vote Pubkeys
 
