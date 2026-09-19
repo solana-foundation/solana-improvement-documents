@@ -49,26 +49,13 @@ opcodes.
 The mechanism can later be applied to operations that benefit from CPU SIMD
 and other host-architecture-specific instructions.
 
-### Compiler integration through libcalls
-
-Compiler libcalls provide a way to leverage JIT intrinsics without requiring
-application developers to change their source code.
-
-Compilers already lower operations unsupported by the target ISA into libcalls.
-LLVM lowers 128-bit integer multiplication to the `__multi3` libcall. Compiler
-tooling can implement `__multi3` using the `sol_multi3` JIT intrinsic instead
-of a BPF software implementation. This allows existing programs to benefit
-from the intrinsic simply by recompiling with a compiler-builtins library
-optimized for SVM, without source-level rewrites.
-
 ### Prototype results
 
 We prototyped `sol_multi3` in
 [sbpf](https://github.com/anza-xyz/sbpf/commit/4ce37fad6c4773730c4a2445674c9e9b55621b09).
 In a benchmark performing 10,000 `u128` multiplications, the intrinsic method
-consumed approximately four times fewer compute units (110k versus 450k CU) and
-ran approximately twice as fast in wall-clock time. These results are described
-in our [research article].
+consumed ~75% less compute (110k versus 450k CU) and ran approximately twice as
+fast in wall-clock time. These results are described in our [research article].
 
 [research article]: https://blueshift.gg/research/accelerating-u128-math-with-libcalls-and-jit-intrinsics
 
@@ -99,7 +86,8 @@ targeted by this proposal is x86-64.
 
 ## Detailed Design
 
-JIT intrinsics use the static call encoding defined by SIMD-0178:
+JIT intrinsics use the static call encoding defined by SIMD-0178 for all
+supported SBPF versions:
 
 - opcode 0x85
 - source register field set to zero
@@ -146,10 +134,12 @@ result = (a * b) mod 2^128
 On return, `r0` must contain the low 64 bits of `result`, and `r2` must contain
 the high 64 bits. The implementation must capture the high 64 bits of the first
 operand from `r2` before overwriting `r2` with the high 64 bits of the result.
-The intrinsic does not read or write VM memory.
+All other registers must remain unchanged. The intrinsic does not read or write
+VM memory.
 
-The intrinsic consumes the normal instruction-meter charge for its `CALL_IMM`
-instruction and must not incur the additional dispatch cost of a syscall.
+The intrinsic consumes one compute unit: the normal instruction-meter charge
+for its `CALL_IMM` instruction. It must not incur any additional intrinsic or
+syscall charge.
 
 ### Host-Architecture Execution
 
@@ -186,37 +176,21 @@ offsets.
 - The result must be identical regardless of host architecture or whether the
   program is interpreted or JIT-compiled.
 
-### Validator Components Affected
-
-| Validator Component             | Impact                                     |
-|---------------------------------|--------------------------------------------|
-| Transaction Execution (Runtime) | Intrinsic registration and compute metering |
-| Virtual Machine                 | Interpreter and JIT implementation         |
-| Block Packing                   | None                                       |
-| Consensus                       | None                                       |
-| Gossip                          | None                                       |
-| Turbine                         | None                                       |
-| Snapshots                       | None                                       |
-| On-Chain Core BPF Programs      | None                                       |
-| Other                           | None                                       |
-
 ## Alternatives Considered
 
-- New BPF instructions could represent accelerated operations directly, but
-  would extend the BPF ISA and require changes across the compiler and tooling
-  ecosystem
+- New BPF instructions could represent accelerated operations directly and
+  bind operands to arbitrary registers, avoiding register-shuffling
+  instructions. However, they would extend the BPF ISA and require
+  ecosystem-wide ISA support.
 - Regular syscalls could provide the same operations, but syscall dispatch
   introduces unnecessary overhead for small computational operations that can
   be emitted directly by the JIT.
 
 ## Impact
 
-The initial `sol_multi3` intrinsic allows existing applications to benefit from
-faster 128-bit multiplication without source-code changes.
-
-This also provides a stable compiler-to-SVM optimization interface and allows
-Solana to take advantage of host-architecture capabilities while keeping BPF
-programs portable.
+The `sol_multi3` intrinsic provides a portable BPF interface for wrapping
+128-bit multiplication while allowing SVM implementations to take advantage of
+host-architecture capabilities.
 
 ## Security Considerations
 
@@ -236,15 +210,15 @@ n/a
 
 ## Backwards Compatibility *(Optional)*
 
-Existing programs are unaffected. Existing source code can adopt `sol_multi3`
-by recompiling with a Solana compiler-builtins implementation that lowers
-`__multi3` to the intrinsic.
+Existing programs are unaffected. Programs may opt into `sol_multi3` by using
+its static call identifier.
 
 ## Conformance
 
-Conformance tests must verify identical `r0` and `r2` results and compute-unit
-consumption between the interpreter and every JIT backend. They must also
-verify that `sol_multi3` does not modify VM memory.
+Conformance tests must verify the specified `r0` and `r2` results, that all
+other registers remain unchanged, and identical compute-unit consumption
+between the interpreter and every JIT backend. They must also verify that
+`sol_multi3` does not modify VM memory.
 
 The test vectors must include zero, one, `u64::MAX`, `2^127`, and `u128::MAX`
 operands and products that do and do not overflow 128 bits.
