@@ -31,9 +31,33 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-This syscall is intended to be an account-less sysvar accessor.
-It validates the complete 128 byte result pointer and returns
-a result in accordance with the details below.
+`result` is a virtual address. On success the syscall writes 128 bytes of
+`LeaderInfo` to `[result, result + 128)`.
+
+Compute units are consumed first. If that exceeds the budget, the virtual
+machine aborts and no bytes are written.
+
+Otherwise the syscall aborts the virtual machine, without returning to the
+caller and without writing `LeaderInfo`, when any of the following are true.
+The checks run in this order:
+
+1. The program was loaded by a loader that does not enforce aligned accesses.
+   The error is `SyscallError::UnalignedPointer`. This is the same guard the
+   sysvar getter syscalls use. `LeaderInfo` is a `#[repr(C)]` struct of four
+   pubkeys, so its alignment is 1. When the loader does enforce alignment, the
+   address is not rejected for being unaligned.
+
+2. `result >= 0x4_0000_0000` (`MM_INPUT_START`, the input region). The error
+   is `SyscallError::InvalidPointer`. This syscall rejects an input-region
+   destination directly, the same way a sysvar getter does. The check does
+   not depend on SIMD-0459 being active.
+
+3. Any byte in `[result, result + 128)` is not writable. That includes an
+   unmapped address, a read-only region, and a range that crosses a region
+   boundary. This is an access violation. Address 0 fails here; there is no
+   separate null check.
+
+If every check passes, the syscall writes `LeaderInfo` and returns 0.
 
 ### Returned Result
 
