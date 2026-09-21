@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0650'
 title: BN254 Pairing with Target Group Output
 authors:
   - SK, ZZ (Anza)
@@ -261,7 +261,7 @@ output accounted for in the memory access cost as for the other
   `ALT_BN128_PAIRING`, including the G2 subgroup check. Skipping it would
   produce values outside the target group and make the output unsafe to use as
   key material.
-- The output MUST be the canonical encoding of the fully reduced target groupgit 
+- The output MUST be the canonical encoding of the fully reduced target group
   element, so that equal elements are byte-identical. Implementations MUST NOT
   leak internal representation details (e.g. Montgomery form) into the output.
 - The new opcode changes the behavior of `sol_alt_bn128_group_op` for a
