@@ -45,8 +45,7 @@ None.
 ## Detailed Design
 
 The following must go into effect if and only if a program indicates the SBPF 
-version `0x03` or higher in its ELF header e_flags field, according to the 
-specification of SIMD-0161.
+version `0x03` or higher in its ELF header e_flags field.
 
 ### Static syscall instruction
 
