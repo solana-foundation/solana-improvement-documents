@@ -123,7 +123,7 @@ pub struct VoteStateV4 {
     pub pending_delegator_rewards: u64,
 
     /// NEW: compressed bls pubkey for alpenglow
-    pub bls_pubkey_compressed: Option<[u8; 48]>
+    pub bls_pubkey_compressed: Option<[u8; 48]>,
 
     pub votes: VecDeque<LandedVote>,
     pub root_slot: Option<Slot>,
@@ -148,8 +148,8 @@ All vote instructions besides `InitializeAccount` MUST be updated to deserialize
 vote accounts in the following order:
 
 1. Deserialize versioned vote state
-1. Check for initialization or return `InstructionError::UninitializedAccount`
-2. Convert to v4 with the following default values for the new fields:
+2. Check for initialization or return `InstructionError::UninitializedAccount`
+3. Convert to v4 with the following default values for the new fields:
 
 ```rust
 VoteStateV4 {

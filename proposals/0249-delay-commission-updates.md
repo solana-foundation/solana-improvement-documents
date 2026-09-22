@@ -39,7 +39,7 @@ to the vote account state at the beginning of epoch `E + 1`.
 #### UpdateCommission
 
 Update the core vote program to no longer restrict commission increases from
-happening during the first half of the epoch.
+happening during the second half of the epoch.
 
 ## Alternatives Considered
 
@@ -56,10 +56,6 @@ updates.
 ## Security Considerations
 
 NA
-
-## Drawbacks *(Optional)*
-
-Why should we not do this?
 
 ## Backwards Compatibility *(Optional)*
 

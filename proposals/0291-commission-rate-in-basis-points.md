@@ -123,10 +123,6 @@ points.
 
 NA
 
-## Drawbacks *(Optional)*
-
-Why should we not do this?
-
 ## Backwards Compatibility *(Optional)*
 
 A feature gate will be used to simultaneously update the vote program to support
