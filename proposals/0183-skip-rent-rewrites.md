@@ -69,5 +69,5 @@ the network at least once per epoch.
 
 By skipping rewrites, we lose this security property.  This is OK because the
 Epoch Accounts Hash (EAH) was added to directly address this issue.  See the
-[EAH proposal](https://docs.solanalabs.com/implemented-proposals/epoch_accounts_hash)
+[EAH proposal](https://docs.anza.xyz/implemented-proposals/epoch_accounts_hash)
 for more information.

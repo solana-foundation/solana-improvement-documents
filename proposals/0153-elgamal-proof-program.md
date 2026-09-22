@@ -61,9 +61,9 @@ n/a
 ## Detailed Design
 
 The new ZK ElGamal Proof program contains a strict subset of the proof
-verification [instructions](https://github.com/anza-xyz/agave/blob/master/zk-token-sdk/src/zk_token_proof_instruction.rs#L48)
+verification [instructions](https://github.com/anza-xyz/agave/blob/v2.0.0/zk-token-sdk/src/zk_token_proof_instruction.rs#L47)
 in the original ZK Token Proof program. We list the
-the instructions in the ZK Token Proof program that are to be either renamed or
+instructions in the ZK Token Proof program that are to be either renamed or
 removed in the new ZK ElGamal Proof program.
 
 The following set of instructions will be RENAMED:

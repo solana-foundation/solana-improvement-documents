@@ -40,8 +40,8 @@ N/A.
 ## Detailed Design
 
 `p-token`
-([repository](https://github.com/solana-program/token/tree/main/p-token)) is a
-like-for-like efficient re-implementation of the Token program. It is `no_std`
+([repository](https://github.com/solana-program/token/tree/main/pinocchio/program))
+is a like-for-like efficient re-implementation of the Token program. It is `no_std`
 (no heap memory allocations are made in the program) and uses zero-copy access
 for instruction and account data. Since it follows the same instructions and
 accounts layout, it does not require any changes to client code – it works as a
@@ -50,7 +50,7 @@ drop-in replacement.
 Apart from the original SPL Token instructions, this proposal adds three
 additional instructions to the program:
 
-1. [`withdraw_excess_lamports`](https://github.com/solana-program/token/blob/main/p-token/src/processor/withdraw_excess_lamports.rs)
+1. [`withdraw_excess_lamports`](https://github.com/solana-program/token/blob/main/pinocchio/program/src/processor/withdraw_excess_lamports.rs)
     (instruction discriminator `38`): allow recovering "bricked" SOL from mint
     (e.g., USDC mint as `~323` SOL in excess) and multisig accounts. The logic of
     this instruction is similar to the current SPL Token-2022 instruction: the mint
@@ -62,7 +62,7 @@ additional instructions to the program:
     depending on the quantity of "unbricked" SOL; the total amount of SOL that could
     be freed up in this manner has yet to be calculated.
 
-2. [`batch`](https://github.com/solana-program/token/blob/main/p-token/src/processor/batch.rs)
+2. [`batch`](https://github.com/solana-program/token/blob/main/pinocchio/program/src/processor/batch.rs)
     (instruction discriminator `255`): enable efficient CPI interaction with the
     Token program. This is a new instruction that can execute a variable number of
     Token instructions in a single invocation of the Token program. Therefore, the

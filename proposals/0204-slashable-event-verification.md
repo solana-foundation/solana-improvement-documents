@@ -354,4 +354,4 @@ The feature is not backwards compatible
   merkle shreds, and retransmitter signed chained merkle shreds, see https://github.com/anza-xyz/agave/blob/4e7f7f76f453e126b171c800bbaca2cb28637535/ledger/src/shred.rs#L6
   for the full specification.
 
-\[3\]: Example of offset calculation can be found here https://docs.solanalabs.com/runtime/programs#ed25519-program
+\[3\]: Example of offset calculation can be found here https://web.archive.org/web/20240625214837/https://docs.solanalabs.com/runtime/programs#ed25519-program

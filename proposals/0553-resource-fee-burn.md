@@ -420,7 +420,7 @@ to resource fee in lamports is linear in the input. As such, implementations onl
 need a simple test suite (to check for edge cases, overflow, ceiling division) for
 the linear map from requested cost units to resource fee lamports.
 
-[Discussion #547]: ../discussions/547
+[Discussion #547]: https://github.com/solana-foundation/solana-improvement-documents/discussions/547
 [SIMD-0458]: 0458-stop-using-static-simplevote-transaction-cost.md
 
 <!-- markdownlint-disable MD013 -->

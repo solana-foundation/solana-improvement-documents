@@ -98,7 +98,7 @@ distribution during rewarding phases.
 
 The reward calculation will be performed at the first block of the epoch, block
 height `X`. (Some documentation on how rewards are calculated is available
-[here](https://docs.solanalabs.com/consensus/stake-delegation-and-rewards#basics).)
+[here](https://docs.anza.xyz/consensus/stake-delegation-and-rewards#basics).)
 Once the full rewards are calculated, the rewards will be partitioned into
 distribution chunks stored in the bank, which will then be distributed during
 the `reward distribution` phase.
