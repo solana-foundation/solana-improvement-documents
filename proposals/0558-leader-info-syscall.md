@@ -140,7 +140,7 @@ the next epoch.  This value comes from the next epoch's leader schedule.
   example, the next leader having a history of outright censorship. A program
   can then take actions to ensure that its state remains valid even if it is
   censored for the entire next leader window.  Even though the current / next
-  leader will usually be the same it is only 64 bytes / CU and other schemes
+  leader will usually be the same it is only 110 CU total and other schemes
   for counting the next leader (i.e, the actual next non-current leader)
   seemed to have awkward semantics or would exhibit odd behavior on single-node
   clusters. The % of time that these fields are the same will also decrease
@@ -149,7 +149,7 @@ the next epoch.  This value comes from the next epoch's leader schedule.
   epoch. This was rejected to avoid variable-length sysvars and because the
   account would be well over 200,000 bytes. Additionally, getting the current
   slot from `Clock` and indexing by window offset makes the current-leader
-  lookup cost `O(500)` CU instead of `O(228)` CU here.
+  lookup cost `O(500)` CU instead of `O(110)` CU here.
 
 ## Impact
 
