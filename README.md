@@ -22,6 +22,10 @@ SIMDs can be divided into the following categories:
 - **Meta SIMDs**:
   Describe a process surrounding Solana or propose a change to (or an event in)
   a process.
+- **Advisory SIMDs**:
+  Give clarifying information about protocol features or notice of upcoming
+  changes that don't require breaking consensus, such as errata and deprecation
+  notices.
 
 ## Before You Begin
 

@@ -253,7 +253,7 @@ export const metadataTypeIsValid = {
 
     const validTypes = ["Core", "Networking", "Interface", "Meta", "Advisory"]
 
-    if (!validTypes.some((validType) => type.includes(validType))) {
+    if (!validTypes.includes(type)) {
       onError({
         lineNumber: 1,
         detail: `\`${type}\` is not supported as a value for type. Valid values for type are: ${validTypes.join(

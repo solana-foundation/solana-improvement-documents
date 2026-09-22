@@ -4,7 +4,7 @@ title: Alt-BN128 Little Endian compatibility
 authors:
   - Dean Little - Blueshift
 category: Standard
-type: Core/Networking/Interface/Meta
+type: Core
 status: Idea
 created: 2025-05-15
 feature: 

@@ -3,8 +3,9 @@ simd: 'XXXX'
 title: Title of SIMD. This should be concise and descriptive.
 authors:
   - (fill in with names of authors)
-category: Standard/Meta
-type: Core/Networking/Interface/Meta
+category: Standard/Meta/Advisory
+type: Core/Networking/Interface/Meta/Advisory
+status: Draft
 created: (fill me in with today's date, YYYY-MM-DD)
 feature: (fill in with feature key and github tracking issues once accepted)
 supersedes: (optional - fill this in if the SIMD supersedes a previous SIMD)
