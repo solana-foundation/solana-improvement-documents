@@ -90,7 +90,7 @@ Transactions that are unable to pay fees may be included in blocks.
 ## Drawbacks
 
 - If there is no interest in simplifying block-validation to allow for
-  asynchronous, this proposal is not necesary.
+  asynchronous, this proposal is not necessary.
 - Concern about data propagation for without paying fees to the network (burn):
   - This concern has been raised in the past when this has been discussed.
   - However, the concern is largely invalid since even without this proposal,

@@ -36,7 +36,7 @@ None.
 
 ## Impact
 
-Exisiting dApps will not be affected as long as they don't depend on this limit
+Existing dApps will not be affected as long as they don't depend on this limit
 in their logic to fail transactions, which is unlikely.
 
 ## Security Considerations

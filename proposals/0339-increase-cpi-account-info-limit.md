@@ -117,10 +117,6 @@ to decrease the number of accounts passed to CPI's.
 
 NA
 
-## Drawbacks *(Optional)*
-
-Why should we not do this?
-
 ## Backwards Compatibility *(Optional)*
 
 The max account info length increase for CPI's and new costs will be feature

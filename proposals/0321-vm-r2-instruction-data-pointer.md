@@ -96,7 +96,7 @@ details.
 
 On-chain programs are positively impacted by this change. The new `r2` pointer
 gives programs the ability to efficiently read instruction data, further
-customize their program's control flow and maximize compute unit effiency.
+customize their program's control flow and maximize compute unit efficiency.
 However, any programs that currently depend on the uninitialized/garbage value
 in `r2` at entrypoint will break when this feature is activated.
 

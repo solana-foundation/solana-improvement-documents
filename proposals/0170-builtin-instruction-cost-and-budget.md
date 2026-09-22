@@ -83,7 +83,7 @@ requirement, allowing for controlled flexibility without an excessive margin.
 
 If a transaction consists only of builtins, no explicit CU request should be
 required. If a CU request is made, the requested limit will override the max
-allocation in #2.
+allocation of `MAX_BUILTIN_ALLOCATION_COMPUTE_UNIT_LIMIT`.
 
 ## Alternatives Considered
 

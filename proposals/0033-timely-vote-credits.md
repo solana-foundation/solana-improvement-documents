@@ -52,7 +52,7 @@ https://www.shinobi-systems.com/timely_voting_proposal
 
 This website is quite out of date however; the parameterizations that were
 proposed there ("4 16 1", see later in this document for a description of what
-these numbers mean) has been long since superceded by different values ("2 8
+these numbers mean) has been long since superseded by different values ("2 8
 1").  This is because the overall performance of the Solana mainnet cluster
 has matured to a degree where "tighter timings" are tolerable.
 
@@ -61,7 +61,7 @@ has matured to a degree where "tighter timings" are tolerable.
 **Vote Latency** is defined as the difference, in slots, between the slot
 being voted on within a vote transaction, and the slot in which the vote
 transaction itself lands.  The minimum possible vote latency for any voted-on
-slot is 1, since a vote on a slot must land no earler than the slot
+slot is 1, since a vote on a slot must land no earlier than the slot
 immediately following the slot being voted on.
 
 For example, if a vote transaction which included slot 1000 were voted on in a
@@ -160,7 +160,7 @@ that survives this pruning can have its latency calculated simply.
 
 3. The Solana CLI will have been updated to show vote latencies for each vote;
    any context in which the Solana CLI output is observed by users or other
-   tooling will need to adapt to the additonal data being displayed.
+   tooling will need to adapt to the additional data being displayed.
 
 4. The maximum number of earnable credits will increase from 432,000 to
    3,456,000.  This will add an extra digit in any context where this value is

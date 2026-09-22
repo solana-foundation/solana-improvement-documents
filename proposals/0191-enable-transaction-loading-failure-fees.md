@@ -86,22 +86,22 @@ performed in this order for error-consistency:
   `requested_loaded_accounts_data_size_limit` (or default if unspecified),
   return `MaxLoadedAccountDataSizeExceeded`.
 
-For each transction-level instruction in the transaction the following
+For each transaction-level instruction in the transaction the following
 checks MUST be performed, and SHOULD be performed in this order for
 error-consistency:
 
 - If the program account is `native_loader`, continue to next
   instruction.
 - If the program account does not exist, return `ProgramAccountNotFound`
-- If the program account is not executable, return ``InvalidProgramForExecution`
+- If the program account is not executable, return `InvalidProgramForExecution`
   - This only applies until
     [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162)
     is activated
 - If the program account's owner is the native_loader, continue to next
   instruction.
 - If the program account's owner does not exist, return `ProgramAccountNotFound`
-- If the program account's owner is not the native_loader, return ``InvalidProgramForExecution`
-- If the program account's owner is not executable, return ``InvalidProgramForExecution`
+- If the program account's owner is not the native_loader, return `InvalidProgramForExecution`
+- If the program account's owner is not executable, return `InvalidProgramForExecution`
   - This only applies until
     [SIMD-0162](https://github.com/solana-foundation/solana-improvement-documents/pull/162)
     is activated

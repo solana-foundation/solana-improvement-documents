@@ -24,7 +24,7 @@ and (2) removing the **Epoch Accounts Hash**.
 
 ## Motivation
 
-The main goal is to scale Solana to billions accounts, and compute a "hash of
+The main goal is to scale Solana to billions of accounts, and compute a "hash of
 all accounts" in practical time and space.
 
 Currently there are two main kinds of accounts hashes used in Solana:
@@ -240,5 +240,5 @@ Incompatible. This changes the bank hash, thus changing consensus.
    [cseweb.ucsd.edu](https://cseweb.ucsd.edu/~daniele/papers/IncHash.html)
 4. *Wagner*, **A Generalized Birthday Problem**, 2002,
    [crypto2002](https://www.iacr.org/archive/crypto2002/24420288/24420288.pdf)
-5. *O'Connor, Ausmasson, Neves, Wilcox-O'Hearn*, **BLAKE3**, 2021,
+5. *O'Connor, Aumasson, Neves, Wilcox-O'Hearn*, **BLAKE3**, 2021,
    [PDF](https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf)

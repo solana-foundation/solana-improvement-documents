@@ -50,7 +50,7 @@ block data out.
 If someone could predictably grind and influence turbine tree to ensure some
 malicious minority of stake could censor unrecoverable portions of a block, this
 would be a problem. Today, the grinding can be done, which means further ChaCha
-rounds provide very limited beenfit, but the ability to influence the generated
+rounds provide very limited benefit, but the ability to influence the generated
 tree is clamped down because the input data includes:
 
 - shred index

@@ -19,7 +19,7 @@ Add a new feature to disable rent fees collections.
 
 ## Motivation
 
-On solana network, (Rent) [https://solana.com/docs/intro/rent] was introduced to
+On solana network, [Rent](https://solana.com/docs/intro/rent) was introduced to
 account for the storage costs of an account initially. However, as the disks
 become cheaper and cheaper. The cost of storing the account becomes negligible.
 
@@ -51,8 +51,8 @@ made, should there be any such rent-paying accounts.
 
 ## Impact
 
-The main impact of this SIMD is to simply the validator design. Rent collection
-code is a non-trivial piece of code inside the bank. By removing it, we simply
+The main impact of this SIMD is to simplify the validator design. Rent collection
+code is a non-trivial piece of code inside the bank. By removing it, we simplify
 the overall code of bank, and we no longer need to maintain it in existing
 validator client code. This will also help to simplify the development of other
 validator client implementations, which don't need to replicate the rent

@@ -84,7 +84,7 @@ must be taken not to introduce names whose hash collides with existing ones.
 We expect core developers to rely on proper testing to identify such cases when 
 registering a new syscall in the program loader. It is worth pointing that the 
 solution proposed in this document is an improvement over the existing 
-mechanism that does not realiably distinguish internal and external calls.
+mechanism that does not reliably distinguish internal and external calls.
 
 ## Alternatives Considered
 

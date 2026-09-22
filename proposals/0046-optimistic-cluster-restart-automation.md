@@ -60,7 +60,7 @@ version` is calculated using `(current_shred_version + 1) % 0xffff`.
 restart so they can make decision for the whole cluster. If everything works
 perfect, we only need 2/3 of the total stake. However, validators could die
 or perform abnormally, so we currently set the `RESTART_STAKE_THRESHOLD` at
-80%, which is the same as what we use now for `--wait_for_supermajority`.
+80%, which is the same as what we use now for `--wait-for-supermajority`.
 
 ## Motivation
 
@@ -81,7 +81,7 @@ will halt and print debug information if anything goes wrong, and operators can
 set up their own monitoring accordingly.
 
 However, there are many ways an automatic restart can go wrong, mostly due to
-unforseen situations or software bugs. To make things really safe, we apply
+unforeseen situations or software bugs. To make things really safe, we apply
 multiple checks during the restart, if any check fails, the automatic restart
 is halted and debugging info printed, waiting for human intervention. Therefore
 we say this is an optimistic cluster restart procedure.
@@ -271,7 +271,7 @@ protocol. We call these `non-conforming` validators.
    Assuming a block has child `A` and `B` both on the list, the children's
    combined stake would be `2 * (67% - 5% - X)`. Because we only allow one
    RestartHeaviestFork per pubkey, every validator should select either `A`
-   or `B`, it's easy to find and filter out vialators who selected both. So the
+   or `B`, it's easy to find and filter out violators who selected both. So the
    children's total stake should be less than `100% - X`. We can calculate that
    if `124% - 2 * X < 100% - X`, then `X > 24%`, this is not possible when we
    have at least 80% of the validators in restart. So we prove any block in the
@@ -337,7 +337,7 @@ protocol. We call these `non-conforming` validators.
 If the previous step succeeds, the validator immediately starts adding a hard
 fork at the designated slot and perform `set_root`. Then it will start
 generating an incremental snapshot at the agreed upon `cluster restart slot`.
-After snapshot generation completes, the `--wait_for_supermajority` args with
+After snapshot generation completes, the `--wait-for-supermajority` args with
 correct shred version, restart slot, and expected bankhash will be printed to
 the logs.
 
@@ -381,7 +381,7 @@ file for later slashing.
 
 Even though it's not very common that an outage happens across an epoch
 boundary, we do need to prepare for this rare case. Because the main purpose
-of `wen restart` is to make everyone reach aggrement, the following choices
+of `wen restart` is to make everyone reach agreement, the following choices
 are made:
 
 * Every validator only handles 2 epochs, any validator will discard slots

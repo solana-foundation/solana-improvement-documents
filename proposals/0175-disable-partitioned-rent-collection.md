@@ -50,10 +50,6 @@ ensuring that all validators have the same set of account state.
 Rent related code changes often come along with a lot of edge cases to consider
 so changes should be made carefully to avoid introducing any bugs.
 
-## Drawbacks *(Optional)*
-
-Why should we not do this?
-
 ## Backwards Compatibility *(Optional)*
 
 Changes require feature gates for activation to avoid any backwards incompatiblity
