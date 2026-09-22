@@ -86,8 +86,8 @@ example below:
 | `0x200001000..0x200002000` | --- | mapped |
 | `0x200002000..0x200003000` | mapped | mapped |
 | `0x200003000..0x200004000` | --- | --- |
-| `0x200004000..0x200006000` | mapped | --- |
-| `0x200005000..0x200007000` | --- | --- |
+| `0x200004000..0x200005000` | mapped | --- |
+| `0x200005000..0x200006000` | --- | --- |
 
 In SBPFv0 the stack frame bump on `call` and `callx` must be lowered from 8 KiB
 to 4 KiB (this is already the case in SBPFv3).

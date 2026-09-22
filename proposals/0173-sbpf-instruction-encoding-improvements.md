@@ -66,6 +66,10 @@ SBPF-version v2 or higher in its program header (see SIMD-0161). Some now
 unreachable verification and execution checks around `LDDW` can be safely
 removed (see motivation).
 
+These changes are specific to SBPFv2. SBPFv3 (SIMD-0377) does not carry them
+over, and the reference implementation (`anza-xyz/sbpf`) gates each of them on
+`SBPFVersion::V2` exactly.
+
 ### Changes to the Bytecode Verifier
 
 A program containing one of the following instructions must throw
@@ -114,7 +118,7 @@ opcodes:
 ## Impact
 
 The toolchain will emit machinecode according to the selected SBPF version.
-As most proposed changes affect the encoding only, and not the functionallity,
+As most proposed changes affect the encoding only, and not the functionality,
 we expect to see no impact on dApp developers. The only exception is that
 64-bit immediate loads will now cost 2 CU instead of 1 CU.
 
