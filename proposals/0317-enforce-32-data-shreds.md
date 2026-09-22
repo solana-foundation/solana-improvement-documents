@@ -18,7 +18,7 @@ sending and receiving only 32 data + 32 coding shreds.
 
 ## Motivation
 
-It is inconvinient to support many combinations of data + coding shreds.
+It is inconvenient to support many combinations of data + coding shreds.
 Even the logic to validate if a shred index is valid or not is complex
 because it requires to receive a coding shred for the FEC set to know the
 index boundaries. With fixed 32 data + 32 coding shreds this logic becomes
@@ -42,12 +42,15 @@ A sender should always produce 32 data shreds + 32 coding shreds per FEC set
 
 Receivers currently accept FEC sets with variable number of shreds.
 
-If `enforce_32_data_shreds: <PUBKEY>`
+If `enforce_fixed_fec_set: fixfecLZYMfkGzwq6NJA11Yw6KYztzXiK9QcL3K78in`
 is active, then any FEC set with a number of shreds different than 32 data + 32 coding
 will be dropped on ingest.
 
-As a result, the FEC set payload must be exactly equal to 31840 bytes (with 995 bytes
-of payload per data shred).
+As a result, the FEC set payload must be exactly equal to 30816 bytes (with 963 bytes
+of payload per data shred). All shreds are chained since SIMD-0313, so each data
+shred carries the 32 byte Merkle root of the previous erasure batch next to the
+6-entry Merkle proof. Resigned shreds also carry a 64 byte retransmitter
+signature, so a resigned FEC set holds 28768 bytes (899 bytes per data shred).
 
 ## Alternatives Considered
 
