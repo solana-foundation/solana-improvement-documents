@@ -126,7 +126,7 @@ being the byte-ordering of the base field (Fq) elements themselves:
 ### New Curve ID Constants
 
 We propose using new `curve_id` constants for BLS12-381. These IDs will be used
-across across the new and extended syscalls (`sol_curve_group_op`,
+across the new and extended syscalls (`sol_curve_group_op`,
 `sol_curve_validate_point`, `sol_curve_pairing_map`, and `sol_curve_decompress`)
 to specify the curve and endianness.
 
@@ -150,7 +150,7 @@ pub const BLS12_381_G2_LE: u64 = 6;
 pub const BLS12_381_G2_BE: u64 = 6 | 0x80;
 ```
 
-The `BLS12-381_{LE,BE}` constants will be used for the pairing operation.
+The `BLS12_381_{LE,BE}` constants will be used for the pairing operation.
 The `BLS12_381_G1_{LE,BE}` and `BLS12_381_G2_{LE,BE}` constants will be used for
 group operations and decompression.
 

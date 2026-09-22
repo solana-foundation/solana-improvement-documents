@@ -59,7 +59,7 @@ epoch:
 4. Invoke the loader to deploy the new program account and program data account.
   This step also updates the program cache.
 
-4. Zero out the buffer account `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv`, and
+5. Zero out the buffer account `S1asHs4je6wPb2kWiHqNNdpNRiDaBEDQyfyCThhsrgv`, and
   update the changes to capitalization and account data lengths accordingly.
 
 This is the only protocol change that clients need to implement. The remaining
@@ -90,7 +90,7 @@ system program :
 - `offset`, an unaligned eight-byte little-endian unsigned integer indicating
   the offset from which to read the proof
 - `slot`, an unaligned eight-byte little-endian unsigned integer indicating the
-  slot in which the violation occured
+  slot in which the violation occurred
 - `node_pubkey`, an unaligned 32 byte array representing the public key of the
   node which committed the violation
 - `reporter`, an unaligned 32 byte array representing the account to credit
@@ -129,7 +129,7 @@ program such as the Record program.
 
 - The difference between the current slot and `slot` is greater than 1 epoch's
   worth of slots as reported by the `Clock` sysvar
-- The `destination` is equal to the address of `pda_account`
+- The `destination` is equal to the address of `report_account`
 - `offset` is larger than the length of `proof_account`
 - `proof_account[offset..]` does not deserialize cleanly to a
   `DuplicateBlockProofData`.
@@ -228,12 +228,12 @@ let (pda, _) = find_program_address(&[
 ])
 ```
 
-If the `pda` is not equal to the addres of the `pda_account` then we abort.
+If the `pda` is not equal to the address of the `report_account` then we abort.
 
 At the moment `DuplicateBlock` is the only violation type but future work will
 add additional slashing types.
 
-We expect the `pda` account to be prefund-ed by the user to contain enough lamports
+We expect the `pda` account to be prefunded by the user to contain enough lamports
 to store a `ProofReport`.
 
 If the `pda` account has any data, is owned by the slashing program, and the version
@@ -262,7 +262,7 @@ struct ProofReport {
 
   slot: Slot,                      // Unaligned unsigned eight-byte little endian
                                    // integer representing the slot in which the
-                                   // violation occured
+                                   // violation occurred
 
   violation_type: u8,              // Byte representing the violation type
 }
@@ -274,7 +274,7 @@ This proof data provides an on chain trail of the reporting process, since the
 `proof_account` supplied in the `DuplicateBlockProof` instruction could later
 be modified.
 
-The `pubkey` is populated with the `node_pubkey`. For future violation types that
+The `violator` is populated with the `node_pubkey`. For future violation types that
 involve votes, this will instead be populated with the vote account's pubkey.
 The work in SIMD-0180 will allow the `node_pubkey` to be translated to a vote account
 if needed.
@@ -311,7 +311,7 @@ The three epoch window is somewhat arbitrary, we only need the `report_account` 
 last at least one epoch in order to for it to be observed by the runtime as part
 of a future SIMD.
 
-Otherwise we set the owner of `report_account` to the system program, rellocate
+Otherwise we set the owner of `report_account` to the system program, reallocate
 the account to 0 bytes, and credit the `lamports` to `destination_account`
 
 ---

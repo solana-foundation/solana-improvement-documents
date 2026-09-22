@@ -82,7 +82,7 @@ The LegacyHeader is unchanged from prior transaction formats.
 For reference, it consists of three `u8` values with no padding. The values
 (in order) are:
 
-- `num_required_signatures`: The number of requires signatures
+- `num_required_signatures`: The number of required signatures
 - `num_readonly_signed_accounts`: The number of the accounts with
     signatures that are loaded as read-only
 - `num_readonly_unsigned_accounts`: The number of accounts without
@@ -152,11 +152,11 @@ consists of three fields with no padding:
   has been renamed to clarify its use without changing its meaning.
 - `NumInstructionAccounts: u8`: the number of addresses that will be passed
   to the program when it is invoked. This field was implicitly represented in
-  a different encoding in a previous versions of the transaction format as
+  a different encoding in previous versions of the transaction format as
   the element count of the `accounts` vector.
 - `NumInstructionDataBytes: u16`: the size in bytes of the data that will be
   passed as input to the program when it is invoked. This field was
-  implicitly represented in a different encoding in a previous versions of
+  implicitly represented in a different encoding in previous versions of
   the transaction format as the element count of the `data` vector.
 
 There is also no padding between each 4-byte element.
@@ -215,7 +215,7 @@ requests in a transaction.
 It is intended to be flexible enough to add new fields in the future, and is 
 initially aimed at replacing the ComputeBudgetProgram instructions that are 
 currently used to configure transactions.
-Each bit in the mask represents 4-bytes in the `ConfigRequests` array.
+Each bit in the mask represents 4-bytes in the `ConfigValues` array.
 If a configured value, such as priority-fee, needs more than 4-bytes a field can
 use 2 bits in the mask.
 
