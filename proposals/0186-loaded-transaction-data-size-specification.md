@@ -72,7 +72,7 @@ programdata account.
 The proposed algorithm is as follows:
 
 1. The set of accounts that determine loaded transaction data size is defined as
-the unique intersection of:
+the union of:
     * The set of account keys explicitly specified on the transaction,
 irrespective of how they are used.
     * The set of programdata accounts referenced by the LoaderV3 program

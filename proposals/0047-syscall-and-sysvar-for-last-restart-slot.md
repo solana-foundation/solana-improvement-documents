@@ -99,9 +99,12 @@ Sysvar Id: `SysvarLastRestartS1ot1111111111111111111111`
 The implementation of this syscall is pretty straightforward. The syscall should
 have following signature:
 
-`fn sol_get_last_restart_slot() -> u64`
+`fn sol_get_last_restart_slot(addr: *mut u8) -> u64`
 
-Murmur3 hash is: `0xb532af38`
+Like the other sysvar syscalls, it writes the `LastRestartSlot` sysvar to `addr`
+and returns 0 on success.
+
+Murmur3 hash is: `0x188a0031`
 
 ### Overview of changes for Solana client
 
