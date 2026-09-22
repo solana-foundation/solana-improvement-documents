@@ -220,5 +220,4 @@ N/A.
 
 Fully backwards compatible, no changes are required for users of the program.
 Note that we are proposing omitting instruction name logs
-(e.g., "Instruction: &#60;name&#62;") .
-````
+(e.g., "Instruction: &#60;name&#62;").

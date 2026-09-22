@@ -271,11 +271,11 @@ Sample Response Payload
     "blockHeight": 428,
     "blockTime": null,
     "blockhash": "3Eq21vXNB5s86c62bVuUfTeaMif1N2kUqRPBmGRJhyTA",
-    "parentSlot": 429,
+    "parentSlot": 378967387,
     "previousBlockhash": "mfcyqEXB3DnHXki6KjjmZck6YjmZLvpAByy2fj4nh6B",
     "footer": {
         "blockProducerTimeNanos": 1750176982899968023,
-        "blockUserAgent": "agave/v3.0.0 (double0) greedy-scheduler/v3 (mode:perf; another-flag)",
+        "blockUserAgent": "agave/v3.0.0 (double0) greedy-scheduler/v3 (mode:perf; another-flag)"
     },
     "transactions": [
       {
@@ -302,7 +302,7 @@ Sample Response Payload
               "SysvarC1ock11111111111111111111111111111111",
               "Vote111111111111111111111111111111111111111"
             ],
-            "footer": {
+            "header": {
               "numReadonlySignedAccounts": 0,
               "numReadonlyUnsignedAccounts": 3,
               "numRequiredSignatures": 1
@@ -330,9 +330,9 @@ Sample Response Payload
 
 ### Mandating the footer
 
-This proposal makes the block footer. Blocks that don't include a valid footer
-in the block payload must be flagged as dead blocks and skipped by the other
-nodes in the cluster.
+This proposal makes the block footer mandatory. Blocks that don't include a
+valid footer in the block payload must be flagged as dead blocks and skipped by
+the other nodes in the cluster.
 
 ## Alternatives Considered
 

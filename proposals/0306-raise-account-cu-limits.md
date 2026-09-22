@@ -50,6 +50,7 @@ Units`. This will result in the following `Max Writable Account Units` for
 current and future proposed `Max Block Units`:
 
 | Block Limit | Max Block Units | Max Writable Account Units |
+|-------------|-----------------|----------------------------|
 | Current | 50M | 20M |
 | SIMD-0256 | 60M | 24M |
 | SIMD-0286 | 100M | 40M |

@@ -62,8 +62,11 @@ pub const ALT_BN128_G2_MULTIPLICATION_INPUT_LEN:  u64 = ALT_BN128_G2_POINT_SIZE
     + ALT_BN128_FIELD_SIZE; // 160
 pub const ALT_BN128_G2_MULTIPLICATION_OUTPUT_LEN: u64 = ALT_BN128_G2_POINT_SIZE;
     // 128
+```
 
 ### New Opcodes
+
+```rust
 pub const ALT_BN128_G2_ADD: u64 = 4;
 pub const ALT_BN128_G2_SUB: u64 = 5;
 pub const ALT_BN128_G2_MUL: u64 = 6;
