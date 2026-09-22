@@ -146,7 +146,7 @@ fn verify() {
 
     signature = get_data_slice(all_tx_data,
                                offsets.signature_instruction_index,
-                               offsets.signature_offset
+                               offsets.signature_offset,
                                signature_length)
     if !signature {
       return Error
@@ -162,7 +162,7 @@ fn verify() {
 
     message = get_data_slice(all_tx_data,
                              offsets.message_instruction_index,
-                             offsets.message_offset
+                             offsets.message_offset,
                              offsets.message_length)
     if !message {
       return Error
@@ -209,12 +209,12 @@ fn get_data_slice(all_tx_data, instruction_index, offset, length) {
 
 **Context.**
 
-In Solana, transactions use Ed25199 signatures, and are validated using
+In Solana, transactions use Ed25519 signatures, and are validated using
 the so called **strict verify**.
 Compared to "RFC verify", strict verify enforces extra checks against
 (certain types of) malleability.
 
-The Ed25199 precompile currently implements a non-strict verify, so with
+The Ed25519 precompile currently implements a non-strict verify, so with
 Change #1 we'll make it compatible with the way Solana verifies signatures.
 
 Moreover, the Ed25519 precompile accepts a payload of `[0, 0]` as valid
@@ -228,7 +228,7 @@ in the return error code, we recommend to NOT change the internal behavior
 
 **FAQ.**
 
-- **Q: Why does the Ed25199 precompile currently use `verify` instead of
+- **Q: Why does the Ed25519 precompile currently use `verify` instead of
   `strict_verify`?**
   A: No good reason, it was built without noticing the difference.
 

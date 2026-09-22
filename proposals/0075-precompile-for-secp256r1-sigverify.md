@@ -127,9 +127,9 @@ by enforcing the usage of `lowS` values, in which `s <= n/2`.
 
 As such, the program must immediately fail upon the detection of any
 signature that includes a `highS` value. This prevents any accidental
-succeptibility to signature malleability attacks.
+susceptibility to signature malleability attacks.
 
-Note: The existing `secp256k1` precompile makes no attempt attempt to mitigate
+Note: The existing `secp256k1` precompile makes no attempt to mitigate
 s malleability, as doing so would go against its primary goal of achieving
 `ecrecover` parity with EVM.
 
@@ -221,24 +221,24 @@ function verify() {
     return Error
   }
   num_signatures = data[0]
-  if num_signatures == 0 && length_of_data > 1 {
+  if num_signatures == 0 || num_signatures > 8 {
     return Error
   }
   if length_of_data < (num_signatures * SERIALIZED_OFFSET_STRUCT_SIZE + 2) {
     return Error
   }
   all_tx_data = { data, instruction_datas }
-  data_start_position = 2
+  data_position = 2
 
   for i in 0..num_signatures {
       offsets = (Secp256r1SignatureOffsets) 
-        all_tx_data.data[data_start_position..data_start_position + SERIALIZED_OFFSET_STRUCT_SIZE]
+        all_tx_data.data[data_position..data_position + SERIALIZED_OFFSET_STRUCT_SIZE]
       data_position += SERIALIZED_OFFSET_STRUCT_SIZE
 
       signature = get_data_slice(all_tx_data,
                                 offsets.signature_instruction_index,
-                                offsets.signature_offset
-                                signature_length)
+                                offsets.signature_offset,
+                                SERIALIZED_SIGNATURE_LENGTH)
       if !signature {
         return Error
       }
@@ -253,7 +253,7 @@ function verify() {
 
       message = get_data_slice(all_tx_data,
                               offsets.message_instruction_index,
-                              offsets.message_offset
+                              offsets.message_offset,
                               offsets.message_length)
       if !message {
         return Error
@@ -293,7 +293,7 @@ fn get_data_slice(all_tx_data, instruction_index, offset, length) {
 }    
 ```
 
-Additonally the precompile's core `verify` function must be constructed in
+Additionally the precompile's core `verify` function must be constructed in
 accordance with the structure outlined in [sdk/src/precompiles.rs](https://github.com/solana-labs/solana/blob/9ffbe2afd8ab5b972c4ad87d758866a3e1bb87fb/sdk/src/precompiles.rs).
 
 ### Compute Cost / Efficiency
@@ -301,7 +301,7 @@ accordance with the structure outlined in [sdk/src/precompiles.rs](https://githu
 Benchmarking and compute cost calculations must be done in accordance with [SIMD-0121](https://github.com/solana-foundation/solana-improvement-documents/pull/121)
 
 Additionally, comparisons to existing precompiles should be done to check for
-comperable efficiency.
+comparable efficiency.
 
 ## Impact
 
