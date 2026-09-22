@@ -97,7 +97,7 @@ an unsigned 32 bit division (`dst / imm` and `dst / src`).
 - the `UDIV64` instruction (opcode `0x56` and `0x5E`) produces the quotient of
 an unsigned 64 bit division (`dst / imm` and `dst / src`).
 - the `UREM32` instruction (opcode `0x66` and `0x6E`) produces the remainder of
-an unsigned 64 bit division (`dst % imm` and `dst % src`).
+an unsigned 32 bit division (`dst % imm` and `dst % src`).
 - the `UREM64` instruction (opcode `0x76` and `0x7E`) produces the remainder of
 an unsigned 64 bit division (`dst % imm` and `dst % src`).
 - the `LMUL32` instruction (opcode `0x86` and `0x8E`) produces the 32 LSBs of
@@ -112,9 +112,9 @@ a signed 32 bit division (`dst / imm` and `dst / src`).
 - the `SDIV64` instruction (opcode `0xD6` and `0xDE`) produces the quotient of
 a signed 64 bit division (`dst / imm` and `dst / src`).
 - the `SREM32` instruction (opcode `0xE6` and `0xEE`) produces the remainder of
-a signed 32 bit division (`dst / imm` and `dst / src`).
+a signed 32 bit division (`dst % imm` and `dst % src`).
 - the `SREM64` instruction (opcode `0xF6` and `0xFE`) produces the remainder of
-a signed 64 bit division (`dst / imm` and `dst / src`).
+a signed 64 bit division (`dst % imm` and `dst % src`).
 
 Runtime exceptions are:
 
@@ -141,8 +141,8 @@ instruction becomes the explicit sign extension operation.
 #### Register Immediate Subtraction
 
 The operands roles of `SUB32_IMM` (opcode `0x14`) and `SUB64_IMM` (opcode
-`0x17`) must be swapped: Until now the resulting difference was `src - imm` and
-it must be changed to `imm - src`.
+`0x17`) must be swapped: Until now the resulting difference was `dst - imm` and
+it must be changed to `imm - dst`.
 
 ## Impact
 
