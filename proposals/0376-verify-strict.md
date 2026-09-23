@@ -138,6 +138,23 @@ them with the Algorithm described above. This includes replacing the equation
 used for verification of transaction signatures, gossip packet signatures, shred
 packet signatures, and the Ed25519 precompile program.
 
+Section 3.2 of [Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf)
+explains the relationship between batched and single cofactored verifications,
+proving them to be compatible. As a result, they can be used interchangeably,
+in use cases such as optimizing transaction signature verification.
+The batched verification implementation in
+[ed25519-zebra](https://github.com/ZcashFoundation/ed25519-zebra) can still be
+used, provided steps 1–5 are applied to each signature before it is added to
+the batch, since those steps are per-signature and independent of the batch.
+
+### Activation
+
+This upgrade requires one feature gate. The rule that applies to a given
+signature depends on where it is verified, as specified below. In every case, a
+signature produced by RFC-8032 `sign` verifies under both the old and the new
+rule, so any window in which two nodes apply different rules affects only
+purpose-built signatures.
+
 #### Shred signatures
 
 Shred verification is asynchronous with respect to execution: a node verifies
@@ -152,30 +169,44 @@ epoch $E + 1$ and later are verified with the Algorithm above.
 pre-activation rule (`verify_strict`).
 
 The delay ensures every node observes the activation before it takes effect for
-shreds. A node only accepts shreds within a bounded distance ahead of its root
-(currently 50,000 slots in Agave), which is far smaller than an epoch (432,000
-slots). A node close enough to epoch $E + 1$ to accept its shreds therefore has
-a root in epoch $E$ and has already observed the activation. Conversely, any
-shred for epoch $E + 1$ that reaches a node before it has observed the
+shreds. A node only accepts shreds within a bounded distance ahead of its root.
+Agave currently bounds this at $`\max(500, \text{slots\_per\_epoch} / 2)`$
+slots. For any epoch of at least 1,000 slots, including the 432,000-slot
+epochs of mainnet-beta, testnet, and devnet, this bound is strictly less than
+one epoch. A node close enough to epoch $E + 1$ to accept its shreds therefore
+has a root in epoch $E$ and has already observed the activation. Conversely,
+any shred for epoch $E + 1$ that reaches a node before it has observed the
 activation lies beyond that distance and is dropped regardless of which rule
 would have been applied.
 
-Transaction signatures and the Ed25519 precompile switch at the activation slot,
-since they are verified against the bank of the slot in which they execute.
-Gossip signatures are not bound to a slot; a node switches once its root bank
-reflects the activation. Because every signature produced by RFC-8032 `sign`
-verifies under both rules, a transient disagreement between nodes on gossip
-verification affects only purpose-built signatures and is not a consensus
-concern.
+For epochs shorter than 1,000 slots, which Agave supports for test clusters,
+the 500-slot floor can span more than one epoch, and a node rooted in epoch
+$E - 1$ or earlier may receive epoch $E + 1$ shreds before observing the
+activation. The rule is unchanged in this case: such a node applies the
+pre-activation rule until its root bank reflects the activation. It diverges
+from the rest of the cluster only on shreds whose leader deliberately embedded
+a torsion component, and it re-verifies any such shred under the new rule if it
+later obtains it through repair. Clusters with epochs shorter than 1,000 slots
+must either accept this weaker guarantee or activate the feature at genesis.
 
-Section 3.2 of [Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf)
-explains the relationship between batched and single cofactored verifications,
-proving them to be compatible. As a result, they can be used interchangeably,
-in use cases such as optimizing transaction signature verification.
-The batched verification implementation in
-[ed25519-zebra](https://github.com/ZcashFoundation/ed25519-zebra) can still be
-used, provided steps 1–5 are applied to each signature before it is added to
-the batch, since those steps are per-signature and independent of the batch.
+#### Transactions and the Ed25519 precompile
+
+Transaction signatures and the Ed25519 precompile switch at the activation slot:
+a signature in a block is valid if and only if it satisfies the rule selected by
+the feature set of that block's bank. Implementations that verify transaction
+signatures ahead of execution, such as a leader's ingest pipeline, must ensure
+that every transaction they include satisfies the rule of the slot in which it
+is included. A transaction verified under the pre-activation rule and still
+buffered when the activation slot is reached must be re-verified under the new
+rule or discarded. Otherwise a leader could include a signature with a
+non-canonical $A$ encoding, which `verify_strict` accepts and this proposal
+rejects, and produce a block that replay rejects.
+
+#### Gossip
+
+Gossip signatures are not bound to a slot; a node switches once its root bank
+reflects the activation. Transient disagreement between nodes on gossip
+verification is not a consensus concern for the reason given above.
 
 ## Alternatives Considered
 
@@ -317,9 +348,11 @@ $A$ and/or $R$ by $A' = A + T_A$ and $R' = R + T_R$ for small-order $T_A$ and
 $T_R$, then recomputes $h = \text{SHA512}(R' \|\| A' \|\| M) \bmod L$ and
 $S = r + h \cdot a \bmod L$, so the signature is honest apart from the torsion
 component. Under the cofactorless equation,
-$`S \cdot B - h \cdot A' = R' - T_R - h \cdot T_A`$, which differs from $R'$
-whenever $`T_R \ne \mathcal{O}`$ or $`8 \nmid h`$. Under the cofactored
-equation both torsion terms vanish.
+$`S \cdot B - h \cdot A' = R' - (T_R + h \cdot T_A)`$, which differs from $R'$
+exactly when $`T_R + h \cdot T_A \ne \mathcal{O}`$. The torsion terms can
+cancel for particular choices of $T_A$, $T_R$ and $h$, so each vector below was
+checked directly rather than assumed to fail. Under the cofactored equation
+both torsion terms vanish regardless of $h$.
 
 Vector 0 is the unmodified RFC-8032 signature and serves as a control.
 $A$ is the TEST 1 public key:
@@ -373,9 +406,8 @@ and accepted afterwards.
 
 This upgrade will require one feature gate. Once this feature gate is active,
 the equation and checks described above will be used for all EdDSA signature
-verifications, instead of `verify_strict`. For shred signatures the switch is
-delayed by one epoch and keyed on the shred's slot, as specified in
-[Shred signatures](#shred-signatures).
+verifications, instead of `verify_strict`, with the per-path activation
+semantics specified in [Activation](#activation).
 
 - All signatures accepted by `verify_strict` with canonical $A$ and $R$
 encodings remain valid.
