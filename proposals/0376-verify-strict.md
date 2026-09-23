@@ -265,6 +265,80 @@ today, and a conforming implementation of this proposal must continue to reject
 all of them; rejecting each encoding in either position covers all 196
 combinations.
 
+#### Signatures with torsion components
+
+The following vectors exercise the class of signatures that `verify_strict`
+rejects and this proposal accepts: $A$ or $R$ carries a torsion component but
+is not itself small-order. In every vector below all encodings are canonical,
+$S$ is fully reduced, and neither $A$ nor $R$ is small-order, so steps 1–5
+pass and only the verification equation in step 7 decides.
+
+All vectors use the RFC-8032 section 7.1 TEST 1 secret key and the 9-byte ASCII
+message `SIMD-0376`:
+
+```text
+seed     9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60
+message  53494d442d30333736
+```
+
+Let $a$ be the clamped secret scalar, $r$ the RFC-8032 deterministic nonce for
+this key and message, $A = a \cdot B$ and $R = r \cdot B$. Each vector replaces
+$A$ and/or $R$ by $A' = A + T_A$ and $R' = R + T_R$ for small-order $T_A$ and
+$T_R$, then recomputes $h = \text{SHA512}(R' \|\| A' \|\| M) \bmod L$ and
+$S = r + h \cdot a \bmod L$, so the signature is honest apart from the torsion
+component. Under the cofactorless equation,
+$`S \cdot B - h \cdot A' = R' - T_R - h \cdot T_A`$, which differs from $R'$
+whenever $`T_R \ne \mathcal{O}`$ or $`8 \nmid h`$. Under the cofactored
+equation both torsion terms vanish.
+
+Vector 0 is the unmodified RFC-8032 signature and serves as a control.
+$A$ is the TEST 1 public key:
+
+```text
+A  d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+R  378f3448cf68fc54d977c7367d4ef248fd05c1384bc8ab8c90ec3011e3d2cadb
+S  237f8b8042af663b4ad84d04d78aead91668aa243c2598027763ec74312bce0c
+```
+
+Vector 1: $T_A$ is the order-8 point `c7176a…037a`, $R$ is honest:
+
+```text
+A  9158312a9a8d6e3b34c891d6d61444f8b8211c5117ebad15bdb0bd68b07e0245
+R  378f3448cf68fc54d977c7367d4ef248fd05c1384bc8ab8c90ec3011e3d2cadb
+S  ff5bd16bfb12ff7df68015870ff0d9f68fbabb71e811a6b700efa72f1e84cb08
+```
+
+Vector 2: $A$ is honest, $T_R$ is the order-8 point `c7176a…037a`:
+
+```text
+A  d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+R  d6e69141a5921217a696a5ed42292ed014a1ab5e7a982268f0d0716da8d05a55
+S  d51b3303a858f99f17e0418ae47d4198787740e3d2b0bc56a6a7f6d77aeb170a
+```
+
+Vector 3: $T_A$ is the order-4 point `0000…0080`, $T_R$ is the order-2 point
+`ecff…ff7f`:
+
+```text
+A  ad38a8f0b22ab7ca46ecee7bbef12b5f336c182652fac34392f859dbd9666a7d
+R  b670cbb7309703ab268838c982b10db702fa3ec7b43754736f13cfee1c2d3524
+S  3388c63463dd67693a6aa65c3c9153254f23fe91a9d8089ee619a9d7b1c90201
+```
+
+Expected results:
+
+| Vector | `verify_strict` | `verify` (cofactorless) | This proposal |
+| ------ | --------------- | ----------------------- | ------------- |
+| 0      | accept          | accept                  | accept        |
+| 1      | reject          | reject                  | accept        |
+| 2      | reject          | reject                  | accept        |
+| 3      | reject          | reject                  | accept        |
+
+The `verify_strict` and `verify` columns were confirmed against
+`ed25519-dalek` 2.2.0, and vector 0 matches that library's signer for the same
+seed and message. Vectors 1–3 must be rejected until the feature gate is active
+and accepted afterwards.
+
 ## Backwards Compatibility
 
 This upgrade will require one feature gate. Once this feature gate is active,
@@ -275,6 +349,9 @@ verifications, instead of `verify_strict`.
 encodings remain valid.
 - A small class of signatures previously rejected may now be accepted: those
 where $A$ or $R$ carries a torsion component but is not itself small-order.
+Vectors 1–3 in
+[Signatures with torsion components](#signatures-with-torsion-components)
+are concrete examples.
 - Some verification paths may reject signatures that they previously accepted
 when $A$ or $R$ has a non-canonical encoding. This impact is path-dependent:
 `ed25519-dalek` 1.x decodes $A$ and $R$ permissively and compares curve points,
