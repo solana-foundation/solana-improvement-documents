@@ -13,10 +13,11 @@ feature: (fill in with feature key and github tracking issues once accepted)
 ## Summary
 
 LoaderV3 currently bounds instruction deserialization at 1232 bytes, the
-traditional maximum transaction size. This prevents using
+traditional maximum transaction size. This prevents using most of the 4096 bytes
+made available by
 [Transaction V1](https://github.com/solana-foundation/solana-improvement-documents/pull/385)
-when writing to LoaderV3 buffers, which would allow program upgrades to use a
-fraction of the transactions now required.
+when writing to LoaderV3 buffers. Removing this bound would allow program
+upgrades to use a fraction of the transactions now required.
 
 We remove this bound.
 
@@ -62,7 +63,8 @@ neither program has any valid instruction longer than low hundreds of bytes.
 
 ### Edge Cases
 
-N/A
+Care should be taken that an incorrect length on the write `Vec` does not over-
+allocate before failing validation.
 
 ### Validator Components Affected
 
