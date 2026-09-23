@@ -66,9 +66,7 @@ SBPF-version v2 or higher in its program header (see SIMD-0161). Some now
 unreachable verification and execution checks around `LDDW` can be safely
 removed (see motivation).
 
-These changes are specific to SBPFv2. SBPFv3 (SIMD-0377) does not carry them
-over, and the reference implementation (`anza-xyz/sbpf`) gates each of them on
-`SBPFVersion::V2` exactly.
+These changes are specific to SBPFv2.
 
 ### Changes to the Bytecode Verifier
 

@@ -51,9 +51,7 @@ None.
 The following must go into effect if and only if a program indicates the
 SBPF-version (v2) or higher in its program header (see SIMD-0161).
 
-These changes are specific to SBPFv2. SBPFv3 (SIMD-0377) does not carry them
-over, and the reference implementation (`anza-xyz/sbpf`) gates each of them on
-`SBPFVersion::V2` exactly.
+These changes are specific to SBPFv2.
 
 ### Changes to the Bytecode Verifier
 
