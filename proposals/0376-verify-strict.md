@@ -138,6 +138,36 @@ them with the Algorithm described above. This includes replacing the equation
 used for verification of transaction signatures, gossip packet signatures, shred
 packet signatures, and the Ed25519 precompile program.
 
+#### Shred signatures
+
+Shred verification is asynchronous with respect to execution: a node verifies
+shreds for slots it has not yet replayed, so the feature set of the shred's own
+slot is not available at verification time. Following the precedent of earlier
+shred-related protocol changes, the rule applied to a shred is selected by the
+epoch of the *shred's slot*, with a one-epoch delay after activation:
+
+- If the feature gate is activated at a slot in epoch $E$, shreds for slots in
+epoch $E + 1$ and later are verified with the Algorithm above.
+- Shreds for slots in epoch $E$ and earlier continue to be verified with the
+pre-activation rule (`verify_strict`).
+
+The delay ensures every node observes the activation before it takes effect for
+shreds. A node only accepts shreds within a bounded distance ahead of its root
+(currently 50,000 slots in Agave), which is far smaller than an epoch (432,000
+slots). A node close enough to epoch $E + 1$ to accept its shreds therefore has
+a root in epoch $E$ and has already observed the activation. Conversely, any
+shred for epoch $E + 1$ that reaches a node before it has observed the
+activation lies beyond that distance and is dropped regardless of which rule
+would have been applied.
+
+Transaction signatures and the Ed25519 precompile switch at the activation slot,
+since they are verified against the bank of the slot in which they execute.
+Gossip signatures are not bound to a slot; a node switches once its root bank
+reflects the activation. Because every signature produced by RFC-8032 `sign`
+verifies under both rules, a transient disagreement between nodes on gossip
+verification affects only purpose-built signatures and is not a consensus
+concern.
+
 Section 3.2 of [Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf)
 explains the relationship between batched and single cofactored verifications,
 proving them to be compatible. As a result, they can be used interchangeably,
@@ -343,7 +373,9 @@ and accepted afterwards.
 
 This upgrade will require one feature gate. Once this feature gate is active,
 the equation and checks described above will be used for all EdDSA signature
-verifications, instead of `verify_strict`.
+verifications, instead of `verify_strict`. For shred signatures the switch is
+delayed by one epoch and keyed on the shred's slot, as specified in
+[Shred signatures](#shred-signatures).
 
 - All signatures accepted by `verify_strict` with canonical $A$ and $R$
 encodings remain valid.
