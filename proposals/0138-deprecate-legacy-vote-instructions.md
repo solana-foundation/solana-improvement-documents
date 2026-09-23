@@ -50,6 +50,11 @@ are activated, the following instructions will result in an
 Enabling `deprecate legacy vote instructions` without 
 `enable tower sync vote instruction` should have no effect.
 
+The `deprecate legacy vote instructions` feature is not planned to be
+activated. Instead, the vote program rejects the same instructions with
+`InvalidInstructionData` once the cluster has migrated to Alpenglow
+([SIMD-0384]), so they are retired as part of that migration.
+
 ## Impact
 
 Sending transactions that include the mentioned instructions will fail.
@@ -61,3 +66,5 @@ None
 ## Backwards Compatibility
 
 Incompatible
+
+[SIMD-0384]: https://github.com/solana-foundation/solana-improvement-documents/pull/384
