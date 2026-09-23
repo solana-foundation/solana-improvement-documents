@@ -53,7 +53,7 @@ This proposal depends on the following previously accepted proposals:
 
     Specifies the new consensus protocol that requires BLS signatures
 
-- **[SIMD-0357]: Alpenglow Validator Admission Ticket**
+- **[SIMD-0357]: Require BLS Public Key for Alpenglow**
 
     Specifies that vote accounts must have a BLS public key to participate in
     voting
@@ -146,10 +146,10 @@ See "Security Considerations" for why the fields are needed.
 
 During PoP calculation, the CLI will generate the BLS keypair, then use the BLS
 private key to sign this message to generate the signature, compress it, and
-save it in `bls_proof_of_possession`.
+save it in `authorized_voter_bls_proof_of_possession`.
 
 During PoP verification, the validators will construct the same message, then
-check that the `bls_proof_of_possession` is the correct
+check that the `authorized_voter_bls_proof_of_possession` is the correct
 signature.
 
 #### Add new variant of VoteAuthorize

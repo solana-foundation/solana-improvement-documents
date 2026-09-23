@@ -63,7 +63,7 @@ The specification for the proposed syscall is as follows:
  *
  * If a valid pointer for `vote_addr` is provided, returns the total active
  * stake delegated to the vote account at the 32-byte address found at
- * `vote_addr`.
+ * `var_addr`.
  *
  * If a null pointer is provided, returns the total active stake for the
  * cluster.
@@ -79,7 +79,7 @@ uint64_t sol_get_epoch_stake(/* r1 */ void const * vote_addr);
 
 ### Control Flow
 
-If `vote_addr` is _not_ a null pointer:
+If `var_addr` is _not_ a null pointer:
 
 - The syscall aborts the virtual machine if:
     - Not all bytes in VM memory range `[vote_addr, vote_addr + 32)` are
@@ -90,7 +90,7 @@ If `vote_addr` is _not_ a null pointer:
   If the provided vote address corresponds to an account that is not a vote
   account or does not exist, the syscall will return `0` for active stake.
 
-If `vote_addr` is a null pointer:
+If `var_addr` is a null pointer:
 
 - The syscall aborts the virtual machine if:
     - Compute budget is exceeded.
@@ -101,15 +101,15 @@ If `vote_addr` is a null pointer:
 
 The syscall will always consume a fixed amount of CUs regardless of control
 flow. This fixed amount can be one of two values, depending on whether a null
-pointer was provided for `vote_addr`.
+pointer was provided for `var_addr`.
 
-If `vote_addr` is _not_ a null pointer:
+If `var_addr` is _not_ a null pointer:
 
 ```
 syscall_base + floor(PUBKEY_BYTES/cpi_bytes_per_unit) + mem_op_base
 ```
 
-If `vote_addr` is a null pointer:
+If `var_addr` is a null pointer:
 
 ```
 syscall_base
@@ -117,7 +117,7 @@ syscall_base
 
 - `PUBKEY_BYTES`: 32 bytes for an Ed25519 public key.
 - `syscall_base`: Base cost of a syscall.
-- `cpi_bytes_per_unit`: Number of account data bytes per CU charged during CPI.
+- `cpi_bytes_per_units`: Number of account data bytes per CU charged during CPI.
 - `mem_op_base`: Base cost of a memory operation syscall.
 
 ## Impact
