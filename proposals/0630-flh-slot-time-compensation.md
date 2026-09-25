@@ -28,8 +28,8 @@ As we show below, with `HANDOVER_COMPENSATION` the *effective slot time* roughly
 averages `Δblock` also for the first slot.
 
 Further, in order to reduce idle time, especially in the long tail of long
-handovers, each leader is now supposed to send their block directly to the
-following leader, in addition to distributing it through Turbine/Rotor.
+handovers, each leader sends their block directly to the following leader, in
+addition to distributing it through Turbine/Rotor.
 
 ## Motivation
 
@@ -134,10 +134,21 @@ This is equivalent to calculating them with `Δblock - HANDOVER_COMPENSATION` as
 slot time for the first slot and still using the full `Δblock` for all other
 slots.
 
+Specifically, given `DELTA_TIMEOUT` and with 4 slots per leader window and
+200 ms slot time and `HANDOVER_COMPENSATION = 60 ms`, the timeouts for the
+leader window starting at slot `s` are calculated as:
+
+| Slot  | Timeout Duration from ParentReady |
+|-------|-----------------------------------|
+| s     | DELTA_TIMEOUT + 140 ms            |
+| s + 1 | DELTA_TIMEOUT + 340 ms            |
+| s + 2 | DELTA_TIMEOUT + 540 ms            |
+| s + 3 | DELTA_TIMEOUT + 740 ms            |
+
 ### Direct leader-to-leader delivery
 
-A block producing leader should send all shreds not just to Turbine/Rotor but
-also directly to the next leader.
+A block producing leader sends all shreds not just to Turbine/Rotor but also
+directly to the next leader.
 
 This change widens the gap between the next leader receiving the block and
 seeing the `ParentReady` event.
@@ -262,6 +273,11 @@ While only the timeout rule requires agreement, it is RECOMMENDED that both
 changes are rolled out at the same time.
 
 The gate SHOULD be activated at least one epoch after the final SIMD-0525 stage.
+Call `E` the first epoch the feature gate is active for.
+For every slot that is part of epoch `E` or later the block production timing
+and vote timeouts of this proposal MUST be used.
+For every slot that is part of epoch `E-1` or earlier the prior block production
+timing and vote timeouts MUST be used.
 
 ## Forward Compatibility
 
