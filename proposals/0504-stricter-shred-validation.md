@@ -140,26 +140,20 @@ included explicitly for clarity.
 
 ### Family 2: FEC-level checks
 
-Below, a FEC set is identified by the Merkle root.  In all standard
-cases, that is equivalent to identifying a FEC set by a common
-signature, but a malicious leader with a specifically crafted key may be
-able to produce multiple valid signatures for the same Merkle root after
-[SIMD-0376](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0376-verify-strict.md)
-is activated.
+Below, a FEC set is identified by the Merkle root.
 
-1. All shreds in a FEC set MUST have the same signature
-2. All shreds in a FEC set MUST have the same chained Merkle root
-3. All shreds in a FEC set MUST have the same shred type
-4. All shreds in a FEC set MUST have the same `slot`
-5. All shreds in a FEC set MUST have the same shred version
-6. All shreds in a FEC set MUST have the same `fec_set_index`
-7. All data shreds in a FEC set MUST have the same `parent_offset`
-8. If any data shred does not have the maximum value of the `size` field as
+1. All shreds in a FEC set MUST have the same chained Merkle root
+2. All shreds in a FEC set MUST have the same shred type
+3. All shreds in a FEC set MUST have the same `slot`
+4. All shreds in a FEC set MUST have the same shred version
+5. All shreds in a FEC set MUST have the same `fec_set_index`
+6. All data shreds in a FEC set MUST have the same `parent_offset`
+7. If any data shred does not have the maximum value of the `size` field as
    determined by check 12 in the first family, then all shreds in the
    same FEC set with a larger shred_index MUST have the minimum value of
    `size` (as determined by check 12), and the flags field of final
    shred in the FEC set MUST have the batch complete bit set.
-9. All shreds in a FEC set MUST satisfy all the constraints in Family 1
+8. All shreds in a FEC set MUST satisfy all the constraints in Family 1
 
 Under TowerBFT, a validator MUST NOT vote for a block containing any FEC
 set unless it satisfies all of these checks.  Under Alpenglow, a
@@ -169,6 +163,9 @@ transactions in a FEC set unless it satisfies all of these checks.
 Other than as specified by the Family 1 restrictions, a validator SHOULD
 use these shreds for constructing equivocation proofs, and they SHOULD
 be served over repair or retransmitted via Turbine.
+
+Note: A validator MUST be able to process FEC sets where shreds have
+different but valid signatures for the same Merkle root.
 
 ### A note on recovery
 
