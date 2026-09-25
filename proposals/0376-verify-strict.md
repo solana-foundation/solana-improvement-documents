@@ -136,7 +136,9 @@ parties that purposefully create special keys or signatures can be affected.
 This proposal specifically targets usages of `verify_strict`, replacing
 them with the Algorithm described above. This includes replacing the equation
 used for verification of transaction signatures, gossip packet signatures, shred
-packet signatures, and the Ed25519 precompile program.
+packet signatures (however the shred is obtained: turbine, repair, or embedded
+in a duplicate-shred proof), repair request and response signatures, and the
+Ed25519 precompile program.
 
 Section 3.2 of [Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf)
 explains the relationship between batched and single cofactored verifications,
@@ -168,26 +170,23 @@ epoch $E + 1$ and later are verified with the Algorithm above.
 - Shreds for slots in epoch $E$ and earlier continue to be verified with the
 pre-activation rule (`verify_strict`).
 
-The delay ensures every node observes the activation before it takes effect for
-shreds. A node only accepts shreds within a bounded distance ahead of its root.
-Agave currently bounds this at $`\max(500, \text{slots\_per\_epoch} / 2)`$
-slots. For any epoch of at least 1,000 slots, including the 432,000-slot
-epochs of mainnet-beta, testnet, and devnet, this bound is strictly less than
-one epoch. A node close enough to epoch $E + 1$ to accept its shreds therefore
-has a root in epoch $E$ and has already observed the activation. Conversely,
-any shred for epoch $E + 1$ that reaches a node before it has observed the
-activation lies beyond that distance and is dropped regardless of which rule
-would have been applied.
+This rule applies to a shred regardless of how it is obtained: via turbine, via
+repair, or embedded in a duplicate-shred proof.
 
-For epochs shorter than 1,000 slots, which Agave supports for test clusters,
-the 500-slot floor can span more than one epoch, and a node rooted in epoch
-$E - 1$ or earlier may receive epoch $E + 1$ shreds before observing the
-activation. The rule is unchanged in this case: such a node applies the
-pre-activation rule until its root bank reflects the activation. It diverges
-from the rest of the cluster only on shreds whose leader deliberately embedded
-a torsion component, and it re-verifies any such shred under the new rule if it
-later obtains it through repair. Clusters with epochs shorter than 1,000 slots
-must either accept this weaker guarantee or activate the feature at genesis.
+The delay gives every node the opportunity to observe the activation before it
+takes effect for shreds. A node learns of the activation when its root advances
+into epoch $E$. If a node receives shreds for a block in epoch $E + 1$ before
+its root has advanced into epoch $E$, it must not use those shreds to
+reconstruct, replay, or vote on that block unless they are subsequently
+verified under the new rule.
+
+On public clusters, the epoch length together with the limit on how far ahead
+of its root a node accepts shreds guarantees that a node observes the
+activation before any epoch $E + 1$ shred can be admitted, so this requirement
+is satisfied without additional handling. Clusters where that invariant does
+not hold, such as test clusters with very short epochs, must activate the
+feature at genesis or otherwise guarantee that no epoch $E + 1$ shred is
+admitted before the activation is observed.
 
 #### Transactions and the Ed25519 precompile
 
@@ -202,11 +201,12 @@ rule or discarded. Otherwise a leader could include a signature with a
 non-canonical $A$ encoding, which `verify_strict` accepts and this proposal
 rejects, and produce a block that replay rejects.
 
-#### Gossip
+#### Gossip and repair
 
-Gossip signatures are not bound to a slot; a node switches once its root bank
-reflects the activation. Transient disagreement between nodes on gossip
-verification is not a consensus concern for the reason given above.
+Gossip packet signatures and repair request and response signatures are not
+bound to a block; a node switches once its root bank reflects the activation.
+Transient disagreement between nodes on these paths is not a consensus concern
+for the reason given above.
 
 ## Alternatives Considered
 
@@ -399,8 +399,9 @@ Expected results:
 
 The `verify_strict` and `verify` columns were confirmed against
 `ed25519-dalek` 2.2.0, and vector 0 matches that library's signer for the same
-seed and message. Vectors 1–3 must be rejected until the feature gate is active
-and accepted afterwards.
+seed and message. Vectors 1–3 must be rejected until the new rule is effective
+for the verification path in question, as specified in
+[Activation](#activation), and accepted afterwards.
 
 ## Backwards Compatibility
 
