@@ -45,6 +45,11 @@ This proposal depends on the following previously accepted proposals:
     Introduces a new instruction type for setting commission rates in basis
     points
 
+- **[SIMD-0326]: Alpenglow**
+
+    Provides reward epoch delegated stakes for block reward calculation and
+    active validator set through VAT
+
 - **[SIMD-0392]: Runtime Adjustments for Rent Increase**
 
     Updates delegation calculation based on `Rent` sysvar parameters
@@ -53,6 +58,7 @@ This proposal depends on the following previously accepted proposals:
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0185-vote-account-v4.md
 [SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0232-custom-commission-collector.md
 [SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0291-commission-rate-in-basis-points.md
+[SIMD-0326]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0326-alpenglow.md
 [SIMD-0392]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0392-rent-increase-adaptations.md
 
 ## Alternatives Considered
@@ -177,6 +183,15 @@ not impact any internal epoch rewards sysvar state fields like `total_rewards`
 or `distributed_rewards` since block revenue will instead be tracked via the
 epoch rewards sysvar lamport balance.
 
+Also note that `A` (active stake) MUST be derived from the stake from the end of
+the epoch, and not the cached epoch stakes. The cached epoch stakes amount does
+not include inflation rewards earned during the rewarded epoch, so it is
+incorrect for the calculation.
+
+If block rewards need to be recalculated, due to restarting a node during the
+distribution phase, the `RewardEpochDelegatedStakes` account created by
+Alpenglow's inflation reward system may be used.
+
 #### Individual Delegator Reward
 
 For each individual stake account with an active non-zero delegation, multiply
@@ -220,6 +235,30 @@ All other variables are the same as before, as described in
 
 After distributing all partitioned delegator rewards, the epoch rewards sysvar balance
 MUST be reset to its rent exemption balance and any surplus lamports are burned.
+
+#### Inclusion in block revenue distribution
+
+Similar to inflation rewards, vote accounts that are excluded from the active
+validator set do not participate in block revenue distribution; all pending
+delegator rewards for these vote accounts are burned at the end of the
+partitioned reward distribution, and stake accounts delegated to these vote
+accounts receive nothing.
+
+A vote account can be excluded from the active validator set at the start of the
+distribution epoch by not paying the VAT or not having any active stake.
+
+This table summarizes how to treat different vote accounts, based on stake
+in the rewarded epoch E, distribution epoch E + 1, and paying VAT in the
+distribution epoch:
+
+| Stake in E | Stake in E + 1 | Pay VAT | Sweep | Distribute | Burn |
+| --- | --- | --- | --- | --- | --- |
+| > 0 | > 0 | Yes | Yes | Yes | No |
+| 0 | > 0 | Yes | No | No | No |
+| 0 | 0 | N/A cannot | Yes | No | Yes |
+| > 0 | 0 | N/A cannot | Yes | No | Yes |
+| > 0 | > 0 | No | Yes | No | Yes |
+| 0 | > 0 | No | Yes | No | Yes |
 
 ### Vote Program
 
