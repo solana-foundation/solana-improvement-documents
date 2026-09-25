@@ -5,6 +5,7 @@ authors:
   - febo (Anza)
 category: Standard
 type: Core
+status: Review
 created: 2026-09-25
 feature: (fill in with feature key and github tracking issues once accepted)
 ---
