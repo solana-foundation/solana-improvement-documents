@@ -13,13 +13,25 @@ feature: (fill in with feature tracking issues once accepted)
 ## Summary
 
 This proposal replaces the `verify_strict` semantics used in Solana, derived
-from Agave's usage of `ed25519-dalek`'s `verify_strict`, with
-[ZIP-215](https://zips.z.cash/zip-0215), Zebra's EdDSA variant. In practice,
-this removes the $R$ and $A$ torsion checks, multiplies the verification
-equation by the cofactor, and makes verification insensitive to torsion
-elements. This change enables batch verification of transaction signatures,
-improves validator efficiency, and standardizes consensus behaviour across
-implementations.
+from Agave's usage of `ed25519-dalek`'s `verify_strict`, with the *cofactored*
+verification scheme described in
+[Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf):
+
+- the cofactored verification equation of
+[ZIP-215](https://zips.z.cash/zip-0215),
+- combined with explicit rejection of non-canonical encodings and of
+small-order $A$ and $R$.
+
+In practice, this multiplies the verification equation by the cofactor, making
+verification insensitive to the torsion *components* of otherwise valid points,
+while continuing to reject points that are *entirely* torsion. This change
+enables batch verification of transaction signatures, improves validator
+efficiency, and standardizes consensus behaviour across implementations.
+
+Note that this proposal deliberately does *not* adopt ZIP-215 verbatim.
+ZIP-215 accepts small-order $A$, which on Solana would make
+`Pubkey::default()` (the all-zero encoding, also the System Program ID) a
+signable public key. See [Security Considerations](#security-considerations).
 
 ## Motivation
 
@@ -34,10 +46,21 @@ being part of consensus, this proposal suggests using a better proven
 verification equation, which is better described,
 rather than the implicit behaviour found in the `ed25519-dalek` library.
 
-2. `verify_strict` rejects small-order `R`, which makes batch verification
-impossible. Batched verification can reduce costs by ~40% for large
-signatures batches, which is significant at Solana's scale, where validators
-process hundreds of thousands of signatures every block.
+2. `verify_strict` uses the *cofactorless* verification equation
+$`S \cdot B - h \cdot A = R`$. Batch verification checks a random linear
+combination of the individual equations, so it agrees with per-signature
+verification only when the equation being combined is cofactored: the cofactor
+multiplication annihilates every torsion component, so the batch equation holds
+(with overwhelming probability) exactly when each individual cofactored
+equation holds. Batched verification can
+reduce costs by ~40% for large signature batches, which is significant at
+Solana's scale, where validators process hundreds of thousands of signatures
+every block.
+
+The per-signature checks retained by this proposal (canonicity, scalar
+reduction, small-order rejection) are compatible with batching: they are
+independent of the batch and are applied to each signature before it enters
+the multi-scalar multiplication.
 
 ## New Terminology
 
@@ -49,68 +72,173 @@ is multiplied by the curve's cofactor (8), rendering torsion elements irrelevant
 while preserving security.
 - Batch Verification: Verifying many signatures together via random linear
 combination and a multi-scalar multiplication.
+- Canonical Point Encoding: A 32-byte compressed Edwards encoding in which the
+low 255 bits encode a $y$ coordinate that is fully reduced ($y < 2^{255} - 19$),
+and in which the sign bit (bit 255) is not set when the recovered
+$x$ coordinate is zero.
+- Small-Order Point: A point $P$ in the order-8 torsion subgroup of
+Edwards25519, i.e. one satisfying $`[8]P = \mathcal{O}`$. There are exactly
+eight such points, including the identity.
 
 ## Detailed Design
 
-Switch to using the verification equation described in
+Switch to using the cofactored verification equation described in
 [ZIP-215](https://zips.z.cash/zip-0215) for Ed25519 EdDSA signature
-verification.
+verification, while making the encoding and small-order checks explicit.
 
 ### Algorithm:
 
-Given a message $M$, public key $A$, signature ephemeral point $R$, and
-scalar $S$.
+Given a message $M$, a 32-byte public key encoding $A$, and a 64-byte
+signature split into a 32-byte ephemeral point encoding $R$ and a 32-byte
+scalar encoding $S$.
 
-1. Reject the signature if $`S \notin \{0, ..., L - 1\}`$.
-2. Compute the hash $\text{SHA512}(R \|\| A \|\| M)$ and reduce it
+1. Reject the signature if the encoding of $A$ is not canonical.
+2. Reject the signature if the encoding of $R$ is not canonical.
+3. Reject the signature if $S$ is not fully reduced, i.e. if
+$`S \notin \{0, ..., L - 1\}`$.
+4. Decode $A$ and $R$ to curve points. Reject the signature if either point
+is not on the curve.
+5. Reject the signature if $A$ is small-order, i.e. if
+$`[8]A = \mathcal{O}`$. Reject the signature if $R$ is small-order.
+6. Compute the hash $\text{SHA512}(R \|\| A \|\| M)$ and reduce it
 $\bmod L$ to get scalar $h$.
-3. Given that $B$ is the Ed25519 basepoint, accept the signature if:
+7. Given that $B$ is the Ed25519 basepoint, accept the signature if:
 
 ```math
 8(S \cdot B) - 8R - 8(h \cdot A) = \mathcal{O}
 ```
 
-Note that non-canonical $R$ and $A$ points *are allowed*. Honest parties
-will generate their keys according to the protocol, which in this case
-would be [RFC-8032](https://www.rfc-editor.org/rfc/rfc8032.html#section-5.1.6)'s
-definition of `sign`. As this does not produce non-canonical encodings of
-points, the honest parties will be unaffected, and it will only affect parties
-that purposefully create special signatures.
+Steps 1–5 define the input-validation policy for this proposal; they are not all
+inherited from a single existing verification rule. RFC-8032 requires canonical
+point decoding and a fully reduced $S$, but does not separately reject
+small-order $A$ or $R$. Existing `verify_strict` paths reject a non-reduced $S$
+and small-order $A$ and $R$, while their treatment of non-canonical point
+encodings depends on the `ed25519-dalek` version and call path.
+
+Step 7 is the principal relaxation: multiplying the verification equation by
+the cofactor makes verification insensitive to a torsion component *added* to
+an otherwise valid $A$ or $R$. This permits compatible batched verification,
+while step 5 continues to reject points that consist of nothing but torsion.
+
+Because steps 1 and 2 have already rejected non-canonical encodings, step 5 may
+be implemented either as a cofactor multiplication or as a comparison of the
+32-byte encodings of $A$ and $R$ against the eight canonical small-order
+encodings listed in [Test Vectors](#test-vectors).
+
+Honest parties will generate their keys and signatures according to
+[RFC-8032](https://www.rfc-editor.org/rfc/rfc8032.html#section-5.1.6)'s
+definition of `sign`. This produces neither non-canonical encodings nor
+small-order points, so honest parties are unaffected by steps 1–5, and only
+parties that purposefully create special keys or signatures can be affected.
 
 ### Application:
 
 This proposal specifically targets usages of `verify_strict`, replacing
 them with the Algorithm described above. This includes replacing the equation
 used for verification of transaction signatures, gossip packet signatures, shred
-packet signatures, and the Ed25519 precompile program.
+packet signatures (however the shred is obtained: turbine, repair, or embedded
+in a duplicate-shred proof), repair request and response signatures, and the
+Ed25519 precompile program.
 
 Section 3.2 of [Taming the many EdDSAs](https://eprint.iacr.org/2020/1244.pdf)
 explains the relationship between batched and single cofactored verifications,
 proving them to be compatible. As a result, they can be used interchangeably,
 in use cases such as optimizing transaction signature verification.
+The batched verification implementation in
+[ed25519-zebra](https://github.com/ZcashFoundation/ed25519-zebra) can still be
+used, provided steps 1–5 are applied to each signature before it is added to
+the batch, since those steps are per-signature and independent of the batch.
+
+### Activation
+
+This upgrade requires one feature gate. The rule that applies to a given
+signature depends on where it is verified, as specified below. In every case, a
+signature produced by RFC-8032 `sign` verifies under both the old and the new
+rule, so any window in which two nodes apply different rules affects only
+purpose-built signatures.
+
+#### Shred signatures
+
+Shred verification is asynchronous with respect to execution: a node verifies
+shreds for slots it has not yet replayed, so the feature set of the shred's own
+slot is not available at verification time. Following the precedent of earlier
+shred-related protocol changes, the rule applied to a shred is selected by the
+epoch of the *shred's slot*, with a one-epoch delay after activation:
+
+- If the feature gate is activated at a slot in epoch $E$, shreds for slots in
+epoch $E + 1$ and later are verified with the Algorithm above.
+- Shreds for slots in epoch $E$ and earlier continue to be verified with the
+pre-activation rule (`verify_strict`).
+
+This rule applies to a shred regardless of how it is obtained: via turbine, via
+repair, or embedded in a duplicate-shred proof.
+
+The delay gives every node the opportunity to observe the activation before it
+takes effect for shreds. A node learns of the activation when its root advances
+into epoch $E$. If a node receives shreds for a block in epoch $E + 1$ before
+its root has advanced into epoch $E$, it must not use those shreds to
+reconstruct, replay, or vote on that block unless they are subsequently
+verified under the new rule.
+
+On public clusters, the epoch length together with the limit on how far ahead
+of its root a node accepts shreds guarantees that a node observes the
+activation before any epoch $E + 1$ shred can be admitted, so this requirement
+is satisfied without additional handling. Clusters where that invariant does
+not hold, such as test clusters with very short epochs, must activate the
+feature at genesis or otherwise guarantee that no epoch $E + 1$ shred is
+admitted before the activation is observed.
+
+#### Transactions and the Ed25519 precompile
+
+Transaction signatures and the Ed25519 precompile switch at the activation slot:
+a signature in a block is valid if and only if it satisfies the rule selected by
+the feature set of that block's bank. Implementations that verify transaction
+signatures ahead of execution, such as a leader's ingest pipeline, must ensure
+that every transaction they include satisfies the rule of the slot in which it
+is included. A transaction verified under the pre-activation rule and still
+buffered when the activation slot is reached must be re-verified under the new
+rule or discarded. Otherwise a leader could include a signature with a
+non-canonical $A$ encoding, which `verify_strict` accepts and this proposal
+rejects, and produce a block that replay rejects.
+
+#### Gossip and repair
+
+Gossip packet signatures and repair request and response signatures are not
+bound to a block; a node switches once its root bank reflects the activation.
+Transient disagreement between nodes on these paths is not a consensus concern
+for the reason given above.
 
 ## Alternatives Considered
 
 - `ed25519-dalek`'s `verify`: Another option would be to just downgrade the
 check from `verify_strict` to `verify`. This would also be backwards compatible,
-however there are a few issues with this approach. It is not possible to
-perform a compatible batched verification of a cofactorless verification
-equation with some sort of incompatibility, leading back to the original issue.
-Our only option would be to define the protocol in terms of the batched
-verification equation's behaviour which is not preferable.
+however there are a few issues with this approach. `verify` is still
+cofactorless, so no batched verification is equivalent to it, leading back to
+the original issue. Our only option would be to define the protocol in terms of
+the batched verification equation's behaviour which is not preferable.
 
-- *Taming the many EdDSAs* equation: The paper describes a cofactored
-verification scheme very similar to ZIP-215, the only difference being
-that small-order $A$ points are rejected. This allows their scheme to achieve
-strongly binding signatures, a property that does not affect Solana. We prefer
-using ZIP-215 as it has a well-proven Rust library,
-[ed25519-zebra](https://github.com/ZcashFoundation/ed25519-zebra),
-that would allow easier migration for Agave.
+- Unmodified ZIP-215: Earlier revisions of this proposal adopted ZIP-215
+verbatim, which additionally accepts non-canonical encodings and small-order
+$A$ and $R$. This was rejected. ZIP-215's containment argument is that a
+forgeable weak key can only compromise an authority that was never safe in the
+first place, which holds in Zcash, where an Ed25519 public key is only ever a
+verification key. It does not hold on Solana, where the same 32 bytes are also
+an address, a program ID, and an authority sentinel. Accepting small-order $A$
+would make `Pubkey::default()` signable; see
+[Security Considerations](#security-considerations). Rejecting small-order $A$
+and $R$ costs at most a byte-string comparison per signature and preserves the
+batching design, so the cost of retaining these checks is negligible.
+
+- Rejecting only the all-zero public key: Rejecting only the all-zero encoding
+would address the known sentinel value, but Edwards25519 has eight canonical
+small-order encodings (and six further non-canonical ones), any of which an
+application could use as a constant. Rejecting the whole torsion subgroup is
+no more expensive and is not value-specific.
 
 ## Impact
 
-- Dapp developers: No required changes, signatures already generated remain
-valid.
+- Dapp developers: No required changes for signatures produced by RFC-8032
+`sign`; those remain valid.
 - Validators: Lower CPU usage, faster verification pipelines.
 - Core Contributors: A more clear, standardized implementation for new validator
 clients and other software potentially performing signature
@@ -128,21 +256,187 @@ scheme is SUF-CMA secure if an attacker cannot create *any* new valid signature,
 even on a message that has been signed before. In other words, they can't
 "malleate" an existing signature into another distinct, valid one.
 
-The only quality that Solana worries about is SUF-CMA (as opposed to EUF-CMA),
-which ZIP-215 achieves by rejecting $S$ scalars which do not fit into $l$.
+The scheme in this proposal achieves SUF-CMA by rejecting $S$ scalars that are
+not fully reduced $\bmod\ L$ (step 3), and achieves SBS by rejecting
+small-order $A$ (step 5), matching the cofactored scheme analyzed in
+*Taming the many EdDSAs*.
+
+### Rejecting small-order public keys
+
+The cofactored equation annihilates every small-order component, so if
+small-order $A$ were accepted, a small-order public key would accept a forged
+signature on *any* message. Concretely, the all-zero 32-byte encoding is a
+canonical encoding of a point of order 4. Setting $A$ and $R$ to that encoding
+and $S = 0$ makes every term of the cofactored equation the identity
+independently of $h$, so the all-zero 64-byte signature would verify for the
+all-zero public key on every message. `verify_strict` rejects this witness
+today, and step 5 of this proposal continues to reject it.
+
+This matters on Solana specifically because public keys are not only
+verification keys. The all-zero encoding is `Pubkey::default()`, is rendered as
+`11111111111111111111111111111111`, and is the System Program ID. 
+
+Rejecting the torsion subgroup at the verifier removes this class of
+cross-layer collision for all eight canonical small-order encodings, not just
+the all-zero one, and does so without weakening the batching design that
+motivates the proposal.
+
+### Test Vectors
+
+Implementations must reject each of the following as $A$ and as $R$. These are
+the eight canonical encodings of the order-8 torsion subgroup, and must be
+rejected by step 5:
+
+```text
+0000000000000000000000000000000000000000000000000000000000000000  (order 4)
+0000000000000000000000000000000000000000000000000000000000000080  (order 4)
+0100000000000000000000000000000000000000000000000000000000000000  (order 1)
+26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05  (order 8)
+26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85  (order 8)
+c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a  (order 8)
+c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa  (order 8)
+ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f  (order 2)
+```
+
+The following six encodings are the non-canonical encodings of small-order
+points, and must be rejected by steps 1 and 2. The first four have
+$y \ge 2^{255} - 19$; the last two set the sign bit while the recovered $x$
+coordinate is zero:
+
+```text
+edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+0100000000000000000000000000000000000000000000000000000000000080
+ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+```
+
+In particular, the all-zero public key paired with the all-zero 64-byte
+signature must be rejected for every message.
+
+These fourteen encodings are exactly the set enumerated by `ed25519-zebra`'s
+`small_order` test suite: the eight above are the compressed encodings of
+`curve25519-dalek`'s `EIGHT_TORSION`, and the six above are the low-order
+prefix of that suite's non-canonical encodings. That suite constructs all
+14x14 combinations of $A$ and $R$ drawn from this set with $S = 0$, and
+asserts that every one of them is *accepted* under unmodified ZIP-215, by both
+its individual and its batched verifier. `verify_strict` rejects all of them
+today, and a conforming implementation of this proposal must continue to reject
+all of them; rejecting each encoding in either position covers all 196
+combinations.
+
+#### Signatures with torsion components
+
+The following vectors exercise the class of signatures that `verify_strict`
+rejects and this proposal accepts: $A$ or $R$ carries a torsion component but
+is not itself small-order. In every vector below all encodings are canonical,
+$S$ is fully reduced, and neither $A$ nor $R$ is small-order, so steps 1–5
+pass and only the verification equation in step 7 decides.
+
+All vectors use the RFC-8032 section 7.1 TEST 1 secret key and the 9-byte ASCII
+message `SIMD-0376`:
+
+```text
+seed     9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60
+message  53494d442d30333736
+```
+
+Let $a$ be the clamped secret scalar, $r$ the RFC-8032 deterministic nonce for
+this key and message, $A = a \cdot B$ and $R = r \cdot B$. Each vector replaces
+$A$ and/or $R$ by $A' = A + T_A$ and $R' = R + T_R$ for small-order $T_A$ and
+$T_R$, then recomputes $h = \text{SHA512}(R' \|\| A' \|\| M) \bmod L$ and
+$S = r + h \cdot a \bmod L$, so the signature is honest apart from the torsion
+component. Under the cofactorless equation,
+$`S \cdot B - h \cdot A' = R' - (T_R + h \cdot T_A)`$, which differs from $R'$
+exactly when $`T_R + h \cdot T_A \ne \mathcal{O}`$. The torsion terms can
+cancel for particular choices of $T_A$, $T_R$ and $h$, so each vector below was
+checked directly rather than assumed to fail. Under the cofactored equation
+both torsion terms vanish regardless of $h$.
+
+Vector 0 is the unmodified RFC-8032 signature and serves as a control.
+$A$ is the TEST 1 public key:
+
+```text
+A  d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+R  378f3448cf68fc54d977c7367d4ef248fd05c1384bc8ab8c90ec3011e3d2cadb
+S  237f8b8042af663b4ad84d04d78aead91668aa243c2598027763ec74312bce0c
+```
+
+Vector 1: $T_A$ is the order-8 point `c7176a…037a`, $R$ is honest:
+
+```text
+A  9158312a9a8d6e3b34c891d6d61444f8b8211c5117ebad15bdb0bd68b07e0245
+R  378f3448cf68fc54d977c7367d4ef248fd05c1384bc8ab8c90ec3011e3d2cadb
+S  ff5bd16bfb12ff7df68015870ff0d9f68fbabb71e811a6b700efa72f1e84cb08
+```
+
+Vector 2: $A$ is honest, $T_R$ is the order-8 point `c7176a…037a`:
+
+```text
+A  d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+R  d6e69141a5921217a696a5ed42292ed014a1ab5e7a982268f0d0716da8d05a55
+S  d51b3303a858f99f17e0418ae47d4198787740e3d2b0bc56a6a7f6d77aeb170a
+```
+
+Vector 3: $T_A$ is the order-4 point `0000…0080`, $T_R$ is the order-2 point
+`ecff…ff7f`:
+
+```text
+A  ad38a8f0b22ab7ca46ecee7bbef12b5f336c182652fac34392f859dbd9666a7d
+R  b670cbb7309703ab268838c982b10db702fa3ec7b43754736f13cfee1c2d3524
+S  3388c63463dd67693a6aa65c3c9153254f23fe91a9d8089ee619a9d7b1c90201
+```
+
+Expected results:
+
+| Vector | `verify_strict` | `verify` (cofactorless) | This proposal |
+| ------ | --------------- | ----------------------- | ------------- |
+| 0      | accept          | accept                  | accept        |
+| 1      | reject          | reject                  | accept        |
+| 2      | reject          | reject                  | accept        |
+| 3      | reject          | reject                  | accept        |
+
+The `verify_strict` and `verify` columns were confirmed against
+`ed25519-dalek` 2.2.0, and vector 0 matches that library's signer for the same
+seed and message. Vectors 1–3 must be rejected until the new rule is effective
+for the verification path in question, as specified in
+[Activation](#activation), and accepted afterwards.
 
 ## Backwards Compatibility
 
-- All signatures valid under `verify_strict` remain valid under ZIP-215
-verification.
-- A small class of signatures previously rejected may now be accepted.
-
 This upgrade will require one feature gate. Once this feature gate is active,
-ZIP-215 will be the equation used for all EdDSA signature verifications,
-instead of `verify_strict`. 
+the equation and checks described above will be used for all EdDSA signature
+verifications, instead of `verify_strict`, with the per-path activation
+semantics specified in [Activation](#activation).
 
-Here is a proof that any signature that `verify_strict` accepts would
-be accepted by the new verification equation as well:
+- All signatures accepted by `verify_strict` with canonical $A$ and $R$
+encodings remain valid.
+- A small class of signatures previously rejected may now be accepted: those
+where $A$ or $R$ carries a torsion component but is not itself small-order.
+Vectors 1–3 in
+[Signatures with torsion components](#signatures-with-torsion-components)
+are concrete examples.
+- Some verification paths may reject signatures that they previously accepted
+when $A$ or $R$ has a non-canonical encoding. This impact is path-dependent:
+`ed25519-dalek` 1.x decodes $A$ and $R$ permissively and compares curve points,
+whereas 2.x rejects a non-canonical $R$ by comparing the recomputed canonical
+encoding of $R$ with the signature bytes, while still decoding $A$
+permissively. Such encodings cannot be produced by RFC-8032 `sign` and can only
+arise from purpose-built keys or signatures. Implementations must therefore
+evaluate the existing acceptance set at each affected call site rather than
+assuming that all `verify_strict` paths behave identically.
+
+Explicit canonicity checks are preferred over inheriting version-dependent
+decoding behaviour, since reproducing implicit library behaviour across
+validator implementations is precisely the problem this proposal sets out to
+remove. A feature gate is required in every case because the cofactored
+equation also accepts signatures that the existing equation rejects, regardless
+of whether canonicity checks narrow a particular path's accepted set.
+
+Here is a proof that any signature that `verify_strict` accepts, and whose $A$
+and $R$ encodings are canonical, would be accepted by the new verification
+equation as well:
 
 ### Lemma:
 
@@ -169,8 +463,8 @@ Then the new verification equation (C):
 8(S \cdot B) - 8R - 8(h \cdot A) = \mathcal{O}
 ```
 
-also holds; therefore a new verifier that enforces (2), and the equation (C),
-will accept the signature.
+also holds; therefore a new verifier that enforces (2), (3), (4) and the
+equation (C), will accept the signature.
 
 ### Proof:
 
@@ -199,6 +493,6 @@ If you distribute $[8]$ across the sum:
 8(S \cdot B) - 8R - 8(h \cdot A) = \mathcal{O}
 ```
 
-which is exactly the equation (C). Therefore, assuming that $S$ is properly
-checked, the new verification equation should never reject a signature accepted
-by `verify_strict`.
+which is exactly the equation (C). Therefore, assuming that $S$, $A$ and $R$
+are properly checked, the new verification equation should never reject a
+signature accepted by `verify_strict` under the assumptions above.
