@@ -107,12 +107,14 @@ pub fn sol_invoke_signed_v2(
 );
 ```
 
-These modifications eliminate only the type conversions performed on the program
-side. The CPI logic in the runtime remains unchanged, apart from reading the
-account information through the instruction account index during account
-translation. In other words, this proposal does not change the runtime's CPI
-logic, but it does change the way programs pass account information to the
-runtime.
+The layout for signer seeds is the same as in the current invoke syscall.
+
+These modifications eliminate only the type conversions performed on the
+program side. The CPI logic in the runtime remains unchanged, apart from
+reading the account information through the instruction account index during
+ account translation. In other words, this proposal does not change the 
+runtime's CPI logic, but it does change the way programs pass account 
+information to the runtime.
 
 ### Validator Components Affected
 
