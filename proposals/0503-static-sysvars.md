@@ -20,7 +20,7 @@ enable static resolution of sysvars.
 
 In order to access Sysvar values, developers currently have three options:
 
-1. Invoke a specific getter syscall such as `sol_clock` or `sol_rent`
+1. Invoke a specific getter syscall such as `sol_get_rent_sysvar`
 2. Invoke the `sol_get_sysvar` syscall, or
 3. Include a `Sysvar` account in their program inputs.
 
