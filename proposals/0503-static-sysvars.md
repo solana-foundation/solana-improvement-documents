@@ -158,12 +158,10 @@ loads.
 In evaluating that syscall, SIMD-0127 also considered and rejected the
 memory-mapped region approach that this proposal adopts, citing address
 translation complexity, full data copies per VM instantiation, and a dependency
-on direct mapping. The first two no longer apply: a single read-only buffer is
-maintained once per slot and shared by reference into every transaction's memory
-mapping, so there is no per-VM copy, and translation is an ordinary
-direct-mapped base-plus-offset resolution rather than bespoke logic. The third —
-the dependency on direct mapping — remains, and is a deliberate requirement of
-this design.
+on direct mapping. A single read-only buffer maintained once per slot and 
+shared by reference into every transaction's memory mapping removes the need for
+a per-VM copy, making translation an ordinary base-plus-offset resolution 
+without the need for any bespoke logic.
 
 ### Reserved offsets for extensibility
 
