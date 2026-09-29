@@ -1,5 +1,5 @@
 ---
-simd: '0XXX'
+simd: '0674'
 title: Validator Location Registration
 authors:
   - Quentin Kniep
