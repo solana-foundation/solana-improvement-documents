@@ -67,7 +67,7 @@ must implement the behavior described below for each one of them.
                                `pc += offset if (dst as u32 & IMM as u32) != 0`
 - `JNE32_IMM`  -> opcode = `0x56` -> `pc += offset if dst as u32 != IMM as u32`
 - `JSGT32_IMM` -> opcode = `0x66` -> `pc += offset if dst as i32 >  IMM as i32`
-- `JSGE32_IMM` -> opcode = `0x76` -> `pc += offset if dst as i32 >  IMM as i32`
+- `JSGE32_IMM` -> opcode = `0x76` -> `pc += offset if dst as i32 >= IMM as i32`
 - `JLT32_IMM`  -> opcode = `0xa6` -> `pc += offset if dst as u32 <  IMM as u32`
 - `JLE32_IMM`  -> opcode = `0xb6` -> `pc += offset if dst as u32 <= IMM as u32`
 - `JSLT32_IMM` -> opcode = `0xc6` -> `pc += offset if dst as i32 <  IMM as i32`
@@ -78,20 +78,20 @@ must implement the behavior described below for each one of them.
 - `JGE32_REG`  -> opcode = `0x3e` -> `pc += offset if dst as u32 >= src as u32`
 - `JSET32_REG` -> opcode = `0x4e` -> 
                                `pc += offset if (dst as u32 & src as u32) != 0`
-- `JNE32_REG`  -> opcode = `0x56` -> `pc += offset if dst as u32 != src as u32`
-- `JSGT32_REG` -> opcode = `0x66` -> `pc += offset if dst as i32 >  src as i32`
-- `JSGE32_REG` -> opcode = `0x76` -> `pc += offset if dst as i32 >  src as i32`
-- `JLT32_REG`  -> opcode = `0xa6` -> `pc += offset if dst as u32 <  src as u32`
-- `JLE32_REG`  -> opcode = `0xb6` -> `pc += offset if dst as u32 <= src as u32`
-- `JSLT32_REG` -> opcode = `0xc6` -> `pc += offset if dst as i32 <  src as i32`
-- `JSLE32_REG` -> opcode = `0xd6` -> `pc += offset if dst as i32 <= src as i32`
+- `JNE32_REG`  -> opcode = `0x5e` -> `pc += offset if dst as u32 != src as u32`
+- `JSGT32_REG` -> opcode = `0x6e` -> `pc += offset if dst as i32 >  src as i32`
+- `JSGE32_REG` -> opcode = `0x7e` -> `pc += offset if dst as i32 >= src as i32`
+- `JLT32_REG`  -> opcode = `0xae` -> `pc += offset if dst as u32 <  src as u32`
+- `JLE32_REG`  -> opcode = `0xbe` -> `pc += offset if dst as u32 <= src as u32`
+- `JSLT32_REG` -> opcode = `0xce` -> `pc += offset if dst as i32 <  src as i32`
+- `JSLE32_REG` -> opcode = `0xde` -> `pc += offset if dst as i32 <= src as i32`
 
 ### callx encoding
 
 The encoding of callx must change so that the register containing the address 
 to jump to is in the destination register.
 
-- `callx` -> opcode = `0x9d` -> pc = `dst`
+- `callx` -> opcode = `0x8d` -> pc = `dst`
 
 ### Stack frame gaps
 
