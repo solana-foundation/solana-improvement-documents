@@ -20,8 +20,8 @@ executed the last slice of the previous block. However, its block production
 timer of duration `Δblock` only starts once the `ParentReady` event is observed.
 
 This proposal reduces the post-`ParentReady` production budget for the first
-slot of a leader window by a constant `HANDOVER_COMPENSATION` (60 ms) from 200
-ms (after full activation of SIMD-0525) to 140 ms.
+slot of a leader window by a constant `HANDOVER_COMPENSATION` (25 ms) from 200
+ms (after full activation of SIMD-0525) to 175 ms.
 Likewise, the timeout duration after `ParentReady` for the first slot is reduced
 by `HANDOVER_COMPENSATION` and timeouts for other slots shift accordingly.
 As we show below, with `HANDOVER_COMPENSATION` the *effective slot time* roughly
@@ -45,7 +45,7 @@ Consequences of leaving this uncompensated:
 
 1. **The effective slot time would not match the targets of SIMD-0525.** The
    final stage of SIMD-0525 targets 200 ms; but with the uncompensated fast
-   leader handover, a correct leader would produce for an average of around 260
+   leader handover, a correct leader would produce for an average of around 225
    ms. This makes the first slot per window systematically longer.
 2. **Epoch wall-clock duration.** As epochs are a fixed number of slots, the
    more wall-clock time elapses on top of the pure slot times, the longer the
@@ -84,7 +84,7 @@ Related proposals, not dependencies:
 
 ## New Terminology
 
-- **`HANDOVER_COMPENSATION`**: a protocol constant, 60 ms, subtracted from the
+- **`HANDOVER_COMPENSATION`**: a protocol constant, 25 ms, subtracted from the
   post-`ParentReady` production budget of the first block of a leader window and
   the timeouts.
 - **Effective slot time**: the time interval between the moment a leader starts
@@ -107,7 +107,7 @@ document are to be interpreted as described in [RFC
 ### Constants
 
 ```
-HANDOVER_COMPENSATION  = 60 ms
+HANDOVER_COMPENSATION  = 25 ms
 ```
 
 `HANDOVER_COMPENSATION` is an absolute duration and MUST NOT be scaled with the
@@ -135,15 +135,15 @@ slot time for the first slot and still using the full `Δblock` for all other
 slots.
 
 Specifically, given `DELTA_TIMEOUT` and with 4 slots per leader window and
-200 ms slot time and `HANDOVER_COMPENSATION = 60 ms`, the timeouts for the
+200 ms slot time and `HANDOVER_COMPENSATION = 25 ms`, the timeouts for the
 leader window starting at slot `s` are calculated as:
 
 | Slot  | Timeout Duration from ParentReady |
 |-------|-----------------------------------|
-| s     | DELTA_TIMEOUT + 140 ms            |
-| s + 1 | DELTA_TIMEOUT + 340 ms            |
-| s + 2 | DELTA_TIMEOUT + 540 ms            |
-| s + 3 | DELTA_TIMEOUT + 740 ms            |
+| s     | DELTA_TIMEOUT + 175 ms            |
+| s + 1 | DELTA_TIMEOUT + 375 ms            |
+| s + 2 | DELTA_TIMEOUT + 575 ms            |
+| s + 3 | DELTA_TIMEOUT + 775 ms            |
 
 ### Direct leader-to-leader delivery
 
@@ -155,12 +155,12 @@ seeing the `ParentReady` event.
 This is not reflected in the timeouts but allows us to increase
 `HANDOVER_COMPENSATION` and turn idle time into block production time.
 
-### Choice of 60 ms
+### Choice of 25 ms
 
-`HANDOVER_COMPENSATION` should roughly equal the mean optimistic prefix time
+`HANDOVER_COMPENSATION` SHOULD roughly equal the mean optimistic prefix time
 observed on mainnet.
-The value of 60 ms this proposal adopts was derived from a simulation based on
-real-world network latencies and the current mainnet distribution.
+The value of 25 ms this proposal adopts was derived from a simulation based on
+real-world network latencies and the current mainnet distribution as of epoch 1038.
 This value already accounts for the direct leader-to-leader delivery.
 It SHOULD be validated against measurements before activation.
 
@@ -207,13 +207,13 @@ longer than `Δblock`, and the relative gap widens with every decrease in
 ## Impact
 
 - **Users and dapp developers.** At the final SIMD-0525 stage the chain advances
-  at roughly 213 ms per slot rather than roughly 229 ms, about 7.5% more slots
+  at roughly 206 ms per slot rather than roughly 217 ms, about 5.3% more slots
   per unit of wall-clock time.
 Blockhash expiry, which is counted in slots, shortens correspondingly in
 wall-clock terms.
 Block timestamps become more evenly spaced.
 
-- **Validators.** Leaders lose 60 ms of post-`ParentReady` packing time on the
+- **Validators.** Leaders lose 25 ms of post-`ParentReady` packing time on the
   first block of each window, which should make up for the (on average) same
   time gained through the fast leader handover.
 Per-block limits are unchanged, so the first block of a window now has both the
@@ -224,7 +224,7 @@ on that block and SHOULD move packing to the optimistic start.
 - **Core contributors.** Epoch wall-clock duration, inflation delivered per
   wall-clock year, and realised VAT cost per day all move roughly 55% of the way
   towards the values intended by SIMD-0525 and SIMD-0357. At `w · Δblock = 800
-  ms`, the epoch falls from about 27.5 h to about 25.6 h against an intended 24
+  ms`, the epoch falls from about 26 h to about 24.7 h against an intended 24
   h. The remainder is the time for the next leader to receive the block from the
   previous leader, amortised over the window, and closing it requires reducing
   that time even more, e.g. by adjusting the leader schedule, or increasing the
