@@ -48,10 +48,11 @@ next vote state version on top of the V4 layout. It follows the pattern
 of [SIMD-0387] (BLS Pubkey Management in Vote Account), which likewise
 registers a validator key in the vote account and makes registration
 mandatory before a consuming feature activates. The companion geo-aware
-leader schedule SIMD-0XXX depends on this proposal.
+leader schedule [SIMD-0675] depends on this proposal.
 
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
 [SIMD-0387]: https://github.com/solana-foundation/solana-improvement-documents/pull/387
+[SIMD-0675]: https://github.com/solana-foundation/solana-improvement-documents/pull/675
 
 ## New Terminology
 
@@ -312,7 +313,7 @@ Validators register a 12-byte coordinate triple once, and again
 whenever they move; clients verify registrations with a handful of
 integer operations. Dapp developers are unaffected. Core contributors
 gain a deterministic location and distance primitive on which the
-geo-aware leader schedule (SIMD-0XXX) is built; the primitive is also
+geo-aware leader schedule ([SIMD-0675]) is built; the primitive is also
 reusable for network diagnostics and telemetry.
 
 ## Security Considerations
