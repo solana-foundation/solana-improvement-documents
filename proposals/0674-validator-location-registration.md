@@ -6,6 +6,7 @@ authors:
   - Roger Wattenhofer
 category: Standard
 type: Core
+status: Draft
 created: 2026-09-24
 feature: (fill in with feature key and github tracking issues once accepted)
 extends: SIMD-0185
