@@ -14,8 +14,9 @@ feature: (fill in with feature tracking issues once accepted)
 
 Store the epoch stakes in a dedicated on-chain account per epoch, keyed by
 epoch number. The account includes the vote-account stake mapping, vote account
-v4 reward fields, and Alpenglow validator rank data. All epochs from feature
-activation forward remain accessible as persistent account state.
+v4 reward fields, and Alpenglow validator rank data. Retain eight epoch accounts:
+the upcoming epoch, the current epoch, and six previous epochs. The runtime
+closes older accounts at epoch boundaries.
 
 ## Motivation
 
@@ -43,10 +44,10 @@ snapshot manifest as validator-local data that is *not* covered by the
 bank hash. A snapshot with corrupted or tampered epoch stakes will load
 successfully and the node will not discover the corruption until later in
 startup, when the data is used to compute the leader schedule or validate
-votes. Moving the epoch stakes into an account places them inside the bank
-hash that validators vote on, so any corruption is detected immediately at
-snapshot load time, before any consensus decisions are made. This closes
-a snapshot verification gap that exists today.
+votes. Publishing the epoch stakes as account data commits them to the bank
+hash that validators vote on. A follow-up can use these accounts to validate
+or replace the manifest's epoch stakes. This SIMD does not change snapshot
+loading.
 
 **For indexers and off-chain infrastructure.** There is no way to subscribe
 to epoch stake changes. Consumers must poll RPC endpoints, introducing
@@ -144,9 +145,9 @@ The collector and commission fields mirror the vote account v4 state
 introduced by [SIMD-0185] and consumed by [SIMD-0232]: v4 splits
 validator income into two streams (inflation rewards and block revenue),
 each with its own collector address and its own commission rate in basis
-points. This schema carries both streams so that it remains a complete
-replacement for the per-vote-account data the runtime reads at epoch
-boundaries after those SIMDs are active.
+points. These values come from the same early snapshot as the stake mapping;
+they are not live vote account state. Their timing is described under
+[Snapshot Timing](#snapshot-timing).
 
 - **`vote_pubkey`** - the vote account address. Primary key; entries are
   sorted by this field.
@@ -173,12 +174,11 @@ boundaries after those SIMDs are active.
 - **`delegated_stake`** - total stake delegated to this vote account, in
   lamports. Sum of the individual stake delegations pointing at this vote
   account.
-- **`cumulative_credits`** - total epoch credits earned by this vote
-  account through the epoch this account represents (i.e. the latest
-  cumulative credits value from the vote state's `epoch_credits` history
-  as of this epoch). Reward distribution computes credits earned *in*
-  epoch N by diffing this field between the epoch-N and epoch-(N-1)
-  accounts.
+- **`cumulative_credits`** - the latest cumulative credits value from the
+  vote state's `epoch_credits` history in the snapshot used for this account,
+  or zero if that history is empty. For `epoch_stakes(E)`, the snapshot is
+  taken at the start of `E - 1`, before any credits are recorded in that epoch.
+  The field does not include credits earned during `E`.
 - **`inflation_rewards_commission_bps`** - inflation rewards commission
   in basis points `[0, 10000]`, matching the vote account v4
   representation. For vote accounts whose state predates v4, runtime
@@ -204,8 +204,57 @@ boundaries after those SIMDs are active.
 
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/pull/185
 [SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
+[SIMD-0249]: ./0249-delay-commission-updates.md
 [SIMD-0326]: https://github.com/solana-foundation/solana-improvement-documents/pull/326
 [SIMD-0357]: https://github.com/solana-foundation/solana-improvement-documents/pull/357
+
+#### Snapshot Timing
+
+`epoch_stakes(E)` contains the runtime's stake and vote account snapshot taken
+at the boundary into `E - 1`, for use by consensus in `E`. The runtime normally
+publishes it at that boundary. Publishing an existing snapshot on feature
+activation does not change when its contents were captured.
+
+For a vote account present in both consecutive snapshots, with a continuous
+cumulative credits counter, let `credits(E)` denote its `cumulative_credits`
+in `epoch_stakes(E)`:
+
+| Value | Epoch it describes |
+|-------|--------------------|
+| Commission in `epoch_stakes(E)` under SIMD-0249 | Rewards earned in `E` |
+| `credits(E) - credits(E - 1)` | Credits recorded during `E - 2` |
+
+For example, `epoch_stakes(100)` captures state at the start of epoch 99. Its
+inflation commission applies to rewards earned in epoch 100, while its credits
+minus those in `epoch_stakes(99)` give the credits recorded during epoch 98.
+To align credits with the commission for rewards earned in `E`, consumers use
+the credits difference between `epoch_stakes(E + 2)` and `epoch_stakes(E + 1)`.
+That difference becomes available at the start of `E + 1`.
+
+With [SIMD-0249] active, inflation rewards earned in `E` use the commission
+from the start of `E - 1`. If the vote account is missing from that snapshot,
+the runtime falls back to its state at the start of `E`, then at the start of
+`E + 1`. These snapshots correspond to `epoch_stakes(E)`,
+`epoch_stakes(E + 1)`, and `epoch_stakes(E + 2)`, respectively, when the vote
+account is included. The delay applies to the inflation commission; it does
+not establish the effective epoch of the other collector or commission fields.
+
+Consumers **MUST** distinguish a missing epoch account from a missing entry.
+An account outside the retention window provides no evidence about whether a
+vote account was present in its snapshot. Missing entries **MUST NOT** be
+treated as zero credits or zero commission. These accounts cover the runtime's
+admitted epoch stake set, not every vote account. A missing entry or a closed
+and recreated vote account can prevent a valid credits comparison.
+
+Credits here mean increments recorded during the indicated epoch. They need
+not refer to votes for slots in that epoch: Alpenglow can record rewards for
+an earlier slot in the current bank's epoch. This SIMD preserves the runtime's
+counter and its meaning, including changes at Alpenglow activation.
+
+The published accounts do not change reward calculation. Stake snapshots,
+credits, and commission alone do not determine actual delegator returns.
+Per-epoch reward totals and their alignment with these snapshots remain
+follow-up work.
 
 #### Schema Rationale
 
@@ -218,10 +267,9 @@ follow-up work and may require reconstructing those maps at snapshot load.
    indexers) are reading these accounts, the entry layout becomes an ABI.
    Retroactive expansion would force a v2 format and either break v1
    consumers or require dual-version support indefinitely.
-2. **Cost is bounded.** Per-entry size grows from 40 bytes to 224 bytes,
-   per-account size from ~80 KiB to ~438 KiB, and annual state growth from
-   ~56 MiB/year to ~312 MiB/year. Preserving the history avoids rewriting
-   old data and lets consumers query an epoch without maintaining an archive.
+2. **Cost is bounded.** Each account is at most 448,032 bytes (~438 KiB).
+   Eight retained accounts require at most 3,584,256 bytes (~3.42 MiB) of
+   account data. Consumers can query the retained epochs without an archive.
 3. **Per-stake-delegation data is not included.** Agave no longer serializes
    stake delegations in `epoch_stakes`; they are recoverable from stake
    accounts. Reintroducing them here would add cost without restoring data the
@@ -234,20 +282,18 @@ With mainnet parameters (~2,000 vote accounts):
 | Component | Calculation | Size |
 |-----------|------------|------|
 | Header | fixed | 32 bytes |
-| Entries | 2,000 x 224 bytes | ~438 KiB |
-| **Total per account** | | **~438 KiB** |
+| Entries | 2,000 x 224 bytes | 448,000 bytes |
+| **Total per account** | 32 + 448,000 bytes | **448,032 bytes (~438 KiB)** |
+| **Eight retained accounts** | 8 x 448,032 bytes | **~3.42 MiB** |
 
 The epoch stakes account **MUST** contain at most 2,000 entries, matching
 the validator admission cap enforced elsewhere in the protocol. This
 bounds the maximum account size and gives consumers a firm upper limit
 for buffer allocation.
 
-At ~2 epochs per day, annual on-chain state growth from this proposal
-is approximately 312 MiB/year. This is a deliberate tradeoff (see
-[State Growth](#state-growth)). Preserving all history simplifies
-consumer logic and avoids write amplification. The annual growth is
-small relative to overall validator state and can be pruned in a
-future SIMD if it becomes a concern.
+The eight-account limit bounds live account data after each epoch boundary.
+It excludes account metadata and validator storage overhead. Historical ledger
+or archival storage is separate from the on-chain retention guarantee.
 
 ### Account Addresses
 
@@ -262,15 +308,14 @@ on-wire `u64` representation of an epoch number).
 
 Every epoch has its own stable, deterministic address. The runtime writes the
 account data once and never copies it between addresses. A consumer that knows
-an epoch number can derive the address and read the data for any epoch that has
-been written since feature activation.
+an epoch number can derive the address and read the data while that epoch is
+retained. The address is not reused for another epoch after the account closes.
 
 This scheme eliminates the write amplification of a rolling
 `previous / current / next` layout (which would require rewriting the
-same data under different addresses every epoch boundary). It also
-naturally preserves historical stakes. Any program or indexer can walk
-backward through epochs for retrospective analysis without needing an
-off-chain archive.
+same data under different addresses every epoch boundary). Programs and
+indexers can read recent history within the retention window. Older history
+requires an off-chain archive.
 
 Consumers subscribing to the current and upcoming epoch stakes can compute
 both addresses from the current epoch number (available via the `Clock`
@@ -306,15 +351,18 @@ At each epoch boundary (when `parent.epoch() < new.epoch()`), the runtime:
    to stake mapping) into the binary format described above.
 2. Creates the account at `epoch_stakes(current_epoch + 1)` with the
    serialized data and a rent-exempt lamport balance.
+3. Closes published accounts older than the retention window, as specified
+   under [Retention and Closure](#retention-and-closure).
 
 If the runtime finds that the current epoch's account is missing when
 this logic runs (e.g. on the very first epoch boundary after feature
 activation), it additionally writes the current epoch's account.
 
-Each newly created account is funded with the rent-exempt minimum. The runtime
-does not rewrite its data. There is no copying or rotation between addresses.
-If someone pre-funds a future PDA, the runtime preserves those lamports when it
-writes the account so pre-funding cannot block publication or destroy funds.
+Each newly created account receives enough lamports to reach the rent-exempt
+minimum. The runtime does not rewrite its data while it is retained. There is
+no copying or rotation between addresses. If someone pre-funds a future PDA,
+the runtime preserves that balance and only supplies any shortfall. Those
+lamports remain subject to the same closure rule as the rest of the balance.
 
 This integrates into the existing epoch-boundary processing in
 `process_new_epoch()`, after vote account stake snapshots are taken and
@@ -329,29 +377,45 @@ rank field relies on the canonical Alpenglow validator set.
 On the first epoch boundary after feature activation, the runtime creates
 the account for the current epoch and the account for the next epoch (if
 the next epoch's stakes are already available). No historical accounts
-are backfilled. Data for epochs preceding feature activation is not
-available on-chain.
+are backfilled. The full eight-account window fills over subsequent epoch
+boundaries.
 
-From that point forward, each epoch boundary writes at most one new
-account (for `current_epoch + 1`), as described above.
+Subsequent boundaries normally write one new account, for `current_epoch + 1`.
+If the current epoch's snapshot was unavailable at the previous boundary,
+the runtime also publishes it when available.
 
 Consumers **MUST** check that an account exists (via e.g.
 `getAccountInfo`) before attempting to read it. Accounts for epochs
-prior to feature activation, or for epochs further in the future than
-the current leader schedule epoch, will not exist.
+before the first published epoch, outside the retention window, or further
+in the future than the current leader schedule epoch have no published data.
+An account at a derived address alone does not prove publication: consumers
+**MUST** validate its owner, format version, and header epoch. Anyone can
+transfer lamports to an unpublished PDA, creating a system-owned placeholder.
 
-#### State Growth
+#### Retention and Closure
 
-Each epoch contributes ~438 KiB of new on-chain account state. With
-approximately two epochs per day, annual growth is on the order of
-312 MiB. This is a deliberate tradeoff: preserving all history simplifies
-consumer logic, eliminates write amplification at epoch boundaries, and
-enables retrospective analysis without off-chain archival.
+After the boundary into epoch `C`, the retained range **MUST** be:
 
-Future SIMDs may introduce a pruning mechanism if long-term state growth
-becomes a concern. Because each account is independently addressable by
-epoch, pruning can be added without breaking the address scheme for the
-remaining accounts.
+```text
+max(first_published_epoch, C.saturating_sub(6)) <= epoch <= C + 1
+```
+
+This is eight accounts total once the window is full: six previous epochs,
+the current epoch, and the upcoming epoch. `first_published_epoch` is the
+current epoch at the first boundary after feature activation. An unavailable
+upcoming snapshot does not extend the lower end of the window. Retention is
+measured in epochs, independent of wall-clock duration.
+
+At each boundary, the runtime **MUST** close every previously published
+account below the lower bound, clear its data, zero its lamport balance, and
+reduce capitalization by the balance removed. The full balance is burned,
+including any lamports transferred to the account by transactions. Closure
+**MUST** only affect accounts owned by the Epoch Stakes program; a system-owned
+placeholder at an unpublished or expired address is left unchanged.
+
+Closing an account does not move its data to another address. Expired epochs
+**MUST NOT** be republished. Clients that need older history must archive it
+before closure; on-chain programs can only rely on the retained window.
 
 #### Consistency
 
@@ -366,16 +430,10 @@ visible as account state.
 No changes to existing RPC methods are required by this proposal. The
 `getVoteAccounts` method continues to work as before.
 
-However, once the epoch stakes are available as account data, the
-stake-distribution portion of `getVoteAccounts` becomes redundant as
-a validator-specific endpoint. Client libraries can implement the
-equivalent query as a plain account read (via any accounts interface they
-already use, including snapshot reads or account subscriptions). This
-unblocks eventual deletion of the endpoint (or the stake-distribution
-portion of it) in a future SIMD, which is a prerequisite for the broader
-effort to remove RPC from the validator entirely. The deletion itself is
-out of scope for this SIMD; this proposal provides only the on-chain data
-source that makes deletion possible.
+Clients that need the admitted epoch stake set can read these accounts through
+existing account APIs. The snapshots do not replace live vote account data or
+cover every vote account returned by RPC. Changes to `getVoteAccounts` or
+other RPC methods remain out of scope.
 
 ## Alternatives Considered
 
@@ -432,9 +490,8 @@ several reasons:
 - **Write amplification.** Rotation requires rewriting the same data
   under different addresses every epoch, producing three writes per
   epoch boundary instead of one.
-- **Bounded history.** A rolling layout only ever exposes three epochs.
-  Any consumer that needs older history would need to maintain their
-  own archive, defeating a core motivation of the proposal.
+- **Shorter history.** Three rolling accounts expose fewer epochs than
+  the eight-account window specified here.
 - **Ambiguity at epoch boundaries.** A `current_epoch_stakes` account
   has an implicit epoch binding that changes on every epoch boundary,
   creating a race between the runtime write and any consumer reading
@@ -470,28 +527,25 @@ data rewrites and allows independent addressability.
 ## Impact
 
 **Validator operators.** Validators will create one new account per
-epoch boundary (~438 KiB) after the feature is activated, contributing
-approximately 312 MiB per year of on-chain state growth. The account data is
-written once at each epoch boundary, adding negligible overhead to epoch
-processing. No configuration changes are required.
+epoch boundary (at most ~438 KiB) after the feature is activated and close
+expired accounts. Live account data is capped at ~3.42 MiB. No configuration
+changes are required.
 
-**RPC providers.** No immediate changes. Existing `getVoteAccounts` and
-related endpoints continue to function. Over time, client libraries are
-expected to shift to reading the on-chain accounts directly, which
-opens the path to deprecating and eventually removing the
-stake-distribution portion of `getVoteAccounts`, a prerequisite for
-the broader effort to remove RPC from the validator itself.
+**RPC providers.** Existing `getVoteAccounts` and related endpoints continue
+to function. The retained epoch snapshots are available through ordinary
+account reads and subscriptions.
 
 **Indexers and Geyser plugin operators.** One of the primary
 beneficiaries. Indexers can subscribe to the epoch stakes program via
 `programSubscribe` (or the Geyser equivalent) to receive stake
 distribution updates at epoch boundaries, replacing RPC polling.
 Consumers that want only a specific epoch can subscribe to the
-corresponding epoch-keyed PDA directly.
+corresponding epoch-keyed PDA directly. Consumers that need longer history
+must archive each account before it expires.
 
 **On-chain program developers.** Programs can read the epoch stakes
-account for any epoch since feature activation by deriving the PDA
-from the epoch number. The binary format supports zero-copy access.
+account for any published epoch within the retention window by deriving its
+PDA from the epoch number. The binary format supports zero-copy access.
 Concrete use cases include stake-weighted governance, quorum
 verification, client-side leader schedule derivation, and stake-aware
 delegation strategies.
@@ -507,19 +561,26 @@ sysvar cache.
 ### Account Size and Growth
 
 Each account is bounded at ~438 KiB by the 2,000-validator admission cap.
-New accounts are created at each epoch boundary, yielding approximately
-312 MiB of annual state growth. This is a deliberate tradeoff discussed
-under [State Growth](#state-growth); pruning may be introduced in a
-follow-up SIMD if warranted.
+The eight-account retention window caps live account data at ~3.42 MiB.
+Implementations **MUST** perform closure as part of the epoch boundary update,
+so account data cannot accumulate beyond that window.
 
 ### Capitalization Impact
 
-Each epoch boundary adds enough lamports to make one new account rent exempt.
-Without pre-funding, this is ~3.12 SOL per epoch at current rent parameters for
-a ~438 KiB account, or approximately 2,280 SOL per year. These lamports are not
-burned; they remain in the epoch stakes program's accounts indefinitely. If a
-future pruning SIMD is adopted, freed lamports could be returned to the
-treasury or burned.
+The runtime increases capitalization by any lamports it supplies when creating
+an account and decreases it by the full balance burned on closure. It **MUST**
+preserve pre-funded lamports on creation and only mint the shortfall needed
+for rent exemption. This prevents a transfer to a future PDA from blocking
+publication or being counted as newly minted supply.
+
+For example, at 3,480 lamports per byte-year, a two-year exemption threshold,
+and 128 bytes of account overhead, a maximum-sized account requires ~3.12 SOL.
+With eight such accounts and no external funding, the retained balance is
+~24.95 SOL. Once the window is full, closing the oldest account offsets funding
+a new account of the same size. Different entry counts or rent parameters
+change the net amount. Transfers from transactions can increase balances but
+do not increase the account data limit; those lamports are also burned when
+the account expires.
 
 ### Read-Only Guarantees
 
@@ -537,7 +598,7 @@ to protect their contents because:
 
 1. No valid transaction can alter the data, owner, or debit lamports from an
    account whose owner program rejects every instruction.
-2. The runtime's writes happen outside of transaction processing and
+2. The runtime's writes and closures happen outside of transaction processing and
    are therefore unaffected by the account-lock scheduler.
 3. Any validator that diverged from the deterministic computation would
    produce a different bank hash and fail consensus.
@@ -569,17 +630,14 @@ naturally enabled by it or complement it:
   per-vote-account snapshot data after the loader can rebuild its derived maps
   from account state. This SIMD supplies the bank-hashed source data but does
   not change snapshot loading.
-- **State pruning.** A maximum retention window (e.g. the most recent
-  N epochs) if long-term growth becomes a concern.
-- **Leader contact info via Geyser (planned follow-up, not a SIMD).**
-  Streaming leader TPU contact info (gossip-level endpoints that can
-  change within an epoch) will be delivered as a direct extension to
-  the Geyser plugin interface rather than as a SIMD, since Geyser is
-  outside the SIMD process. That work is independent of this proposal
-  because the data has different properties (mutable, high-frequency,
-  non-consensus) and a different appropriate delivery mechanism. It
-  is the last piece needed for transaction senders to operate entirely
-  RPC-free; this SIMD is one of the prerequisites.
+- **Reward history.** Per-epoch reward totals, including the appropriate
+  equivalents of `total_points` and `total_rewards`, require a separate
+  proposal. They become known after the early stake snapshot and must be
+  aligned with the applicable reward rules before consumers can reconstruct
+  actual delegator returns.
+- **Interim commission history.** Vote-account commission history that can
+  activate before Alpenglow is independent of this proposal. This SIMD's
+  activation dependencies and admitted-set coverage remain unchanged.
 
 ## Backwards Compatibility
 
