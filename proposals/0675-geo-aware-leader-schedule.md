@@ -386,6 +386,15 @@ bins instead.
 - **Do nothing.** Keeps the current incentive to co-locate with the majority
   of the stake and the current handover latency. It is the most secure
   against byzantine runs.
+- **Geographic order within a run.** Instead of a uniformly random order
+  within a run, the first leader is chosen at random and the remaining
+  leaders follow a shortest geographic path through the bin. Only the first
+  leader of a run pays a long handover; all further handovers become even
+  shorter, which would further improve the average latency. However, given
+  the bin membership, the order within a run is then largely deterministic:
+  the schedule symmetry property is weakened, and nearby validators are
+  always scheduled adjacently, so an adversary with several co-located
+  validators gets predictable, consecutive leader slots.
 
 ## Impact
 
