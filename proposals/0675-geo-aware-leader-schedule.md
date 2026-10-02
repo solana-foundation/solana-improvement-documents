@@ -383,9 +383,6 @@ bins instead.
   `1/RUN_LENGTH`) only rarely has a predecessor in the same area, while a
   leader in a dense area often has a nearby predecessor. So there is an
   incentive to move to a dense area, which means centralization.
-- **Do nothing.** Keeps the current incentive to co-locate with the majority
-  of the stake and the current handover latency. It is the most secure
-  against byzantine runs.
 - **Geographic order within a run.** Instead of a uniformly random order
   within a run, the first leader is chosen at random and the remaining
   leaders follow a shortest geographic path through the bin. Only the first
@@ -395,6 +392,9 @@ bins instead.
   the schedule symmetry property is weakened, and nearby validators are
   always scheduled adjacently, so an adversary with several co-located
   validators gets predictable, consecutive leader slots.
+- **Do nothing.** Keeps the current incentive to co-locate with the majority
+  of the stake and the current handover latency. It is the most secure
+  against byzantine runs.
 
 ## Impact
 
