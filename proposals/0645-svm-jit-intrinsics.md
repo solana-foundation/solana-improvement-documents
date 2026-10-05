@@ -71,8 +71,7 @@ This proposal depends on:
 
 ## New Terminology
 
-`sol_multi3` uses the static call encoding defined by SIMD-0178 for all
-supported SBPF versions
+`sol_multi3` uses the static call encoding defined by SIMD-0178 for SBPFv3 programs.
 
 ## Detailed Design
 
