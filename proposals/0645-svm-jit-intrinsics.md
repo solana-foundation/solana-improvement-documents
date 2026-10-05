@@ -98,7 +98,7 @@ murmur32("sol_multi3") = 0xDB0F6D13 = -619746029 as i32
 ```
 
 `sol_multi3` performs wrapping multiplication of two unsigned 128-bit values.
-It matches the `__multi3` SBPF ABI:
+It matches the `__multi3` BPF ABI:
 
 | Phase | Register | Meaning |
 |-------|----------|---------|
