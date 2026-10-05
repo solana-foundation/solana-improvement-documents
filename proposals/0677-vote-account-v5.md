@@ -62,7 +62,7 @@ will be empty under Alpenglow.
 [SIMD-0674] is not a dependency. It currently defines its own v5 layout
 and would need to be amended to take the layout from this proposal. The
 location field stays directly after `pending_delegator_rewards`. Its byte
-offset becomes 222, where SIMD-0674 has 144.
+offset becomes 202, where SIMD-0674 has 144.
 
 [SIMD-0118]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0118-partitioned-epoch-reward-distribution.md
 [SIMD-0123]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0123-block-revenue-distribution.md
@@ -78,7 +78,7 @@ offset becomes 222, where SIMD-0674 has 144.
 
 ## New Terminology
 
-- **Commission schedule**: a fixed-size list of at most four
+- **Commission schedule**: a fixed-size list of at most three
   `(epoch, bps)` entries in the vote account, one schedule per commission
   kind.
 - **Effective epoch**: the `epoch` of a schedule entry. The entry's rate
@@ -102,11 +102,11 @@ pub struct CommissionEntry {
 }
 
 pub struct CommissionSchedule {
-    /// Number of entries in use, from 1 to 4.
+    /// Number of entries in use, from 1 to 3.
     pub len: u8,
     /// Entries `[0, len)` are in strictly increasing `epoch` order.
-    /// Entries `[len, 4)` are zero.
-    pub entries: [CommissionEntry; 4],
+    /// Entries `[len, 3)` are zero.
+    pub entries: [CommissionEntry; 3],
 }
 
 pub struct VoteStateV5 {
@@ -140,7 +140,7 @@ pub struct VoteStateV5 {
 
 All fields are serialized like their v4 counterparts. A `CommissionEntry`
 is 10 bytes (`epoch` as `u64`, `bps` as `u16`, little endian). A
-`CommissionSchedule` is 41 bytes: `len` followed by the four entries, with
+`CommissionSchedule` is 31 bytes: `len` followed by the three entries, with
 no length prefix. Fields up to and including `location` sit at fixed byte
 offsets:
 
@@ -151,13 +151,13 @@ offsets:
 | 36     | 32   | `authorized_withdrawer`        |
 | 68     | 32   | `inflation_rewards_collector`  |
 | 100    | 32   | `block_revenue_collector`      |
-| 132    | 41   | `inflation_rewards_commission` |
-| 173    | 41   | `block_revenue_commission`     |
-| 214    | 8    | `pending_delegator_rewards`    |
-| 222    | 12   | `location` (`x`, `y`, `z`)     |
-| 234    | 1/49 | `bls_pubkey_compressed`        |
+| 132    | 31   | `inflation_rewards_commission` |
+| 163    | 31   | `block_revenue_commission`     |
+| 194    | 8    | `pending_delegator_rewards`    |
+| 202    | 12   | `location` (`x`, `y`, `z`)     |
+| 214    | 1/49 | `bls_pubkey_compressed`        |
 
-The maximum serialized size of `VoteStateV5` is 2020 bytes. The required
+The maximum serialized size of `VoteStateV5` is 2000 bytes. The required
 vote account size of `3762` bytes MUST remain unchanged.
 
 ### Commission Schedule
@@ -177,7 +177,7 @@ fn schedule(&mut self, t: Epoch, bps: u16) {
         self.entries[last].bps = bps; // same target epoch: overwrite
         return;
     }
-    if self.len == 4 {
+    if self.len == 3 {
         self.remove(0); // the other entries move down by one
     }
     self.push(t, bps);
@@ -188,7 +188,7 @@ fn schedule(&mut self, t: Epoch, bps: u16) {
 `schedule` is only called with `t` equal to the current epoch plus two, so
 `t` is never less than the last entry's `epoch`.
 
-A stored schedule is valid only if `len` is between 1 and 4, the entries
+A stored schedule is valid only if `len` is between 1 and 3, the entries
 in use are in strictly increasing `epoch` order and the unused entries are
 zero. A v5 state with an invalid schedule MUST fail to deserialize.
 
@@ -328,13 +328,13 @@ v5 vote accounts.
 - **A runtime-written commission history appended to v4.** The first
   version of this proposal. It made the runtime rewrite every vote
   account every epoch.
-- **A smaller schedule.** Rewards are correct at any size, because step 2
-  covers a missing entry. With two entries, a validator that updates in
-  two consecutive epochs holds only pending entries and the rate in force
-  is no longer in the account. Three is the smallest size at which it
-  always is. The fourth entry keeps the previous epoch's rate readable
-  while its rewards are paid out, the same `C - 1` to `C + 2` range
-  [SIMD-0185] keeps for `authorized_voters`, for 20 bytes per account.
+- **A different schedule size.** An update made in epoch `X` applies
+  from `X + 2`, so the rate in force and two pending rates can exist at
+  once. With two entries, a validator that updates in two consecutive
+  epochs holds only pending entries and the rate in force is no longer in
+  the account. Three is the smallest size at which it always is. A fourth
+  entry would keep the previous epoch's rate readable, but that is history
+  the protocol does not need.
 - **Seeding a converted account at `current_epoch + 1`.** The stored v4
   value already applies from then, so the rate would be readable one
   epoch sooner with the same rewards. A new account cannot use that seed,
