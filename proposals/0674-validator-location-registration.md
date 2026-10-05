@@ -151,8 +151,8 @@ syntax, serialized like the existing variants):
 UpdateLocation { x: i32, y: i32, z: i32 }   // ECEF meters
 ```
 
-- The instruction MUST be signed by the vote account's validator
-  identity.
+- The instruction MUST be signed by the vote account's authorized
+  voter (vote authority).
 - The runtime MUST fail the instruction unless the coordinates pass
   the validity check above; a vote account therefore never holds an
   invalid location.
@@ -181,10 +181,12 @@ UpdateLocation { x: i32, y: i32, z: i32 }   // ECEF meters
 
 VoteStateV5 is serialized like VoteStateV4 (SIMD-0185), with the
 version discriminant 4 (u32, little-endian) in the first 4 bytes and
-the position appended after `last_timestamp` as the final field:
-x (i32), y (i32), z (i32), little-endian, 12 bytes. Because vote state
-contains variable-length fields (votes, authorized voters, epoch
-credits), fields do not have fixed offsets. The maximum serialized size
+the position inserted immediately after `pending_delegator_rewards`:
+x (i32), y (i32), z (i32), little-endian, 12 bytes. All fields up to
+and including the position are fixed-size, so the position sits at a
+fixed byte offset and can be read without deserializing the whole vote
+state. When converting a V4 account to V5, all trailing bytes after the
+serialized VoteStateV5 MUST be zeroed. The maximum serialized size
 of VoteStateV5 fits comfortably within the existing 3762-byte vote
 account allocation, which SIMD-0185 deliberately kept oversized to
 leave room for future fields. No resize is required; new vote accounts
@@ -203,13 +205,13 @@ Instruction data (16 bytes):
 
 Accounts:
   0 [writable]  vote account
-  1 [signer]    validator identity
+  1 [signer]    vote authority
 ```
 
 Errors:
 
 - vote account not owned by the vote program: `InvalidAccountOwner`
-- account 1 is not the validator identity: `MissingRequiredSignature`
+- account 1 is not the vote authority: `MissingRequiredSignature`
 
 Before feature `<feature-id>` is activated, the vote program MUST
 reject discriminant 20 with `InvalidInstructionData`.
@@ -324,7 +326,7 @@ reusable for network diagnostics and telemetry.
   responsibility of the consuming leader schedule design.
 - **Authenticity and replay protection** come from the existing vote
   account machinery: `UpdateLocation` is an ordinary signed
-  transaction, and only the validator identity can change the stored
+  transaction, and only the vote authority can change the stored
   location.
 - **Precision is intentionally coarse.** Meter-level coordinates
   reveal no more than existing gossip IP addresses already do; a
