@@ -287,36 +287,6 @@ Note that the commission rate is allowed to be set and stored as any `u16` value
 but as detailed above, it will capped at 10,000 during the actual commission
 calculation.
 
-#### DepositDelegatorRewards
-
-A new instruction for distributing lamports to stake delegators will be added to
-the vote program with the enum discriminant value of `19u32` little endian
-encoded in the first 4 bytes.
-
-```rust
-pub enum VoteInstruction {
-    /// # Account references
-    ///   0. `[WRITE]` Vote account to be updated with the deposit
-    ///   1. `[SIGNER, WRITE]` Source account for deposit funds
-    DepositDelegatorRewards { // 19u32
-        deposit: u64,
-    },
-}
-```
-
-Perform the following checks:
-
-- If the number of account inputs is less than 2, return
-`InstructionError::NotEnoughAccountKeys`
-- If the vote account (index `0`) fails to deserialize, return
-`InstructionError::InvalidAccountData`
-- If the vote account is not initialized with state version 4, return
-`InstructionError::InvalidAccountData`
-
-Then the processor should perform a system transfer CPI of `deposit` lamports
-from the source account (index `1`) to the vote account. Lastly, increment the
-`pending_delegator_rewards` value by `deposit`.
-
 ## Impact
 
 Stake delegators will receive additional income when delegating to validators
