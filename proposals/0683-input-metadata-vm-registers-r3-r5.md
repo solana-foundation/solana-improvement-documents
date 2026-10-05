@@ -47,8 +47,8 @@ N/A
 
 The ABIv1 program entrypoint has 5 registers available. The first two registers
 (`r1` and `r2`) are already used for the input region pointer and the pointer to
-the instruction data section, respectively. The remaining registers can be used
-to hold:
+the instruction data section, respectively. After this proposal, all VM registers
+will provide the following information:
 
 - `r1`: Input region pointer (existing behavior)
 - `r2`: Pointer to instruction data section (existing behavior)
@@ -68,9 +68,9 @@ uninitialized data at the program entrypoint.
   the input region. The address is stored as a little-endian 64-bit pointer (8
   bytes).
 - The value in `r5` is a little-endian 64-bit unsigned integer (8 bytes)
-  representing the number of accounts in the accounts slice. This value is
-  equivalent to the number of accounts in the serialized input region at the
-  start of the input region (`r1`).
+  representing the number of accounts in the accounts slice, including duplicate
+  accounts. This value is equivalent to the number of accounts in the serialized
+  input region at the start of the input region (`r1`).
 
 ### Validator Components Affected
 
@@ -137,4 +137,4 @@ consumes all registers, but the callee never touches uninitialized registers.
 ## Backwards Compatibility
 
 This feature is only backwards compatible for programs that currently do not
-read from `r3`, `r4`, or `r5` at program entrypoint.
+read from `r3`, `r4`, or `r5` at the program entrypoint.
