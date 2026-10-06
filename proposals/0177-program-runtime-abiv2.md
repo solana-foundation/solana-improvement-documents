@@ -243,7 +243,8 @@ or as the program (and thus owner relation) changes between instructions.
 
 #### Instruction payload
 
-For each instruction, one separate readonly memory region must be mapped for its payload.
+For each instruction, one separate readonly memory region must be mapped for 
+its payload.
 
 One additional writable memory region can be created after the last instruction
 as zero-copy CPI scratch pad. See [Scratchpad management](#scratchpad-management).
@@ -296,8 +297,10 @@ The following syscalls must throw an error when invoked in ABIv2:
 
 #### Added syscalls
 
+##### Assign owner and transfer lamports syscalls
+
 Changes to the account metadata must now be communicated with specific
-syscalls, as detailed below:
+syscalls, as detailed below.
 
 - `sol_assign_owner(u64, *const [u8; 32])`.
   - `u64`: Index in transaction of the account whose owner is changing,
@@ -306,6 +309,8 @@ syscalls, as detailed below:
   - `u64`: Index in transaction of the destination account.
   - `u64`: Index in transaction of the source account.
   - `u64`: Lamports amount.
+
+##### Set buffer length syscall
 
 Changes to the account payload length and all the scratchpads sections
 introduced in this SIMD (the return-data scratchpad and the CPI scratchpad)
@@ -317,10 +322,28 @@ following parameters:
 
 The syscall must start by charging a base cost (to be determined) plus the
 same CU per byte ratio as the `memset` syscall for the new length of the memory
-region. Then it must check if the address matches the base address of either a
-writable account payload mapping or one of the scratchpad mappings and return
-an error otherwise. Constrains for the maximum resizable limits must also be
-verified for each region separetely.
+region.
+
+The expected errors for the syscalls are the following:
+
+1. `SyscallError::InvalidPointer` when the received based address is not a 
+   valid memory region or if it is not the base address of a region.
+2. `SyscallError::InvalidArgument` when the received address refers to an 
+   instruction that is not the last plus one.
+3. `InstructionError::MissingAccount` if the received address refers to an 
+   account not present in the transaction.
+4. `InstructionError::InvalidRealloc` when trying to resize an account past
+   its maximum 10 MB size.
+5. `InstructionError::MaxAccountsDataAllocationsExceeded` when trying to 
+   resize an account past the transaction wide growth limit of 20 MB.
+6. `InstructionError::ReadonlyDataModified` when trying to resize a readonly 
+   account.
+7. `InstructionError::ExternalDataModified` when trying to resize an account 
+   not owned by the program.
+8. `SyscallError::InvalidArgument` when resizing the 
+   [instruction accounts](#instruction-accounts) region past its 255 accounts 
+   limit.
+
 
 #### CPI
 
@@ -342,16 +365,19 @@ differently. At each CPI call, the runtime must perform the following actions:
 
 1. Verify that all account indexes received in the `InstructionAccount` area
   belong in the current executing instruction. Likewise, the prgram ID index
-  that should be called must also undergo the same verification.
-2. Verify that accounts have the correct signer and writer flags set, avoiding
-  privelege promotion.
-3. Append a new instruction at the end of the
+  that should be called must also undergo the same verification. Runtime must 
+  throw `InstructionError::MissingAccount` if any condition is violated.
+2. Verify that accounts have the correct signer and writer flags set, and throw
+   `InstructionError::PrivilegeEscalation` otherwise.
+3. Check if the number of instruction accounts for the CPI is less than 255, 
+   and throw `InstructionError::MaxAccountsExceeded` otherwise.
+4. Append a new instruction at the end of the
   [Instruction-trace](#instruction-trace).
-4. Transform the caller CPI scratchpad into a readonly instruction payload
+5. Transform the caller CPI scratchpad into a readonly instruction payload
   region visible for the callee.
-5. Change the read and write permission for the
+6. Change the read and write permission for the
   [Transaction-account](#transaction-account) regions.
-6. Update the address for the callee CPI scratchpad, the index of current
+7. Update the address for the callee CPI scratchpad, the index of current
   executing instruction, and the number of instructions in transaction
   in the [Transaction-metadata](#transaction-metadata).
 
