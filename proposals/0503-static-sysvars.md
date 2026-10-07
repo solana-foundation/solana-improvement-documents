@@ -13,8 +13,7 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Leverage existing memory translation infrastructure of JIT compilation to 
-enable static resolution of sysvars.
+Leverage memory translation to enable static sysvar resolution.
 
 ## Motivation
 
@@ -31,9 +30,10 @@ The downsides of these approaches are threefold:
    resulting in degraded developer experience.
 2. Invoking a syscall to access Sysvar data requires allocating the full 
    amount of the sysvar data in memory.
-3. Passing in accounts to access Sysvars is ~20x slower than syscalls or static 
-   sysvars, yet they are currently priced the cheapest in CUs, actively
-   incentivizing worse execution with less composable program APIs.
+3. Passing in accounts to access Sysvars is [far slower][benchmarks] than
+   syscalls or static sysvars, yet they are currently priced the cheapest in
+   CUs, actively incentivizing worse execution with less composable program
+   APIs.
 
 If these globals were simply exposed to the VM and resolved JIT, we could 
 dramatically improve developer experience, whilst also reducing the runtime 
@@ -105,7 +105,7 @@ Where `MM_STATIC_SYSVARS` is `0x05 << 32` (`0x500000000`) and `offset(sysvar)`
 is the sysvar's assigned offset within the region. Offsets are part of the
 protocol and, once assigned, are permanent.
 
-### JIT Resolution
+### Meory Mapping
 
 The region is backed by a single contiguous, read-only host buffer laid out
 exactly as described above. A single `MemoryRegion` maps the entire
@@ -204,3 +204,5 @@ This feature is a breaking change that will require feature-gated activation.
 Realizing the performance benefits of static sysvars will require adoption by 
 all relevant programs and SDKs. All existing Syscall/Sysvar APIs will continue 
 to function as normal.
+
+[benchmarks]: https://github.com/blueshift-gg/static-sysvars/blob/a6ab300c5aaeaebc510fc3091a2950275e568b89/BENCHMARKS.md
