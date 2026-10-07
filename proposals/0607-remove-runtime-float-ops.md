@@ -93,6 +93,9 @@ PICO_RATE     =    100_000_000_000    // existing 0.0001 pico inflation
 TAPER_15      = Fraction { numerator: 15, denominator: 100 }
 TAPER_30      = Fraction { numerator: 30, denominator: 100 }
 
+Taper numerators and denominators MUST fit in `u32`. Clients MUST validate this
+before converting wider stored values.
+
 Each protocol slot-time regime MUST define `slots_per_year` as an exact
 rational value. For any slot-time regimes already active or specified by prior
 features, this SIMD preserves their existing protocol values by converting the
@@ -118,6 +121,12 @@ epoch_reward =
 
 Clients MUST perform both flooring operations in the order shown.
 
+Inflation calculations MUST return an error on arithmetic overflow, including
+overflow of intermediate products, conversion of rewards to `u64` lamports, or
+addition of rewards to capitalization. A validator MUST panic if an inflation
+calculation returns an error. Clients MUST NOT wrap, saturate, or substitute a
+decay factor or reward amount on error.
+
 #### Feature Activation and Reward Boundary
 
 The integer reward calculation applies immediately in the boundary bank. If
@@ -134,12 +143,12 @@ required.
 This also accommodates short slot durations used by tests and local validators
 without requiring additional decay constants.
 
-The calculation uses three scales:
+The calculation uses two scales:
 
 - `RATE_SCALE = 10^15`: Initial, terminal, anchor, and calculated validator
   rates.
-- `DECAY_SCALE = 2^64`: Per-slot and accumulated decay factors.
-- `WORK_SCALE = 2^88`: Intermediate logarithm and exponential approximations.
+- `DECAY_SCALE = 2^64`: Per-slot and accumulated decay factors, and intermediate
+  logarithm and exponential approximations.
 
 Each integer represents its value multiplied by the corresponding scale;
 dividing by that scale recovers the represented value. For example, an annual
@@ -148,8 +157,8 @@ rate of 8% is stored as `80_000_000_000_000` at `RATE_SCALE`.
 Annual rates retain their existing decimal representation at `RATE_SCALE`.
 Decay factors remain in `[0, DECAY_SCALE]`, where `DECAY_SCALE` represents 1.0.
 The finer `DECAY_SCALE` limits the error amplified by exponentiating a factor
-close to 1 over many slots. `WORK_SCALE` provides additional precision during
-factor derivation; the derived factor is rounded to `DECAY_SCALE` before use.
+close to 1 over many slots. Factor derivation uses the same scale, so no scale
+conversion is needed before accumulating decay.
 
 #### Derivation of the per-slot factor
 
@@ -162,15 +171,14 @@ x = -ln(1 - taper) * ns_per_slot / YEAR_NS
 YEAR_NS = 31_556_925_993_600_000
 ```
 
-`WORK_SCALE` is `2^24` times `DECAY_SCALE` to limit rounding
-error during factor derivation while keeping intermediates within `u128` for
-the protocol parameters. For the 15% and 30% tapers, the truncation error of the
-32-term logarithm series is smaller than one working-scale unit. The exponential
+With `u32` logarithm inputs widened to `u128`, the logarithm arithmetic cannot
+overflow at `DECAY_SCALE`. For the 15% and 30% tapers, the truncation error of the
+32-term logarithm series is smaller than one scale unit. The exponential
 uses a cubic approximation because the per-slot exponent is small; the quadratic
 and cubic terms account for the leading corrections to linear decay.
 
 Clients MUST reproduce the results of the following integer algorithm, including
-its term counts, division positions, and final round-to-nearest-even operation.
+its term counts and division positions.
 Clients MAY use an equivalent implementation if it produces the same result or
 failure for every input. The mathematical formula above describes the
 approximation target; it does not require a correctly rounded transcendental
@@ -178,19 +186,20 @@ result for every possible input.
 
 All values in the Rust implementation are unsigned. Division discards the
 remainder.
-Inputs from a `Fraction` MUST be widened before arithmetic. Clients MUST NOT use
+Logarithm inputs MUST be widened before arithmetic. Clients MUST NOT use
 floating-point operations to derive the factor, including as a fallback.
 
 ```rust
-const WORK_SCALE: u128 = 1 << 88;
 const DECAY_SCALE: u128 = 1 << 64;
 const YEAR_NS: u128 = 31_556_925_993_600_000;
 
-// Approximates WORK_SCALE * ln(numerator / denominator).
-fn approximate_logarithm(numerator: u128, denominator: u128) -> Option<u128> {
+// Approximates DECAY_SCALE * ln(numerator / denominator).
+fn approximate_logarithm(numerator: u32, denominator: u32) -> Option<u128> {
     if denominator == 0 || numerator < denominator {
         return None;
     }
+    let numerator = u128::from(numerator);
+    let denominator = u128::from(denominator);
     // Represent z = (numerator - denominator) / (numerator + denominator)
     // as a fraction. Then (1 + z) / (1 - z) = numerator / denominator,
     // so ln(numerator / denominator) = 2 * (z + z^3/3 + z^5/5 + ...).
@@ -198,8 +207,8 @@ fn approximate_logarithm(numerator: u128, denominator: u128) -> Option<u128> {
     let z_den = numerator.checked_add(denominator)?;
     let z_num_squared = z_num.checked_mul(z_num)?;
     let z_den_squared = z_den.checked_mul(z_den)?;
-    // Initially, term is z scaled by WORK_SCALE.
-    let mut term = WORK_SCALE.checked_mul(z_num)? / z_den;
+    // Initially, term is z scaled by DECAY_SCALE.
+    let mut term = DECAY_SCALE.checked_mul(z_num)? / z_den;
     let mut sum = 0u128;
     for i in 0..32 {
         sum = sum.checked_add(term / (2 * i + 1))?;
@@ -211,15 +220,15 @@ fn approximate_logarithm(numerator: u128, denominator: u128) -> Option<u128> {
     sum.checked_mul(2)
 }
 
-// Approximates WORK_SCALE * exp(-x / WORK_SCALE), including the leading 1.
+// Approximates DECAY_SCALE * exp(-x / DECAY_SCALE), including the leading 1.
 fn approximate_exponential(x: u128) -> Option<u128> {
-    let second = x.checked_mul(x)? / (2 * WORK_SCALE);
-    let third = second.checked_mul(x)? / (3 * WORK_SCALE);
+    let second = x.checked_mul(x)? / (2 * DECAY_SCALE);
+    let third = second.checked_mul(x)? / (3 * DECAY_SCALE);
     let decrement = x.checked_sub(second)?.checked_add(third)?;
-    WORK_SCALE.checked_sub(decrement)
+    DECAY_SCALE.checked_sub(decrement)
 }
 
-fn decay_per_slot(ns: u128, taper_num: u128, taper_den: u128) -> Option<u128> {
+fn decay_per_slot(ns: u128, taper_num: u32, taper_den: u32) -> Option<u128> {
     if ns == 0 || taper_den == 0 || taper_num >= taper_den {
         return None;
     }
@@ -227,24 +236,14 @@ fn decay_per_slot(ns: u128, taper_num: u128, taper_den: u128) -> Option<u128> {
     let annual_exponent =
         approximate_logarithm(taper_den, taper_den.checked_sub(taper_num)?)?;
     let slot_exponent = annual_exponent.checked_mul(ns)? / YEAR_NS;
-    let decay = approximate_exponential(slot_exponent)?;
-
-    // Scale the small decrement; scaling the near-1 decay directly overflows.
-    let numerator = WORK_SCALE.checked_sub(decay)?.checked_mul(DECAY_SCALE)?;
-    let whole = numerator / WORK_SCALE;
-    let rem = numerator % WORK_SCALE;
-    let up = u128::from(
-        rem > WORK_SCALE / 2 || (rem == WORK_SCALE / 2 && whole % 2 != 0),
-    );
-    // DECAY_SCALE is even, so complement rounding preserves ties-to-even.
-    DECAY_SCALE.checked_sub(whole.checked_add(up)?)
+    approximate_exponential(slot_exponent)
 }
 ```
 
-`None` denotes invalid inputs or failure of checked arithmetic. Derivation is
-expected to succeed for the protocol's chosen slot durations and tapers; checked
-arithmetic exposes unsupported choices during testing. Clients MUST NOT wrap,
-saturate, clamp inputs, or substitute a floating-point result.
+`None` denotes a calculation error due to invalid inputs or failure of checked
+arithmetic. Clients MUST propagate this error to the validator, which MUST panic
+as specified above. Derivation is expected to succeed for the protocol's chosen
+slot durations and tapers.
 
 #### Accumulating decay
 
@@ -355,7 +354,8 @@ epoch_reward = floor(annual_reward * slots_in_epoch * slots_per_year_denominator
     / slots_per_year_numerator)
 ```
 
-For a normalized capitalization of 1,000,000,000 SOL, 8% initial inflation,
+For a normalized capitalization of 1,000,000,000,000,000,000 lamports,
+8% initial inflation,
 432,000-slot epochs, and the 400ms, 350ms, 300ms, 250ms, and 200ms slot-time
 regimes, the largest observed absolute epoch reward differences over 6000 epochs
 (epoch indices 0 through 5999) are shown below. Capitalization, taper, and slot
@@ -366,13 +366,13 @@ Differences are in lamports:
 
 | Taper | Original `10^15` decay | Proposed `2^64` decay |
 |-------|-----------------------|-----------------------|
-| 15% | 31,831,625 | 2,062 |
+| 15% | 31,831,625 | 5,923 |
 | 30% | 14,181,312 | 1,061 |
 
-The proposed calculation's maximum is 0.000002062 SOL per epoch. The observed
-relative difference,
+The largest observed difference in total epoch rewards from the floating-point
+calculation was 5,923 lamports. The observed relative difference,
 `abs(integer_epoch_reward - legacy_reward) / legacy_reward`, is below
-`2.15e-11` for both tapers. These are measured results for the comparison above,
+`7.03e-11` for both tapers. These are measured results for the comparison above,
 not universal error bounds.
 
 Using `DECAY_SCALE = 2^64` reduces rounding error in the per-slot factor and
