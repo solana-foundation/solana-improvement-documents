@@ -48,8 +48,8 @@ program data accounts.
 This proposal adds a hash validation step to the migration procedure. Before
 migrating a program, the runtime needs to validate that the hash of the program
 data (ELF bytes) in the buffer account matches the expected hash. The expected
-hash is the SHA-256 hash of the ELF bytes and is provided when the feature gate
-is created in the validator client.
+hash is the SHA-256 hash of the ELF bytes and must be supplied alongside the
+feature gate in accordance with the validator implementation.
 
 When the feature activates, the runtime must:
 
@@ -59,8 +59,9 @@ When the feature activates, the runtime must:
 3. Compare the computed hash with the expected hash provided in the feature
    gate.
 
-If the hashes match, the migration proceeds as described in SIMD-0418. If the
-hashes do not match, the migration fails and the program remains unchanged.
+If the hashes match, the migration follows the steps described in SIMD-0418
+&mdash; these steps are unchanged.
+If the hashes do not match, the migration fails without modifying the program.
 
 Hash validation ties the migration to the expected program data, rather than
 relying solely on the source buffer account's address.
@@ -89,9 +90,9 @@ lead to unexpected behavior or security vulnerabilities in important programs.
 
 ## Impact
 
-The runtime will only migrate a program if the source buffer's ELF bytes match
-the expected hash. A hash mismatch aborts the migration and leaves the existing
-program unchanged.
+The runtime will only migrate a program if the hash of the source buffer's ELF
+bytes matches the expected hash. A hash mismatch aborts the migration and leaves
+the existing program unchanged.
 
 ## Security Considerations
 
