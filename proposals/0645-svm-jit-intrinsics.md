@@ -9,7 +9,6 @@ type: Core
 status: Draft
 created: 2026-08-25
 feature: TBD
-extends: '0178'
 ---
 
 ## Summary
@@ -18,13 +17,11 @@ This SIMD introduces `sol_multi3`, a static BPF call for wrapping 128-bit
 multiplication. An SVM implementation can take advantage of the JIT process by
 lowering the call to native wide-multiplication operations on x86-64.
 
-`sol_multi3` uses the static `CALL_IMM` calling convention defined in SIMD-0178.
+`sol_multi3` uses the static `CALL_IMM` syscall identification mechanism.
 This enables efficient access to host-architecture instructions without
 introducing new instructions that would break compatibility with the BPF ISA.
 
 ## Motivation
-
-BPF static call → SVM operation → x86-64 JIT lowering
 
 Some operations are expensive to express using BPF instructions despite
 having efficient implementations on the host architecture. For example, BPF
@@ -60,23 +57,16 @@ fast in wall-clock time. These results are described in our [research article].
 
 ## Dependencies
 
-This proposal depends on:
-
-- **[SIMD-0178]: SBPF Static Syscalls**
-
-  `sol_multi3` reuses the static syscall encoding and hash-based call resolution
-  introduced by SIMD-0178.
-
-[SIMD-0178]: https://github.com/solana-foundation/solana-improvement-documents/pull/178
+n/a
 
 ## New Terminology
 
-`sol_multi3` uses the static call encoding defined by SIMD-0178 for SBPFv3 programs.
+`sol_multi3` (see below detailed design)
 
 ## Detailed Design
 
 - opcode 0x85
-- source register field set to zero
+- src/dst register fields set to zero
 - immediate field containing `murmur32("sol_multi3")`
 
 The immediate value identifies `sol_multi3` using the same mechanism used to
