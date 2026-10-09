@@ -45,6 +45,11 @@ This proposal depends on the following previously accepted proposals:
     Introduces a new instruction type for setting commission rates in basis
     points
 
+- **[SIMD-0326]: Alpenglow**
+
+    Provides reward epoch delegated stakes for block reward calculation and
+    active validator set through VAT
+
 - **[SIMD-0392]: Runtime Adjustments for Rent Increase**
 
     Updates delegation calculation based on `Rent` sysvar parameters
@@ -53,6 +58,7 @@ This proposal depends on the following previously accepted proposals:
 [SIMD-0185]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0185-vote-account-v4.md
 [SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0232-custom-commission-collector.md
 [SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0291-commission-rate-in-basis-points.md
+[SIMD-0326]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0326-alpenglow.md
 [SIMD-0392]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0392-rent-increase-adaptations.md
 
 ## Alternatives Considered
@@ -156,8 +162,8 @@ an epoch `N` where the first block is any block with a parent in the previous
 epoch. Rewards MUST be recalculated if a node is restarted during the partitioned
 rewards distribution period as described in [SIMD-0118].
 
-For each vote account, get its total active stake delegation
-during the reward epoch `N - 1`. Let this value be `A`.
+For each vote account, get its total active stake delegation during the reward
+epoch `N - 1`. Let this value be `A`.
 
 Then for each vote account, get its pending delegator rewards from the
 `pending_delegator_rewards` field in the vote state at the end of reward epoch
@@ -165,17 +171,28 @@ Then for each vote account, get its pending delegator rewards from the
 is nothing to be distributed.
 
 Lastly, if this is the first block of epoch `N`, the vote state’s
-`pending_delegator_rewards` field MUST be reset to `0`. Then, if `A` (active
-stake) is zero, the delegator rewards will effectively returned to the voter
-after the `pending_delegator_rewards` field is reset to `0`. Otherwise, if `A`
-is non-zero, `P` lamports MUST be debited from the vote account’s lamport
-balance and credited to the epoch rewards sysvar account’s lamport balance
-before any transactions or votes are processed.
+`pending_delegator_rewards` field MUST be reset to `0`.
+
+If `A` (active stake) is zero, since no stake accounts can receive the reward
+lamports, the delegator rewards will be returned to the voter after the
+`pending_delegator_rewards` field is reset to `0`. Note that since voters with 0
+stake are excluded from the VAT-paying set, this situation is only possible if a
+vote account has 0 stake *and* some amount of activating stake in the rewarded
+epoch, that becomes active in the distribution epoch.
+
+Otherwise, if `A` is non-zero, `P` lamports MUST be debited from the vote
+account’s lamport balance and credited to the epoch rewards sysvar account’s
+lamport balance before any transactions or votes are processed.
 
 Note that unlike inflation rewards distribution, block revenue distribution will
 not impact any internal epoch rewards sysvar state fields like `total_rewards`
 or `distributed_rewards` since block revenue will instead be tracked via the
 epoch rewards sysvar lamport balance.
+
+Also note that `A` (active stake) MUST be derived from the stake from the end of
+the epoch, and not the start of epoch stake values used to derive the leader
+schedule. The start of epoch stake amount does not include inflation rewards
+earned during the rewarded epoch, so it is incorrect for the calculation.
 
 #### Individual Delegator Reward
 
@@ -221,6 +238,42 @@ All other variables are the same as before, as described in
 After distributing all partitioned delegator rewards, the epoch rewards sysvar balance
 MUST be reset to its rent exemption balance and any surplus lamports are burned.
 
+#### Inclusion in block revenue distribution
+
+Similar to inflation rewards, vote accounts that are excluded from the active
+validator set do not participate in block revenue distribution; all pending
+delegator rewards for these vote accounts are burned at the end of the
+partitioned reward distribution, and stake accounts delegated to these vote
+accounts receive nothing.
+
+Concretely, this means that for block revenue earned in epoch E, the validator
+MUST pay VAT at the start of E + 1, or those lamports are burned.
+
+A vote account can be excluded from the active validator set at the start of the
+distribution epoch by not paying the VAT or not having any active stake.
+
+Pending delegator rewards are stored on the vote account, so a vote account
+must have enough lamports to pay VAT *without* accounting for these lamports.
+Before deducting VAT from a vote account, the runtime MUST ensure that:
+
+```
+vote_account_lamports >= rent_exempt_minimum + VAT + pending_delegator_rewards
+```
+
+This table summarizes how to treat different vote accounts, based on stake
+in the rewarded epoch E, distribution epoch E + 1, and paying VAT in the
+distribution epoch. In all cases, the pending delegator rewards counter MUST
+be reset to 0:
+
+| Stake in E | Stake in E + 1 | Pay VAT | Sweep | Distribute | Burn |
+| --- | --- | --- | --- | --- | --- |
+| > 0 | > 0 | Yes | Yes | Yes | No |
+| 0 | > 0 | Yes | No | No | No |
+| 0 | 0 | N/A cannot | Yes | No | Yes |
+| > 0 | 0 | N/A cannot | Yes | No | Yes |
+| > 0 | > 0 | No | Yes | No | Yes |
+| 0 | > 0 | No | Yes | No | Yes |
+
 ### Vote Program
 
 #### Withdraw
@@ -247,36 +300,6 @@ returning an `InstructionError::InvalidInstructionData`.
 Note that the commission rate is allowed to be set and stored as any `u16` value
 but as detailed above, it will capped at 10,000 during the actual commission
 calculation.
-
-#### DepositDelegatorRewards
-
-A new instruction for distributing lamports to stake delegators will be added to
-the vote program with the enum discriminant value of `19u32` little endian
-encoded in the first 4 bytes.
-
-```rust
-pub enum VoteInstruction {
-    /// # Account references
-    ///   0. `[WRITE]` Vote account to be updated with the deposit
-    ///   1. `[SIGNER, WRITE]` Source account for deposit funds
-    DepositDelegatorRewards { // 19u32
-        deposit: u64,
-    },
-}
-```
-
-Perform the following checks:
-
-- If the number of account inputs is less than 2, return
-`InstructionError::NotEnoughAccountKeys`
-- If the vote account (index `0`) fails to deserialize, return
-`InstructionError::InvalidAccountData`
-- If the vote account is not initialized with state version 4, return
-`InstructionError::InvalidAccountData`
-
-Then the processor should perform a system transfer CPI of `deposit` lamports
-from the source account (index `1`) to the vote account. Lastly, increment the
-`pending_delegator_rewards` value by `deposit`.
 
 ## Impact
 
