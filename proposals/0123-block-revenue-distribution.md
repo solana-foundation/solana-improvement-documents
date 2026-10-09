@@ -162,8 +162,8 @@ an epoch `N` where the first block is any block with a parent in the previous
 epoch. Rewards MUST be recalculated if a node is restarted during the partitioned
 rewards distribution period as described in [SIMD-0118].
 
-For each vote account, get its total active stake delegation
-during the reward epoch `N - 1`. Let this value be `A`.
+For each vote account, get its total active stake delegation during the reward
+epoch `N - 1`. Let this value be `A`.
 
 Then for each vote account, get its pending delegator rewards from the
 `pending_delegator_rewards` field in the vote state at the end of reward epoch
@@ -171,12 +171,18 @@ Then for each vote account, get its pending delegator rewards from the
 is nothing to be distributed.
 
 Lastly, if this is the first block of epoch `N`, the vote state’s
-`pending_delegator_rewards` field MUST be reset to `0`. Then, if `A` (active
-stake) is zero, the delegator rewards will effectively returned to the voter
-after the `pending_delegator_rewards` field is reset to `0`. Otherwise, if `A`
-is non-zero, `P` lamports MUST be debited from the vote account’s lamport
-balance and credited to the epoch rewards sysvar account’s lamport balance
-before any transactions or votes are processed.
+`pending_delegator_rewards` field MUST be reset to `0`.
+
+If `A` (active stake) is zero, since no stake accounts can receive the reward
+lamports, the delegator rewards will be returned to the voter after the
+`pending_delegator_rewards` field is reset to `0`. Note that since voters with 0
+stake are excluded from the VAT-paying set, this situation is only possible if a
+vote account has 0 stake *and* some amount of activating stake in the rewarded
+epoch, that becomes active in the distribution epoch.
+
+Otherwise, if `A` is non-zero, `P` lamports MUST be debited from the vote
+account’s lamport balance and credited to the epoch rewards sysvar account’s
+lamport balance before any transactions or votes are processed.
 
 Note that unlike inflation rewards distribution, block revenue distribution will
 not impact any internal epoch rewards sysvar state fields like `total_rewards`
@@ -184,13 +190,9 @@ or `distributed_rewards` since block revenue will instead be tracked via the
 epoch rewards sysvar lamport balance.
 
 Also note that `A` (active stake) MUST be derived from the stake from the end of
-the epoch, and not the cached epoch stakes. The cached epoch stakes amount does
-not include inflation rewards earned during the rewarded epoch, so it is
-incorrect for the calculation.
-
-If block rewards need to be recalculated, due to restarting a node during the
-distribution phase, the `RewardEpochDelegatedStakes` account created by
-Alpenglow's inflation reward system may be used.
+the epoch, and not the start of epoch stake values used to derive the leader
+schedule. The start of epoch stake amount does not include inflation rewards
+earned during the rewarded epoch, so it is incorrect for the calculation.
 
 #### Individual Delegator Reward
 
@@ -244,12 +246,24 @@ delegator rewards for these vote accounts are burned at the end of the
 partitioned reward distribution, and stake accounts delegated to these vote
 accounts receive nothing.
 
+Concretely, this means that for block revenue earned in epoch E, the validator
+MUST pay VAT at the start of E + 1, or those lamports are burned.
+
 A vote account can be excluded from the active validator set at the start of the
 distribution epoch by not paying the VAT or not having any active stake.
 
+Pending delegator rewards are stored on the vote account, so a vote account
+must have enough lamports to pay VAT *without* accounting for these lamports.
+Before deducting VAT from a vote account, the runtime MUST ensure that:
+
+```
+vote_account_lamports >= rent_exempt_minimum + VAT + pending_delegator_rewards
+```
+
 This table summarizes how to treat different vote accounts, based on stake
 in the rewarded epoch E, distribution epoch E + 1, and paying VAT in the
-distribution epoch:
+distribution epoch. In all cases, the pending delegator rewards counter MUST
+be reset to 0:
 
 | Stake in E | Stake in E + 1 | Pay VAT | Sweep | Distribute | Burn |
 | --- | --- | --- | --- | --- | --- |
