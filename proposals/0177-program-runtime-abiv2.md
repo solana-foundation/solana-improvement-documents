@@ -343,6 +343,9 @@ The expected errors for the syscalls are the following:
 8. `SyscallError::InvalidArgument` when resizing the 
    [instruction accounts](#instruction-accounts) region past its 255 accounts 
    limit.
+9. `SyscallError::InvalidArgument` when resizing the
+    [instruction payload](#instruction-payload) region past the existing limit 
+    of 10 kb for instruction data length.
 
 
 #### CPI
