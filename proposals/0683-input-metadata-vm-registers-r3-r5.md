@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2026-10-04
-feature: (fill in with feature key and GitHub tracking issues once accepted)
+feature: (fill in with feature key and github tracking issues once accepted)
 ---
 
 ## Summary
@@ -56,9 +56,10 @@ will provide the following information:
 - `r4`: pointer to the accounts slice **(new)**
 - `r5`: number of accounts **(new)**
 
-The new register assignments are available to all programs, under all loaders,
+The new register assignments are available to all ABIv1 programs, under all loaders,
 regardless of whether or not the value is read. These registers currently contain
-uninitialized data at the program entrypoint.
+uninitialized data at the program entrypoint. The deprecated loader (ABIv0) is not
+supported and the registers will not be initialized for ABIv0 programs.
 
 **New register details:**
 
