@@ -82,12 +82,40 @@ containing the BPF implementation of the target native program.
 The migration process must adhere to the following steps:
 
 1. Verifiably build the ELF of the BPF implementation.
-2. Generate a new keypair for the source buffer account.
-3. Create the buffer account and write the ELF bytes to it.
-4. Generate a new keypair for the feature gate.
-5. Create a new feature gate to replace the target program with the source
-   buffer.
-6. Follow the existing process for activating features.
+2. Compute the SHA-256 hash of the resulting ELF bytes.
+3. Generate a new keypair for the source buffer account.
+4. Create the buffer account and write the ELF bytes to it.
+5. Generate a new keypair for the feature gate.
+6. Create a new feature gate to replace the target program with the source
+   buffer. The hash from step 2 must be supplied alongside the feature gate in
+   accordance with the validator implementation.
+7. Follow the existing process for activating features.
+
+### Hash Validation
+
+Before migrating a program, the runtime must validate that the hash of the
+program data (ELF bytes) in the source buffer account matches the expected
+hash. The expected hash is the SHA-256 hash of the ELF bytes and must be
+supplied alongside the feature gate in accordance with the validator
+implementation.
+
+When the feature gate activates, the runtime must:
+
+1. Extract the ELF bytes from the source buffer account (all bytes after the
+   `UpgradeableLoaderState::Buffer` metadata header), excluding trailing zero
+   bytes.
+2. Compute the SHA-256 hash of the extracted ELF bytes.
+3. Compare the computed hash with the expected hash supplied alongside the
+   feature gate.
+
+If the hashes match, the migration proceeds as described above.
+If the hashes do not match, the migration fails without modifying the program.
+
+Hash validation ties the migration to the expected program data, rather than
+relying solely on the source buffer account's address.
+
+Hash validation is enabled by its own feature gate. Migrations performed before
+that feature gate is activated are not subject to hash validation.
 
 ## Impact
 
