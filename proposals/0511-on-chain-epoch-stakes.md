@@ -20,15 +20,20 @@ older accounts at epoch boundaries.
 
 ## Motivation
 
-Epoch stakes are inputs to consensus, but their snapshots currently live in
-validator-local caches and snapshot manifests. Publishing them as account data
-lets on-chain programs inspect stake distributions and lets read-layer clients
+Historical epoch stakes currently live in validator-local caches and snapshot
+manifests. Publishing per-validator stake weights, identities, and BLS keys and
+ranks as account data puts these consensus inputs under the bank hash. A later
+snapshot-loading change could rebuild stake-weight and BLS-rank lookups from
+these accounts instead of relying on historical vote-account data in the
+manifest.
+
+On-chain programs can inspect stake distributions, and read-layer clients can
 map BLS certificate ranks to validators. Existing account reads and subscriptions
 can serve this data without a new RPC method or Geyser interface.
 
-The account data is covered by the bank hash. A later proposal can use it to
-validate or replace snapshot-manifest fields. This proposal does not change
-snapshot loading, reward calculation, or existing RPC methods.
+Removing caches or snapshot-manifest fields remains follow-up work. This
+proposal does not change snapshot loading, reward calculation, or existing RPC
+methods.
 
 ## New Terminology
 
@@ -160,10 +165,13 @@ The owner is the following vanity address:
 EpochStakes11111111111111111111111111111111
 ```
 
-No program is deployed at this address. When funded, it is a non-executable,
-system-owned account with no data. Only the runtime creates and closes the
-epoch stakes accounts. Transactions cannot modify their data or owner, or
-debit their lamports.
+No program is deployed at this address. Feature activation **MUST NOT** create,
+fund, or modify an account at the owner address. If it is already funded, it
+remains a non-executable, system-owned account with no data. The runtime funds
+the per-epoch PDAs as specified below.
+
+Only the runtime creates and closes the epoch stakes accounts. Transactions
+cannot modify their data or owner, or debit their lamports.
 
 Neither the owner address nor the per-epoch PDAs are added to the reserved
 account keys. Ordinary account-lock rules apply. Transactions can fund these
@@ -197,10 +205,10 @@ Publish only `epoch_stakes(A)`. No earlier snapshot is backfilled, and no future
 snapshot epoch is published. The snapshot for consensus in `A` is therefore
 unavailable through these accounts during the activation epoch. The first
 published snapshot describes consensus in `A + 1`.
-After processing the boundary into epoch `C`, the retained range is:
+After processing the boundary into epoch `E`, the retained range is:
 
 ```text
-max(A, C.saturating_sub(7)) <= snapshot_epoch <= C
+max(A, E.saturating_sub(7)) <= snapshot_epoch <= E
 ```
 
 This retains at most eight accounts: current and seven previous epochs. The
@@ -282,8 +290,9 @@ Transfers can raise balances but cannot enlarge the account data.
 
 Snapshot-manifest validation or replacement, per-epoch reward totals, and
 changes to collector lookup remain separate proposals. This format omits
-collector addresses and other internal cache data, so it does not by itself
-replace every cached vote-account field.
+authorized voters, collector addresses, and the full credits history, so it
+cannot replace the complete cached vote-account state. The pre-reward stake
+snapshot also does not replace the stake balances used for reward recalculation.
 
 ## Backwards Compatibility
 
