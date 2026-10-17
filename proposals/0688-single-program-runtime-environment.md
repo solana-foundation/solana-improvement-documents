@@ -19,14 +19,18 @@ execution.
 
 ## Motivation
 
+Verifying deployments against the next slot requires every client to maintain
+a second program runtime environment alongside the one used for execution, and
+to keep the two consistent across epoch boundaries and feature activations.
+Dropping it significantly simplifies runtime environment management, which
+reduces the surface for consensus bugs and makes changes to the program runtime
+easier to ship.
+
 The two environments can only differ at the very last slot of an epoch, where
 the next slot belongs to the next epoch, which may activate a feature that
-affects the SBPF program runtime environment.
-
-The purpose of this design was to verify a program against the environment it
-would become effective in (after its delayed visibility window). However, we
-can just defer loading and caching the program until its effective slot, where
-it is verified against the environment in effect.
+affects the SBPF program runtime environment. Continuing to straddle such an
+epoch boundary with two program runtime environments is cumbersome and can
+actually be eliminated completely without significant impact to developers.
 
 ## New Terminology
 
@@ -58,8 +62,9 @@ one slot per epoch.
 
 dApp developers deploying at the very last slot of an epoch at which an
 environment-changing feature activates may see a deployment succeed and the
-program then fail to load in the next epoch. Deployments at any other slot are
-unaffected.
+program then fail to load in the next epoch. Conversely, a program using such
+a feature must wait until activation to deploy. Deployments at any other slot
+are unaffected.
 
 Validator implementations may drop the second environment.
 
