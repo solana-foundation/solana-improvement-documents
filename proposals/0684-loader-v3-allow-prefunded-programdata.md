@@ -47,17 +47,30 @@ N/A
 `CreateAccount` to create the programdata account.
 
 `CreateAccountAllowPrefund` takes the same instruction data as `CreateAccount`
-(`lamports`, `space`, `owner`), so the implementation is otherwise the same,
-except for `lamports`. Instead of the full rent-exempt minimum, the loader
-transfers only the remainder not already covered by the programdata account's
-balance (or zero, if it is already covered). The payer is omitted when no
-lamports are transferred.
+(`lamports`, `space`, `owner`). `space` and `owner` are unchanged. Instead of
+the full rent-exempt minimum, `lamports` is only the top-up needed to make the
+programdata account rent-exempt:
+
+```text
+required_lamports = minimum_balance(programdata_len)
+top_up_lamports = required_lamports.saturating_sub(programdata_lamports)
+```
+
+Where `programdata_len` is the programdata metadata size plus `max_data_len`,
+and `programdata_lamports` is the programdata account's balance before the
+CPI. Any lamports in excess of `required_lamports` remain in the programdata
+account. As today, the buffer's lamports are drained to the payer before the
+CPI.
+
+When `top_up_lamports` is zero, the payer is omitted from the CPI and is not
+required to sign `DeployWithMaxDataLen`. The payer MUST still be writable,
+since it receives the buffer's lamports.
 
 Note that `CreateAccountAllowPrefund` takes its accounts in reverse order:
 
 ```text
 0. [ws] ProgramData account
-1. [ws] Payer, if lamports > 0
+1. [ws] Payer, if top_up_lamports > 0
 ```
 
 ## Alternatives Considered
@@ -75,6 +88,9 @@ Deployments no longer fail when the programdata account holds lamports.
 
 The target is always the derived programdata address, so the wallet-locking
 concern noted in [SIMD-0312] does not apply.
+
+An unsigned payer only ever receives lamports (the drained buffer balance), and
+the upgrade authority, which must sign, still authorizes the deployment.
 
 ## Backwards Compatibility
 
