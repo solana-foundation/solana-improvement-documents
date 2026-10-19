@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0698'
 title: Raise Block Limits to 100M CUs in Stages
 authors:
   - Brennan Watt
