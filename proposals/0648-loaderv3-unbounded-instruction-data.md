@@ -35,9 +35,9 @@ limit instructions are included. A V1 transaction can deliver 1216 payload
 bytes, a modest improvement over the prior status quo, but still severely
 limited compared to what it ought to be.
 
-By removing the artificial bound in LoaderV3, a V1 transaction can deliver 3872
-payload bytes per transaction, or 3860 bytes with compute price and limit. This
-means a program deployment or upgrade requires ~75% fewer transactions.
+By removing the artificial bound in LoaderV3, a V1 transaction can deliver 3864
+payload bytes per transaction, or 3856 bytes per transaction with a priority
+fee. This means program deployment and upgrade require ~75% fewer transactions.
 
 This also admits LoaderV3 buffer writes up to almost 10KiB via CPI. It is
 possible this may be useful to some consumers such as multisigs, but not a
@@ -113,5 +113,5 @@ this.
 
 ## Conformance
 
-Verify that LoaderV3 can successfully deserialize `Write` instructions of longer
-than 1232 bytes.
+Verify that LoaderV3 can successfully deserialize `Write` instructions of
+arbitrary length, including but not limited to longer than 1232 bytes.
