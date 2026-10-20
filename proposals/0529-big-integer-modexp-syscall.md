@@ -81,11 +81,11 @@ actual operation size.
 
 A full RSA verification syscall would cover the most common immediate use case,
 but would unnecessarily bake message hashing, padding schemes, and key sizes
-into the runtime. A fixed-exponent RSA helper syscall is also unnecessary when
-generic ModExp metering follows the EIP-198 exponent-aware cost model. Programs
-can verify RSA signatures by invoking `sol_big_mod_exp` with exponent `65537`,
-while remaining responsible for hashing, padding checks, key validation, and
-domain separation.
+into the runtime. A fixed-exponent RSA helper syscall is also unnecessary
+because generic ModExp metering is exponent-aware and charges exponent `65537`
+for a single 64-bit exponent word. Programs can verify RSA signatures by
+invoking `sol_big_mod_exp` with exponent `65537`, while remaining responsible
+for hashing, padding checks, key validation, and domain separation.
 
 ## New Terminology
 
@@ -249,69 +249,59 @@ If `exponent` is zero, the result is `1 mod modulus`, encoded in exactly
 
 ### Compute Metering
 
-The syscall MUST charge compute before performing the arithmetic. Metering MUST
-follow the EIP-198 operation complexity model for the general ModExp path,
-adapted to Solana compute units. A separate modular-reduction path is used when
-the decoded exponent value is `1`.
+The syscall MUST charge compute before performing the arithmetic. The cost
+depends on the encoded operand lengths and, for the general ModExp path, on the
+number of 64-bit words spanned by the exponent. A separate modular-reduction
+path is used when the decoded exponent value is `1`.
 
 ```text
+operand_words = ceil(max(base_len, modulus_len) / 8)
+mult_complexity = operand_words ** 2 + BIG_MOD_EXP_MULT_COMPLEXITY_CONSTANT
+
 if decoded_exponent == 1:
-    reduction_complexity =
-        mod_reduce_complexity(base_len, modulus_len)
     compute_units =
-        BIG_MOD_EXP_BASE_CU + ceil(reduction_complexity / BIG_MOD_EXP_CU_DIVISOR)
+        BIG_MOD_EXP_BASE_CU
+        + ceil(mult_complexity / BIG_MOD_EXP_MOD_REDUCTION_CU_DIVISOR)
 else:
-    max_operand_len = max(base_len, modulus_len)
-    effective_exponent_length =
-        max(adjusted_exponent_length, BIG_MOD_EXP_MIN_EXPONENT_LENGTH)
-    operation_complexity =
-        mult_complexity(max_operand_len) * effective_exponent_length
+    exponent_words = floor(adjusted_exponent_length / 64) + 1
+    multiplications =
+        BIG_MOD_EXP_SETUP_MULTIPLICATIONS
+        + BIG_MOD_EXP_MULTIPLICATIONS_PER_EXPONENT_WORD * exponent_words
     compute_units =
-        BIG_MOD_EXP_BASE_CU + ceil(operation_complexity / BIG_MOD_EXP_CU_DIVISOR)
+        BIG_MOD_EXP_BASE_CU
+        + ceil(mult_complexity * multiplications / BIG_MOD_EXP_CU_DIVISOR)
 ```
 
-The initial draft constants are:
+The constants are:
 
 ```rust
-pub const BIG_MOD_EXP_BASE_CU: u64 = 422;
-pub const BIG_MOD_EXP_CU_DIVISOR: u64 = 189;
-pub const BIG_MOD_EXP_MIN_EXPONENT_LENGTH: u64 = 75;
-pub const BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR: u64 = 15;
+pub const BIG_MOD_EXP_BASE_CU: u64 = 50;
+pub const BIG_MOD_EXP_MULT_COMPLEXITY_CONSTANT: u64 = 22;
+pub const BIG_MOD_EXP_SETUP_MULTIPLICATIONS: u64 = 12;
+pub const BIG_MOD_EXP_MULTIPLICATIONS_PER_EXPONENT_WORD: u64 = 80;
+pub const BIG_MOD_EXP_CU_DIVISOR: u64 = 4;
+pub const BIG_MOD_EXP_MOD_REDUCTION_CU_DIVISOR: u64 = 15;
 ```
 
-These values are preliminary, based on early EIP-198 cost-sweep benchmark data,
-and MUST be finalized from implementation benchmarks before activation.
-`BIG_MOD_EXP_BASE_CU` accounts for syscall overhead that is not represented by
-EIP-198's pure arithmetic complexity formula.
-`BIG_MOD_EXP_MIN_EXPONENT_LENGTH` accounts for fixed-exponent cases, including
-common RSA exponents, whose measured runtime is not well represented by very
-small adjusted exponent lengths.
+With these constants `multiplications` is always a multiple of
+`BIG_MOD_EXP_CU_DIVISOR`, so the general path costs exactly
+`50 + mult_complexity * (3 + 20 * exponent_words)` CUs.
+
+`mult_complexity` is the cost of one multiplication modulo an operand of
+`operand_words` 64-bit words: the quadratic term is the word-by-word product and
+reduction, and `BIG_MOD_EXP_MULT_COMPLEXITY_CONSTANT` is the fixed overhead of
+each multiplication, which dominates for small operands.
+`BIG_MOD_EXP_MULTIPLICATIONS_PER_EXPONENT_WORD` covers the squarings and
+multiplications for each 64-bit exponent word, and
+`BIG_MOD_EXP_SETUP_MULTIPLICATIONS` covers the precomputation and conversions
+done once per call. `BIG_MOD_EXP_BASE_CU` covers syscall overhead outside the
+arithmetic.
 
 The `decoded_exponent == 1` branch prices the modular-reduction use case
 directly. This branch MUST be selected by the decoded exponent value, not by
-`adjusted_exponent_length` or `effective_exponent_length`, because the minimum
-exponent length raises small nonzero exponents for the general ModExp path.
-
-The multiplication complexity function is:
-
-```text
-mult_complexity(x):
-    if x <= 64:
-        return x ** 2
-    if x <= 1024:
-        return x ** 2 // 4 + 96 * x - 3072
-    return x ** 2 // 16 + 480 * x - 199680
-```
-
-The initial modular-reduction complexity function is:
-
-```text
-mod_reduce_complexity(base_len, modulus_len):
-    return (
-        mult_complexity(max(base_len, modulus_len)) *
-        BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR
-    )
-```
+`adjusted_exponent_length`. That length is `0` for both exponent `0` and
+exponent `1` when `exponent_len <= 32`, and it counts trailing zero bytes when
+`exponent_len > 32`.
 
 `adjusted_exponent_length` MUST be computed using the EIP-198 rules over the
 decoded exponent. Implementations MUST compute the same value that would be
@@ -328,13 +318,24 @@ order across exactly `exponent_len` bytes.
   the most significant 32 bytes of the fixed-width exponent. If those most
   significant 32 bytes are all zero, the index term is zero.
 
-The general ModExp formula is based on encoded lengths, not the minimal
-numerical byte length of any decoded value, so trailing zeroes do not reduce
-`base_len`, `modulus_len`, or `exponent_len`. The same formula applies to RSA
-verification use cases. For example, an RSA-2048 verification with exponent
-`65537` uses `base_len = 256`, `modulus_len = 256`,
-`adjusted_exponent_length = 16`, and
-`effective_exponent_length = BIG_MOD_EXP_MIN_EXPONENT_LENGTH`.
+The formula is based on encoded lengths, not the minimal numerical byte length
+of any decoded value, so trailing zeroes do not reduce `base_len`,
+`modulus_len`, or `exponent_len`. The same formula applies to RSA verification
+use cases. For example, an RSA-2048 verification with exponent `65537` uses
+`base_len = 256` and `modulus_len = 256`, so `operand_words = 32` and
+`mult_complexity = 1_046`. Its `adjusted_exponent_length` is `16`, so
+`exponent_words = 1` and `multiplications = 92`. It costs
+`50 + ceil(1_046 * 92 / 4) = 24_108` CUs.
+
+With a 512-byte modulus, exponents longer than 1024 bits exceed the 1.4 million
+CU per-transaction limit.
+
+These costs were calibrated on a private 10-validator Alpenglow cluster with
+200 ms slots and the cost limits of SIMD-0286 (20 million CUs per writable
+account and 50 million CUs per block in each slot). They are set so that a block
+filled to the per-account limit with any of the measured operand and exponent
+shapes, which forces the transactions to execute serially, replays within the
+slot. They should be revisited if those limits change.
 
 ### Benchmark Methodology
 
@@ -347,9 +348,7 @@ activation. The benchmark report SHOULD include:
 - input generation details for balanced, RSA-style, modulus-driven, and
   exponent-driven cases, including `decoded_exponent == 1` modular-reduction
   cases,
-- the selected values of `BIG_MOD_EXP_BASE_CU`, `BIG_MOD_EXP_CU_DIVISOR`,
-  `BIG_MOD_EXP_MIN_EXPONENT_LENGTH`, and
-  `BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR`, and
+- the selected values of the constants in the Compute Metering section, and
 - the rule used to convert benchmark time to compute units.
 
 ### Test Vectors
@@ -386,10 +385,7 @@ implementations MUST agree on:
 - the syscall name and ABI,
 - `BIG_MOD_EXP_MAX_BYTES`,
 - output and abort behavior,
-- `BIG_MOD_EXP_BASE_CU`, `BIG_MOD_EXP_CU_DIVISOR`, and
-  `BIG_MOD_EXP_MIN_EXPONENT_LENGTH`,
-- `BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR`,
-- the `mod_reduce_complexity(base_len, modulus_len)` function, and
+- the compute metering formula and constants, and
 - the arithmetic test vectors.
 
 ## Impact
@@ -410,11 +406,10 @@ Programs that need modular reduction can use the same syscall with exponent
 
 Underpricing is the main risk. Modular exponentiation has input-dependent cost,
 especially as base size, modulus size, exponent length, and exponent density
-change. Since syscall metering uses an EIP-198-style complexity formula for the
-general ModExp path and a separate modular-reduction formula for exponent `1`,
-the compute cost constants MUST be benchmarked across validator implementations
-and should leave margin for worst-case valid inputs, including dense exponents,
-large bases, and odd moduli that are slow for the selected implementation.
+change. The compute costs MUST be benchmarked across validator implementations
+before activation and should leave margin for worst-case valid inputs,
+including dense exponents, large bases, and odd moduli that are slow for the
+selected implementation.
 
 The syscall MUST NOT expose library-specific error behavior. All valid byte
 strings within the length limit are unsigned integers with an odd decoded
