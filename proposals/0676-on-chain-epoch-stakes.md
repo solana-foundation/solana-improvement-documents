@@ -1,5 +1,5 @@
 ---
-simd: '0511'
+simd: '0676'
 title: On-Chain Epoch Stakes
 authors:
   - sam0x17
@@ -14,7 +14,8 @@ feature: (fill in with feature tracking issues once accepted)
 
 Publish the stake and vote-account snapshot taken at the start of epoch `E` in
 an on-chain account keyed by `E`. It contains delegated stake, identity,
-commission, credits, and the BLS key and rank used for Alpenglow in `E + 1`.
+commission, accumulated rewards, latest vote, root slot, and the BLS key and
+rank used for Alpenglow in `E + 1`.
 Retain eight snapshots: the current epoch and seven previous epochs. Close
 older accounts at epoch boundaries.
 
@@ -60,18 +61,22 @@ subsequently increase delegated balances.
 The key is the snapshot epoch. The stake set and Alpenglow ranks in
 `epoch_stakes(E)` apply to consensus in `E + 1`.
 
-For a vote account present in consecutive snapshots with a continuous credits
-counter, let `credits(E)` be its `cumulative_credits` in `epoch_stakes(E)`:
+For the same vote-account incarnation present in consecutive snapshots, let
+`lamports(E)` be its `accumulated_lamports` in `epoch_stakes(E)`. When both
+snapshots are within Alpenglow and the counter remains continuous and does not
+saturate:
 
 | Value | Epoch it describes |
 |-------|--------------------|
 | Stake set and Alpenglow ranks in `epoch_stakes(E)` | Consensus in `E + 1` |
 | Inflation commission in `epoch_stakes(E)` | Rewards in `E + 1` |
-| `credits(E) - credits(E - 1)` | Credits recorded during `E - 1` |
+| `lamports(E) - lamports(E - 1)` | Reward lamports recorded during `E - 1` |
+| `latest_vote` and `root_slot` | Vote-account state at the start of `E` |
 
 For example, `epoch_stakes(100)` contains the snapshot taken at the start of
-100. Its inflation commission applies to rewards earned in 101. Its credits
-minus those in `epoch_stakes(99)` give the credits recorded during 99.
+100. Its inflation commission applies to rewards earned in 101. Under the
+conditions above, its accumulated lamports minus those in `epoch_stakes(99)`
+give the reward lamports recorded during 99.
 
 Under [SIMD-0249], rewards earned in `E` use the inflation commission from
 `epoch_stakes(E - 1)`. If the vote account was absent from that snapshot, the
@@ -79,9 +84,17 @@ reward rules fall back to its state at the start of `E`, then `E + 1`.
 The corresponding published snapshots are `epoch_stakes(E)` and
 `epoch_stakes(E + 1)`, when the vote account is included.
 
-Credits are increments recorded during the indicated epoch, which may include
-votes for earlier slots under Alpenglow. Per-epoch reward totals are out of scope.
-These fields alone do not reconstruct actual delegator returns.
+Alpenglow increments this counter by reward lamports, including rewards for
+votes on earlier slots. It is cumulative, not a balance or the amount paid to
+delegators in one epoch. Migration can carry an offset from Tower credits, so
+the absolute value need not consist entirely of lamports. A difference spanning
+migration, account recreation, a reset, or saturation does not reliably measure
+Alpenglow rewards. Per-epoch reward totals remain out of scope. These fields
+alone do not reconstruct actual delegator returns.
+
+`latest_vote` and `root_slot` preserve the historical health indicators from
+that same boundary snapshot. They are not live values and are not refreshed
+during the epoch. A missing value is distinct from slot zero.
 
 ### Account Structure
 
@@ -106,13 +119,14 @@ Entries are sorted in ascending lexicographic order of `vote_pubkey` bytes.
 | `vote_pubkey` | `Pubkey` | 0 |
 | `node_pubkey` | `Pubkey` | 32 |
 | `delegated_stake` | `u64` | 64 |
-| `cumulative_credits` | `u64` | 72 |
+| `accumulated_lamports` | `u64` | 72 |
 | `inflation_rewards_commission_bps` | `u16` | 80 |
 | `block_revenue_commission_bps` | `u16` | 82 |
 | `alpenglow_rank` | `u16` | 84 |
 | `_reserved` | `[u8; 10]` | 86 |
 | `bls_pubkey_compressed` | `[u8; 48]` | 96 |
-| `_reserved` | `[u8; 16]` | 144 |
+| `latest_vote` | `u64`, `u64::MAX` = none | 144 |
+| `root_slot` | `u64`, `u64::MAX` = none | 152 |
 
 Each vote account admitted under [SIMD-0357] appears once. This snapshot can
 include entries excluded from the BLS rank map because they share a validator
@@ -123,8 +137,10 @@ use `u16::MAX` for the rank. The fields contain:
 - `node_pubkey`: its validator identity at the snapshot.
 - `delegated_stake`: the effective delegated stake in lamports selected at the
   snapshot. It is fixed even if subsequent reward payouts increase live stake.
-- `cumulative_credits`: the last cumulative credits value in the snapshot's
-  vote-state credits history, or zero when that history is empty.
+- `accumulated_lamports`: the last cumulative reward counter in the snapshot's
+  vote-state history, or zero when that history is empty. In v4 this is the
+  `credits` value of the last `epoch_credits` entry. Preserve the value without
+  subtracting a migration offset or converting it to a per-epoch amount.
 - `inflation_rewards_commission_bps` and `block_revenue_commission_bps`: the raw
   vote-account v4 values. Every `u16` value is valid in this format, including
   values above 10,000. Publication **MUST NOT** clamp them. Reward calculation
@@ -136,7 +152,10 @@ use `u16::MAX` for the rank. The fields contain:
   highest eligible stake. Write `u16::MAX` for an entry outside that active set.
 - `bls_pubkey_compressed`: the vote state's 48-byte compressed BLS public key,
   or 48 zero bytes if it has no BLS key.
-- `_reserved`: 26 zero bytes. Reusing them requires a later protocol change
+- `latest_vote`: the last voted slot recorded in the snapshot's vote state,
+  or `u64::MAX` when absent. For v4, use the last entry in `votes`.
+- `root_slot`: the root slot recorded in that vote state, or `u64::MAX` when absent.
+- `_reserved`: 10 zero bytes. Reusing them requires a later protocol change
   that preserves existing readers' interpretation of version 1.
 
 Collector addresses are excluded. Changes to which vote-account state supplies
@@ -231,7 +250,7 @@ never backfilled outside the retained range.
 Consumers can authenticate a snapshot by checking the derived address, owner,
 format version, header epoch, and data length. A funded PDA alone does not prove
 publication. Older history requires an archive. Neither missing snapshots nor
-missing entries imply zero stake, credits, or commission.
+missing entries imply zero stake, accumulated rewards, or commission.
 
 ## Alternatives Considered
 
@@ -271,7 +290,8 @@ Existing RPC methods and validator configuration remain unchanged.
 Programs can read the accounts directly. Indexers can use `accountSubscribe`,
 `programSubscribe`, or Geyser account notifications and archive snapshots before
 expiry. Consumers mapping certificates to ranks use the preceding epoch's
-snapshot. Consumers of commissions and credits use the timing rules above.
+snapshot. Consumers of commissions and accumulated rewards use the timing
+rules above.
 
 ## Security Considerations
 
@@ -290,7 +310,7 @@ Transfers can raise balances but cannot enlarge the account data.
 
 Snapshot-manifest validation or replacement, per-epoch reward totals, and
 changes to collector lookup remain separate proposals. This format omits
-authorized voters, collector addresses, and the full credits history, so it
+authorized voters, collector addresses, and the full reward-counter history, so it
 cannot replace the complete cached vote-account state. The pre-reward stake
 snapshot also does not replace the stake balances used for reward recalculation.
 
