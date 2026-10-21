@@ -28,6 +28,7 @@ Differences from Vote Account v4:
 3. Replaces the `votes` array with a single optional `latest_vote`.
 4. Replaces each commission rate with a commission schedule.
 5. Renames `epoch_credits` to `accumulated_lamports`.
+6. Dynamically-sized fields are now statically-sized for zero-copy access
 
 ## Motivation
 
@@ -155,9 +156,9 @@ true:
 - The account data length is exactly 3762 bytes.
 - `location` is valid as defined in [SIMD-0674].
 - The inflation rewards commission rate fields hold 1 to 4 commission
-  rate changes, with strictly increasing epochs.
+  rate changes.
 - The block revenue commission rate fields hold 1 to 4 commission
-  rate changes, with strictly increasing epochs.
+  rate changes.
 - `authorized_voters` has at most 4 entries with strictly increasing
   epochs.
 - `accumulated_lamports` has at most 64 entries.
@@ -175,8 +176,8 @@ record the change `(E + 2, bps)` in the appropiate commission array.
 This is because, as per [SIMD-0249], the new rate will take effect at
 epoch `E + 2`.
 
-If the latest entry in the array is already for epoch `E + 2`, the `bps`
-value is overwritten. Otherwise the new entry is appended to the front
+If the last entry in the array is already for epoch `E + 2`, the `bps`
+value is overwritten. Otherwise the new entry is appended to the end
 of the list. If there are already 4 changes, the oldest one is removed
 first.
 
@@ -320,7 +321,10 @@ Account v5:
 ## Backwards Compatibility
 
 - Vote Account v4 accounts remain valid, this SIMD does not force
-  anyone to upgrade.
+  anyone to upgrade. Upgrading is optional until [SIMD-0674]'s
+  `enforce_validator_location_registration` feature gate is activated,
+  which excludes vote accounts without a location set - and therefore
+  have a vote account version older than v5 - from the VAT.
 
 ## Conformance
 
