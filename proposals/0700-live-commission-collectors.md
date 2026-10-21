@@ -62,10 +62,10 @@ The following checks MUST always be performed when reading live vote account
 data. If any check fails, fees or rewards are burned.
 
 - The account MUST be owned by the vote program
-- The account MUST be deserializable as a vote state v3 or v4. If the account is
-  v3, use the identity address for block rewards, and the vote address for
-  inflation rewards. If the account is v4, read the appropriate collector from
-  the account.
+- The account MUST be deserializable as a valid vote state. If the account is
+  v4, read the appropriate collector from the account. Otherwise, use the
+  identity address for block rewards, and the vote address for inflation
+  rewards.
 
 ### Edge Cases
 
