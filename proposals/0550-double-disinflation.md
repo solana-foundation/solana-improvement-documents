@@ -34,26 +34,22 @@ N/A
 ## Detailed Design
 
 Add a new feature gate called `double_disinflation_rate`. The inflation
-rate is computed from the elapsed time since genesis, so simply setting
-`taper = 0.30` would reshape the whole curve and drop the rate discontinuously
-at activation. To double the rate of decline from activation onward while
-keeping issuance continuous, the schedule is re-anchored at the activation slot:
-the rate the current (`taper = 0.15`) schedule yields at the activation `year`
-is recorded as `anchor_rate`, `taper` is set to `0.30`, and `initial` is
-recomputed so the steeper curve passes through `anchor_rate` at that `year`
-(`initial = anchor_rate / (1 - 0.30)^year`). This leaves `total(year)` unchanged
-at the activation slot, so the doubled disinflation takes effect going forward
-rather than as a step. The exact ordered computation and its determinism
-requirements are specified under Conformance; the reference implementation is
-tracked in the `feature` field.
+rate uses the SIMD-0607 integer schedule, which must activate first. At the
+SIMD-0550 activation slot, calculate `anchor_rate` using the preceding 15%
+integer taper across the actual slot-time regimes, including the terminal-rate
+clamp. Apply the 30% integer taper to that anchor from the activation slot
+forward. At zero elapsed slots, the rate is exactly `anchor_rate`, so issuance
+does not jump at activation. The stored `Inflation` governor keeps
+`initial = 0.08` and changes `taper` to `0.30`; it is not re-anchored with
+`powf`.
 
 Regarding activation timing, features activate on an epoch boundary: the gate
-fires on the E -> E+1 transition, and the re-anchored schedule governs rewards
+fires on the E -> E+1 transition, and the 30% schedule governs rewards
 for E+1 and later. Rewards for the just-completed epoch E are computed at that
-boundary using the rate at the boundary slot. Because the re-anchor leaves that
-rate unchanged, epoch E settles identically to the pre-activation schedule and
+boundary using the rate at the boundary slot. Because zero elapsed slots leave
+the rate unchanged, epoch E settles identically to the pre-activation schedule and
 nothing is applied retroactively. Implementations *must not* apply the
-re-anchored schedule to any epoch before E+1.
+30% schedule to any epoch before E+1.
 
 The feature gate is retained permanently and not cleaned up. Inflation rewards
 are committed to bank hashes, so the effective taper must be a function of
@@ -68,22 +64,22 @@ and updated by the gate above.
 
 ### Validator Components Affected
 
-- Transaction Execution (Runtime): Epoch reward calculation only;
-  `taper`/`initial` are re-anchored at the activation slot, with no change to
-  per-transaction execution.
+- Transaction Execution (Runtime): Epoch reward calculation uses the integer
+  activation anchor and 30% taper, with no change to per-transaction execution.
 - Virtual Machine: None.
 - Block Packing: None.
 - Consensus: Reward totals feed bank capitalization and the bank hash, so all
   clients must compute identical values across the activation boundary.
 - Gossip: None.
 - Turbine: None.
-- Snapshots: `Inflation` must persist in the serialized bank fields so the
-  re-anchored values survive a restart.
+- Snapshots: The stored `Inflation` governor retains `initial = 0.08` and the
+  updated taper; the feature activation slot must remain available after restart.
 - On-Chain Core BPF Programs: None.
-- Other (please describe): RPC output (`getInflationRate`,
-  `getInflationGovernor`) reflects the new schedule; `getInflationGovernor`
-  returns the re-anchored `initial`. There is no API change. Adds the feature
-  `double_disinflation_rate`.
+- Other (please describe): `getInflationGovernor` returns the stored
+  `initial = 0.08` and updated `taper = 0.30`. The current floating-point
+  `getInflationRate` calculation does not use the consensus integer schedule;
+  making it do so requires a separate RPC code change. No RPC interface changes
+  are specified here. Adds the feature `double_disinflation_rate`.
 
 ## Alternatives Considered
 
@@ -126,24 +122,15 @@ diverging from the canonical chain.
 
 At the activation slot, clients *must* perform the following steps in order:
 
-- Compute `year` from the slot exactly as the reward path does
-- Compute `anchor_rate = total(year)` under `taper = 0.15`
-- Set `taper = 0.30`
-- Set `initial = anchor_rate / (1.0 - taper).powf(year)`
+- Compute `anchor_rate` with the preceding SIMD-0607 15% integer schedule across
+  the actual slot-time regimes, including the terminal-rate clamp.
+- Set the stored `Inflation` taper to `0.30` and leave `initial = 0.08`.
+- Apply the SIMD-0607 30% integer taper to `anchor_rate` from the activation
+  slot forward. At zero elapsed slots, the result *must* equal `anchor_rate`.
 
-All arithmetic uses IEEE-754 binary64, meaning clients must use the same
-decimal literals (i.e., `0.08`, `0.015`, `0.15`, and `0.30`), each taken to its
-nearest `f64`. Because `foundation = 0.0`, the rate applied to rewards is
-`validator(year) == total(year)`.
-
-For all subsequent slots, clients use the re-anchored `initial` in the
-following rate calculation:
-
-```text
-total(year) = max(0.015, initial * (1 - 0.30)^year)
-```
-
-Conformance requires bit-for-bit agreement on each `powf` evaluation.
+Rewards for the just-completed epoch use the boundary rate. Conformance uses
+the SIMD-0607 integer arithmetic and rounding rules, including the terminal
+clamp; no floating-point `powf` calculation determines consensus rewards.
 
 Conformance is verified by replaying a reference ledger spanning the activation
 slot and confirming byte-identical per-epoch reward capitalization and bank
