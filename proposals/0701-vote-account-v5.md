@@ -213,8 +213,7 @@ each field, where `E` is the current epoch:
 | zeroed | all zero |
 
 The `UpdateLocation` instruction MUST fail with `InvalidAccountData` if
-the Vote Account v4 has no BLS key, more than 4 authorized voters or
-more than 64 `epoch_credits` entries. Note that this means that
+the Vote Account v4 has no BLS key. Note that this means that
 conversion from vote account versions older than v4 will fail, because
 they do not have a BLS key set. So older vote accounts must first be
 converted to Vote Account v4, and set a valid BLS key, before they can
@@ -228,11 +227,6 @@ semantics of some instructions MUST change:
 - `UpdateLocation` is the new instruction described in [SIMD-0674], and
   is the only instruction which can convert an account to Vote Account
   v5, as described in [Conversion from Vote Account v4](#conversion-from-vote-account-v4).
-- `Vote`, `VoteSwitch`, `UpdateVoteState`,
-  `UpdateVoteStateSwitch`, `CompactUpdateVoteState`,
-  `CompactUpdateVoteStateSwitch`, `TowerSync`, `TowerSyncSwitch` MUST
-  fail with `InvalidInstructionData` if they are passed a Vote Account
-  v5.
 - `Authorize`, `AuthorizeChecked`, `AuthorizeWithSeed` and
   `AuthorizeCheckedWithSeed` MUST fail with `InvalidInstructionData`
   if, after purging, adding an authorized voter would exceed
@@ -331,6 +325,6 @@ Account v5:
 A series of test fixtures MUST be provided, using the
 [conformance tooling](https://github.com/anza-xyz/agave/wiki/Conformance-Tools).
 These MUST include the following scenarios at a minimum: conversion from
-Vote Account v4 (including no BLS key and too many authorized voters or
-`epoch_credits` entries), commission updates in one and in consecutive
-epochs and all Vote Account v5 states that fail validation.
+Vote Account v4 (including no BLS key), commission updates in one and
+in consecutive epochs and all Vote Account v5 states that fail
+validation.
