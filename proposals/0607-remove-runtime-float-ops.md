@@ -85,6 +85,7 @@ values as floating point, but after activation clients MUST use the integer
 representation for consensus calculations.
 
 RATE_SCALE    = 1_000_000_000_000_000
+YEAR_NS       = 31_556_925_993_600_000
 
 INITIAL_RATE  = 80_000_000_000_000    // existing 0.08 initial inflation
 TERMINAL_RATE = 15_000_000_000_000    // existing 0.015 terminal inflation
@@ -96,19 +97,7 @@ TAPER_30      = Fraction { numerator: 30, denominator: 100 }
 Taper numerators and denominators MUST fit in `u32`. Clients MUST validate this
 before converting wider stored values.
 
-Each protocol slot-time regime MUST define `slots_per_year` as an exact
-rational value. For any slot-time regimes already active or specified by prior
-features, this SIMD preserves their existing protocol values by converting the
-current decimal constants into exact rational constants. For known slot-time
-regimes, the value for `slots_per_year` are:
-
-|slot-time|slots_per_year|
-|---------|--------------|
-|400ms | 78_892_314_984 / 1000|
-|350ms | 90_162_645_696 / 1000|
-|300ms | 105_189_753_312 / 1000|
-|250ms | 126_227_703_974 / 1000|
-|200ms | 157_784_629_968 / 1000|
+Each slot-time regime supplies its integer `ns_per_slot`.
 
 Epoch inflation rewards are computed as:
 
@@ -116,8 +105,7 @@ annual_reward =
     floor(capitalization * validator_rate / RATE_SCALE)
 
 epoch_reward =
-    floor(annual_reward * slots_in_epoch * slots_per_year_denominator
-          / slots_per_year_numerator)
+    floor(annual_reward * slots_in_epoch * ns_per_slot / YEAR_NS)
 
 Clients MUST perform both flooring operations in the order shown.
 
@@ -296,7 +284,7 @@ The rate calculation MUST use a `u128` intermediate or an exactly equivalent
 implementation. `anchor_rate` is in `[0, RATE_SCALE]`, so this product fits in
 `u128`; division by `DECAY_SCALE` is equivalent to shifting right by 64 bits.
 Clients MUST NOT round the per-slot factor or accumulated decay to `RATE_SCALE`
-before applying it to the anchor rate. Epoch reward calculations are unchanged.
+before applying it to the anchor rate.
 
 Before SIMD-0550 activation, `anchor_rate = INITIAL_RATE` and the taper is 15%.
 At SIMD-0550 activation, clients MUST calculate the activation anchor rate using
@@ -311,15 +299,6 @@ discontinuity.
 
 SIMD-0194 has already deprecated the rent exemption threshold on mainnet-beta
 since epoch 943.
-
-Client implementations that need to replay the SIMD-0194 activation boundary
-must use an integer-equivalent conversion for the historical migration:
-
-if exemption_threshold == bytes(1.0):
-    lamports_per_byte = lamports_per_byte
-
-if exemption_threshold == bytes(2.0):
-    lamports_per_byte = checked_mul(lamports_per_byte, 2)
 
 ## Backwards Compatibility
 
@@ -350,8 +329,7 @@ decay = pow_decay_floor(decay_per_slot, slots_since_anchor)
 validator_rate = max(TERMINAL_RATE,
     floor(anchor_rate * decay / DECAY_SCALE))
 annual_reward = floor(capitalization * validator_rate / RATE_SCALE)
-epoch_reward = floor(annual_reward * slots_in_epoch * slots_per_year_denominator
-    / slots_per_year_numerator)
+epoch_reward = floor(annual_reward * slots_in_epoch * ns_per_slot / YEAR_NS)
 ```
 
 For a normalized capitalization of 1,000,000,000,000,000,000 lamports,
