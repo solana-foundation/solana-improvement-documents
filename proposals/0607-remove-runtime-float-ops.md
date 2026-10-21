@@ -120,7 +120,9 @@ decay factor or reward amount on error.
 The integer reward calculation applies immediately in the boundary bank. If
 the feature activates on epoch E -> E+1, rewards paid for epoch E during E+1
 must use fixed-point math. Rewards calculated by banks before this feature
-activation must use legacy calculation.
+activation must use legacy calculation. At activation, clients MUST set the
+stored `Inflation.initial` to `0.08` and use `INITIAL_RATE` for subsequent
+inflation calculations on every cluster, including testnet.
 
 ### Inflation Decay
 
