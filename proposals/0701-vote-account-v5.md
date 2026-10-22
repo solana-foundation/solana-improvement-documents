@@ -27,7 +27,8 @@ Differences from Vote Account v4:
 2. `bls_pubkey_compressed` is now mandatory.
 3. Replaces the `votes` array with a single optional `latest_vote`.
 4. Replaces each commission rate with a commission schedule.
-5. Renames `epoch_credits` to `accumulated_lamports`.
+5. Renames `epoch_credits` to `accumulated_lamports` and keeps only the
+   last 5 entries.
 6. Dynamically-sized fields are now statically-sized for zero-copy access
 
 ## Motivation
@@ -96,11 +97,11 @@ The new Vote Account v5 state layout:
 | 288 | 8 | latest_vote | `u64`, `u64::MAX` = none |
 | 296 | 8 | root_slot | `u64`, `u64::MAX` = none |
 | 304 | 4 | authorized_voters_len | `u32`, at most 4 |
-| 308 | 4 | accumulated_lamports_len | `u32`, at most 64 |
+| 308 | 4 | accumulated_lamports_len | `u32`, at most 5 |
 | 312 | 160 | authorized_voters | `[(epoch: u64, pubkey: Pubkey); 4]` |
-| 472 | 1536 | accumulated_lamports | `[(epoch, lamports, prev_lamports); 64]` |
-| 2008 | 16 | last_timestamp | `(slot: u64, timestamp: i64)` |
-| 2024 | 1738 | zeroed | `[u8; 1738]`, all zero |
+| 472 | 120 | accumulated_lamports | `[(epoch, lamports, prev_lamports); 5]` |
+| 592 | 16 | last_timestamp | `(slot: u64, timestamp: i64)` |
+| 608 | 3154 | zeroed | `[u8; 3154]`, all zero |
 
 All integers are little-endian. The size of the vote account is
 unchanged from Vote Account v4. There is no padding. Each field starts at
@@ -143,9 +144,13 @@ v4. There are some encoding changes to support zero-copy access:
   these entries.
 - `epoch_credits` is renamed to `accumulated_lamports` to reflect the
   changed semantics post-Alpenglow: this array now holds lamports
-  instead of credits. It is now a fixed-size array of up to 64 entries,
+  instead of credits. It is now a fixed-size array of up to 5 entries,
   oldest first. `accumulated_lamports_len` holds the number of these
-  entries.
+  entries. Under Alpenglow every delegation is paid its rewards every
+  epoch, so rewards only need the last 2 entries. However, the Stake
+  program's DeactivateDelinquent instruction uses 5 entries to determine
+  if the vote account has voted recently. We will reduce the length of
+  this field to 2 in a future SIMD.
 
 All other fields are unchanged.
 
@@ -162,7 +167,7 @@ true:
   rate changes.
 - `authorized_voters` has at most 4 entries with strictly increasing
   epochs.
-- `accumulated_lamports` has at most 64 entries.
+- `accumulated_lamports` has at most 5 entries.
 - For every fixed size list, each entry at or after its length is zero.
 - `zeroed` is all zero.
 
@@ -209,7 +214,7 @@ each field, where `E` is the current epoch:
 | latest_vote | slot of the last `votes` entry, or `u64::MAX` if none |
 | root_slot | copied, or `u64::MAX` if `None` |
 | authorized_voters | copied, in increasing epoch order |
-| accumulated_lamports | the `epoch_credits` entries, in order |
+| accumulated_lamports | the last 5 `epoch_credits` entries, in order |
 | last_timestamp | copied |
 | zeroed | all zero |
 
@@ -294,7 +299,7 @@ Account v5:
 
 ## Alternatives Considered
 
-- Shrink the Vote Account v5 data length to 2024 bytes. As in Vote
+- Shrink the Vote Account v5 data length to 608 bytes. As in Vote
   Account v4, we opted to keep the length constant to avoid vote accounts
   dropping below the rent-exempt value if more fields are added in the
   future.
