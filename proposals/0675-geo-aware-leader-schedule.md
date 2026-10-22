@@ -58,6 +58,8 @@ This proposal depends on the following previous proposals:
 - **[SIMD-0674]: Validator Location Registration** — Defines how validators
   self-report their location and the distance measure `dist2` used in this
   proposal.
+  It also defines the `enforce_validator_location_registration` feature,
+  which guarantees that every validator in the stake set has a location.
 
 This proposal also changes a constant introduced in:
 
@@ -94,6 +96,11 @@ Related proposals, not dependencies:
   bin.
 - **Run**: the sequence of leaders of a bin once they are added to the final
   schedule.
+- **PRNG**: the deterministic random number generator used by the
+  reordering step, defined below. It is separate from the PRNG of the base
+  schedule.
+- **`roll(n)`**: a uniformly random integer in `[0, n)` drawn from the
+  reorder PRNG.
 
 ## Detailed Design
 
@@ -152,6 +159,7 @@ schedule. Second, `L` is reordered, producing the final schedule `out`.
 All randomness in this step MUST come from a deterministic PRNG seeded from
 the epoch, domain-separated from and independent of the PRNG stream used for
 the base schedule.
+This PRNG is specified in [Reorder PRNG](#reorder-prng).
 
 ```
 bins = []   // ordered by creation time
@@ -175,6 +183,9 @@ for b in shuffle(bins):
 ```
 
 `shuffle` MUST be a Fisher-Yates shuffle driven by the PRNG above.
+"uniform random index in 0..len(near)" is `roll(len(near))`. `near` lists
+the open bins in creation order, and removing a full bin keeps the order of
+the others. `b.members` lists a bin's members in the order they joined.
 
 In words: leaders of the base schedule are considered one by one, in order.
 Leader `l` is near for bin `b` if `l` is within the radius of `b.anchor`, or
@@ -184,6 +195,44 @@ soon as a bin holds `RUN_LENGTH` leaders, it is appended to the schedule in
 uniformly random order, and the bin is removed. At the end of the epoch, all
 remaining bins are appended in uniformly random bin order, each in uniformly
 random member order.
+
+#### Reorder PRNG
+
+The reordering MUST take all its randomness from one generator per
+schedule:
+
+- **Seed:** `SHA-256("geo-aware-leader-schedule" || epoch)`, where the tag
+  is the 25 ASCII bytes (no terminator) and `epoch` is the schedule's epoch
+  as a little-endian `u64`.
+- **Stream:** ChaCha20 (20 rounds) keyed with the seed, with a 64-bit block
+  counter starting at 0 and a zero nonce.
+- **`roll(n)`:** a uniform integer in `[0, n)`:
+
+  ```
+  zone = (2^64 - 1) - ((2^64 - n) mod n)
+  loop:
+      v = next_u64()
+      p = v * n                      // 128-bit product
+      if low64(p) <= zone:
+          return high64(p)
+  ```
+
+  This matches `Uniform::<u64>` in Rust's `rand` 0.7. Other samplers give
+  different results and MUST NOT be used.
+- **`shuffle(a)`:** a Fisher-Yates shuffle:
+
+  ```
+  for i in (2..=len(a)).rev():       // i = len(a), ..., 2
+      j = roll(i)
+      swap(a[i - 1], a[j])
+  ```
+
+Joining a bin takes one `roll`, even with only one bin to choose from.
+If there are no bins left, and you need to create a new bin, that does
+not take a `roll`.
+
+The generator is separate from the base schedule's, so the reordering
+doesn't depend on how the leaders were drawn.
 
 ### Choice of Parameters
 
@@ -353,10 +402,24 @@ bins instead.
 
 - **`RUN_LENGTH = 1`.** Every bin is flushed immediately, and the final
   schedule equals the base schedule.
+  No PRNG value is drawn.
 - **Validator above `STAKE_FLOOR`.** Such a high stake validator `v` has
   radius `r(v) = 0`. There is a chance for `v` to have a monopoly run.
 - **Equal distances.** Being near uses `<=`, and `r(v)` is defined via
   `>=`, so ties are resolved deterministically.
+
+### Validator Components Affected
+
+| Validator Component             | Impact                                  |
+|---------------------------------|-----------------------------------------|
+| Transaction Execution (Runtime) | Leader schedule computation             |
+| Virtual Machine                 | None                                    |
+| Block Packing                   | None                                    |
+| Consensus                       | Leader schedule; HANDOVER_COMPENSATION  |
+| Gossip                          | None                                    |
+| Turbine                         | Leader order                            |
+| Snapshots                       | Epoch stakes include locations          |
+| On-Chain Core BPF Programs      | None                                    |
 
 ## Alternatives Considered
 
@@ -395,6 +458,8 @@ bins instead.
 - **Do nothing.** Keeps the current incentive to co-locate with the majority
   of the stake and the current handover latency. It is the most secure
   against byzantine runs.
+- **Reusing the base schedule's PRNG stream.** Simpler, but bin choices
+  would depend on the draws that picked the leaders.
 
 ## Impact
 
@@ -442,7 +507,25 @@ bins instead.
 
 The leader schedule is consensus-critical, so a feature gate is REQUIRED. If
 the feature gate is activated in epoch `e`, the new algorithm MUST be used
-to calculate the leader schedule for all epochs starting with `e+2`, and the
+to calculate the leader schedule for all epochs starting with `e+1`, and the
 old SIMD-0180 algorithm MUST be used for all epochs up to and including
-`e+1`. The format of the leader schedule, e.g. as reported by RPC, is
+`e`. The format of the leader schedule, e.g. as reported by RPC, is
 unchanged. Ledger replay of historical epochs is unaffected.
+
+`enforce_validator_location_registration` ([SIMD-0674]) MUST be active
+before this SIMD activates.
+
+## Conformance
+
+A series of test fixtures MUST be provided, using the
+[conformance tooling](https://github.com/anza-xyz/agave/wiki/Conformance-Tools).
+These MUST include the following scenarios and edge cases at a minimum:
+
+- PRNG seeds for a few epochs, the first `next_u64()` values,
+  `roll(n)` with rejected draws, and `shuffle` of arrays of length 0, 1
+  and more.
+- A validator with at least `STAKE_FLOOR` of the stake, validators
+  sharing a location, and stake that adds up to exactly `STAKE_FLOOR`.
+- A single validator, all validators in one place, a validator
+  far from everyone, a leader near one bin and near several, and bins
+  still open at the end of the epoch.
