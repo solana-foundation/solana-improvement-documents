@@ -53,6 +53,12 @@ Use vote-account state before distributing inflation rewards at this boundary
 and before processing any transactions in the new epoch. The consensus stake
 set for `E + 1` is derived from this vote-account snapshot.
 
+Include exactly the vote accounts selected under [SIMD-0357] at the boundary
+into `E`, from which VAT is deducted for admission to consensus in `E + 1`.
+An account admitted at the previous boundary is included only if it is selected
+again at this boundary. Do not add previous-epoch VAT payers solely for reward
+calculation.
+
 Publish that snapshot as `epoch_stakes(E)`, with `E` in its header. The snapshot
 is immutable until closure. `delegated_stake` and `total_stake` describe this
 snapshot, not live stake later in the epoch: partitioned inflation rewards can
@@ -77,20 +83,6 @@ For example, `epoch_stakes(100)` contains the snapshot taken at the start of
 100. Its inflation commission applies to rewards earned in 101. Under the
 conditions above, its accumulated lamports minus those in `epoch_stakes(99)`
 give the reward lamports recorded during 99.
-
-Under [SIMD-0249], rewards earned in `E` use the inflation commission from
-`epoch_stakes(E - 1)`. If the vote account was absent from that snapshot, the
-reward rules fall back to its state at the start of `E`, then `E + 1`.
-The corresponding published snapshots are `epoch_stakes(E)` and
-`epoch_stakes(E + 1)`, when the vote account is included.
-
-Alpenglow increments this counter by reward lamports, including rewards for
-votes on earlier slots. It is cumulative, not a balance or the amount paid to
-delegators in one epoch. Migration can carry an offset from Tower credits, so
-the absolute value need not consist entirely of lamports. A difference spanning
-migration, account recreation, a reset, or saturation does not reliably measure
-Alpenglow rewards. Per-epoch reward totals remain out of scope. These fields
-alone do not reconstruct actual delegator returns.
 
 `latest_vote` and `root_slot` preserve the historical health indicators from
 that same boundary snapshot. They are not live values and are not refreshed
@@ -128,7 +120,7 @@ Entries are sorted in ascending lexicographic order of `vote_pubkey` bytes.
 | `latest_vote` | `u64`, `u64::MAX` = none | 144 |
 | `root_slot` | `u64`, `u64::MAX` = none | 152 |
 
-Each vote account admitted under [SIMD-0357] appears once. This snapshot can
+Each vote account selected at the boundary into `E` appears once. This snapshot can
 include entries excluded from the BLS rank map because they share a validator
 identity or BLS key. Those entries retain their stake and commission data and
 use `u16::MAX` for the rank. The fields contain:
@@ -323,7 +315,6 @@ feature activates.
 
 [SIMD-0180]: ./0180-vote-account-leader-schedule.md
 [SIMD-0185]: ./0185-vote-account-v4.md
-[SIMD-0249]: ./0249-delay-commission-updates.md
 [SIMD-0326]: ./0326-alpenglow.md
 [SIMD-0357]: ./0357-alpenglow_validator_admission_ticket.md
 [SIMD-0558]: ./0558-leader-info-syscall.md
