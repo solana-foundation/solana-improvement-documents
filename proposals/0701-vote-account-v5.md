@@ -84,27 +84,28 @@ The new Vote Account v5 state layout:
 | 36 | 32 | authorized_withdrawer | `Pubkey` |
 | 68 | 32 | inflation_rewards_collector | `Pubkey` |
 | 100 | 32 | block_revenue_collector | `Pubkey` |
-| 132 | 8 | pending_delegator_rewards | `u64` |
-| 140 | 12 | location | `x: i32, y: i32, z: i32` |
+| 132 | 12 | location | `x: i32, y: i32, z: i32` |
+| 144 | 8 | pending_delegator_rewards | `u64` |
 | 152 | 4 | inflation_rewards_commission_bps_len | `u32`, 1 to 4 |
-| 156 | 32 | inflation_rewards_commission_bps_epochs | `[u64; 4]` |
-| 188 | 8 | inflation_rewards_commission_bps | `[u16; 4]` |
-| 196 | 4 | block_revenue_commission_bps_len | `u32`, 1 to 4 |
+| 156 | 4 | block_revenue_commission_bps_len | `u32`, 1 to 4 |
+| 160 | 32 | inflation_rewards_commission_bps_epochs | `[u64; 4]` |
+| 192 | 8 | inflation_rewards_commission_bps | `[u16; 4]` |
 | 200 | 32 | block_revenue_commission_bps_epochs | `[u64; 4]` |
 | 232 | 8 | block_revenue_commission_bps | `[u16; 4]` |
 | 240 | 48 | bls_pubkey_compressed | `[u8; 48]` |
 | 288 | 8 | latest_vote | `u64`, `u64::MAX` = none |
 | 296 | 8 | root_slot | `u64`, `u64::MAX` = none |
 | 304 | 4 | authorized_voters_len | `u32`, at most 4 |
-| 308 | 160 | authorized_voters | `[(epoch: u64, pubkey: Pubkey); 4]` |
-| 468 | 4 | accumulated_lamports_len | `u32`, at most 64 |
+| 308 | 4 | accumulated_lamports_len | `u32`, at most 64 |
+| 312 | 160 | authorized_voters | `[(epoch: u64, pubkey: Pubkey); 4]` |
 | 472 | 1536 | accumulated_lamports | `[(epoch, lamports, prev_lamports); 64]` |
 | 2008 | 16 | last_timestamp | `(slot: u64, timestamp: i64)` |
 | 2024 | 1738 | zeroed | `[u8; 1738]`, all zero |
 
 All integers are little-endian. The size of the vote account is
 unchanged from Vote Account v4. There is no padding. Each field starts at
-a multiple of 4 bytes.
+a multiple of its own size: all `u64` and `i64`'s at a multiple of 8
+bytes and all `u32` and `i32`'s at a multiple of 4 bytes.
 
 ### New Fields
 
