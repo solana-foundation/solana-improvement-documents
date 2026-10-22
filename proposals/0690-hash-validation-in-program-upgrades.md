@@ -55,10 +55,9 @@ N/A
 
 The procedures for migrating native programs to Core BPF (SIMD-0088), migrating
 Loader v2 programs to Loader v3 (SIMD-0418), and upgrading Core BPF programs
-(SIMD-0495) involve
-creating a buffer account with the contents of the program. The runtime then
-replaces the existing native or Loader v2 program account with new Loader v3
-program and program data accounts.
+(SIMD-0495) involve creating a buffer account with the contents of the program.
+The runtime then replaces the existing native, Loader v2, or Loader v3 program
+account with new Loader v3 program and program data accounts.
 
 This proposal adds a hash validation step to the migration and upgrade
 procedures. Before migrating or upgrading a program, the runtime needs to
@@ -67,7 +66,9 @@ matches the expected hash. The expected hash is the SHA-256 hash of the ELF byte
 and must be supplied alongside the feature gate in accordance with the validator
 implementation.
 
-When the feature activates, the runtime must:
+When the feature activates, the runtime must validate the hash of the buffer
+contents after verifying that the buffer account exists, is owned by the
+Upgradeable Loader, and deserializes as `UpgradeableLoaderState::Buffer`:
 
 1. Extract the ELF bytes from the source buffer account, excluding trailing zero
    bytes.
@@ -75,8 +76,8 @@ When the feature activates, the runtime must:
 3. Compare the computed hash with the expected hash provided in the feature
    gate.
 
-If the hashes match, the procedure follows the steps in the corresponding
-proposal:
+If the hashes match, the remaining checks and steps are unchanged from their
+respective proposals:
 
 - Native program migrations to Core BPF: [SIMD-0088].
 - Loader v2 program migrations to Loader v3: [SIMD-0418].
