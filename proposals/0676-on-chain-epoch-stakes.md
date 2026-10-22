@@ -23,10 +23,10 @@ older accounts at epoch boundaries.
 
 Historical epoch stakes currently live in validator-local caches and snapshot
 manifests. Publishing per-validator stake weights, identities, and BLS keys and
-ranks as account data puts these consensus inputs under the bank hash. A later
-snapshot-loading change could rebuild stake-weight and BLS-rank lookups from
-these accounts instead of relying on historical vote-account data in the
-manifest.
+ranks as account data puts these consensus inputs under the bank hash.
+Rebuilding stake-weight and BLS-rank lookups from these accounts during snapshot
+loading is an intended follow-up, reducing reliance on historical vote-account
+data in the manifest.
 
 On-chain programs can inspect stake distributions, and read-layer clients can
 map BLS certificate ranks to validators. Existing account reads and subscriptions
@@ -129,23 +129,25 @@ use `u16::MAX` for the rank. The fields contain:
 - `node_pubkey`: its validator identity at the snapshot.
 - `delegated_stake`: the effective delegated stake in lamports selected at the
   snapshot. It is fixed even if subsequent reward payouts increase live stake.
-- `accumulated_lamports`: the last cumulative reward counter in the snapshot's
-  vote-state history, or zero when that history is empty. In v4 this is the
-  `credits` value of the last `epoch_credits` entry. Preserve the value without
-  subtracting a migration offset or converting it to a per-epoch amount.
+- `accumulated_lamports`: the vote state's cumulative reward counter at the
+  snapshot, or zero when no counter has been recorded. For vote-state formats
+  with `epoch_credits`, use the last entry's cumulative `credits` value, or zero
+  if that history is empty. Preserve the value without subtracting a migration
+  offset or converting it to a per-epoch amount.
 - `inflation_rewards_commission_bps` and `block_revenue_commission_bps`: the raw
-  vote-account v4 values. Every `u16` value is valid in this format, including
-  values above 10,000. Publication **MUST NOT** clamp them. Reward calculation
-  clamps to 10,000 when applying a rate. For pre-v4 vote states, publish the
-  legacy inflation commission percentage multiplied by 100 and a block-revenue
-  commission of 10,000, following [SIMD-0185].
+  vote-account commission rates in basis points. Every `u16` value is valid,
+  including values above 10,000. Publication **MUST NOT** clamp them. Reward
+  calculation clamps to 10,000 when applying a rate. For vote-state formats
+  with only a legacy inflation commission percentage, publish that percentage
+  multiplied by 100 and a block-revenue commission of 10,000, following
+  [SIMD-0185].
 - `alpenglow_rank`: the rank in the canonical Alpenglow BLS validator set for
   `E + 1`, including its BLS-key and identity deduplication. Rank zero has the
   highest eligible stake. Write `u16::MAX` for an entry outside that active set.
 - `bls_pubkey_compressed`: the vote state's 48-byte compressed BLS public key,
   or 48 zero bytes if it has no BLS key.
 - `latest_vote`: the last voted slot recorded in the snapshot's vote state,
-  or `u64::MAX` when absent. For v4, use the last entry in `votes`.
+  or `u64::MAX` when absent.
 - `root_slot`: the root slot recorded in that vote state, or `u64::MAX` when absent.
 - `_reserved`: 10 zero bytes. Reusing them requires a later protocol change
   that preserves existing readers' interpretation of version 1.
@@ -210,6 +212,10 @@ to a retained account can increase its balance without changing the snapshot.
 
 Activation **MUST** occur at an epoch boundary with [SIMD-0326] and [SIMD-0357]
 active. The rank and entry-count bound depend on those proposals.
+
+The eight-epoch window accommodates a consumer's request for at least five
+epochs of history for delegation scoring and leaves room for delayed reads.
+At the 2,000-entry limit, it bounds live account data at about 2.44 MiB.
 
 Let `A` be the first epoch boundary at which this feature publishes snapshots.
 Publish only `epoch_stakes(A)`. No earlier snapshot is backfilled, and no future
