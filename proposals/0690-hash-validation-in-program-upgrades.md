@@ -61,10 +61,10 @@ account with new Loader v3 program and program data accounts.
 
 This proposal adds a hash validation step to the migration and upgrade
 procedures. Before migrating or upgrading a program, the runtime needs to
-validate that the hash of the program data (ELF bytes) in the buffer account
-matches the expected hash. The expected hash is the SHA-256 hash of the ELF bytes
-and must be supplied alongside the feature gate in accordance with the validator
-implementation.
+validate that the hash of the program data (ELF bytes) in the buffer account,
+excluding trailing zero bytes, matches the expected hash. The expected hash is
+the SHA-256 hash of the ELF bytes and must be supplied alongside the feature
+gate in accordance with the validator implementation.
 
 When the feature activates, the runtime must validate the hash of the buffer
 contents after verifying that the buffer account exists, is owned by the
