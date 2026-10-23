@@ -172,9 +172,13 @@ CPI parameter setup. All other costs of a CPI remain the same.
 ## Security Considerations
 
 The security surface is identical to that of the existing invoke syscall. This
-proposal does not change the CPI logic in the runtime, apart from reading the
-account information through the instruction account index during account
-translation. The same input validation and CU metering apply.
+proposal does not change the CPI logic in the runtime, apart from accessing
+account information through the instruction account index during account translation.
+The same input validation and CU metering apply. Although the new syscall reduces
+the memory overhead of CPIs by representing account information in 4-byte
+descriptors, the CU charge remains based on 34 bytes per account, since the
+runtime still needs to read the same amount of account information from the
+transaction.
 
 ## Backwards Compatibility
 
