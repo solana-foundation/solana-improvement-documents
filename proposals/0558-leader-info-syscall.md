@@ -31,9 +31,33 @@ No new terminology is introduced by this proposal.
 
 ## Detailed Design
 
-This syscall is intended to be an account-less sysvar accessor.
-It validates the complete 128 byte result pointer and returns
-a result in accordance with the details below.
+`result` is a virtual address. On success the syscall writes 128 bytes of
+`LeaderInfo` to `[result, result + 128)`.
+
+Compute units are consumed first. If that exceeds the budget, the virtual
+machine aborts and no bytes are written.
+
+Otherwise the syscall aborts the virtual machine, without returning to the
+caller and without writing `LeaderInfo`, when any of the following are true.
+The checks run in this order:
+
+1. The program was loaded by a loader that does not enforce aligned accesses.
+   The error is `SyscallError::UnalignedPointer`. This is the same guard the
+   sysvar getter syscalls use. `LeaderInfo` is a `#[repr(C)]` struct of four
+   pubkeys, so its alignment is 1. When the loader does enforce alignment, the
+   address is not rejected for being unaligned.
+
+2. `result >= 0x4_0000_0000` (`MM_INPUT_START`, the input region). The error
+   is `SyscallError::InvalidPointer`. This syscall rejects an input-region
+   destination directly, the same way a sysvar getter does. The check does
+   not depend on SIMD-0459 being active.
+
+3. Any byte in `[result, result + 128)` is not writable. That includes an
+   unmapped address, a read-only region, and a range that crosses a region
+   boundary. This is an access violation. Address 0 fails here; there is no
+   separate null check.
+
+If every check passes, the syscall writes `LeaderInfo` and returns 0.
 
 ### Returned Result
 
@@ -68,14 +92,29 @@ No sysvar is introduced.
 
 ### CU Cost
 
-This syscall copies data into a caller-provided memory address similar to the
-sysvar-specific getter syscalls (`SolGetClockSysvar`,
-`SolGetLastRestartSlotSysvar`, etc.).
+The `sol_get_leader` syscall CU cost is defined as:
 
-We price this syscall in line with the cost model used by those
-syscalls (`100 + size_of::<T>() as u64`).
+$$
+  \mathtt{sysvar\\_base\\_cost} +
+  \max \left(
+    \mathtt{mem\\_op\\_base\\_cost},
+    \left\lfloor
+      \frac{\mathit{sizeof}(\mathtt{LeaderInfo)}}
+      {\mathtt{cpi\\_bytes\\_per\\_unit}}
+    \right\rfloor
+  \right)
+$$
 
-Under this model, `sol_get_leader` costs `100 + 32 * 4 = 228 CU`.
+As of mainnet epoch 1036, this is 110 CU, which matches `sol_get_sysvar`:
+
+$$
+  100 +
+  \max \left(
+    \left\lfloor \frac{128}{250} \right\rfloor,
+    10
+  \right)
+= 110
+$$
 
 ### Leader & Vote Pubkeys
 
@@ -101,7 +140,7 @@ the next epoch.  This value comes from the next epoch's leader schedule.
   example, the next leader having a history of outright censorship. A program
   can then take actions to ensure that its state remains valid even if it is
   censored for the entire next leader window.  Even though the current / next
-  leader will usually be the same it is only 64 bytes / CU and other schemes
+  leader will usually be the same it is only 110 CU total and other schemes
   for counting the next leader (i.e, the actual next non-current leader)
   seemed to have awkward semantics or would exhibit odd behavior on single-node
   clusters. The % of time that these fields are the same will also decrease
@@ -110,7 +149,7 @@ the next epoch.  This value comes from the next epoch's leader schedule.
   epoch. This was rejected to avoid variable-length sysvars and because the
   account would be well over 200,000 bytes. Additionally, getting the current
   slot from `Clock` and indexing by window offset makes the current-leader
-  lookup cost `O(500)` CU instead of `O(228)` CU here.
+  lookup cost `O(500)` CU instead of `O(110)` CU here.
 
 ## Impact
 

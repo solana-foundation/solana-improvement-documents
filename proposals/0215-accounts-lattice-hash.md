@@ -214,8 +214,29 @@ Only validators will be impacted.
 
 ## Security Considerations
 
-LtHash instantiated with BLAKE3 and a 2048-byte output provides the desired
-128-bit security [1, Appendix A].
+LtHash instantiated with BLAKE3 and a 2048-byte output uses 1024 16-bit
+elements with arithmetic modulo `2^16`. These parameters were selected to
+target 128-bit collision security based on the analysis in [1, Appendix A].
+
+A subsequent analysis [6, Section 6.1] describes a collision attack on these
+parameters with an expected cost of approximately `2^81` hash queries. It
+gives upper bounds on expected scalar work and peak memory of `2^101` binary
+operations and `2^88.45` bits, respectively, including the records needed to
+recover the colliding sets. The reported query complexity is below `2^128`,
+but the evaluated attack remains impractical.
+
+There is also an account-state constraint. With the evaluated attack
+parameters, the two colliding sets contain at least `550^8` (approximately
+`2^72.83`) items in total. Only accounts with nonzero lamport balances
+contribute to the Accounts Lattice Hash. Since valid total capitalization
+must fit in a `u64`, each account state can contain at most `2^64 - 1` such
+accounts, and two valid states together contain fewer than `2^65`. The
+colliding sets produced by this evaluated attack are therefore too large to
+represent two valid account states.
+
+Given these resource requirements and account-state constraints, LtHash with
+BLAKE3, a 2048-byte output, and arithmetic modulo `2^16` remains secure
+against the evaluated attack when used for the Accounts Lattice Hash.
 
 
 ## Drawbacks
@@ -242,3 +263,6 @@ Incompatible. This changes the bank hash, thus changing consensus.
    [crypto2002](https://www.iacr.org/archive/crypto2002/24420288/24420288.pdf)
 5. *O'Connor, Ausmasson, Neves, Wilcox-O'Hearn*, **BLAKE3**, 2021,
    [PDF](https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf)
+6. *Ding, Gong, Jiang, Tang*, **Two-Bit Lifting for Ternary SIS:
+   Polynomial-Time Collision Attacks on LtHash**, 2026,
+   [ePrint 2026/2083](https://eprint.iacr.org/2026/2083)
