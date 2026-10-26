@@ -227,10 +227,10 @@ consumed on every abort path MUST be identical across implementations.
 4. Translate and read the `exponent` bytes from VM memory. This also validates
    the `exponent + exponent_len` calculation for overflow and that the range is
    readable.
-5. Determine the operation cost from the length fields and the decoded
-   exponent. If the operation cost cannot be represented as a `u64`, consume
-   all remaining compute units and abort.
-6. Charge the operation cost. Abort if the transaction does not have enough
+5. Compute `operation_cost`, as defined in the Compute Metering section, from
+   the length fields and the decoded exponent. If `operation_cost` cannot be
+   represented as a `u64`, consume all remaining compute units and abort.
+6. Charge `operation_cost`. Abort if the transaction does not have enough
    remaining compute units.
 7. Translate and read the `base` and `modulus` bytes from VM memory. This also
    validates the `base + base_len` and `modulus + modulus_len` calculations for
@@ -278,17 +278,17 @@ operand_words = ceil(max(base_len, modulus_len) / 8)
 mult_complexity = operand_words ** 2 + BIG_MOD_EXP_MULT_COMPLEXITY_CONSTANT
 
 if decoded_exponent == 1:
-    compute_units =
-        BIG_MOD_EXP_BASE_CU
-        + ceil(mult_complexity / BIG_MOD_EXP_MOD_REDUCTION_CU_DIVISOR)
+    operation_cost =
+        ceil(mult_complexity / BIG_MOD_EXP_MOD_REDUCTION_CU_DIVISOR)
 else:
     exponent_words = floor(adjusted_exponent_length / 64) + 1
     multiplications =
         BIG_MOD_EXP_SETUP_MULTIPLICATIONS
         + BIG_MOD_EXP_MULTIPLICATIONS_PER_EXPONENT_WORD * exponent_words
-    compute_units =
-        BIG_MOD_EXP_BASE_CU
-        + ceil(mult_complexity * multiplications / BIG_MOD_EXP_CU_DIVISOR)
+    operation_cost =
+        ceil(mult_complexity * multiplications / BIG_MOD_EXP_CU_DIVISOR)
+
+compute_units = BIG_MOD_EXP_BASE_CU + operation_cost
 ```
 
 The constants are:
