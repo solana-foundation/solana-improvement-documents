@@ -131,17 +131,37 @@ compute budget bounds the amount of work.
 ### Input Validation
 
 Validation MUST be identical to that of the existing `ALT_BN128_PAIRING` opcode
-at the time the feature is activated. In particular:
+at the time the feature is activated. Note that the existing decoding treats
+the two most significant bits of the y coordinate as flag bits, which deviates
+from EIP-197. The new opcode MUST reproduce that behavior exactly. Each point is
+decoded as follows:
 
-1. Every field element MUST be canonical (less than the base field modulus).
-2. G1 points MUST satisfy the curve equation. The BN254 curve has a cofactor of
+1. If the entire point encoding is zero (64 bytes for G1, 128 bytes for G2),
+   the point is the point at infinity and no further checks apply.
+2. Otherwise, the two most significant bits of the y coordinate are flag bits:
+   bit 6 (`0x40`) is the point-at-infinity flag and bit 7 (`0x80`) is the
+   y-is-negative flag. For G1 they are the top two bits of `y`; for G2 they
+   are the top two bits of the imaginary part `y.c1`. In the big-endian
+   encoding this is the first byte of the y coordinate (byte 32 of a G1 point,
+   byte 64 of a G2 point); in the little-endian encoding it is the last byte of
+   the point. The flag bits are cleared before y is interpreted as a field
+   element. If both flag bits are set, the point is invalid.
+3. Every field element MUST be canonical (less than the base field modulus).
+   This applies to every coordinate of x and to every coordinate of y after
+   the flag bits are cleared, and it applies even when the infinity flag is
+   set. Since the modulus is smaller than 2^254, an x coordinate with either of
+   its top two bits set is rejected as non-canonical.
+4. If the point-at-infinity flag (bit 6) is set, the point is the point at
+   infinity. The value of x and the remaining bits of y are ignored beyond the
+   canonicality check above.
+5. If only the y-is-negative flag (bit 7) is set, it is ignored: the point is
+   decoded as `(x, y)` with the flag bit cleared.
+6. G1 points MUST satisfy the curve equation. The BN254 curve has a cofactor of
    1 in G1, so every point on the curve is in the prime-order subgroup and no
    separate subgroup check is needed.
-3. G2 points MUST satisfy the curve equation and MUST be in the prime-order
+7. G2 points MUST satisfy the curve equation and MUST be in the prime-order
    subgroup. The pairing is only well defined on the prime-order subgroup, so
    this check cannot be skipped.
-4. The all-zero encoding is accepted as the point at infinity for both G1 and
-   G2.
 
 If any input fails validation, the syscall MUST return an error and MUST NOT
 write to the output buffer.
@@ -200,7 +220,7 @@ For example, the multiplicative identity `1` of the target group is encoded as:
 ### Compute Cost
 
 `ALT_BN128_PAIRING_MAP` performs the same Miller loop and final exponentiation
-as `ALT_BN128_PAIRING` and differs only in what it writes. It SHOULD be charged
+as `ALT_BN128_PAIRING` and differs only in what it writes. It MUST be charged
 using the same cost model (a base cost plus a per-pair cost), with the larger
 output accounted for in the memory access cost as for the other
 `sol_alt_bn128_group_op` operations.
@@ -210,8 +230,9 @@ output accounted for in the memory access cost as for the other
 - `input_size == 0`: succeeds and writes the identity element.
 - `input_size` not a multiple of 192: error, nothing written.
 - Any G1 or G2 point that fails validation: error, nothing written.
-- Points at infinity in the input contribute the identity to the product and
-  are otherwise valid.
+- Points at infinity in the input, whether encoded as all zeros or via the
+  infinity flag, contribute the identity to the product and are otherwise
+  valid.
 - An unknown `group_op` value, including `7` before feature activation, MUST
   continue to return an error.
 
