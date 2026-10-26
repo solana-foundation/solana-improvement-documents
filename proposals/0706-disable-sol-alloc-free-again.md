@@ -1,9 +1,10 @@
 ---
 simd: '0706'
-title: Disable the `sol_alloc_free_` syscall for new deployments again
+title: Disable the `sol_alloc_free_` syscall again
 authors:
   - Simonas Kazlauskas (Anza)
 category: Standard
+status: Review
 type: Core
 created: 2026-10-26
 feature: (fill in with feature key and github tracking issues once accepted)
@@ -58,11 +59,15 @@ reference this syscall. Out of 209 <=v2 programs that may call the
 A test that attempts to deploy a SBPFv3 program invoking the `sol_alloc_free_`
 syscall should suffice. It could be a conformance test suite fixture.
 
-## Alternatives considered
+## Alternatives Considered
 
 Remove the syscall altogether – would break 209, a couple of which are still
 being actively used, most notably Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo.
 
-## Security considerations
+## Security Considerations
+
+None
+
+## New Terminology
 
 None
