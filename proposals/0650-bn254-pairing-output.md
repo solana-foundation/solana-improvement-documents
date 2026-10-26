@@ -115,11 +115,13 @@ element (see [Target Group (Gt) Encoding](#target-group-gt-encoding)).
 ### Input
 
 The input layout is identical to that of `ALT_BN128_PAIRING`, so existing
-callers can switch opcodes without re-encoding their data. The input is a
-sequence of `ALT_BN128_PAIRING_MAP_ELEMENT_LEN` (192) byte elements, each an
-uncompressed affine G1 point (64 bytes) immediately followed by an uncompressed
-affine G2 point (128 bytes). Points are encoded exactly as for the
-corresponding `ALT_BN128_PAIRING` variant.
+callers with EIP-197 conformant inputs can switch opcodes without re-encoding
+their data (see [Input Validation](#input-validation) for the one difference in
+what is accepted). The input is a sequence of
+`ALT_BN128_PAIRING_MAP_ELEMENT_LEN` (192) byte elements, each an uncompressed
+affine G1 point (64 bytes) immediately followed by an uncompressed affine G2
+point (128 bytes). Points are encoded exactly as for the corresponding
+`ALT_BN128_PAIRING` variant.
 
 `input_size` MUST be a multiple of 192; otherwise the syscall MUST return an
 error, consistent with SIMD-0334.
@@ -130,41 +132,35 @@ compute budget bounds the amount of work.
 
 ### Input Validation
 
-Validation MUST be identical to that of the existing `ALT_BN128_PAIRING` opcode
-at the time the feature is activated. Note that the existing decoding treats
-the two most significant bits of the y coordinate as flag bits, which deviates
-from EIP-197. The new opcode MUST reproduce that behavior exactly. Each point is
-decoded as follows:
+Input points are validated against the EIP-197 encoding rules. For each G1 and
+G2 point:
 
-1. If the entire point encoding is zero (64 bytes for G1, 128 bytes for G2),
-   the point is the point at infinity and no further checks apply.
-2. Otherwise, the two most significant bits of the y coordinate are flag bits:
-   bit 6 (`0x40`) is the point-at-infinity flag and bit 7 (`0x80`) is the
-   y-is-negative flag. For G1 they are the top two bits of `y`; for G2 they
-   are the top two bits of the imaginary part `y.c1`. In the big-endian
-   encoding this is the first byte of the y coordinate (byte 32 of a G1 point,
-   byte 64 of a G2 point); in the little-endian encoding it is the last byte of
-   the point. The flag bits are cleared before y is interpreted as a field
-   element. If both flag bits are set, the point is invalid.
-3. Every field element MUST be canonical (less than the base field modulus).
-   This applies to every coordinate of x and to every coordinate of y after
-   the flag bits are cleared, and it applies even when the infinity flag is
-   set. Since the modulus is smaller than 2^254, an x coordinate with either of
-   its top two bits set is rejected as non-canonical.
-4. If the point-at-infinity flag (bit 6) is set, the point is the point at
-   infinity. The value of x and the remaining bits of y are ignored beyond the
-   canonicality check above.
-5. If only the y-is-negative flag (bit 7) is set, it is ignored: the point is
-   decoded as `(x, y)` with the flag bit cleared.
-6. G1 points MUST satisfy the curve equation. The BN254 curve has a cofactor of
+1. The all-zero encoding (64 bytes for G1, 128 bytes for G2) is the point at
+   infinity. It is the only accepted encoding of the point at infinity.
+2. Every field element MUST be canonical: its integer value MUST be less than
+   the base field modulus. Since the modulus is smaller than 2^254, this
+   rejects any coordinate whose two most significant bits are not both zero.
+   No bits of the encoding are interpreted as flags.
+3. G1 points MUST satisfy the curve equation. The BN254 curve has a cofactor of
    1 in G1, so every point on the curve is in the prime-order subgroup and no
    separate subgroup check is needed.
-7. G2 points MUST satisfy the curve equation and MUST be in the prime-order
+4. G2 points MUST satisfy the curve equation and MUST be in the prime-order
    subgroup. The pairing is only well defined on the prime-order subgroup, so
    this check cannot be skipped.
 
 If any input fails validation, the syscall MUST return an error and MUST NOT
 write to the output buffer.
+
+This is stricter than the validation currently performed by
+`ALT_BN128_PAIRING`, which interprets the two most significant bits of the y
+coordinate (of `y` for G1, of the imaginary part `y.c1` for G2) as flag bits
+instead of rejecting them: if bit 6 (`0x40`) is set the point decodes as the
+point at infinity regardless of `x`, if only bit 7 (`0x80`) is set it is
+cleared and ignored, and if both are set the input is rejected.
+`ALT_BN128_PAIRING_MAP` MUST NOT reproduce this behavior and MUST reject any
+such input. Every input that is valid under EIP-197 has all coordinates below
+the modulus and therefore no flag bits set, so it is accepted by both opcodes
+and decoded identically.
 
 ### Output
 
@@ -230,9 +226,10 @@ output accounted for in the memory access cost as for the other
 - `input_size == 0`: succeeds and writes the identity element.
 - `input_size` not a multiple of 192: error, nothing written.
 - Any G1 or G2 point that fails validation: error, nothing written.
-- Points at infinity in the input, whether encoded as all zeros or via the
-  infinity flag, contribute the identity to the product and are otherwise
-  valid.
+- A point whose encoding is all zeros is the point at infinity. It
+  contributes the identity to the product and is otherwise valid.
+- A coordinate with bit 6 or bit 7 of its most significant byte set: error,
+  nothing written. `ALT_BN128_PAIRING` instead treats these bits as flags.
 - An unknown `group_op` value, including `7` before feature activation, MUST
   continue to return an error.
 
@@ -262,6 +259,12 @@ output accounted for in the memory access cost as for the other
   pairing input layout unchanged.
 - **A dedicated syscall** for the pairing output. This increases the API
   surface for no functional gain over a new opcode.
+- **Reusing the flag-bit decoding of `ALT_BN128_PAIRING`** so that the two
+  opcodes accept exactly the same inputs. That decoding is an artifact of the
+  serialization format of the library used by the original implementation,
+  not part of EIP-197, and it gives the point at infinity a second encoding.
+  The new opcode has no existing callers to stay compatible with, so it
+  follows EIP-197 strictly instead.
 - **Adding target group arithmetic** (multiplication, inversion,
   exponentiation) alongside the pairing output. Out of scope here; Fq12
   arithmetic is cheap enough to implement in BPF when needed and can be added
@@ -278,10 +281,14 @@ output accounted for in the memory access cost as for the other
 
 ## Security Considerations
 
-- `ALT_BN128_PAIRING_MAP` MUST apply exactly the same input validation as
-  `ALT_BN128_PAIRING`, including the G2 subgroup check. Skipping it would
-  produce values outside the target group and make the output unsafe to use as
-  key material.
+- `ALT_BN128_PAIRING_MAP` MUST apply the full input validation of
+  [Input Validation](#input-validation), including the G2 subgroup check.
+  Skipping it would produce values outside the target group and make the
+  output unsafe to use as key material.
+- The new opcode rejects inputs with flag bits set, which `ALT_BN128_PAIRING`
+  accepts. This is a deliberate tightening: it gives every point, including
+  the point at infinity, a single valid encoding, and it does not affect any
+  EIP-197 conformant input.
 - The output MUST be the canonical encoding of the fully reduced target group
   element, so that equal elements are byte-identical. Implementations MUST NOT
   leak internal representation details (e.g. Montgomery form) into the output.
