@@ -1,5 +1,5 @@
 ---
-simd: 'XXXX'
+simd: '0706'
 title: Disable the `sol_alloc_free_` syscall for new deployments again
 authors:
   - Simonas Kazlauskas (Anza)
