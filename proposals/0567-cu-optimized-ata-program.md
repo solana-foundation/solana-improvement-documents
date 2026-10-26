@@ -271,6 +271,7 @@ reinterpret data those callers already send and risk the same breakage.
   demonstrates semantic equivalence with the legacy implementation.
 
 [SIMD-0266]: ./0266-efficient-token-program.md
+[SIMD-0312]: ./0312-create-account-allow-prefund.md
 [SIMD-0449]: ./0449-direct-account-pointers-in-program-input.md
 [SIMD-0690]: ./0690-hash-validation-in-program-upgrades.md
 [Pinocchio]: https://github.com/anza-xyz/pinocchio
