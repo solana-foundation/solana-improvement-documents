@@ -114,14 +114,12 @@ element (see [Target Group (Gt) Encoding](#target-group-gt-encoding)).
 
 ### Input
 
-The input layout is identical to that of `ALT_BN128_PAIRING`, so existing
-callers with EIP-197 conformant inputs can switch opcodes without re-encoding
-their data (see [Input Validation](#input-validation) for the one difference in
-what is accepted). The input is a sequence of
-`ALT_BN128_PAIRING_MAP_ELEMENT_LEN` (192) byte elements, each an uncompressed
-affine G1 point (64 bytes) immediately followed by an uncompressed affine G2
-point (128 bytes). Points are encoded exactly as for the corresponding
-`ALT_BN128_PAIRING` variant.
+The input layout and validation are identical to those of `ALT_BN128_PAIRING`,
+so existing callers can switch opcodes without re-encoding their data. The
+input is a sequence of `ALT_BN128_PAIRING_MAP_ELEMENT_LEN` (192) byte elements,
+each an uncompressed affine G1 point (64 bytes) immediately followed by an
+uncompressed affine G2 point (128 bytes). Points are encoded exactly as for the
+corresponding `ALT_BN128_PAIRING` variant.
 
 `input_size` MUST be a multiple of 192; otherwise the syscall MUST return an
 error, consistent with SIMD-0334.
@@ -132,35 +130,29 @@ compute budget bounds the amount of work.
 
 ### Input Validation
 
-Input points are validated against the EIP-197 encoding rules. For each G1 and
-G2 point:
+Input points MUST be validated exactly as for `ALT_BN128_PAIRING`, so the two
+opcodes accept the same set of inputs and decode them identically. For each G1
+and G2 point:
 
 1. The all-zero encoding (64 bytes for G1, 128 bytes for G2) is the point at
-   infinity. It is the only accepted encoding of the point at infinity.
-2. Every field element MUST be canonical: its integer value MUST be less than
-   the base field modulus. Since the modulus is smaller than 2^254, this
-   rejects any coordinate whose two most significant bits are not both zero.
-   No bits of the encoding are interpreted as flags.
-3. G1 points MUST satisfy the curve equation. The BN254 curve has a cofactor of
-   1 in G1, so every point on the curve is in the prime-order subgroup and no
-   separate subgroup check is needed.
-4. G2 points MUST satisfy the curve equation and MUST be in the prime-order
-   subgroup. The pairing is only well defined on the prime-order subgroup, so
-   this check cannot be skipped.
+   infinity.
+2. The two most significant bits of `y` (of `y.c1` for G2) are flag bits. If
+   both are set, the input MUST be rejected. If bit 6 (`0x40` in the most
+   significant byte) is set, the point is the point at infinity. Bit 7
+   (`0x80`) alone is ignored. Both bits are cleared before the field check
+   below.
+3. Every field element MUST be less than the base field modulus. This still
+   applies to `x` when the infinity flag is set.
+4. G1 points MUST satisfy the curve equation. G2 points MUST satisfy the curve
+   equation and MUST be in the prime-order subgroup.
 
 If any input fails validation, the syscall MUST return an error and MUST NOT
 write to the output buffer.
 
-This is stricter than the validation currently performed by
-`ALT_BN128_PAIRING`, which interprets the two most significant bits of the y
-coordinate (of `y` for G1, of the imaginary part `y.c1` for G2) as flag bits
-instead of rejecting them: if bit 6 (`0x40`) is set the point decodes as the
-point at infinity regardless of `x`, if only bit 7 (`0x80`) is set it is
-cleared and ignored, and if both are set the input is rejected.
-`ALT_BN128_PAIRING_MAP` MUST NOT reproduce this behavior and MUST reject any
-such input. Every input that is valid under EIP-197 has all coordinates below
-the modulus and therefore no flag bits set, so it is accepted by both opcodes
-and decoded identically.
+Every EIP-197 conformant input has all coordinates below the modulus, hence no
+flag bits set, and is accepted unchanged. Restricting the BN254 opcodes to
+strict EIP-197 conformance is out of scope for this proposal (see
+[Alternatives Considered](#alternatives-considered)).
 
 ### Output
 
@@ -226,10 +218,11 @@ output accounted for in the memory access cost as for the other
 - `input_size == 0`: succeeds and writes the identity element.
 - `input_size` not a multiple of 192: error, nothing written.
 - Any G1 or G2 point that fails validation: error, nothing written.
-- A point whose encoding is all zeros is the point at infinity. It
+- A point whose encoding is all zeros, or whose infinity flag (bit 6 of the
+  most significant byte of `y` or `y.c1`) is set, is the point at infinity. It
   contributes the identity to the product and is otherwise valid.
-- A coordinate with bit 6 or bit 7 of its most significant byte set: error,
-  nothing written. `ALT_BN128_PAIRING` instead treats these bits as flags.
+- A `y` (or `y.c1`) coordinate with both flag bits set: error, nothing
+  written.
 - An unknown `group_op` value, including `7` before feature activation, MUST
   continue to return an error.
 
@@ -259,12 +252,12 @@ output accounted for in the memory access cost as for the other
   pairing input layout unchanged.
 - **A dedicated syscall** for the pairing output. This increases the API
   surface for no functional gain over a new opcode.
-- **Reusing the flag-bit decoding of `ALT_BN128_PAIRING`** so that the two
-  opcodes accept exactly the same inputs. That decoding is an artifact of the
-  serialization format of the library used by the original implementation,
-  not part of EIP-197, and it gives the point at infinity a second encoding.
-  The new opcode has no existing callers to stay compatible with, so it
-  follows EIP-197 strictly instead.
+- **Validating inputs strictly against EIP-197**, rejecting any coordinate
+  with a flag bit set so that the point at infinity has a single encoding.
+  This would make the new opcode accept a different set of inputs than
+  `ALT_BN128_PAIRING`, and callers could no longer switch opcodes without
+  re-checking their encodings. If strict EIP-197 conformance is wanted, it
+  should be applied uniformly to all BN254 opcodes in a separate proposal.
 - **Adding target group arithmetic** (multiplication, inversion,
   exponentiation) alongside the pairing output. Out of scope here; Fq12
   arithmetic is cheap enough to implement in BPF when needed and can be added
@@ -285,10 +278,9 @@ output accounted for in the memory access cost as for the other
   [Input Validation](#input-validation), including the G2 subgroup check.
   Skipping it would produce values outside the target group and make the
   output unsafe to use as key material.
-- The new opcode rejects inputs with flag bits set, which `ALT_BN128_PAIRING`
-  accepts. This is a deliberate tightening: it gives every point, including
-  the point at infinity, a single valid encoding, and it does not affect any
-  EIP-197 conformant input.
+- The new opcode accepts exactly the inputs that `ALT_BN128_PAIRING` accepts,
+  including the flag-bit encodings of the point at infinity, and introduces no
+  new decoding path.
 - The output MUST be the canonical encoding of the fully reduced target group
   element, so that equal elements are byte-identical. Implementations MUST NOT
   leak internal representation details (e.g. Montgomery form) into the output.
