@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2026-01-30
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: 2GCrNXbzmt4xrwdcKS2RdsLzsgu4V5zHAemW57pcHT6a (`remove_simple_vote_from_cost_model`)
 supersedes: SIMD-0387
 ---
 

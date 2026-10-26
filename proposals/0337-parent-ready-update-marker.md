@@ -9,7 +9,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-08-13
-feature: TBD
+feature: disCA4efguFL6Wqa4pGdG7jpjC7C5uiKzKnhEBqchBe (`discard_unexpected_data_complete_shreds`)
 ---
 
 ## Summary

@@ -6,7 +6,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-05-29
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: Eg7tXEwMZzS98xaZ1YHUbdRHsaYZiCsSaR6sKgxreoaj (`commission_rate_in_basis_points`)
 ---
 
 ## Summary

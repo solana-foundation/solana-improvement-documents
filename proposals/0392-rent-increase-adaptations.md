@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-10-30
-feature: (fill in with feature key and github tracking issues once accepted)
+feature: BY4JhHLahVzS9ynfDz4exzGPbVXhFmJvEyMWsXbDBqME (`relax_post_exec_min_balance_check`)
 ---
 
 ## Summary

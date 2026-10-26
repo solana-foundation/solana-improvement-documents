@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-06-12
-feature:
+feature: bn1hKNURMGQaQoEVxahcEAcqiX3NwRs6hgKKNSLeKxH (`enable_alt_bn128_g2_syscalls`)
 supersedes:
 superseded-by:
 extends:

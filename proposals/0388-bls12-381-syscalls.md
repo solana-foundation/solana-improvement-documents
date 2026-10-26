@@ -6,7 +6,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-10-28
-feature: (fill in with feature tracking issues once accepted)
+feature: b1sgUiJ3qu7hYm3tNDyyqZNQd6gLGJmJppnLNa93PCQ (`enable_bls12_381_syscall`)
 ---
 
 ## Summary

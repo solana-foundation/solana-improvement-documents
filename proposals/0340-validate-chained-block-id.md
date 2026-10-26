@@ -7,7 +7,9 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-08-20
-feature: TBD
+feature:
+  - vcmrbYbiMVKaq1snKP6eCacNDcr6qZvpCNUjmk6gxvZ (`validate_chained_block_id`)
+  - vcmrw431aNM8ngQ46derkZXipoTGQdbHkEygBDh12dA (`validate_chained_block_id_2`)
 ---
 
 ## Summary
