@@ -197,7 +197,7 @@ token multisig so that trailing signer accounts are unambiguous.
 ### Program migration
 
 Since the current mainnet ATA program is a Loader v2 program, the migration will
-follow [SIMD-0418]. A Loader v3 buffer containing the verified `p-ATA` ELF will
+follow [SIMD-0690]. A Loader v3 buffer containing the verified `p-ATA` ELF will
 be deployed before activation. When the feature activates, the runtime creates
 the derived program data account, rewrites the existing ATA program account as a
 Loader v3 program account with no upgrade authority, and closes the source
@@ -240,11 +240,12 @@ deployment slot.
   Preserves prefunded-ATA support while avoiding the legacy `Transfer` +
   `Allocate` + `Assign` sequence.
 
-- **[SIMD-0418]: Loader v2 to v3 Program Migrations**. `p-ATA` will re-use the
-  same pattern exercised by `p-token` for the program upgrade.
-
 - **[SIMD-0449]: Direct Account Pointers** Pending mainnet activation. `p-ATA`
   will save CUs by using the new direct-account-pointer entrypoint.
+
+- **[SIMD-0690]: Hash validation in program upgrades**. `p-ATA` will re-use the
+  same pattern exercised by `p-token` for the program upgrade and include a hash
+  validation step.
 
 ## Alternatives Considered
 
@@ -270,8 +271,9 @@ reinterpret data those callers already send and risk the same breakage.
   demonstrates semantic equivalence with the legacy implementation.
 
 [SIMD-0266]: ./0266-efficient-token-program.md
-[SIMD-0418]: ./0418-enable-loader-v2-to-v3-program-migrations.md
+[SIMD-0312]: ./0312-create-account-allow-prefund.md
 [SIMD-0449]: ./0449-direct-account-pointers-in-program-input.md
+[SIMD-0690]: ./0690-hash-validation-in-program-upgrades.md
 [Pinocchio]: https://github.com/anza-xyz/pinocchio
 [implementation]: https://github.com/solana-program/associated-token-account/tree/main/pinocchio
 [associated-token-account#196]: https://github.com/solana-program/associated-token-account/issues/196
