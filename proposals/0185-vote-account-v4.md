@@ -4,7 +4,7 @@ title: Vote Account v4
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Accepted
+status: Activated
 created: 2024-10-17
 feature: Gx4XFcrVMt4HUvPzTpTSVkdDVgcDSjKhDN1RqRS6KDuZ
 ---

@@ -5,7 +5,7 @@ authors:
   - Blockiosaurus (Metaplex Foundation)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-06-12
 feature:
 supersedes:

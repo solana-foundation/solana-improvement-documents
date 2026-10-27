@@ -5,7 +5,7 @@ authors:
   - Godmode Galactus (Mango Markets)
 category: Standard
 type: Core
-status: Implemented
+status: Activated
 created: 2023-04-15
 feature: HooKD5NC9QNxk25QuzCssB8ecrEzGt6eXEPBUxWp1LaR(https://github.com/solana-labs/solana/issues/32177)
 development: 

@@ -6,7 +6,7 @@ authors:
   - Dean Little (Blueshift)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-07-11
 feature: 5xXZc66h4UdB6Yq7FzdBxBiRAFMMScMLwHxk2QZDaNZL
 ---

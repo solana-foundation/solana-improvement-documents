@@ -5,7 +5,7 @@ authors:
   - Hanako Mumei
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2026-03-09
 feature: (fill in with feature key and github tracking issues once accepted)
 ---

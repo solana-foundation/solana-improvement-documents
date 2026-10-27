@@ -5,7 +5,7 @@ authors:
   - Alexander Meißner (Anza)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2026-01-30
 feature: TBD
 supersedes: 0219
