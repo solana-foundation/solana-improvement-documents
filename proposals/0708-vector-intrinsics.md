@@ -20,7 +20,7 @@ Introduce native vector intrinsics & 30 512-bit vector registers to the SVM.
 Vector intrinsics are static BPF calls corresponding to hardware AVX-512
 instructions. Each vector intrinsic is represented as a single `CALL_IMM`
 instruction with `src=2`. The intrinsic's opcode & operands are packed into the
-32-bit immediate.
+32-bit immediate, and its mask mode into the `dst` field.
 
 Similar to how [SIMD-0645] lowers the `sol_multi3` call to a single native host
 instruction, vector intrinsics can typically be lowered to a single host
@@ -49,19 +49,19 @@ on chain without compromising on efficiency.
 We prototyped vector intrinsics in an [sBPF fork].
 
 In three benchmark kernels (int8 MLP, Keccak-f[1600], and Falcon-512 signature
-verification) we see wallclock improvements ranging from 25x-225x compared to
+verification) we see wallclock improvements ranging from 27x-396x compared to
 scalar sBPF. Our kernels also consume 8.8x-232x less CU at <2.8ns-per-CU
-including loads & stores, indicating that 1 CU per op is not underpricing these
-intrinsics.
+including loads & stores, indicating that the per-op CU costs in this proposal
+do not underprice these intrinsics. The benchmarks use only 1-CU ops.
 
-| Workload | Scalar sBPF | Vector intrinsics | Ratio |
-|---|---:|---:|---:|
-| int8 MLP 256→128→16, CU | 490,048 | 2,108 | 232× |
-| int8 MLP, JIT | 361 µs | 1.6 µs | 225× |
-| Keccak-f[1600], CU per permutation | 11,824 | 988 | 12× |
-| Keccak-f[1600], JIT per permutation | 8.9 µs | 0.32 µs | 28× |
-| Falcon-512 verify, CU | 182,764 | 20,770 | 8.8× |
-| Falcon-512 verify, JIT | 294 µs | 11.7 µs | 25× |
+| Workload | Scalar sBPF | Vector Intrinsics | Ratio |
+|---|---|---|---|
+| Int8 mlp 256→128→16, cu | 490,048 | 2,108 | 232× |
+| Int8 mlp, JIT | 361 µs | 0.91 µs | 396× |
+| Keccak-f[1600], cu / permutation | 11,824 | 988 | 12× |
+| Keccak-f[1600], jit / permutation | 8.9 µs | 0.26 µs | 34× |
+| Falcon-512 verify, cu | 182,764 | 20,770 | 8.8× |
+| Falcon-512 verify, jit | 294 µs | 10.8 µs | 27× |
 
 [sBPF fork]: https://github.com/temporalxyz/sbpf/tree/vector-ops
 
@@ -80,9 +80,14 @@ intrinsic support & metering. It does not depend on `sol_multi3` itself.
 - **Lane width**: the size of integer a given vector intrinsic operates on. `b`
   is 64 × u8, `w` is 32 × u16, `d` is 16 × u32 and `q` is 8 × u64. Lane `i` of
   width `x` is denoted `vN.x[i]`. Lanes are little-endian.
+- **Width code**: an `imm8` value selecting a lane width: 0 = `b`, 1 = `w`,
+  2 = `d`, 3 = `q`.
 - **Kind**: the operand shape of a vector intrinsic. The kind says which
   immediate fields are read, which are written, and whether the op uses `r0`,
   `r1` or `imm8`.
+- **Mask**: a 64-bit scalar in `r2` whose bit `i` selects lane `i`.
+- **Mask mode**: the `dst` field of a vector intrinsic. It says how the mask
+  applies to the result.
 
 ## Detailed Design
 
@@ -111,7 +116,7 @@ A vector intrinsic is an instruction with:
 
 - `opc = 0x85` (`CALL_IMM`)
 - `src = 2`
-- `dst = 0`
+- `dst` = the mask mode
 - `off = 0`, except for memory ops
 - `imm` laid out as follows:
 
@@ -122,7 +127,8 @@ A vector intrinsic is an instruction with:
 +----------+----------+--+-------+--------+--------+
 ```
 
-As a LE u64, a vector intrinsic is `0x85 | (0x20 << 8) | (imm << 32)`.
+As a LE u64, a vector intrinsic is
+`0x85 | (0x20 << 8) | (mode << 8) | (imm << 32)`, with `off = 0`.
 
 `out`, `in0`, and `in1` are vector register numbers. `imm8` is an 8-bit
 immediate. Bit 15 is reserved and must be zero.
@@ -135,22 +141,63 @@ with syscall identifiers.
 
 - Intrinsics that accept a scalar input do so via `r1`.
 - Intrinsics that produce a scalar output do so via `r0`.
+- Intrinsics read the mask from `r2` when the mask mode is nonzero. A few ops
+  also read `r2` as an operand.
 - Intrinsics with no scalar output do not change `r0`.
 - No intrinsic modifies any scalar register other than `r0`.
 
-`r1` is not clobbered. The same pointer or value stored in `r1` can be used
+`r1` and `r2` are not clobbered. The same pointer, value or mask can be used
 across operations.
+
+### Masking
+
+The mask mode is one of:
+
+| Mode | Name | Lane `i` of the result when bit `i` of `r2` is clear |
+|---|---|---|
+| 0 | unmasked | the computed value (`r2` is not read) |
+| 1 | merge | lane `i` of `out` before the op |
+| 2 | zero | 0 |
+
+Unless stated otherwise, an op that writes a vector register allows all three
+modes. The mask applies at the op's result lane width. The bitwise ops (`and`,
+`or`, `xor`, `andn`, `ternlog`) mask at `q` and `ternlog.d` masks at `d`. Ops
+that take a width code in `imm8` mask at that width. For ops whose result is
+narrower than 512 bits, the mask applies only to the result lanes, and the
+bytes above the result are zero in every mode.
+
+The following ops only allow mode 0:
+
+- `ld`, `st`, `ldn`, `stn`, `ld.x`, `st.x`, `ld.y`, `st.y`, `movr.q`
+- `zero`, `mov`, `sad`, `bshli`, `bshri`, `clmul`
+- `cmpeq.*`, `cmpgt.*`, `cmpgtu.q`
+- every op that writes `r0`
+- `insert.*`
+- `aes*` and `sha*`
+- `blendm` and `movm.*`, which read `r2` as an operand
+
+The following ops restrict the modes further:
+
+- `compress`, `expand` and `ld.m` require mode 1 or 2.
+- Scatters allow mode 0 or 1.
+- `st.m` requires mode 1.
 
 ### Memory Operations
 
-`ld`, `st`, `ldbc.d` and `ldbc.q` access memory at the address
-`r1 + sext(off)`, exactly like scalar `ldx*` and `stx*`.
+Memory ops access memory at the address `a = r1 + sext(off)`, exactly like
+scalar `ldx*` and `stx*`.
 
 - Unaligned accesses are permitted.
-- The whole access (64 bytes for `ld` and `st`, 4 or 8 bytes for broadcasts)
-  must lie within one mapped region with the required permission. Otherwise,
-  the intrinsic raises the same error as the equivalent scalar access.
-- Vector registers are unchanged on memory operation fault.
+- Except for gathers and scatters, the whole access must lie within one mapped
+  region with the required permission. Otherwise, the intrinsic raises the
+  same error as the equivalent scalar access.
+- `ld.m` and `st.m` check the full 64 bytes, including masked-off lanes.
+  `st.m` writes only the active lanes.
+- Each active lane of a gather or scatter is an access of its element size. All
+  active lanes are checked in ascending lane order before any is read or
+  written. The first failing lane faults the op. Scatters write lanes in
+  ascending order, so later lanes win where addresses overlap.
+- Vector registers and memory are unchanged on memory operation fault.
 
 ### Kinds
 
@@ -160,28 +207,36 @@ across operations.
 | `r3i` | in0, in1 | out | per op |
 | `a3` | out, in0, in1 | out | 0 |
 | `a3i` | out, in0, in1 | out | per op |
+| `a2` | out, in0 | out | 0 |
+| `a2i` | out, in0 | out | per op |
 | `r2` | in0 | out | 0 |
 | `r2i` | in0 | out | per op |
 | `r0` | — | out | 0 |
 | `ls` | r1 | out | 0 |
+| `lsi` | r1 | out (`ldn`: n registers) | per op |
 | `st` | in0, r1 | memory | 0 |
+| `sti` | in0 (`stn`: n registers), r1 | memory | per op |
+| `ga` | in0, r1 | out | scale |
+| `sc` | in0, in1, r1 | memory | scale |
 | `sr` | in0 | r0 | 0 |
 | `sri` | in0 | r0 | per op |
+| `s3` | in0, in1 | r0 | 0 |
+| `s3i` | in0, in1 | r0 | per op |
+| `s0` | r2 | r0 | 0 |
 | `ai` | out, r1 | out | per op |
 
 Register fields that the kind does not use must be zero. For the accumulating
-kinds (`a3`, `a3i`, `ai`), `out` is both an input and the output.
+kinds (`a3`, `a3i`, `a2`, `a2i`, `ai`), `out` is both an input and the output.
 
 ### Supported Operations
 
 Arithmetic wraps modulo lane width unless saturation is explicitly stated.
 `sat8`, `sat16`, and other saturating operations saturate at the signed range
-of that integer width. `usat8` saturates at the unsigned range.
+of that integer width. `usat8` and other unsigned saturating operations
+saturate at the unsigned range. `sel(imm8, j)` is `(imm8 >> 2j) & 3`.
 
 The x86-64 column is not authoritative and shows the AVX-512 lowering used by
 the prototype JIT implementation.
-
-TODO: FINALIZE OPERATION LIST
 
 #### Memory, splat and move
 
@@ -197,8 +252,45 @@ TODO: FINALIZE OPERATION LIST
 | 0x07 | `splat.q` | `ls` | out.q[i] ← r1 | `vpbroadcastq` |
 | 0x08 | `zero` | `r0` | out ← 0 | `vpxord` |
 | 0x09 | `mov` | `r2` | out ← in0 | `vmovdqa64` |
+| 0x0a | `ld.m` | `lsi` | masked load, width code | `vmovdqu{8,16,32,64}` |
+| 0x0b | `st.m` | `sti` | masked store, width code | `vmovdqu{8,16,32,64}` |
+| 0x0c | `ldn` | `lsi` | n registers ← mem[a..a+64n] | `vmovdqu64` × n |
+| 0x0d | `stn` | `sti` | mem[a..a+64n] ← n registers | `vmovdqu64` × n |
+| 0x0e | `ld.y` | `ls` | out ← mem[a..a+32] | `vmovdqu64` |
+| 0x0f | `st.y` | `st` | mem[a..a+32] ← in0 low 256 bits | `vmovdqu64` |
+| 0xf0 | `ld.x` | `ls` | out ← mem[a..a+16] | `vmovdqu32` |
+| 0xf1 | `st.x` | `st` | mem[a..a+16] ← in0 low 128 bits | `vmovdqu32` |
+| 0xf2 | `ldbc.b` | `ls` | out.b[i] ← mem8[a] | `vpbroadcastb` |
+| 0xf3 | `ldbc.w` | `ls` | out.w[i] ← mem16[a] | `vpbroadcastw` |
+| 0xf4 | `ldbc.x` | `ls` | each 128 bits ← mem[a..a+16] | `vbroadcasti32x4` |
+| 0xf5 | `ldbc.y` | `ls` | each 256 bits ← mem[a..a+32] | `vbroadcasti64x4` |
+| 0xae | `movr.q` | `ls` | out.q[0] ← r1, rest 0 | `vmovq` |
 
 `a` is `r1 + sext(off)`.
+
+`ld.y` and `ld.x` zero the bytes of `out` above the loaded data.
+
+`ldn` and `stn` move `n = imm8` consecutive registers, `out` to `out + n − 1`
+or `in0` to `in0 + n − 1`, with `2 ≤ n` and the last register at most `v29`.
+Register `k` of the range maps to `mem[a + 64k..a + 64k + 64]`.
+
+#### Gather and scatter
+
+| op | Name | Kind | Index | Element | x86-64 |
+|---|---|---|---|---|---|
+| 0xe8 | `gather.qq` | `ga` | `in0.q[i]` | 8 × u64 | `vpgatherqq` |
+| 0xe9 | `gather.dd` | `ga` | `in0.d[i]` | 16 × u32 | `vpgatherdd` |
+| 0xea | `gather.dq` | `ga` | `in0.d[i]` | 8 × u64 | `vpgatherdq` |
+| 0xeb | `gather.qd` | `ga` | `in0.q[i]` | 8 × u32 | `vpgatherqd` |
+| 0xec | `scatter.qq` | `sc` | `in0.q[i]` | 8 × u64 | `vpscatterqq` |
+| 0xed | `scatter.dd` | `sc` | `in0.d[i]` | 16 × u32 | `vpscatterdd` |
+| 0xee | `scatter.dq` | `sc` | `in0.d[i]` | 8 × u64 | `vpscatterdq` |
+| 0xef | `scatter.qd` | `sc` | `in0.q[i]` | 8 × u32 | `vpscatterqd` |
+
+Lane `i` accesses `a + (index << imm8)`, wrapping, with `imm8 < 4`. Dword
+indices are sign-extended. A gather writes element `i` to lane `i` of `out`. A
+scatter writes lane `i` of `in1` to memory. In mode 0 every lane is active.
+`gather.qd` writes the low 256 bits of `out` and zeroes the rest.
 
 #### Integer arithmetic
 
@@ -213,6 +305,7 @@ TODO: FINALIZE OPERATION LIST
 | 0x1c | `mulws` | `r3` | even i32 lanes, i64 product | `vpmuldq` |
 | 0x1d | `mulhi.w` | `r3` | high 16 bits, signed | `vpmulhw` |
 | 0x1e | `mulhiu.w` | `r3` | high 16 bits, unsigned | `vpmulhuw` |
+| 0x1f | `mulhrs.w` | `r3` | rounded high 16 bits | `vpmulhrsw` |
 | 0x20 | `max.d` | `r3` | signed | `vpmaxsd` |
 | 0x21 | `min.d` | `r3` | signed | `vpminsd` |
 | 0x22 | `maxu.d` | `r3` | unsigned | `vpmaxud` |
@@ -223,10 +316,33 @@ TODO: FINALIZE OPERATION LIST
 | 0x27 | `minu.q` | `r3` | unsigned | `vpminuq` |
 | 0x2e | `maxu.w` | `r3` | unsigned | `vpmaxuw` |
 | 0x2f | `minu.w` | `r3` | unsigned | `vpminuw` |
+| 0xaf | `mul52lo` | `r3` | low 52 bits of 52-bit product | `vpmadd52luq` |
+| 0xb0 | `mul52hi` | `r3` | high 52 bits of 52-bit product | `vpmadd52huq` |
+| 0xb1 | `abs.q` | `r2` | \|in0\| | `vpabsq` |
+| 0xb2 | `max.q` | `r3` | signed | `vpmaxsq` |
+| 0xb3 | `min.q` | `r3` | signed | `vpminsq` |
+| 0xb4–0xb6 | `abs.{b,w,d}` | `r2` | \|in0\| | `vpabs{b,w,d}` |
+| 0xb7 | `max.b` | `r3` | signed | `vpmaxsb` |
+| 0xb8 | `min.b` | `r3` | signed | `vpminsb` |
+| 0xb9 | `maxu.b` | `r3` | unsigned | `vpmaxub` |
+| 0xba | `minu.b` | `r3` | unsigned | `vpminub` |
+| 0xbb–0xbc | `adds.{b,w}` | `r3` | in0 + in1, signed sat | `vpadds{b,w}` |
+| 0xbd–0xbe | `addus.{b,w}` | `r3` | in0 + in1, unsigned sat | `vpaddus{b,w}` |
+| 0xbf–0xc0 | `subs.{b,w}` | `r3` | in0 − in1, signed sat | `vpsubs{b,w}` |
+| 0xc1–0xc2 | `subus.{b,w}` | `r3` | in0 − in1, unsigned sat | `vpsubus{b,w}` |
+| 0xc3–0xc4 | `avg.{b,w}` | `r3` | unsigned (in0 + in1 + 1) >> 1 | `vpavg{b,w}` |
+| 0xc5 | `sad` | `r3` | see below | `vpsadbw` |
 
 `mulwu` and `mulws` multiply the even 32-bit lanes into full 64-bit products:
 `out.q[i] ← in0.d[2i] · in1.d[2i]`, unsigned for `mulwu` and signed for
 `mulws`.
+
+- `mulhrs.w`: `out.w[i] ← (((i16(in0.w[i]) · i16(in1.w[i])) >> 14) + 1) >> 1`
+- `mul52lo`: `out.q[i] ← lo52(m52(in0.q[i]) · m52(in1.q[i]))`
+- `mul52hi`: `out.q[i] ← hi52(m52(in0.q[i]) · m52(in1.q[i]))`
+- `abs.*`: the absolute value of the signed lane, so the minimum value maps
+  to itself
+- `sad`: `out.q[i] ← Σ(k<8) |in0.b[8i+k] − in1.b[8i+k]|`, unsigned bytes
 
 #### Bitwise, shifts and rotates
 
@@ -237,6 +353,7 @@ TODO: FINALIZE OPERATION LIST
 | 0x2a | `xor` | `r3` | in0 ^ in1 | `vpxorq` |
 | 0x2b | `andn` | `r3` | ~in0 & in1 | `vpandnq` |
 | 0x2c | `ternlog` | `a3i` | see below | `vpternlogq` |
+| 0x2d | `ternlog.d` | `a3i` | as `ternlog` | `vpternlogd` |
 | 0x30–0x32 | `shli.{w,d,q}` | `r2i` | in0 << imm8 | `vpsll{w,d,q}` |
 | 0x33–0x35 | `shri.{w,d,q}` | `r2i` | logical in0 >> imm8 | `vpsrl{w,d,q}` |
 | 0x36–0x38 | `sari.{w,d,q}` | `r2i` | arithmetic in0 >> imm8 | `vpsra{w,d,q}` |
@@ -248,15 +365,37 @@ TODO: FINALIZE OPERATION LIST
 | 0x3e | `shrv.q` | `r3` | logical in0 >> in1, per lane | `vpsrlvq` |
 | 0x3f | `rolv.d` | `r3` | rotate left by in1 mod 32 | `vprolvd` |
 | 0x40 | `rolv.q` | `r3` | rotate left by in1 mod 64 | `vprolvq` |
+| 0x41 | `shlv.w` | `r3` | in0 << in1, per lane | `vpsllvw` |
+| 0x42 | `shrv.w` | `r3` | logical in0 >> in1, per lane | `vpsrlvw` |
+| 0x43–0x45 | `sarv.{w,d,q}` | `r3` | arithmetic in0 >> in1 | `vpsrav{w,d,q}` |
+| 0xce–0xd0 | `shldi.{w,d,q}` | `r3i` | funnel shift left | `vpshld{w,d,q}` |
+| 0xd1–0xd3 | `shrdi.{w,d,q}` | `r3i` | funnel shift right | `vpshrd{w,d,q}` |
+| 0xd4–0xd6 | `shldv.{w,d,q}` | `a3` | funnel shift left | `vpshldv{w,d,q}` |
+| 0xd7–0xd9 | `shrdv.{w,d,q}` | `a3` | funnel shift right | `vpshrdv{w,d,q}` |
+| 0xcd | `multishift` | `r3` | see below | `vpmultishiftqb` |
 
 `imm8` must be less than the lane width in bits for immediate shifts & rotates.
 A count greater than or equal to the lane width yields zero for variable
-shifts.
+shifts, and fills the lane with the sign bit for `sarv.*`.
 
-#### Comparisons
+`ternlog`: `out.bit ← imm8[(out.bit << 2) | (in0.bit << 1) | in1.bit]`. Every
+value of `imm8` is valid.
 
-Comparisons write all ones to lanes where the comparison is true and zero
-elsewhere. There are no mask registers.
+With `n` the lane width in bits and `x:y` the 2n-bit concatenation with `x` in
+the high half:
+
+- `shldi.*`: `out ← high n bits of (in0:in1) << imm8`
+- `shrdi.*`: `out ← low n bits of (in1:in0) >> imm8`
+- `shldv.*`: `out ← high n bits of (out:in0) << (in1 mod n)`
+- `shrdv.*`: `out ← low n bits of (in0:out) >> (in1 mod n)`
+- `multishift`: `out.b[k] ← low 8 bits of rotr(in1.q[k/8], in0.b[k] & 63)`
+
+#### Comparisons and masks
+
+The `cmpeq` and `cmpgt` ops write all ones to lanes where the comparison is
+true and zero elsewhere. `cmp`, `test`, `testn`, `bitshuf` and `movemask.*`
+write a mask to `r0` instead, with bit `i` for lane `i` and the unused high
+bits zero. There are no mask registers.
 
 | op | Name | Kind | Semantics | x86-64 |
 |---|---|---|---|---|
@@ -266,6 +405,25 @@ elsewhere. There are no mask registers.
 | 0x4b | `cmpgt.d` | `r3` | signed in0 > in1 | `vpcmpgtd` + `vpmovm2d` |
 | 0x4c | `cmpgt.q` | `r3` | signed in0 > in1 | `vpcmpgtq` + `vpmovm2q` |
 | 0x4d | `cmpgtu.q` | `r3` | unsigned in0 > in1 | `vpcmpuq` + `vpmovm2q` |
+| 0x46 | `cmp` | `s3i` | r0[i] ← pred(in0, in1) | `vpcmp*` + `kmovq` |
+| 0x47 | `test` | `s3i` | r0[i] ← (in0 & in1) ≠ 0 | `vptestm*` + `kmovq` |
+| 0x4e | `testn` | `s3i` | r0[i] ← (in0 & in1) = 0 | `vptestnm*` + `kmovq` |
+| 0x4f | `bitshuf` | `s3` | see below | `vpshufbitqmb` + `kmovq` |
+| 0x76 | `movemask.w` | `sr` | r0[i] ← msb(in0.w[i]) | `vpmovw2m` + `kmovq` |
+| 0x77 | `movemask.d` | `sr` | r0[i] ← msb(in0.d[i]) | `vpmovd2m` + `kmovq` |
+| 0xc6 | `movemask.q` | `sr` | r0[i] ← msb(in0.q[i]) | `vpmovq2m` + `kmovq` |
+| 0xc7–0xca | `movm.{b,w,d,q}` | `r0` | lane i ← r2[i] ? ~0 : 0 | `vpmovm2*` |
+| 0x79 | `blendm` | `r3i` | lane i ← r2[i] ? in1 : in0 | `vpblendm*` |
+| 0xf6 | `mpopcnt` | `s0` | r0 ← popcount(r2) | `popcnt` |
+| 0xf7 | `mtzcnt` | `s0` | r0 ← trailing zeros of r2 | `tzcnt` |
+| 0xf8 | `mlzcnt` | `s0` | r0 ← leading zeros of r2 | `lzcnt` |
+
+- `cmp`: `imm8[2:0]` is the predicate: 0 `==`, 1 `<`, 2 `≤`, 4 `≠`, 5 `≥`,
+  6 `>`. Values 3 and 7 are invalid. `imm8[3]` selects an unsigned
+  comparison, `imm8[5:4]` is the width code, and `imm8[7:6]` must be 0.
+- `test`, `testn` and `blendm` take a width code in `imm8`.
+- `bitshuf`: `r0[i] ← bit (in1.b[i] & 63) of in0.q[i/8]`
+- `mtzcnt` and `mlzcnt` return 64 when `r2` is 0.
 
 #### Dot products and multiply-add
 
@@ -277,6 +435,8 @@ elsewhere. There are no mask registers.
 | 0x53 | `maddwd` | `r3` | s16 · s16 in pairs | `vpmaddwd` |
 | 0x54 | `madd52lo` | `a3` | low 52 bits of 52-bit product | `vpmadd52luq` |
 | 0x55 | `madd52hi` | `a3` | high 52 bits of 52-bit product | `vpmadd52huq` |
+| 0x56 | `dpbusds` | `a3` | as `dpbusd`, `sat32` | `vpdpbusds` |
+| 0x57 | `dpwssds` | `a3` | as `dpwssd`, `sat32` | `vpdpwssds` |
 
 - `dpbusd`: `out.d[i] += Σ(j<4) u8(in0.b[4i+j]) · s8(in1.b[4i+j])`
 - `dpwssd`: `out.d[i] += Σ(j<2) s16(in0.w[2i+j]) · s16(in1.w[2i+j])`
@@ -284,6 +444,8 @@ elsewhere. There are no mask registers.
 - `maddwd`: `out.d[i] ← Σ(j<2) s16(in0.w[2i+j]) · s16(in1.w[2i+j])`
 - `madd52lo`: `out.q[i] += lo52(m52(in0.q[i]) · m52(in1.q[i]))`
 - `madd52hi`: `out.q[i] += hi52(m52(in0.q[i]) · m52(in1.q[i]))`
+- `dpbusds`, `dpwssds`: `out.d[i] ← sat32(i32(out.d[i]) + Σ ...)`, with the
+  same sums as `dpbusd` and `dpwssd`
 
 `m52(x)` is the low 52 bits of `x`. `lo52` and `hi52` are bits 0–51 and 52–103
 of the 104-bit product. The accumulations in `dpbusd`, `dpwssd`, `maddwd`,
@@ -296,20 +458,87 @@ of the 104-bit product. The accumulations in `dpbusd`, `dpwssd`, `maddwd`,
 | 0x58 | `packs.d` | `r3` | i32 → i16, `sat16` | `vpackssdw` |
 | 0x59 | `packs.w` | `r3` | i16 → i8, `sat8` | `vpacksswb` |
 | 0x5a | `packus.w` | `r3` | i16 → u8, `usat8` | `vpackuswb` |
+| 0x94 | `packus.d` | `r3` | i32 → u16, `usat16` | `vpackusdw` |
 | 0x5b | `permd` | `r3` | out.d[i] ← in1.d[in0.d[i] & 15] | `vpermd` |
 | 0x5c | `permq` | `r3` | out.q[i] ← in1.q[in0.q[i] & 7] | `vpermq` |
+| 0x86 | `permb` | `r3` | out.b[i] ← in1.b[in0.b[i] & 63] | `vpermb` |
+| 0x87 | `permw` | `r3` | out.w[i] ← in1.w[in0.w[i] & 31] | `vpermw` |
+| 0x7e | `permqi` | `r2i` | see below | `vpermq` |
 | 0x5d | `shufb` | `r3` | see below | `vpshufb` |
 | 0x5e | `perm2.w` | `a3` | see below | `vpermt2w` |
+| 0x5f | `perm2i` | `a3i` | see below | `vpermi2{b,w,d,q}` |
+| 0x85 | `perm2t` | `a3i` | see below | `vpermt2{b,d,q}` |
+| 0x88 | `shufd` | `r2i` | see below | `vpshufd` |
+| 0x89 | `shufhw` | `r2i` | see below | `vpshufhw` |
+| 0x8a | `shuflw` | `r2i` | see below | `vpshuflw` |
+| 0x8b | `shuf128` | `r3i` | see below | `vshufi64x2` |
+| 0x8c | `shufps` | `r3i` | see below | `vshufps` |
+| 0x80 | `align.q` | `r3i` | see below | `valignq` |
+| 0x81 | `align.d` | `r3i` | see below | `valignd` |
+| 0x8d | `alignr` | `r3i` | see below | `vpalignr` |
+| 0x8e | `bshli` | `r2i` | byte shift left per 128-bit lane | `vpslldq` |
+| 0x8f | `bshri` | `r2i` | byte shift right per 128-bit lane | `vpsrldq` |
+| 0x90 | `unpacklo` | `r3i` | see below | `vpunpckl*` |
+| 0x91 | `unpackhi` | `r3i` | see below | `vpunpckh*` |
+| 0x92 | `compress` | `r2i` | see below | `vpcompress*` |
+| 0x93 | `expand` | `r2i` | see below | `vpexpand*` |
 
 The pack ops work per 128-bit lane L: lane L of `out` holds the narrowed lanes
 of `in0`'s lane L, followed by the narrowed lanes of `in1`'s lane L.
 
-`shufb`: per 128-bit lane L,
-`out.b[i] ← (in1.b[i] & 0x80) ? 0 : in0.b[16L + (in1.b[i] & 15)]`.
+- `permqi`: `out.q[i] ← in0.q[(i & ~3) + sel(imm8, i & 3)]`
+- `shufb`: per 128-bit lane L,
+  `out.b[i] ← (in1.b[i] & 0x80) ? 0 : in0.b[16L + (in1.b[i] & 15)]`
+- `perm2.w`: with `k = in0.w[i] & 63`,
+  `out.w[i] ← k < 32 ? out.w[k] : in1.w[k − 32]`
+- `perm2i` and `perm2t` take a width code in `imm8` (`perm2t` does not allow
+  `w`). With `n` lanes per register and `k = idx[i] & (2n − 1)`, lane `i` of
+  `out` ← `k < n ? t0[k] : in1[k − n]`. For `perm2i`, `idx` is `out` and `t0`
+  is `in0`. For `perm2t`, `idx` is `in0` and `t0` is `out`.
+- `shufd`: `out.d[i] ← in0.d[(i & ~3) + sel(imm8, i & 3)]`
+- `shufhw`: per 128-bit lane, words 4–7 ← `in0.w[4 + sel(imm8, j)]` for
+  `j < 4`; words 0–3 are copied from `in0`
+- `shuflw`: per 128-bit lane, words 0–3 ← `in0.w[sel(imm8, j)]`; words 4–7 are
+  copied from `in0`
+- `shuf128`: 128-bit lane L of `out` ← 128-bit lane `sel(imm8, L)` of `in0`
+  for L < 2, or of `in1` for L ≥ 2
+- `shufps`: per 128-bit lane, dword `j` ← dword `sel(imm8, j)` of `in0` for
+  `j < 2`, or of `in1` for `j ≥ 2`
+- `align.q`, `align.d`: with `n` lanes and `j = i + imm8`, `imm8 < n`,
+  lane `i` of `out` ← `j < n ? in1[j] : in0[j − n]`
+- `alignr`: per 128-bit lane, with `j = (i & 15) + imm8`, `imm8 < 32`,
+  `out.b[i]` ← byte `j` of the 32-byte concatenation `in0:in1` (`in1` low),
+  or 0 if `j ≥ 32`
+- `bshli`, `bshri`: shift each 128-bit lane by `imm8 < 16` bytes, filling
+  with zeros
+- `unpacklo`, `unpackhi`: take a width code in `imm8`. Per 128-bit lane, the
+  low (`unpacklo`) or high (`unpackhi`) halves of `in0` and `in1` are
+  interleaved, starting with `in0`.
+- `compress`: takes a width code in `imm8`. The active lanes of `in0` are
+  packed, in order, into the low lanes of `out`. The remaining lanes follow
+  the mask mode.
+- `expand`: takes a width code in `imm8`. The low lanes of `in0` are placed,
+  in order, into the active lanes of `out`. Inactive lanes follow the mask
+  mode.
 
-`perm2.w`: with `k = in0.w[i] & 63`,
-`out.w[i] ← k < 32 ? out.w[k] : in1.w[k − 32]`. All lanes read the value `out`
-had before the op.
+All lanes of `perm2.w`, `perm2i` and `perm2t` read the value `out` had before
+the op.
+
+#### Broadcast, extract and insert
+
+| op | Name | Kind | Semantics | x86-64 |
+|---|---|---|---|---|
+| 0x7a–0x7d | `bcast.{q,d,w,b}` | `r2i` | all ← in0[imm8] | `vpbroadcast*` |
+| 0x7f | `extract256` | `r2i` | out ← in0 256-bit half imm8 | `vextracti64x4` |
+| 0x82 | `extract128` | `r2i` | out ← in0 128-bit lane imm8 | `vextracti32x4` |
+| 0x83 | `insert256` | `r3i` | see below | `vinserti64x4` |
+| 0x84 | `insert128` | `r3i` | see below | `vinserti32x4` |
+
+`imm8` must be less than the number of lanes for `bcast.*`, less than 2 for
+`extract256` and `insert256`, and less than 4 for `extract128` and
+`insert128`. The extracts zero the bytes of `out` above the result.
+`insert256` and `insert128` copy `in0` and replace its 256-bit half or 128-bit
+lane `imm8` with the low bits of `in1`.
 
 #### Widen, narrow and popcount
 
@@ -319,18 +548,42 @@ had before the op.
 | 0x61 | `narrows.d.b` | `r2` | out.b[i] ← sat8(i32(in0.d[i])) | `vpmovsdb` |
 | 0x62 | `narrows.d.w` | `r2` | out.w[i] ← sat16(i32(in0.d[i])) | `vpmovsdw` |
 | 0x63 | `narrow.d.b` | `r2` | out.b[i] ← in0.d[i] truncated | `vpmovdb` |
+| 0x95 | `narrow.d.w` | `r2` | d → w, truncate | `vpmovdw` |
+| 0x96 | `narrowus.d.w` | `r2` | d → w, `usat16` | `vpmovusdw` |
+| 0x97–0x99 | `narrow{,s,us}.q.b` | `r2` | q → b | `vpmov{,s,us}qb` |
+| 0x9a–0x9c | `narrow{,s,us}.q.w` | `r2` | q → w | `vpmov{,s,us}qw` |
+| 0x9d–0x9f | `narrow{,s,us}.q.d` | `r2` | q → d | `vpmov{,s,us}qd` |
+| 0xa0–0xa2 | `narrow{,s,us}.w.b` | `r2` | w → b | `vpmov{,s,us}wb` |
 | 0x64 | `zx.b.d` | `r2` | out.d[i] ← u8(in0.b[i]) | `vpmovzxbd` |
 | 0x65 | `sx.b.d` | `r2` | out.d[i] ← i8(in0.b[i]) | `vpmovsxbd` |
 | 0x66 | `zx.w.d` | `r2` | out.d[i] ← u16(in0.w[i]) | `vpmovzxwd` |
 | 0x67 | `sx.w.d` | `r2` | out.d[i] ← i16(in0.w[i]) | `vpmovsxwd` |
 | 0x68 | `zx.d.q` | `r2` | out.q[i] ← u32(in0.d[i]) | `vpmovzxdq` |
 | 0x69 | `sx.d.q` | `r2` | out.q[i] ← i32(in0.d[i]) | `vpmovsxdq` |
+| 0xa3 | `zx.b.w` | `r2` | out.w[i] ← u8(in0.b[i]) | `vpmovzxbw` |
+| 0xa4 | `sx.b.w` | `r2` | out.w[i] ← i8(in0.b[i]) | `vpmovsxbw` |
+| 0xa5 | `zx.b.q` | `r2` | out.q[i] ← u8(in0.b[i]) | `vpmovzxbq` |
+| 0xa6 | `sx.b.q` | `r2` | out.q[i] ← i8(in0.b[i]) | `vpmovsxbq` |
+| 0xa7 | `zx.w.q` | `r2` | out.q[i] ← u16(in0.w[i]) | `vpmovzxwq` |
+| 0xa8 | `sx.w.q` | `r2` | out.q[i] ← i16(in0.w[i]) | `vpmovsxwq` |
 | 0x6a | `popcnt.b` | `r2` | per u8 | `vpopcntb` |
+| 0x6c | `popcnt.w` | `r2` | per u16 | `vpopcntw` |
+| 0x6d | `popcnt.d` | `r2` | per u32 | `vpopcntd` |
 | 0x6b | `popcnt.q` | `r2` | per u64 | `vpopcntq` |
+| 0x6e | `lzcnt.d` | `r2` | leading zeros per u32 | `vplzcntd` |
+| 0x6f | `lzcnt.q` | `r2` | leading zeros per u64 | `vplzcntq` |
+| 0xcb | `conflict.d` | `r2` | see below | `vpconflictd` |
+| 0xcc | `conflict.q` | `r2` | see below | `vpconflictq` |
 
-Narrowing ops fill the low 16 output lanes, with i < 16, and set the rest of
-`out` to zero. Widening ops read the low input lanes, so 16 for `.d` results
-and 8 for `.q` results.
+Narrowing ops convert each input lane to a smaller lane. `narrow` truncates.
+`narrows` treats the input as signed and saturates to the signed output range.
+`narrowus` treats the input as unsigned and saturates to the unsigned output
+range so negative inputs become the maximum value. They write the low lanes of
+`out` and set the rest of `out` to zero. Widening ops read the low input lanes,
+as many as the result has.
+
+`conflict.*`: bit `j` of `out` lane `i` is set if `j < i` and lane `j` of
+`in0` equals lane `i`.
 
 #### Vector to scalar
 
@@ -340,27 +593,81 @@ and 8 for `.q` results.
 | 0x71 | `hsum.q` | `sr` | r0 ← Σ in0.q[i] mod 2^64 | extract/add tree |
 | 0x72 | `extract.q` | `sri` | r0 ← in0.q[imm8] | `vextracti32x4`, `vpextrq` |
 | 0x73 | `extract.d` | `sri` | r0 ← in0.d[imm8] | `vextracti32x4`, `vpextrd` |
+| 0xa9 | `extract.b` | `sri` | r0 ← in0.b[imm8] | `vextracti32x4`, `vpextrb` |
+| 0xaa | `extract.w` | `sri` | r0 ← in0.w[imm8] | `vextracti32x4`, `vpextrw` |
 | 0x74 | `insert.q` | `ai` | out.q[imm8] ← r1 | implementation-defined |
+| 0xab | `insert.b` | `ai` | out.b[imm8] ← r1[7:0] | `vpinsrb` sequence |
+| 0xac | `insert.w` | `ai` | out.w[imm8] ← r1[15:0] | `vpinsrw` sequence |
+| 0xad | `insert.d` | `ai` | out.d[imm8] ← r1[31:0] | `vpinsrd` sequence |
 | 0x75 | `movemask.b` | `sr` | r0[i] ← msb(in0.b[i]) | `vpmovb2m`, `kmovq` |
 
-`imm8` must be less than 8 for `extract.q` and `insert.q`, and less than 16
-for `extract.d`. `extract.d` zero-extends the lane into `r0`. `msb(x)` is the
-most significant bit of `x`.
+`imm8` must be less than the number of lanes at the op's width. The extracts
+zero-extend the lane into `r0`. `msb(x)` is the most significant bit of `x`.
 
-#### Carry-less multiply
+#### Cryptography
 
 | op | Name | Kind | Semantics | x86-64 |
 |---|---|---|---|---|
 | 0x78 | `clmul` | `r3i` | see below | `vpclmulqdq` |
+| 0xda | `gf2p8mul` | `r3` | GF(2^8) product per byte | `vgf2p8mulb` |
+| 0xdb | `gf2p8affine` | `r3i` | GF(2) affine map per byte | `vgf2p8affineqb` |
+| 0xdc | `gf2p8affineinv` | `r3i` | inverse, affine map | `vgf2p8affineinvqb` |
+| 0xdd | `aesenc` | `r3` | AES round per 128-bit lane | `vaesenc` |
+| 0xde | `aesenclast` | `r3` | last AES round | `vaesenclast` |
+| 0xdf | `aesdec` | `r3` | inverse AES round | `vaesdec` |
+| 0xe0 | `aesdeclast` | `r3` | last inverse AES round | `vaesdeclast` |
+| 0xe1 | `sha256rnds2` | `a3` | two SHA-256 rounds | `sha256rnds2` |
+| 0xe2 | `sha256msg1` | `a2` | SHA-256 schedule, part 1 | `sha256msg1` |
+| 0xe3 | `sha256msg2` | `a2` | SHA-256 schedule, part 2 | `sha256msg2` |
+| 0xe4 | `sha1rnds4` | `a2i` | four SHA-1 rounds | `sha1rnds4` |
+| 0xe5 | `sha1nexte` | `a2` | SHA-1 next E | `sha1nexte` |
+| 0xe6 | `sha1msg1` | `a2` | SHA-1 schedule, part 1 | `sha1msg1` |
+| 0xe7 | `sha1msg2` | `a2` | SHA-1 schedule, part 2 | `sha1msg2` |
 
-Per 128-bit lane L, `out.lane[L] ← clmul(in0.q[2L + (imm8 & 1)],
+`clmul`: per 128-bit lane L, `out.lane[L] ← clmul(in0.q[2L + (imm8 & 1)],
 in1.q[2L + ((imm8 >> 4) & 1)])`. `imm8` must be one of `0x00`, `0x01`, `0x10`
 or `0x11`.
 
+The GF(2^8) ops use the AES polynomial x^8 + x^4 + x^3 + x + 1. The affine
+ops apply the 8 × 8 bit matrix in `in1.q[k/8]` to byte `k` of `in0`, then XOR
+`imm8`. `gf2p8affineinv` first replaces each byte with its inverse, with 0
+mapping to 0.
+
+The AES ops apply one round to each 128-bit lane of `in0` with the round key
+in the same lane of `in1`. The rounds follow FIPS-197: `aesenc` is ShiftRows,
+SubBytes, MixColumns and AddRoundKey, `aesenclast` omits MixColumns, and
+`aesdec` and `aesdeclast` are the inverse operations.
+
+The SHA ops follow the Intel SHA extensions. They operate on the low 128 bits,
+with `out` as the first source and destination and `in0` as the second
+source. `sha256rnds2` takes the two message-plus-constant words from the low
+64 bits of `in1`, and `sha1rnds4` takes the round function index in
+`imm8 < 4`. Bits 511–128 of `out` are unchanged.
+
 ### Metering
 
-All vector intrinsics consume 1 compute unit, the standard charge for
-`CALL_IMM`.
+Each vector intrinsic consumes the compute units listed below. The first is
+the standard charge for `CALL_IMM`. CUs are consumed at invocation prior to
+computation. If remaining CUs are less than the cost, execution fails.
+
+| CU | Ops |
+|---|---|
+| 1 | every op not listed below |
+| 2 | `cmp`, `test`, `testn`, `bitshuf`, `movemask.{w,d,q}` |
+| 2 | `extract.b`, `extract.w`, `mul52lo`, `mul52hi` |
+| 2 | `compress`, `expand`, `ld.m`, `st.m`, `sha256rnds2` |
+| 3 | `insert.b`, `insert.w`, `insert.d`, `conflict.q` |
+| 4 | `conflict.d` |
+| 8 | `gather.qq`, `gather.dq`, `gather.qd` and the matching scatters |
+| 16 | `gather.dd`, `scatter.dd` |
+| n | `ldn`, `stn` (`n = imm8`) |
+| 1–3 | `bcast.*`, see below |
+
+`bcast.q` and `bcast.d` cost 1 CU for lane 0 and 2 CUs otherwise. `bcast.w`
+costs `1 + (imm8 ≥ 8) + (imm8 mod 8 ≠ 0)`. `bcast.b` costs
+`1 + (imm8 ≥ 16) + (imm8 mod 16 ≠ 0)`.
+
+Gathers and scatters cost the same regardless of the mask.
 
 ### Execution Backends
 
@@ -370,6 +677,11 @@ scratch. An implementation may manage vector registers and execute vector
 intrinsics in any way, such as in an interpreter, AVX2 pairs, NEON quads, or
 SVE, provided the backend produces identical register, memory, `r0`, and CU
 results.
+
+The prototype's native lowering targets the AVX-512 subset available on Intel
+Ice Lake and AMD Zen 4, including VBMI2, VNNI, IFMA, BITALG, GFNI, VAES,
+VPCLMULQDQ and the SHA extensions. A host without one of these extensions
+needs a fallback lowering for the affected ops.
 
 Alternative vector register management strategies must preserve behavior as
 specified in this document.
@@ -382,8 +694,12 @@ specified in this document.
   and writable.
 - A memory op at `r1 + sext(off)` where the addition overflows 64 bits faults
   identically to the equivalent scalar access.
-- `hsum.d` and `extract.d` zero-extend into `r0`.
-- `perm2.w` uses the old value of `out` as both table and destination.
+- `ld.m` and `st.m` fault if any of the 64 bytes is inaccessible, even when
+  the mask selects no lane there. Native AVX-512 would suppress that fault.
+- A gather or scatter with an empty mask in mode 1 accesses no memory but
+  still costs its full CU.
+- `hsum.d` and the extracts zero-extend into `r0`.
+- `perm2.w`, `perm2i` and `perm2t` use the old value of `out` as a source.
 
 ### Validator Components Affected
 
@@ -417,12 +733,13 @@ Programs will need to be recompiled and redeployed to adopt vector intrinsics.
 ## Security Considerations
 
 All execution backends must agree on the resulting vector registers, `r0`,
-memory and compute unit consumption for every vector op and every input. A host
-architecture's instruction semantics must not leak into the program-visible
-semantics. Examples are shift-count masking, saturation behavior, and the
-results a host produces for out-of-range indices. This holds whether an op is
-lowered to a single AVX-512 instruction, to a multi-instruction sequence on a
-host without AVX-512, or executed by an interpreter.
+memory and compute unit consumption for every vector op, every mask and every
+input. A host architecture's instruction semantics must not leak into the
+program-visible semantics. Examples are shift-count masking, saturation
+behavior, fault suppression on masked-off lanes, and the results a host
+produces for out-of-range indices. This holds whether an op is lowered to a
+single AVX-512 instruction, to a multi-instruction sequence on a host without
+AVX-512, or executed by an interpreter.
 
 Vector registers must not carry state between program invocations. An
 implementation that keeps vector registers in host registers must zero them at
@@ -432,8 +749,9 @@ host ABI expects when control returns to it. A callee must not be able to read
 or modify its caller's vector registers.
 
 Vector memory ops must apply the same address translation and permission checks
-as scalar loads and stores over the entire width of the access. A faulting
-access must not partially write memory or modify any vector register.
+as scalar loads and stores over the entire width of the access, or of every
+active lane for gathers and scatters. A faulting access must not partially
+write memory or modify any vector register.
 
 A malformed vector operation that reaches execution must fail with the same
 error on every backend.
@@ -451,16 +769,23 @@ feature when the majority of the cluster is using the required version.
 - Every client must implement all vector intrinsics in its interpreter & JIT
 - Fallbacks from AVX-512 negate the speedup from vector intrinsics without
   changing CU cost
+- Hosts that lack an extension in the prototype's baseline, such as GFNI or
+  the SHA extensions, need fallback lowerings for those ops
 
 ## Conformance
 
-Conformance tests must verify, for every op, the resulting vector registers,
-`r0`, memory and CU consumption on every backend. They must also verify that:
+Conformance tests must verify, for every op and every allowed mask mode, the
+resulting vector registers, `r0`, memory and CU consumption on every backend.
+They must also verify that:
 
 - vector registers are zero at entry, are preserved across internal calls and
   syscalls, and are independent across CPI
 - memory ops fault on the first byte outside a region, on read-only regions for
-  `st`, and on cross-region accesses, leaving vector registers unchanged
+  stores, and on cross-region accesses, leaving vector registers and memory
+  unchanged
+- gathers and scatters fault on any active out-of-bounds lane without
+  accessing memory, and ignore inactive lanes
+- an op with insufficient remaining CUs reverts the transaction
 - inputs at the boundary values are handled for each lane width: 0, 1, the
   signed minimum and maximum, and all ones
 - programs without vector intrinsics produce identical results and CU before
