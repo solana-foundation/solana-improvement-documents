@@ -2,8 +2,8 @@
 simd: '0708'
 title: Vector Intrinsics
 authors:
-  - frank
   - cavey
+  - frank
   - ben
 category: Standard
 type: Core
@@ -278,14 +278,12 @@ elsewhere. There are no mask registers.
 | 0x54 | `madd52lo` | `a3` | low 52 bits of 52-bit product | `vpmadd52luq` |
 | 0x55 | `madd52hi` | `a3` | high 52 bits of 52-bit product | `vpmadd52huq` |
 
-```text
-dpbusd    out.d[i] += Σ(j<4) u8(in0.b[4i+j]) · s8(in1.b[4i+j])
-dpwssd    out.d[i] += Σ(j<2) s16(in0.w[2i+j]) · s16(in1.w[2i+j])
-maddubs   out.w[i] ← sat16(Σ(j<2) u8(in0.b[2i+j]) · s8(in1.b[2i+j]))
-maddwd    out.d[i] ← Σ(j<2) s16(in0.w[2i+j]) · s16(in1.w[2i+j])
-madd52lo  out.q[i] += lo52(m52(in0.q[i]) · m52(in1.q[i]))
-madd52hi  out.q[i] += hi52(m52(in0.q[i]) · m52(in1.q[i]))
-```
+- `dpbusd`: `out.d[i] += Σ(j<4) u8(in0.b[4i+j]) · s8(in1.b[4i+j])`
+- `dpwssd`: `out.d[i] += Σ(j<2) s16(in0.w[2i+j]) · s16(in1.w[2i+j])`
+- `maddubs`: `out.w[i] ← sat16(Σ(j<2) u8(in0.b[2i+j]) · s8(in1.b[2i+j]))`
+- `maddwd`: `out.d[i] ← Σ(j<2) s16(in0.w[2i+j]) · s16(in1.w[2i+j])`
+- `madd52lo`: `out.q[i] += lo52(m52(in0.q[i]) · m52(in1.q[i]))`
+- `madd52hi`: `out.q[i] += hi52(m52(in0.q[i]) · m52(in1.q[i]))`
 
 `m52(x)` is the low 52 bits of `x`. `lo52` and `hi52` are bits 0–51 and 52–103
 of the 104-bit product. The accumulations in `dpbusd`, `dpwssd`, `maddwd`,
