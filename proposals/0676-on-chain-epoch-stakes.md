@@ -213,12 +213,11 @@ to a retained account can increase its balance without changing the snapshot.
 Activation **MUST** occur at an epoch boundary with [SIMD-0326] and [SIMD-0357]
 active. The rank and entry-count bound depend on those proposals.
 
-Umar Bhatty of [Wire Outpost] asked for [at least five epochs] of history for
-on-chain delegation scoring. Eight snapshots leave room for delayed reads.
-At the 2,000-entry limit, it bounds live account data at about 2.44 MiB.
+Eight snapshots cover the [requested minimum of five epochs] for on-chain
+delegation scoring and leave room for delayed reads. At the 2,000-entry limit,
+this bounds live account data at about 2.44 MiB.
 
-[Wire Outpost]: https://hub.wire.network/outpost
-[at least five epochs]: https://github.com/solana-foundation/solana-improvement-documents/pull/676#issuecomment-5904637000
+[requested minimum of five epochs]: https://github.com/solana-foundation/solana-improvement-documents/pull/676#issuecomment-5904637000
 
 Let `A` be the first epoch boundary at which this feature publishes snapshots.
 Publish only `epoch_stakes(A)`. No earlier snapshot is backfilled, and no future
