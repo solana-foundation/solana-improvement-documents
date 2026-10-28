@@ -6,7 +6,7 @@ authors:
   - Jon C (anza)
 category: Standard
 type: Core
-status: Idea
+status: Activated
 created: 2025-10-30
 feature: (fill in with feature key and github tracking issues once accepted)
 ---

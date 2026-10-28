@@ -4,7 +4,7 @@ title: Disable Partitioned Rent Updates
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Accepted
+status: Activated
 created: 2024-09-25
 feature: 2B2SBNbUcr438LtGXNcJNBP2GBSxjx81F945SdSkUSfC
 ---

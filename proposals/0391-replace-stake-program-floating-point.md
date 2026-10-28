@@ -6,7 +6,7 @@ authors:
   - Pete (Anza)
 category: Standard
 type: Core
-status: Idea
+status: Activated
 created: 2025-10-23
 feature: (to be assigned upon acceptance)
 ---
