@@ -117,12 +117,13 @@ decay factor or reward amount on error.
 
 #### Feature Activation and Reward Boundary
 
-The integer reward calculation applies immediately in the boundary bank. If
-the feature activates on epoch E -> E+1, rewards paid for epoch E during E+1
-must use fixed-point math. Rewards calculated by banks before this feature
-activation must use legacy calculation. At activation, clients MUST set the
-stored `Inflation.initial` to `0.08` and use `INITIAL_RATE` for subsequent
-inflation calculations on every cluster, including testnet.
+If the feature activates on epoch E -> E+1, clients MUST use integer
+calculations starting with rewards earned in epoch E+1, paid during epoch E+2.
+Rewards earned in epoch E, paid during epoch E+1, MUST use the legacy
+calculation. Under Alpenglow, these rewards have already accrued during epoch E
+and MUST NOT be recalculated or converted at activation. At activation, clients
+MUST set the stored `Inflation.initial` to `0.08` and use `INITIAL_RATE` for
+subsequent inflation calculations on every cluster, including testnet.
 
 ### Inflation Decay
 
@@ -387,4 +388,6 @@ Conformance tests MUST include:
 - decay test cases with exact expected results for every protocol slot-time
   regime and taper
 - SIMD-0550 activation anchoring
+- activation at E -> E+1 with legacy rewards for E paid during E+1 and integer
+  rewards for E+1 paid during E+2
 - replay across activation with matching bank hashes
