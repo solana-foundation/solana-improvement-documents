@@ -5,6 +5,9 @@ authors:
   - cavey
   - frank
   - ben
+  - Phillip Taffet (Jump)
+  - Dean Little (Blueshift)
+  - Joe Caulfield (Anza)
 category: Standard
 type: Core
 status: Draft
