@@ -207,32 +207,49 @@ The syscall MUST abort the virtual machine if any of the following are true:
 - `modulus_len == 0`.
 - The decoded modulus value is less than or equal to `1`.
 - The decoded modulus value is even.
-- The transaction does not have enough remaining compute units.
+- The operation cost cannot be represented as a `u64`. In this case all
+  remaining compute units are consumed before aborting.
+- The transaction does not have enough remaining compute units to cover the
+  base cost or the operation cost.
 
 ### Validation And Charging Order
 
-Implementations MUST perform validation, compute charging, and arithmetic in
-the following order:
+Implementations MUST perform compute charging, validation, and arithmetic in
+the following order. This order is consensus-critical: the compute units
+consumed on every abort path MUST be identical across implementations.
 
-1. Validate and read the `params` record from VM memory.
-2. Validate all length fields, including maximum length checks and nonzero
-   `modulus_len`.
-3. Validate pointer plus length calculations for overflow, including
-   `base + base_len`, `exponent + exponent_len`, `modulus + modulus_len`,
-   and `result + modulus_len`.
-4. Validate required input VM memory ranges are readable and the output VM
-   memory range is writable.
-5. Read all input bytes from VM memory, decode the exponent and modulus, and
-   validate that the modulus is odd and greater than `1`.
-6. Determine the compute cost.
-7. Abort if the transaction does not have enough remaining compute units.
-8. Charge compute.
-9. Perform the arithmetic and write the result.
+1. Charge the flat base cost `BIG_MOD_EXP_BASE_CU`. This is charged before any
+   VM memory translation, so it is consumed on every abort path below. Abort if
+   the transaction does not have enough remaining compute units.
+2. Translate and read the `params` record from VM memory.
+3. Validate the length fields: `base_len`, `exponent_len`, and `modulus_len`
+   MUST each be less than or equal to `BIG_MOD_EXP_MAX_BYTES`. Abort otherwise.
+4. Translate and read the `exponent` bytes from VM memory. This also validates
+   the `exponent + exponent_len` calculation for overflow and that the range is
+   readable.
+5. Compute `operation_cost`, as defined in the Compute Metering section, from
+   the length fields and the decoded exponent. If `operation_cost` cannot be
+   represented as a `u64`, consume all remaining compute units and abort.
+6. Charge `operation_cost`. Abort if the transaction does not have enough
+   remaining compute units.
+7. Translate and read the `base` and `modulus` bytes from VM memory. This also
+   validates the `base + base_len` and `modulus + modulus_len` calculations for
+   overflow and that the ranges are readable.
+8. Decode the modulus and validate that it is odd and greater than `1`. Abort
+   otherwise. `modulus_len == 0` decodes to `0`, which fails this check.
+9. Perform the arithmetic, and translate the writable output range
+   (`result`, `modulus_len` bytes), validating `result + modulus_len` for
+   overflow and that the range is writable. These two actions MAY be done in
+   either order, since both abort paths consume the same compute. Then write
+   the result.
 
-Aborts from steps 1 through 7 MUST NOT charge the syscall compute cost. After
-step 8 succeeds, the charged compute units are consumed even if an
-implementation-level failure aborts the virtual machine. Implementations MUST
-NOT perform arithmetic before completing step 8.
+The flat base cost (step 1) is charged before any validation, so an abort at
+any later step still consumes it. The operation cost (step 6) is charged once
+the exponent has been read and the cost computed, so aborts at steps 7 through
+9 consume both the base cost and the operation cost. Once a compute cost has
+been charged it is consumed even if a later step or an implementation-level
+failure aborts the virtual machine. Implementations MUST NOT perform the
+arithmetic before completing step 6.
 
 ### Arithmetic Semantics
 
@@ -249,7 +266,9 @@ If `exponent` is zero, the result is `1 mod modulus`, encoded in exactly
 
 ### Compute Metering
 
-The syscall MUST charge compute before performing the arithmetic. The cost
+The syscall charges compute in two stages: the flat base cost is charged before
+any validation (step 1 above), and the operation cost is charged after the
+exponent has been read but before the arithmetic (step 6 above). The cost
 depends on the encoded operand lengths and, for the general ModExp path, on the
 number of 64-bit words spanned by the exponent. A separate modular-reduction
 path is used when the decoded exponent value is `1`.
@@ -259,17 +278,17 @@ operand_words = ceil(max(base_len, modulus_len) / 8)
 mult_complexity = operand_words ** 2 + BIG_MOD_EXP_MULT_COMPLEXITY_CONSTANT
 
 if decoded_exponent == 1:
-    compute_units =
-        BIG_MOD_EXP_BASE_CU
-        + ceil(mult_complexity / BIG_MOD_EXP_MOD_REDUCTION_CU_DIVISOR)
+    operation_cost =
+        ceil(mult_complexity / BIG_MOD_EXP_MOD_REDUCTION_CU_DIVISOR)
 else:
     exponent_words = floor(adjusted_exponent_length / 64) + 1
     multiplications =
         BIG_MOD_EXP_SETUP_MULTIPLICATIONS
         + BIG_MOD_EXP_MULTIPLICATIONS_PER_EXPONENT_WORD * exponent_words
-    compute_units =
-        BIG_MOD_EXP_BASE_CU
-        + ceil(mult_complexity * multiplications / BIG_MOD_EXP_CU_DIVISOR)
+    operation_cost =
+        ceil(mult_complexity * multiplications / BIG_MOD_EXP_CU_DIVISOR)
+
+compute_units = BIG_MOD_EXP_BASE_CU + operation_cost
 ```
 
 The constants are:
