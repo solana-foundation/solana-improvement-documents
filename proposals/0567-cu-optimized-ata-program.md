@@ -213,7 +213,9 @@ implementation commit:
 git clone https://github.com/solana-program/associated-token-account.git
 cd associated-token-account
 git checkout daba656acc2949d3bf7903c69bd3357192d0dfe0
-make build-sbf-pinocchio-program
+solana-verify build \
+  --library-name pinocchio_associated_token_account_program \
+  --cargo-build-sbf-args="--tools-version v1.58"
 
 # The generated ELF is located at:
 # target/deploy/pinocchio_associated_token_account_program.so
@@ -225,7 +227,7 @@ solana-verify get-executable-hash \
 The expected verified build hash is:
 
 ```text
-c667326d5d7afbe7e9996e6d05259ce6fca36b310b5cdf7eb6380f2f1d953d4f
+4e008052b0a7ac695482474946700abe70e9cfd03d178aa8887b02674e7f7d9e
 ```
 
 #### Program availability
