@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2024-10-21
-feature: GJav1vwg2etvSWraPT96QvYuQJswJTJwtcyARrvkhuV9
+feature: 5cC3foj77CWun58pC51ebHFUWavHWKarWyR5UUik7dnC (`enable_sbpf_v3_deployment_and_execution`)
 extends: SIMD-0178
 ---
 

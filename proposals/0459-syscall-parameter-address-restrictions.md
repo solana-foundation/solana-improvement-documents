@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2026-01-30
-feature: TBD
+feature: EDGMC5kxFxGk4ixsNkGt8bW7QL5hDMXnbwaZvYMwNfzF (`syscall_parameter_address_restrictions`)
 supersedes: 0219
 ---
 

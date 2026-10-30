@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-11-19
-feature: DqbnFPASg7tHmZ6qfpdrt2M6MWoSeiicWPXxPhxqFCQ
+feature: 6aHuNsUmwSzCEMjrBzBCYaxHAyAcQBjVES92JigHBDuC (`limit_instruction_accounts`)
 ---
 
 ## Summary

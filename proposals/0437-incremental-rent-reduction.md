@@ -8,7 +8,9 @@ type: Core
 status: Idea
 created: 2025-12-22
 supersedes: '0436'
-feature: (fill in with feature key and github tracking issues once accepted)
+feature:
+  - 4a6f7o7iTcA8hRDCrPLkSatnt5Ykxiu36wo5p1Tt12wC (`set_lamports_per_byte_to_6333`)
+  - 61BtM7BkDEE8Yq5fskEVAQT9mYA8qCejJWoLe5apqg81 (`set_lamports_per_byte_to_5080`)
 ---
 
 ## Summary
