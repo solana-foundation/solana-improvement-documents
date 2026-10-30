@@ -212,7 +212,7 @@ implementation commit:
 ```sh
 git clone https://github.com/solana-program/associated-token-account.git
 cd associated-token-account
-git checkout daba656acc2949d3bf7903c69bd3357192d0dfe0
+git checkout 5881eb14aaa794a85f78dc1fcd640cd89bd42cf3
 solana-verify build \
   --library-name pinocchio_associated_token_account_program \
   --cargo-build-sbf-args="--tools-version v1.58"
