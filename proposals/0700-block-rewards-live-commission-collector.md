@@ -1,6 +1,6 @@
 ---
 simd: '0700'
-title: Live Commission Collectors
+title: Block Reward Live Commission Collector
 authors:
   - joncinque
 category: Standard
@@ -13,8 +13,8 @@ supersedes: '0232'
 
 ## Summary
 
-When looking up the inflation and block collector addresses in a vote account,
-use the live account instead of a snapshotted version.
+When looking up the block collector address in a vote account, use the live
+account instead of a snapshotted version.
 
 ## Motivation
 
@@ -22,9 +22,9 @@ The protocol depends on data that is not present in the accounts snapshot. This
 state cannot be easily inspected by users and complicates client
 implementations.
 
-The custom commission collectors introduced in [SIMD-0232] are an example of
-this kind of state, since they are read from a snapshot of vote accounts taken
-at each epoch boundary.
+The custom block commission collector introduced in [SIMD-0232] is an example of
+this kind of state, since it is read from a snapshot of vote accounts taken at
+each epoch boundary.
 
 The use of out-of-protocol snapshotted data is not required, and was likely
 designed to correspond with the snapshot data used for commission values in
@@ -40,13 +40,7 @@ This proposal depends on the following previously accepted proposals:
 
     Custom commission collectors must be enabled for any choice to be made
 
-- **[SIMD-0123]: Block Revenue Distribution**
-
-    The custom block revenue commission collector is only available with block
-    revenue distribution available
-
 [SIMD-0232]: https://github.com/solana-foundation/solana-improvement-documents/pull/232
-[SIMD-0123]: https://github.com/solana-foundation/solana-improvement-documents/pull/123
 
 ## New Terminology
 
@@ -54,8 +48,7 @@ N/A
 
 ## Detailed Design
 
-During reward collection at the end of each block, and when minting inflation
-rewards during the first block of a new epoch, read the current vote account
+During reward collection at the end of each block, read the current vote account
 data for the leader.
 
 The following checks MUST always be performed when reading live vote account
@@ -63,13 +56,12 @@ data. If any check fails, fees or rewards are burned.
 
 - The account MUST be owned by the vote program
 - The account MUST be deserializable as a valid vote state. If the account is
-  v4, read the appropriate collector from the account. Otherwise, use the
-  identity address for block rewards, and the vote address for inflation
-  rewards.
+  v4 or later, read the block reward collector from the account. Otherwise, use
+  the identity address for block rewards.
 
 ### Edge Cases
 
-A vote account can be closed and reopened with new collector values. This is
+A vote account can be closed and reopened with a new collector value. This is
 acceptable since it functions just like a collector reassignment.
 
 ### Validator Components Affected
@@ -96,5 +88,5 @@ N/A
 ## Conformance
 
 The change will be accompanied by a ledger from a localnet cluster demonstrating
-cached collector ids, followed by live collector ids, by updating throughout the
-epoch, and seeing new collectors receive rewards.
+a cached collector id, followed by a live collector id, by updating throughout
+the epoch, and seeing new collectors receive rewards.
