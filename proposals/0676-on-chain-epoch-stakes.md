@@ -36,6 +36,14 @@ Removing caches or snapshot-manifest fields remains follow-up work. This
 proposal does not change snapshot loading, reward calculation, or existing RPC
 methods.
 
+## Dependencies
+
+- [SIMD-0326] (Alpenglow) defines the BLS validator ranks recorded here.
+- [SIMD-0357] (Validator Admission Ticket) defines the admitted stake set and
+  the 2,000-entry limit.
+
+Both features **MUST** be active before this proposal activates.
+
 ## New Terminology
 
 An **epoch stakes account** stores the snapshot taken at the start of its named
@@ -90,7 +98,9 @@ during the epoch. A missing value is distinct from slot zero.
 
 ### Account Structure
 
-Version 1 uses a fixed binary layout. All multi-byte integers are little-endian.
+Version 1 has an immutable binary layout and field meanings. Any change to
+that layout or those meanings, including use of padding bytes for data,
+**MUST** introduce a new version. All multi-byte integers are little-endian.
 The header is 32 bytes, followed by `num_entries` entries of 160 bytes each.
 Entries are sorted in ascending lexicographic order of `vote_pubkey` bytes.
 
@@ -100,11 +110,11 @@ Entries are sorted in ascending lexicographic order of `vote_pubkey` bytes.
 | `num_entries` | `u32` | 4 |
 | `epoch` | `u64` | 8 |
 | `total_stake` | `u64` | 16 |
-| `_reserved` | `[u8; 8]` | 24 |
+| `_padding` | `[u8; 8]` | 24 |
 
 `version` is 1. `epoch` is the snapshot epoch used to derive the address.
-`total_stake` is the sum of `delegated_stake` across all entries. Reserved bytes
-**MUST** be zero.
+`total_stake` is the sum of `delegated_stake` across all entries. Padding
+bytes in both the header and entries **MUST** remain zero for version 1.
 
 | Entry field | Type | Byte offset |
 |-------------|------|-------------|
@@ -115,7 +125,7 @@ Entries are sorted in ascending lexicographic order of `vote_pubkey` bytes.
 | `inflation_rewards_commission_bps` | `u16` | 80 |
 | `block_revenue_commission_bps` | `u16` | 82 |
 | `alpenglow_rank` | `u16` | 84 |
-| `_reserved` | `[u8; 10]` | 86 |
+| `_padding` | `[u8; 10]` | 86 |
 | `bls_pubkey_compressed` | `[u8; 48]` | 96 |
 | `latest_vote` | `u64`, `u64::MAX` = none | 144 |
 | `root_slot` | `u64`, `u64::MAX` = none | 152 |
@@ -144,13 +154,12 @@ use `u16::MAX` for the rank. The fields contain:
 - `alpenglow_rank`: the rank in the canonical Alpenglow BLS validator set for
   `E + 1`, including its BLS-key and identity deduplication. Rank zero has the
   highest eligible stake. Write `u16::MAX` for an entry outside that active set.
+- `_padding`: 10 bytes that remain zero for version 1.
 - `bls_pubkey_compressed`: the vote state's 48-byte compressed BLS public key,
   or 48 zero bytes if it has no BLS key.
 - `latest_vote`: the last voted slot recorded in the snapshot's vote state,
   or `u64::MAX` when absent.
 - `root_slot`: the root slot recorded in that vote state, or `u64::MAX` when absent.
-- `_reserved`: 10 zero bytes. Reusing them requires a later protocol change
-  that preserves existing readers' interpretation of version 1.
 
 Collector addresses are excluded. Changes to which vote-account state supplies
 reward collectors belong to a separate proposal. This account does not define
@@ -267,6 +276,11 @@ account data, without adding sysvar access or reserved-key rules.
 This proposal exposes its underlying stake data and Alpenglow ranks. The
 interfaces share no account or ABI. Schedule derivation uses vote-account keys
 under [SIMD-0180]. The `node_pubkey` here is snapshot metadata.
+
+This format records the stake snapshot without prescribing how to derive a
+leader schedule. Future leader-schedule changes, including those for multiple
+concurrent proposers (MCP), can use the snapshot without changing its layout.
+Changes to the meaning of an existing field would require a new version.
 
 ### Rolling or Combined Accounts
 
