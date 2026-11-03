@@ -1,6 +1,6 @@
 ---
 simd: '0706'
-title: Disable the `sol_alloc_free_` syscall again
+title: Reject unknown syscalls and `sol_alloc_free_` again
 authors:
   - Simonas Kazlauskas (Anza)
 category: Standard
@@ -12,8 +12,9 @@ feature: (fill in with feature key and github tracking issues once accepted)
 
 ## Summary
 
-Disable `sol_alloc_free_` syscall for new deployments again. Additionally,
-increase the CU cost of this syscall to further discourage any remaining use.
+Reject unknown syscalls as well as `sol_alloc_free_` for new deployments.
+Additionally, increase the CU cost of `sol_alloc_free_` to further discourage
+any remaining use.
 
 ## Motivation
 
@@ -36,9 +37,9 @@ This proposal is related to the following previously accepted proposal:
 
 ## Detailed Design
 
-Upon deployment or upgrade of any program, programs containing a static syscall
-instruction to `sol_alloc_free_` (`CALL_IMM 0x83F00E8F`) MUST be rejected the
-same way as any other program invoking an unknown syscall.
+sBPFv3 (or later) programs containing a call instruction to `sol_alloc_free_`
+(i.e. `CALL_IMM 0x83F00E8F`) or an unknown syscall MUST be rejected the same way
+as any other invalid program upon deployment or upgrade.
 
 Any preexisting programs that invoke the `sol_alloc_free_` syscall now have to
 pay an additional `syscall_base_cost` CUs for each invocation of this syscall
