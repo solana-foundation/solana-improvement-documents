@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-08-06
-feature: CHaChatUnR3s6cPyPMMGNJa3VdQQ8PNH2JqdD4LpCKnB (`switch_to_chacha8_turbine`)
+feature: CHaChatUnR3s6cPyPMMGNJa3VdQQ8PNH2JqdD4LpCKnB
 ---
 
 ## Summary

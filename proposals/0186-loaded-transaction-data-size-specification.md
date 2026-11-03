@@ -8,8 +8,8 @@ type: Core
 status: Activated
 created: 2024-10-20
 feature:
-  - DeS7sR48ZcFTUmt5FFEVDr1v1bh73aAbZiZq3SYr8Eh8 (`formalize_loaded_transaction_data_size`)
-  - LTDSzjZKFJMKHYpNycG1FrWwGGTaFFwqEFjB5GGLNVD (`define_ltds_fee_only_semantics`)
+  - Formalize loaded transaction data size - DeS7sR48ZcFTUmt5FFEVDr1v1bh73aAbZiZq3SYr8Eh8
+  - Define LTDS fee-only semantics - LTDSzjZKFJMKHYpNycG1FrWwGGTaFFwqEFjB5GGLNVD
 ---
 
 ## Summary

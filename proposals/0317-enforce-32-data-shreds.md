@@ -7,8 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-07-08
-feature:
-  - fixfecLZYMfkGzwq6NJA11Yw6KYztzXiK9QcL3K78in (`enforce_fixed_fec_set`)
+feature: fixfecLZYMfkGzwq6NJA11Yw6KYztzXiK9QcL3K78in
 ---
 
 ## Summary

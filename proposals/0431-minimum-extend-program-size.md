@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-12-14
-feature: YbbRLkvenrocjGPGyoQE4wjnvYzTgfsk38NFmcYK7a5 (`loader_v3_minimum_extend_program_size`)
+feature: YbbRLkvenrocjGPGyoQE4wjnvYzTgfsk38NFmcYK7a5
 supersedes: '0164'
 ---
 

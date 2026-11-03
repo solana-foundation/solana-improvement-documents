@@ -9,7 +9,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2024-11-13
-feature: rent6iVy6PDoViPBeJ6k5EJQrkj62h7DPyLbWGHwjrC (`deprecate_rent_exemption_threshold`)
+feature: rent6iVy6PDoViPBeJ6k5EJQrkj62h7DPyLbWGHwjrC
 ---
 
 ## Summary

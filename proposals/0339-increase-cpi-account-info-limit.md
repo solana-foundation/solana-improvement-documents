@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-08-15
-feature: H6iVbVaDZgDphcPbcZwc5LoznMPWQfnJ1AM7L1xzqvt5 (`increase_cpi_account_info_limit`)
+feature: H6iVbVaDZgDphcPbcZwc5LoznMPWQfnJ1AM7L1xzqvt5
 ---
 
 ## Summary

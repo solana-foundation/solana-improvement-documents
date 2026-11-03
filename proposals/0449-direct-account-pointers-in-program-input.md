@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Review
 created: 2026-01-24
-feature: ptr9umikaeAS7ZBBp2fsfRhie16F1V2jCKA2y6gXNAK (`direct_account_pointers_in_program_input`)
+feature: ptr9umikaeAS7ZBBp2fsfRhie16F1V2jCKA2y6gXNAK
 ---
 
 ## Summary

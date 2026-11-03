@@ -9,8 +9,8 @@ status: Idea
 created: 2025-12-22
 supersedes: '0436'
 feature:
-  - 4a6f7o7iTcA8hRDCrPLkSatnt5Ykxiu36wo5p1Tt12wC (`set_lamports_per_byte_to_6333`)
-  - 61BtM7BkDEE8Yq5fskEVAQT9mYA8qCejJWoLe5apqg81 (`set_lamports_per_byte_to_5080`)
+  - Set lamports per byte to 6333 - 4a6f7o7iTcA8hRDCrPLkSatnt5Ykxiu36wo5p1Tt12wC
+  - Set lamports per byte to 5080 - 61BtM7BkDEE8Yq5fskEVAQT9mYA8qCejJWoLe5apqg81
 ---
 
 ## Summary

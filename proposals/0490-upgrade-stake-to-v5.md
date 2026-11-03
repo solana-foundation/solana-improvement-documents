@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2026-03-09
-feature: STk5Xj8hdAx3sTzmtJ3QysKkq6X2A3yj73JtxttiRyk (`upgrade_bpf_stake_program_to_v5`)
+feature: STk5Xj8hdAx3sTzmtJ3QysKkq6X2A3yj73JtxttiRyk
 ---
 
 ## Summary

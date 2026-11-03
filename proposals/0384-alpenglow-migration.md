@@ -9,7 +9,7 @@ category: Standard
 type: Core
 status: Review
 created: 2025-10-21
-feature: A1pengvuM6JEcyNuTnMqepBKhwHE3N6PmUrdATGawhJS (`alpenglow`)
+feature: A1pengvuM6JEcyNuTnMqepBKhwHE3N6PmUrdATGawhJS
 ---
 
 ## Summary

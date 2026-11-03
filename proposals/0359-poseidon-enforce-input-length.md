@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-09-22
-feature: poUdAqRXXsNmfqAZ6UqpjbeYgwBygbfQLEvWSqVhSnb (`poseidon_enforce_padding`)
+feature: poUdAqRXXsNmfqAZ6UqpjbeYgwBygbfQLEvWSqVhSnb
 supersedes:
 superseded-by:
 extends:

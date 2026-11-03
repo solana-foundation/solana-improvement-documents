@@ -6,7 +6,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2024-10-03
-feature: 5JsG4NWH8Jbrqdd8uL6BNwnyZK3dQSoieRXG5vmofj9y (`enable_vote_address_leader_schedule`)
+feature: 5JsG4NWH8Jbrqdd8uL6BNwnyZK3dQSoieRXG5vmofj9y
 ---
 
 ## Summary

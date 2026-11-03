@@ -10,7 +10,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-10-27
-feature: AnAP9zPV4KL7czAPQbFhpDKV2tx7g4UGNbK9wvXwjaRo (`bls_pubkey_management_in_vote_account`)
+feature: AnAP9zPV4KL7czAPQbFhpDKV2tx7g4UGNbK9wvXwjaRo
 ---
 
 ## Summary

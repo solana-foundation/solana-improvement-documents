@@ -6,7 +6,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-01-24
-feature: 3HcSrCTGXTUnrTueHi4DAwNuMxZSsm5xui2Ax3mgxHqf (`custom_commission_collector`)
+feature: 3HcSrCTGXTUnrTueHi4DAwNuMxZSsm5xui2Ax3mgxHqf
 ---
 
 ## Summary

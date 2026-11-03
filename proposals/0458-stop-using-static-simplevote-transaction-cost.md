@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2026-01-30
-feature: 2GCrNXbzmt4xrwdcKS2RdsLzsgu4V5zHAemW57pcHT6a (`remove_simple_vote_from_cost_model`)
+feature: 2GCrNXbzmt4xrwdcKS2RdsLzsgu4V5zHAemW57pcHT6a
 supersedes: SIMD-0387
 ---
 

@@ -8,7 +8,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-09-11
-feature: VAT9huvhPjRN9cyrPytq9rwvEJ3J4ADtjdncgZRyANJ (`validator_admission_ticket`)
+feature: VAT9huvhPjRN9cyrPytq9rwvEJ3J4ADtjdncgZRyANJ
 ---
 
 ## Summary

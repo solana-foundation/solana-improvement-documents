@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2024-07-24
-feature: 64ixypL1HPu8WtJhNSMb9mSgfFaJvsANuRkTbHyuLfnx (`static_instruction_limit`)
+feature: 64ixypL1HPu8WtJhNSMb9mSgfFaJvsANuRkTbHyuLfnx
 supersedes:
 superseded-by:
 extends:

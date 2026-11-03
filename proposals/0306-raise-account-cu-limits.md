@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-06-17
-feature: htsptAwi2yRoZH83SKaUXykeZGtZHgxkS2QwW1pssR8 (`raise_account_cu_limit`)
+feature: htsptAwi2yRoZH83SKaUXykeZGtZHgxkS2QwW1pssR8
 ---
 
 ## Summary

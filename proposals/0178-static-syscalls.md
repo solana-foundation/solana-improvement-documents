@@ -9,7 +9,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2024-09-27
-feature: 5cC3foj77CWun58pC51ebHFUWavHWKarWyR5UUik7dnC (`enable_sbpf_v3_deployment_and_execution`)
+feature: 5cC3foj77CWun58pC51ebHFUWavHWKarWyR5UUik7dnC
 ---
 
 ## Summary

@@ -6,7 +6,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-02-18
-feature: 76dHtohc2s5dR3ahJyBxs7eJJVipFkaPdih9CLgTTb4B (`delay_commission_updates`)
+feature: 76dHtohc2s5dR3ahJyBxs7eJJVipFkaPdih9CLgTTb4B
 ---
 
 ## Summary

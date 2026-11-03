@@ -6,7 +6,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-05-29
-feature: Eg7tXEwMZzS98xaZ1YHUbdRHsaYZiCsSaR6sKgxreoaj (`commission_rate_in_basis_points`)
+feature: Eg7tXEwMZzS98xaZ1YHUbdRHsaYZiCsSaR6sKgxreoaj
 ---
 
 ## Summary

@@ -7,7 +7,7 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-05-20
-feature: P1BCUMpAC7V2GRBRiJCNUgpMyWZhoqt3LKo712ePqsz (`raise_block_limits_to_100m`)
+feature: P1BCUMpAC7V2GRBRiJCNUgpMyWZhoqt3LKo712ePqsz
 development:
   - Anza - TBD
   - Firedancer - TBD

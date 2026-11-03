@@ -8,8 +8,8 @@ type: Core
 status: Activated
 created: 2025-08-20
 feature:
-  - vcmrbYbiMVKaq1snKP6eCacNDcr6qZvpCNUjmk6gxvZ (`validate_chained_block_id`)
-  - vcmrw431aNM8ngQ46derkZXipoTGQdbHkEygBDh12dA (`validate_chained_block_id_2`)
+  - Validate chained block ID - vcmrbYbiMVKaq1snKP6eCacNDcr6qZvpCNUjmk6gxvZ
+  - Validate chained block ID 2 - vcmrw431aNM8ngQ46derkZXipoTGQdbHkEygBDh12dA
 ---
 
 ## Summary
