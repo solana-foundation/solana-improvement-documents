@@ -1,6 +1,6 @@
 ---
 simd: '0706'
-title: Reject unknown syscalls and `sol_alloc_free_` again
+title: Reject unknown syscalls and `sol_alloc_free_`
 authors:
   - Simonas Kazlauskas (Anza)
 category: Standard
