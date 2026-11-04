@@ -60,9 +60,11 @@ These changes are limited to the program runtime component
 
 ### Migrating them to core programs on-chain
 
-Precompiles can use top-level instruction introspection, which is not available
-to programs on-chain without the Instructions sysvar. Thus it would require
-either breaking changes to the precompile or adding features to the SVM:
+Currently precompiles (like built-in programs) have access to internal data
+structures from which they can read the top-level instructions of a transaction
+without the SysvarInstructions account. Replicating this in a Core BPF program
+requires breaking changes, either to the API, or by adding this functionality
+to the SVM:
 
 - Require users to pass in all bytes to verify in the precompile instruction,
 forbidding cross referencing other instructions.
@@ -125,7 +127,7 @@ The expected results **after** the feature activation are:
 - at top level with a valid signature:
 `TransactionError::InvalidProgramForExecution`
 - at top level with an invalid signature:
-`InstructionError::UnsupportedProgramId`
+`TransactionError::InvalidProgramForExecution`
 - in CPI with a valid signature: `InstructionError::UnsupportedProgramId`
 
 [to be filled in before merging]
