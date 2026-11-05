@@ -38,7 +38,8 @@ methods.
 
 ## Dependencies
 
-- [SIMD-0326] (Alpenglow) defines the BLS validator ranks recorded here.
+- [SIMD-0326] (Alpenglow), in [BLS Validator Ranks], defines the ranks recorded
+  here.
 - [SIMD-0357] (Validator Admission Ticket) defines the admitted stake set and
   the 2,000-entry limit.
 
@@ -84,11 +85,12 @@ saturate:
 |-------|--------------------|
 | Stake set and Alpenglow ranks in `epoch_stakes(E)` | Consensus in `E + 1` |
 | Inflation commission in `epoch_stakes(E)` | Rewards in `E + 1` |
+| Block-revenue commission in `epoch_stakes(E)` | Block revenue in `E + 1` |
 | `lamports(E) - lamports(E - 1)` | Reward lamports recorded during `E - 1` |
 | `latest_vote` and `root_slot` | Vote-account state at the start of `E` |
 
 For example, `epoch_stakes(100)` contains the snapshot taken at the start of
-100. Its inflation commission applies to rewards earned in 101. Under the
+100. Its inflation and block-revenue commission rates apply in 101. Under the
 conditions above, its accumulated lamports minus those in `epoch_stakes(99)`
 give the reward lamports recorded during 99.
 
@@ -145,15 +147,17 @@ use `u16::MAX` for the rank. The fields contain:
   if that history is empty. Preserve the value without subtracting a migration
   offset or converting it to a per-epoch amount.
 - `inflation_rewards_commission_bps` and `block_revenue_commission_bps`: the raw
-  vote-account commission rates in basis points. Every `u16` value is valid,
+  vote-account commission rates in basis points effective in `E + 1`, using
+  [Commission Schedule Selection](#commission-schedule-selection) when the
+  vote-state format provides schedules. Every `u16` value is valid,
   including values above 10,000. Publication **MUST NOT** clamp them. Reward
   calculation clamps to 10,000 when applying a rate. For vote-state formats
   with only a legacy inflation commission percentage, publish that percentage
   multiplied by 100 and a block-revenue commission of 10,000, following
   [SIMD-0185].
 - `alpenglow_rank`: the rank in the canonical Alpenglow BLS validator set for
-  `E + 1`, including its BLS-key and identity deduplication. Rank zero has the
-  highest eligible stake. Write `u16::MAX` for an entry outside that active set.
+  `E + 1`, constructed as specified in [BLS Validator Ranks]. Rank zero has the
+  highest eligible stake. Write `u16::MAX` for an entry outside that ranked set.
 - `_padding`: 10 bytes that remain zero for version 1.
 - `bls_pubkey_compressed`: the vote state's 48-byte compressed BLS public key,
   or 48 zero bytes if it has no BLS key.
@@ -169,6 +173,21 @@ The admission limit from [SIMD-0357] bounds each account to 2,000 entries.
 The data length **MUST** be exactly `32 + num_entries * 160` bytes, at most
 320,032 bytes (about 313 KiB). Eight retained accounts occupy at most
 2,560,256 bytes (about 2.44 MiB), excluding account and storage metadata.
+
+### Commission Schedule Selection
+
+For vote-state formats with commission schedules, including the proposed
+VoteStateV5 schedules, each commission field **MUST** contain the rate effective
+in `E + 1`. From the schedule in the boundary snapshot, select the entry with
+the greatest effective epoch less than or equal to `E + 1`. Apply this lookup
+independently to inflation and block-revenue commissions. Publish the selected
+raw basis-point value without clamping. The full schedules remain in vote state
+and are not included in the epoch stakes account.
+
+For example, when publishing `epoch_stakes(100)`, a schedule with entries
+effective in epochs 99 and 102 supplies the rate from entry 99. An entry
+effective exactly in 101 would supply that rate instead. Vote-state formats
+without schedules use the scalar rates and legacy conversions defined above.
 
 ### Account Addresses and Owner
 
@@ -338,5 +357,6 @@ feature activates.
 [SIMD-0180]: ./0180-vote-account-leader-schedule.md
 [SIMD-0185]: ./0185-vote-account-v4.md
 [SIMD-0326]: ./0326-alpenglow.md
+[BLS Validator Ranks]: ./0326-alpenglow.md#bls-validator-ranks
 [SIMD-0357]: ./0357-alpenglow_validator_admission_ticket.md
 [SIMD-0558]: ./0558-leader-info-syscall.md
