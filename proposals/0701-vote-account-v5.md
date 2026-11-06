@@ -188,9 +188,32 @@ value is overwritten. Otherwise the new entry is appended to the end
 of the list. If there are already 4 changes, the oldest one is removed
 first.
 
+Old entries are not removed when their epoch passes. An entry is only
+removed when a new change pushes it out.
+
+The rate for an epoch `X` is the `bps` of the entry with the highest
+epoch that is not after `X`.
+
 This SIMD does not change the semantics of how much delay each commission
 update incurs. It only records extra data into the vote account so that
 on-chain programs can use this.
+
+#### Example 1
+
+If there are already 4 entries in a commission rate array:
+
+| Epoch | 0 | 1 | 2 | 3 |
+|-------|--:|--:|--:|--:|
+| Rate | 10 | 11 | 12 | 13 |
+
+and a `[E=2, rate=14]` commission rate update occurs, then the oldest
+entry is removed and the new one is added at the end:
+
+| Epoch | 1 | 2 | 3 | 4 |
+|-------|--:|--:|--:|--:|
+| Rate | 11 | 12 | 13 | 14 |
+
+If no more changes are made, the array stays the same in future epochs.
 
 ### Conversion from Vote Account v4
 
@@ -235,6 +258,40 @@ they do not have a BLS key set. So older vote accounts must first be
 converted to Vote Account v4, and set a valid BLS key, before they can
 be converted to Vote Account v5.
 
+#### Example 2
+
+If a Vote Account v4 with a stored commission rate of 500 in the
+account state is converted to Vote Account v5 during epoch 100, the
+commission array will be:
+
+| Epoch | 102 |
+|-------|----:|
+| Rate | 500 |
+
+This does not necessarily mean that the rate changed in epoch 100,
+just that the previous historical values from before the conversion
+are not stored on-chain.
+
+#### Example 3
+
+If a Vote Account v4 has had its commission rate changed from 500 to
+700 during epoch 99, and is then converted to a Vote Account v5 during
+epoch 100, the commission array will be:
+
+| Epoch | 102 |
+|-------|----:|
+| Rate | 700 |
+
+The change made in epoch 99 takes effect in epoch 101, so the rates
+actually used by the runtime are:
+
+| Epoch | 100 | 101 | 102 |
+|-------|----:|----:|----:|
+| Effective Rate | 500 | 700 | 700 |
+
+The array does not show that 500 was used in epoch 100, or that 700 is
+already used in epoch 101.
+
 ### Vote Program Changes
 
 All Vote program instructions MUST support Vote Account v5. The
@@ -272,7 +329,8 @@ semantics of some instructions MUST change:
 
   Commission rate selection is unchanged: the rate is still read from the
   vote account state in the validators internal cache, as in [SIMD-0249] and [SIMD-0123].
-  This may change in a future SIMD.
+  For a Vote Account v5, the rate is the `bps` of the last entry in each
+  commission array, in the cached vote account. See [Commission Rate Changes](#commission-rate-changes).
 
 ### Stake Program Changes
 
