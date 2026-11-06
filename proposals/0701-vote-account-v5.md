@@ -31,6 +31,7 @@ Differences from Vote Account v4:
    last 5 entries.
 6. Dynamically-sized fields are now statically-sized for zero-copy access
 7. Reduces the account size from 3762 bytes to 951 bytes.
+8. Adds a `rank` field, which is just a placeholder in this SIMD.
 
 ## Motivation
 
@@ -102,7 +103,8 @@ The new Vote Account v5 state layout:
 | 312 | 160 | authorized_voters | `[(epoch: u64, pubkey: Pubkey); 4]` |
 | 472 | 120 | accumulated_lamports | `[(epoch, lamports, prev_lamports); 5]` |
 | 592 | 16 | last_timestamp | `(slot: u64, timestamp: i64)` |
-| 608 | 343 | zeroed | `[u8; 343]`, all zero |
+| 608 | 10 | rank | `(epoch: u64, rank: u16)`, `(u64::MAX, u16::MAX)` = none |
+| 618 | 333 | zeroed | `[u8; 333]`, all zero |
 
 All integers are little-endian. Note that the account size is 951
 bytes, which is smaller than the 3762 bytes of Vote Account v4. There
@@ -130,6 +132,10 @@ all `u64` and `i64`'s at a multiple of 8 bytes and all `u32` and
 - `latest_vote` replaces `votes`. It contains the slot number of the
   vote account's latest vote, or `u64::MAX` if the vote account hasn't
   voted.
+- `rank` - the validator's Alpenglow rank and the epoch during which
+  it held this rank. This is an optional field - if it's not set,
+  the epoch is `u64::MAX` and the rank is `u16::MAX`. This field is not
+  set in this SIMD, but will be updated in a future SIMD.
 - `zeroed` isn't technically a field, but zeroed padding at the end of
   the vote state.
 
@@ -170,6 +176,7 @@ true:
 - `authorized_voters` has at most 4 entries with strictly increasing
   epochs.
 - `accumulated_lamports` has at most 5 entries.
+- `rank` is `(u64::MAX, u16::MAX)`.
 - For every fixed size list, each entry at or after its length is zero.
 - `zeroed` is all zero.
 
@@ -241,6 +248,7 @@ each field, where `E` is the current epoch:
 | authorized_voters | copied, in increasing epoch order |
 | accumulated_lamports | the last 5 `epoch_credits` entries, in order |
 | last_timestamp | copied |
+| rank | `(u64::MAX, u16::MAX)` |
 | zeroed | all zero |
 
 A Vote Account v4 only stores its latest rate, so the conversion
@@ -422,8 +430,8 @@ Account v5:
   accounts. 951 bytes leaves a bit of room for extra fields in the
   future without having to worry about changing the rent-exempt value
   for vote accounts.
-- Store each validator's Alpenglow rank. This is a bigger change to the
-  runtime, so this will come in a future version.
+- Set each validator's Alpenglow rank in this SIMD. This is a bigger
+  change to the runtime, so a future SIMD will set the `rank` field.
 
 ## Impact
 
