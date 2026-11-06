@@ -68,7 +68,9 @@ There are several reasons to make these changes.
 [SIMD-0249]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0249-delay-commission-updates.md
 [SIMD-0291]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0291-commission-rate-in-basis-points.md
 [SIMD-0384]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0384-alpenglow-migration.md
+[SIMD-0387]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0387-bls-pubkey-management-in-vote-account.md
 [SIMD-0674]: https://github.com/solana-foundation/solana-improvement-documents/pull/674
+[SIMD-0464]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0464-vote-account-initialize-v2.md
 
 ## New Terminology
 
@@ -303,6 +305,19 @@ actually used by the runtime are:
 
 The array does not show that 500 was used in epoch 100, or that 700 is
 already used in epoch 101.
+
+### Creating a Vote Account v5
+
+There is no instruction that creates a Vote Account v5 directly. To
+create one:
+
+1. Create a Vote Account v4 with `InitializeAccount`.
+2. Set the BLS key as described in [SIMD-0387].
+3. Call `UpdateLocation` as described in [SIMD-0674], to convert it to
+   a Vote Account v5.
+
+A future SIMD could add an instruction that creates a Vote Account v5
+in one step, similar to [SIMD-0464].
 
 ### Vote Program Changes
 
