@@ -58,7 +58,8 @@ illustrate the maintenance burden of these rules:
   and a prospective cross-client hazard ([agave#14123]).
 
 The exception also shapes other protocol work. [SIMD-0242] restricted nonce
-accounts to static keys so account resolution could be relaxed. [SIMD-0290] was
+accounts to static keys so account resolution could be relaxed. [SIMD-0602]
+proposes also barring them as program IDs for the same reason. [SIMD-0290] was
 narrowed to exclude durable nonce transactions. [SIMD-0297] exists because
 state-dependent nonce failures currently invalidate blocks, which hinders
 asynchronous execution.
@@ -118,7 +119,7 @@ includes it is invalid.
 
 Every transaction with a valid lifetime is therefore a blockhash transaction, so
 the fee-payer rules of [SIMD-0290] apply to all of them. Rules that apply only
-to DNTs, including any adopted under [SIMD-0297], have no effect.
+to DNTs, including any adopted under [SIMD-0297] or [SIMD-0602], have no effect.
 
 Transaction validation, fee-only processing and failed-transaction rollback MUST
 NOT read, advance or commit a nonce account because of the transaction's
@@ -252,4 +253,5 @@ the protocol needs no special handling.
 [SIMD-0290]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0290-relax-fee-payer-constraint.md
 [SIMD-0297]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0297-relax-invalid-nonce.md
 [SIMD-0571]: https://github.com/solana-foundation/solana-improvement-documents/pull/571
+[SIMD-0602]: https://github.com/solana-foundation/solana-improvement-documents/pull/602
 [SIMD-0610]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0610-prohibit-nonce-self-withdrawals.md
