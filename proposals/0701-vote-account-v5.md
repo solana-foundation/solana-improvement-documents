@@ -272,6 +272,13 @@ they do not have a BLS key set. So older vote accounts must first be
 converted to Vote Account v4, and set a valid BLS key, before they can
 be converted to Vote Account v5.
 
+An account can be converted before it has voted in Alpenglow. Its
+`latest_vote`, `root_slot` and `last_timestamp` then still hold its old
+Tower values, which are replaced once it starts voting in Alpenglow. New
+lamports are added on top of its last Tower entry in
+`accumulated_lamports`. See [Runtime Changes](#runtime-changes) and
+[Accumulated Lamports](#accumulated-lamports) for details.
+
 #### Example 2
 
 If a Vote Account v4 with a stored commission rate of 500 in the
@@ -363,7 +370,8 @@ semantics of some instructions MUST change:
     `pending_delegator_rewards` is paid out to stake accounts and reset
     to 0.
 
-  Therefore, `latest_vote`, `root_slot` and `last_timestamp`
+  In these updates, a `latest_vote` or `root_slot` of `u64::MAX` (none)
+  counts as 0. Therefore, `latest_vote`, `root_slot` and `last_timestamp`
   monotonically increase.
 
   If a validator is in both the reward certificate and the finalization
@@ -381,21 +389,21 @@ Vote Account v4. Each entry is `(epoch, lamports, prev_lamports)`, where
 `lamports` is a running total and `prev_lamports` is the total before
 this entry.
 
-To add `n` lamports in epoch `E`, where `t` is the total of the last
-entry (0 if there are none), the runtime:
+To add `n` lamports in epoch `E`, where `total` is the total of the
+last entry (0 if there are none), the runtime:
 
 - adds `n` to the last entry, if it is for epoch `E`.
 - otherwise, if the last entry earned nothing, changes its epoch to `E`
   and adds `n` to it.
-- otherwise, adds a new entry `(E, t + n, t)`, dropping the oldest entry
-  if there are already 5.
+- otherwise, adds a new entry `(E, total + n, total)`, dropping the
+  oldest entry if there are already 5.
 
 In the Alpenglow migration epoch, the first time lamports are added, a
 marker entry `(u64::MAX, u64::MAX, u64::MAX)` is added first, unless
 there is one already. It counts towards the 5 entries. Entries before
 the marker are Tower credits and entries after it are Alpenglow
 lamports. When the last entry is the marker, a new entry is always
-added, and `t` is the total of the entry before the marker.
+added, and `total` is the total of the entry before the marker.
 
 The conversion copies the last 5 `epoch_credits` entries as they are,
 including the marker if there is one. If the account has not earned any
