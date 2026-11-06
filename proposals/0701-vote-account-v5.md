@@ -30,6 +30,7 @@ Differences from Vote Account v4:
 5. Renames `epoch_credits` to `accumulated_lamports` and keeps only the
    last 5 entries.
 6. Dynamically-sized fields are now statically-sized for zero-copy access
+7. Reduces the account size from 3762 bytes to 951 bytes.
 
 ## Motivation
 
@@ -347,6 +348,55 @@ Both instructions MUST accept a Vote Account v5 and read
 
 When [SIMD-0674] is activated, the runtime MUST upgrade the Stake
 program to a version that does this.
+
+### Vote Account Resize
+
+A Vote Account v5 is 951 bytes. Every earlier vote account version is
+3762 bytes, or 3731 bytes for Vote Account v1.14.11.
+
+Any place that checks for the Vote Account v4 size of 3762 bytes, to
+decide whether an account holds a vote state, MUST now accept either
+3762 bytes for a Vote Account v4 or 951 bytes for a Vote Account v5.
+
+This affects the following consensus-critical places:
+
+1. Recognizing vote accounts.
+
+1. Recognizing vote accounts. Validators decide whether an account owned
+   by the Vote program holds a vote state by checking its size and
+   discriminant. This happens whenever a block writes to a vote account,
+   when building the vote accounts and stakes from genesis, and when
+   loading them from a snapshot. These checks MUST accept an account of
+   exactly 951 bytes with discriminant `4`. Otherwise Vote Account v5
+   accounts would drop out of the epoch stakes, the leader schedule, the
+   VAT and rewards.
+2. Conversion. `UpdateLocation` MUST only convert a Vote Account v4 that
+   is exactly 3762 bytes, and MUST then shrink the account to 951 bytes.
+   The account keeps all of its lamports, and anything above the new
+   rent-exempt minimum can be withdrawn.
+3. Writing a vote state. When the Vote program writes a vote state to an
+   account smaller than 3762 bytes, it currently grows the account to
+   3762 bytes. This MUST NOT happen to a Vote Account v5, which MUST stay
+   at 951 bytes. The same applies when the runtime updates a Vote
+   Account v5 in place, as described in [Runtime Changes](#runtime-changes).
+4. Block revenue and delegator rewards. Adding the delegators' share of
+   the fees to `pending_delegator_rewards` at the end of each block, and
+   paying it out at the start of each epoch, currently need a vote
+   account of at least 3762 bytes. Both MUST also accept a 951-byte Vote
+   Account v5, where `pending_delegator_rewards` is at offset 144.
+5. Stake program. The Stake program MUST accept the 951-byte size when
+   it reads a Vote Account v5, as described in
+   [Stake Program Changes](#stake-program-changes).
+
+These places also use the account size, but do not change:
+
+- The VAT minimum balance is still the rent-exempt minimum for a
+  3762-byte account plus one epoch of VAT burn, whatever the size of the
+  vote account.
+- `Withdraw` keeps back the rent-exempt minimum for the account's current
+  size, so a Vote Account v5 keeps the minimum for 951 bytes.
+- `InitializeAccount` and `InitializeAccountV2` still require a 3762-byte
+  account, and create a Vote Account v4.
 
 ### Validator Components Affected
 
