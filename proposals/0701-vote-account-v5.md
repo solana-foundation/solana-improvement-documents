@@ -435,9 +435,7 @@ In particular:
 
 - Validators keep a list of vote accounts, used for epoch stakes, the
   leader schedule, the VAT and rewards. An account only goes on this list
-  if its size and discriminant match a known vote account version. A
-  951-byte account with discriminant `4` MUST pass this check, whether it
-  is being written by a block or loaded from genesis or a snapshot.
+  if its size and discriminant match a known vote account version.
 - Crediting and paying out `pending_delegator_rewards` MUST accept a
   951-byte Vote Account v5.
 - The VAT minimum balance MUST be the rent-exempt minimum for the vote
