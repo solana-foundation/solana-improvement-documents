@@ -327,22 +327,65 @@ semantics of some instructions MUST change:
 
   - Vote Rewards: when processing an Alpenglow reward certificate, for
     each validator in the certificate the runtime updates `latest_vote`
-    and `last_timestamp` for the reward slot, and adds the validator's
-    share of the reward to `accumulated_lamports`. The leader's share is
-    added to the leader's `accumulated_lamports`.
+    and `last_timestamp` for the reward slot. For a Vote Account v4,
+    this replaces the `votes` field with a single vote for the reward
+    slot. A Vote Account v5 has no `votes` field, so the runtime sets
+    `latest_vote` instead, to the highest of its current value, the
+    reward slot and `root_slot`. `last_timestamp` is only changed if the
+    reward slot's timestamp is later than the one stored, and its slot
+    and timestamp are changed together. The runtime also adds the
+    validator's share of the reward to `accumulated_lamports` as
+    described in [Accumulated Lamports](#accumulated-lamports). The
+    leader's share is added to the leader's `accumulated_lamports`.
   - Finalization: when processing an Alpenglow finalization certificate,
-    for each validator in the certificate the runtime updates `root_slot`,
-    `latest_vote` and `last_timestamp` for the finalized slot.
+    for each validator in the certificate the runtime first sets
+    `root_slot` to the highest of its current value and the finalized
+    slot. It then updates `latest_vote` and `last_timestamp` for the
+    finalized slot, in the same way as for Vote Rewards.
   - Block Revenue and Delegator Rewards: at the end of each block, the
     delegators' share of the fees is added to the leader's
     `pending_delegator_rewards`. At the start of each epoch,
     `pending_delegator_rewards` is paid out to stake accounts and reset
     to 0.
 
+  Therefore, `latest_vote`, `root_slot` and `last_timestamp`
+  monotonically increase.
+
+  If a validator is in both the reward certificate and the finalization
+  certificate of a block, the reward certificate is processed first.
+
   Commission rate selection is unchanged: the rate is still read from the
   vote account state in the validators internal cache, as in [SIMD-0249] and [SIMD-0123].
   For a Vote Account v5, the rate is the `bps` of the last entry in each
   commission array, in the cached vote account. See [Commission Rate Changes](#commission-rate-changes).
+
+### Accumulated Lamports
+
+`accumulated_lamports` is updated the same way as `epoch_credits` in
+Vote Account v4. Each entry is `(epoch, lamports, prev_lamports)`, where
+`lamports` is a running total and `prev_lamports` is the total before
+this entry.
+
+To add `n` lamports in epoch `E`, where `t` is the total of the last
+entry (0 if there are none), the runtime:
+
+- adds `n` to the last entry, if it is for epoch `E`.
+- otherwise, if the last entry earned nothing, changes its epoch to `E`
+  and adds `n` to it.
+- otherwise, adds a new entry `(E, t + n, t)`, dropping the oldest entry
+  if there are already 5.
+
+In the Alpenglow migration epoch, the first time lamports are added, a
+marker entry `(u64::MAX, u64::MAX, u64::MAX)` is added first, unless
+there is one already. It counts towards the 5 entries. Entries before
+the marker are Tower credits and entries after it are Alpenglow
+lamports. When the last entry is the marker, a new entry is always
+added, and `t` is the total of the entry before the marker.
+
+The conversion copies the last 5 `epoch_credits` entries as they are,
+including the marker if there is one. If the account has not earned any
+Alpenglow lamports yet, it has no marker, and the rules above simply
+carry on from its last Tower entry.
 
 ### Stake Program Changes
 
