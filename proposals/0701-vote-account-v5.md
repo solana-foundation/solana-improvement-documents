@@ -228,8 +228,11 @@ If no more changes are made, the array stays the same in future epochs.
 Conversion from Vote Account v4 to Vote Account v5 only happens with
 the `UpdateLocation` Vote program instruction introduced
 in [SIMD-0674]. This is because `location` is a mandatory Vote Account v5
-field. Therefore SIMD does not have a feature gate of its own, but
-instead takes effect when the [SIMD-0674] feature gate is activated.
+field. Therefore SIMD does not have a feature gate of its own, and does
+not change any on-chain logic before the [SIMD-0674] feature gate
+is activated. This SIMD simply to describes the format, semantics of
+the fields and conversion from Vote Account v4 to Vote Account v5, to
+avoid bloating [SIMD-0674].
 
 The `UpdateLocation` instruction converts the Vote Account v4 state to
 the new Vote Account v5 state using the conversion function below for
