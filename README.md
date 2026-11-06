@@ -22,6 +22,9 @@ SIMDs can be divided into the following categories:
 - **Meta SIMDs**:
   Describe a process surrounding Solana or propose a change to (or an event in)
   a process.
+- **Advisory SIMDs**:
+  Provide clarifying guidance or advisory information (see SIMD-0001). Category
+  and type may both be `Advisory`.
 
 ## Before You Begin
 
