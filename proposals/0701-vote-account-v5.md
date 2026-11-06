@@ -101,12 +101,13 @@ The new Vote Account v5 state layout:
 | 312 | 160 | authorized_voters | `[(epoch: u64, pubkey: Pubkey); 4]` |
 | 472 | 120 | accumulated_lamports | `[(epoch, lamports, prev_lamports); 5]` |
 | 592 | 16 | last_timestamp | `(slot: u64, timestamp: i64)` |
-| 608 | 3154 | zeroed | `[u8; 3154]`, all zero |
+| 608 | 343 | zeroed | `[u8; 343]`, all zero |
 
-All integers are little-endian. The size of the vote account is
-unchanged from Vote Account v4. There is no padding. Each field starts at
-a multiple of its own size: all `u64` and `i64`'s at a multiple of 8
-bytes and all `u32` and `i32`'s at a multiple of 4 bytes.
+All integers are little-endian. Note that the account size is 951
+bytes, which is smaller than the 3762 bytes of Vote Account v4. There
+is no padding. Each field starts at a multiple of its own size:
+all `u64` and `i64`'s at a multiple of 8 bytes and all `u32` and
+`i32`'s at a multiple of 4 bytes.
 
 ### New Fields
 
@@ -159,7 +160,7 @@ All other fields are unchanged.
 A Vote Account v5 MUST fail to deserialize unless all of following are
 true:
 
-- The account data length is exactly 3762 bytes.
+- The account data length is exactly 951 bytes.
 - `location` is valid as defined in [SIMD-0674].
 - The inflation rewards commission rate fields hold 1 to 4 commission
   rate changes.
@@ -217,6 +218,15 @@ each field, where `E` is the current epoch:
 | accumulated_lamports | the last 5 `epoch_credits` entries, in order |
 | last_timestamp | copied |
 | zeroed | all zero |
+
+A Vote Account v4 only stores its latest rate, so the conversion
+records it as `(E + 2, rate)`, even if the rate was set long ago. The
+rates for epochs `E` and `E + 1` are not stored in the vote account.
+Rewards for those epochs use the rates the runtime saved at the earlier
+epoch boundaries, as they do today.
+
+After the conversion, `UpdateLocation` MUST shrink the account from 3762
+bytes to 951 bytes.
 
 The `UpdateLocation` instruction MUST fail with `InvalidAccountData` if
 the Vote Account v4 has no BLS key. Note that this means that
@@ -299,10 +309,11 @@ Account v5:
 
 ## Alternatives Considered
 
-- Shrink the Vote Account v5 data length to 608 bytes. As in Vote
-  Account v4, we opted to keep the length constant to avoid vote accounts
-  dropping below the rent-exempt value if more fields are added in the
-  future.
+- Keep the 3762-byte size of Vote Account v4. However, this is
+  unnecessary and there are performance benefits to hashing smaller
+  accounts. 951 bytes leaves a bit of room for extra fields in the
+  future without having to worry about changing the rent-exempt value
+  for vote accounts.
 - Store each validator's Alpenglow rank. This is a bigger change to the
   runtime, so this will come in a future version.
 
@@ -331,6 +342,6 @@ Account v5:
 A series of test fixtures MUST be provided, using the
 [conformance tooling](https://github.com/anza-xyz/agave/wiki/Conformance-Tools).
 These MUST include the following scenarios at a minimum: conversion from
-Vote Account v4 (including no BLS key), commission updates in one and
-in consecutive epochs and all Vote Account v5 states that fail
-validation.
+Vote Account v4 (including no BLS key and the resize to 951 bytes),
+commission updates in one and in consecutive epochs and all Vote Account
+v5 states that fail validation.
