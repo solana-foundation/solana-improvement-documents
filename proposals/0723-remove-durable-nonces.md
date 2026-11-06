@@ -211,6 +211,10 @@ and programs that call `InitializeNonceAccount`, `AdvanceNonceAccount` or
 `UpgradeNonceAccount`, including through CPI, also fail after activation, even
 with a recent blockhash.
 
+Affected users have at least six months to migrate, counted from this proposal's
+publication on 2026-11-05. The feature will not be activated on mainnet-beta
+before 2027-05-05.
+
 ### Program-based replacements
 
 Programs such as [Programmatic Signer] and [Blueshift Vector] are designed to
