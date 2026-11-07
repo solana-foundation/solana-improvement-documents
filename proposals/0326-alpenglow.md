@@ -11,7 +11,7 @@ status: Review
 created: 2025-07-25
 feature:
   - Alpenglow - A1pengvuM6JEcyNuTnMqepBKhwHE3N6PmUrdATGawhJS
-  - Alpenglow fast leader handover - (fill in with feature key once keyed)
+  - Alpenglow fast leader handover - FLh2kvwNhDNN6kkQrwdDQ4p5FrgdqxnwykgMUryABRwT
 ---
 
 ## Summary
