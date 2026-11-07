@@ -5,11 +5,11 @@ authors:
   - Andrew Fitzgerald (Solana Labs)
 category: Standard
 type: Core
-status: Accepted
+status: Activated
 created: 2023-11-02
-feature: ENTRYnPAoT5Swwx73YDGzMp3XnNH1kxacyvLosRHza1i (https://github.com/anza-xyz/agave/issues/1029)
+feature: 4WeHX6QoXCCwqbSFgi6dxnB6QsPo6YApaNTH7P4MLQ99 (https://github.com/anza-xyz/agave/pull/4253)
 development:
- - Anza - WIP (https://github.com/anza-xyz/agave/issues/1025)
+ - Anza - Implemented (https://github.com/anza-xyz/agave/pull/4253)
  - Firedancer - Implemented
 ---
 
