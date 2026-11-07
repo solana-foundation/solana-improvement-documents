@@ -7,7 +7,9 @@ category: Standard
 type: Core
 status: Activated
 created: 2024-10-20
-feature: (fill in with feature tracking issues once accepted)
+feature:
+  - Formalize loaded transaction data size - DeS7sR48ZcFTUmt5FFEVDr1v1bh73aAbZiZq3SYr8Eh8
+  - Define LTDS fee-only semantics - LTDSzjZKFJMKHYpNycG1FrWwGGTaFFwqEFjB5GGLNVD
 ---
 
 ## Summary

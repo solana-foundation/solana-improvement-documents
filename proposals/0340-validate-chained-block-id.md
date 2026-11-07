@@ -7,7 +7,9 @@ category: Standard
 type: Core
 status: Activated
 created: 2025-08-20
-feature: TBD
+feature:
+  - Validate chained block ID - vcmrbYbiMVKaq1snKP6eCacNDcr6qZvpCNUjmk6gxvZ
+  - Validate chained block ID 2 - vcmrw431aNM8ngQ46derkZXipoTGQdbHkEygBDh12dA
 ---
 
 ## Summary
