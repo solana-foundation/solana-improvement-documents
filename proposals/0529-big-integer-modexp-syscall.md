@@ -207,10 +207,12 @@ The syscall MUST abort the virtual machine if any of the following are true:
 - `modulus_len == 0`.
 - The decoded modulus value is less than or equal to `1`.
 - The decoded modulus value is even.
-- The operation cost cannot be represented as a `u64`. In this case all
-  remaining compute units are consumed before aborting.
+- The operation cost cannot be represented as a `u64`.
 - The transaction does not have enough remaining compute units to cover the
   base cost or the operation cost.
+
+In the last two cases all remaining compute units are consumed before
+aborting.
 
 ### Validation And Charging Order
 
@@ -219,8 +221,9 @@ the following order. This order is consensus-critical: the compute units
 consumed on every abort path MUST be identical across implementations.
 
 1. Charge the flat base cost `BIG_MOD_EXP_BASE_CU`. This is charged before any
-   VM memory translation, so it is consumed on every abort path below. Abort if
-   the transaction does not have enough remaining compute units.
+   VM memory translation, so it is consumed on every abort path below. If the
+   transaction does not have enough remaining compute units, consume all
+   remaining compute units and abort.
 2. Translate and read the `params` record from VM memory.
 3. Validate the length fields: `base_len`, `exponent_len`, and `modulus_len`
    MUST each be less than or equal to `BIG_MOD_EXP_MAX_BYTES`. Abort otherwise.
@@ -230,8 +233,8 @@ consumed on every abort path MUST be identical across implementations.
 5. Compute `operation_cost`, as defined in the Compute Metering section, from
    the length fields and the decoded exponent. If `operation_cost` cannot be
    represented as a `u64`, consume all remaining compute units and abort.
-6. Charge `operation_cost`. Abort if the transaction does not have enough
-   remaining compute units.
+6. Charge `operation_cost`. If the transaction does not have enough remaining
+   compute units, consume all remaining compute units and abort.
 7. Translate and read the `base` and `modulus` bytes from VM memory. This also
    validates the `base + base_len` and `modulus + modulus_len` calculations for
    overflow and that the ranges are readable.
