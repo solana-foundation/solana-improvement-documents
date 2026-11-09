@@ -5,7 +5,7 @@ authors:
   - Sam Kim
 category: Standard
 type: Core
-status: Implemented
+status: Activated
 created: 2025-01-10
 feature: bn2puAyxUx6JUabAxYdKdJ5QHbNNmKw8dCGuGCyRrFN
 supersedes:

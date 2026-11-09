@@ -38,8 +38,8 @@ methods.
 
 ## Dependencies
 
-- [SIMD-0326] (Alpenglow), in [BLS Validator Ranks], defines the ranks recorded
-  here.
+- [SIMD-0326] (Alpenglow), with the proposed [BLS Validator Ranks] amendment,
+  defines the ranks recorded here.
 - [SIMD-0357] (Validator Admission Ticket) defines the admitted stake set and
   the 2,000-entry limit.
 
@@ -357,6 +357,6 @@ feature activates.
 [SIMD-0180]: ./0180-vote-account-leader-schedule.md
 [SIMD-0185]: ./0185-vote-account-v4.md
 [SIMD-0326]: ./0326-alpenglow.md
-[BLS Validator Ranks]: ./0326-alpenglow.md#bls-validator-ranks
+[BLS Validator Ranks]: https://github.com/solana-foundation/solana-improvement-documents/pull/727
 [SIMD-0357]: ./0357-alpenglow_validator_admission_ticket.md
 [SIMD-0558]: ./0558-leader-info-syscall.md

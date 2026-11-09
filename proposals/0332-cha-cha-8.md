@@ -5,7 +5,7 @@ authors:
   - Brennan Watt
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-08-06
 feature: TBD
 ---

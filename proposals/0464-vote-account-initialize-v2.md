@@ -131,6 +131,10 @@ the following validation, matching the checks required by
 3. The collector must be writable (not a reserved account). Otherwise return
    `InstructionError::InvalidArgument`.
 
+Both collector accounts may alias the vote account and both collector accounts
+may alias the same collector account. The checks above are applies to each
+index independently.
+
 If all checks pass, the new vote account is created with the given parameters.
 The inflation rewards collector address is taken from account index `2` and the
 block revenue collector address is taken from account index `3`.

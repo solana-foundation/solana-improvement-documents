@@ -5,7 +5,7 @@ authors:
   - Andrew Fitzgerald (Anza)
 category: Standard
 type: Core
-status: Accepted
+status: Activated
 created: 2024-12-05
 feature: 5oMCU3JPaFLr8Zr4ct7yFA7jdk6Mw1RmB8K4u9ZbS42z (https://github.com/anza-xyz/agave/issues/4042)
 development:

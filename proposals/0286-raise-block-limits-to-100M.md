@@ -5,7 +5,7 @@ authors:
   - Lucas Bruder (Jito Labs)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-05-20
 feature: TBD
 development:

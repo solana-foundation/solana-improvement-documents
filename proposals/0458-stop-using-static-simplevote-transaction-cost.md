@@ -5,7 +5,7 @@ authors:
   - Tao Zhu
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2026-01-30
 feature: (fill in with feature key and github tracking issues once accepted)
 supersedes: SIMD-0387

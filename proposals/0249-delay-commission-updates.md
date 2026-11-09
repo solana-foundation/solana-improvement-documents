@@ -4,7 +4,7 @@ title: Delay Commission Updates
 authors: Justin Starry (Anza)
 category: Standard
 type: Core
-status: Review
+status: Activated
 created: 2025-02-18
 feature: (fill in with feature key and github tracking issues once accepted)
 ---

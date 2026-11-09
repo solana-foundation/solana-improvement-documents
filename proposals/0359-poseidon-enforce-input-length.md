@@ -5,7 +5,7 @@ authors:
   - Michal Rostecki
 category: Standard
 type: Core
-status: Idea
+status: Activated
 created: 2025-09-22
 feature:
 supersedes:

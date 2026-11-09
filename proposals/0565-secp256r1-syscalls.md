@@ -244,6 +244,37 @@ conditions are met:
 On success, the syscall writes the standard uncompressed 64-byte affine
 representation to `result` and returns `0`.
 
+### Compute Unit Usage
+
+Each `secp256r1` syscall consumes a fixed number of compute units (CUs), charged
+before its inputs are read. The charge applies whether the syscall returns `0`
+or `1`.
+
+| Operation | Syscall | CUs |
+| --- | --- | ---: |
+| Point validation | `sol_curve_validate_point` | 20 |
+| Decompression | `sol_curve_decompress` | 610 |
+| Addition (`ADD`) | `sol_curve_group_op` | 520 |
+| Subtraction (`SUB`) | `sol_curve_group_op` | 520 |
+| Scalar multiplication (`MUL`) | `sol_curve_group_op` | 9,000 |
+| MSM | `sol_curve_multiscalar_mul` | see below |
+
+The MSM cost depends on `points_len`:
+
+```text
+msm_cost = 9_000 + 3_800 * max(points_len - 1, 0)
+```
+
+An MSM of zero or one point costs the same as a scalar multiplication. MSMs of
+more than 367 points exceed the 1.4 million CU per-transaction limit.
+
+These costs were calibrated on a private 10-validator Alpenglow cluster with
+200 ms slots and the cost limits of SIMD-0286 (20 million CUs per writable
+account and 50 million CUs per block in each slot). They are set so that a block
+filled to the per-account limit with any of these operations, which forces the
+transactions to execute serially, replays within the slot. They should be
+revisited if those limits change.
+
 ## Alternatives Considered
 
 Add a monolithic `sol_secp256r1_verify` or `sol_secp256r1_recover` syscall.
@@ -270,12 +301,13 @@ To prevent Denial-of-Service (DoS) attacks, the Compute Unit (CU) cost for each
 `secp256r1` syscall must strictly align with the actual wall-clock execution
 time on validator hardware. If these cryptographic operations are underpriced,
 an attacker could exploit the cost tracker inaccuracy to artificially delay
-block production while remaining ostensibly under the 60 million CU block limit.
+block production while remaining ostensibly under the block and per-account CU
+limits.
 
 Furthermore, the `sol_curve_multiscalar_mul` syscall requires a dynamic CU
-pricing model. Because it utilizes sub-linear optimization algorithms (e.g.,
-Pippenger's algorithm), the computational cost does not scale linearly with
-respect to `points_len`. The cost tracker must accurately reflect this specific
-sub-linear scaling curve to prevent overcharging users for large batch
-operations, while still mathematically guaranteeing the validator cannot be
-stalled.
+pricing model, because its cost grows with `points_len`. The cost in the Compute
+Unit Usage section is linear in `points_len`. This matches the measured cost of
+the implementation for 32 or more points and overcharges smaller MSMs. If an
+implementation later scales sub-linearly (e.g., using Pippenger's algorithm),
+the linear cost overcharges rather than undercharges it, so validators still
+cannot be stalled, and the cost can be revised in a later SIMD.

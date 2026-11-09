@@ -5,7 +5,7 @@ authors:
   - Brennan Watt (Anza)
 category: Standard
 type: Core
-status: Draft
+status: Activated
 created: 2026-05-01
 feature:
   - 350ms - iBRL5RuWhw4yqaAZu96RUULHckHTZAoe2b77qaV38JZ

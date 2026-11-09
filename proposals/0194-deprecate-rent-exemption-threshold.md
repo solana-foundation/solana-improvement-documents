@@ -7,7 +7,7 @@ authors:
   - febo (Anza)
 category: Standard
 type: Core
-status: Accepted
+status: Activated
 created: 2024-11-13
 feature: (fill in with feature tracking issues once accepted)
 ---

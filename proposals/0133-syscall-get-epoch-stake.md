@@ -5,7 +5,7 @@ authors:
   - Joe Caulfield (Anza)
 category: Standard
 type: Core
-status: Implemented
+status: Activated
 created: 2024-03-25
 feature: FKe75t4LXxGaQnVHdUKM6DSFifVVraGZ8LyNo7oPwy1Z (https://github.com/anza-xyz/agave/issues/884)
 development:

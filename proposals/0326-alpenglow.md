@@ -126,40 +126,6 @@ There are five types of certificates:
 - Notar-fallback: corresponds to 60% of *notarize* or *notar-fallback* votes.
 
 
-### BLS Validator Ranks
-
-Each consensus epoch has a fixed mapping from ranks to validators. Derive it
-from the vote-account snapshot selected for that epoch under
-[SIMD-0357](./0357-alpenglow_validator_admission_ticket.md) at the start of the
-preceding epoch. Use the stake, validator identity, and BLS public key from
-that snapshot. Later vote-account updates do not change these ranks.
-
-Clients **MUST** construct the mapping in this order:
-
-1. Start with the vote accounts admitted under SIMD-0357. Exclude accounts with
-   zero delegated stake or a missing or invalid BLS public key. The compressed
-   key must decode to a nonidentity point in the BLS12-381 prime-order subgroup
-   G1. Key registration verifies proof of possession as specified in
-   [SIMD-0387](./0387-bls-pubkey-management-in-vote-account.md).
-2. Count occurrences of each compressed BLS public key and each validator
-   identity among the remaining candidates. Exclude every candidate whose BLS
-   key or identity occurs more than once. Compute both counts before removing
-   any duplicates. Do not select a representative or combine their stakes.
-3. Sort the remaining candidates by delegated stake in descending order. For
-   equal stakes, sort by the 48 compressed BLS public-key bytes in ascending
-   lexicographic order, comparing unsigned bytes from index 0 through 47.
-4. Assign consecutive `u16` ranks starting at zero in this order. Rank zero has
-   the highest eligible stake. Excluded accounts have no rank.
-
-These filters do not change VAT admission or admit replacement accounts.
-The BLS-key tie-break applies only to rank ordering after admission. The
-stake-cutoff rule in SIMD-0357 still determines which accounts are admitted.
-
-Votes and certificates identify validators using the mapping for the epoch of
-their slot. Their stake weights and total participating stake come from the
-remaining ranked candidates.
-
-
 ### Finality
 
 A slot can be directly finalized (and thus decided) in one of two ways: 
