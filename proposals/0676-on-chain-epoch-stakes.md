@@ -15,7 +15,7 @@ feature: (fill in with feature tracking issues once accepted)
 Publish the stake and vote-account snapshot taken at the start of epoch `E` in
 an on-chain account keyed by `E`. It contains delegated stake, identity,
 commission, accumulated rewards, latest vote, root slot, and the BLS key and
-rank used for Alpenglow in `E + 1`.
+signer index used for Alpenglow in `E + 1`.
 Retain eight snapshots: the current epoch and seven previous epochs. Close
 older accounts at epoch boundaries.
 
@@ -23,14 +23,14 @@ older accounts at epoch boundaries.
 
 Historical epoch stakes currently live in validator-local caches and snapshot
 manifests. Publishing per-validator stake weights, identities, and BLS keys and
-ranks as account data puts these consensus inputs under the bank hash.
-Rebuilding stake-weight and BLS-rank lookups from these accounts during snapshot
-loading is an intended follow-up, reducing reliance on historical vote-account
-data in the manifest.
+signer indices as account data puts these consensus inputs under the bank hash.
+Rebuilding stake-weight and BLS signer index lookups from these accounts during
+snapshot loading is an intended follow-up, reducing reliance on historical
+vote-account data in the manifest.
 
 On-chain programs can inspect stake distributions, and read-layer clients can
-map BLS certificate ranks to validators. Existing account reads and subscriptions
-can serve this data without a new RPC method or Geyser interface.
+map BLS signer indices in certificates to validators. Existing account reads and
+subscriptions can serve this data without a new RPC method or Geyser interface.
 
 Removing caches or snapshot-manifest fields remains follow-up work. This
 proposal does not change snapshot loading, reward calculation, or existing RPC
@@ -38,8 +38,8 @@ methods.
 
 ## Dependencies
 
-- [SIMD-0326] (Alpenglow), with the proposed [BLS Validator Ranks] amendment,
-  defines the ranks recorded here.
+- [SIMD-0326] (Alpenglow), with the proposed [BLS Signer Indices] amendment,
+  defines the signer indices recorded here.
 - [SIMD-0357] (Validator Admission Ticket) defines the admitted stake set and
   the 2,000-entry limit.
 
@@ -73,7 +73,7 @@ is immutable until closure. `delegated_stake` and `total_stake` describe this
 snapshot, not live stake later in the epoch: partitioned inflation rewards can
 subsequently increase delegated balances.
 
-The key is the snapshot epoch. The stake set and Alpenglow ranks in
+The key is the snapshot epoch. The stake set and BLS signer indices in
 `epoch_stakes(E)` apply to consensus in `E + 1`.
 
 For the same vote-account incarnation present in consecutive snapshots, let
@@ -83,7 +83,7 @@ saturate:
 
 | Value | Epoch it describes |
 |-------|--------------------|
-| Stake set and Alpenglow ranks in `epoch_stakes(E)` | Consensus in `E + 1` |
+| Stake set and BLS signer indices in `epoch_stakes(E)` | Consensus in `E + 1` |
 | Inflation commission in `epoch_stakes(E)` | Rewards in `E + 1` |
 | Block-revenue commission in `epoch_stakes(E)` | Block revenue in `E + 1` |
 | `lamports(E) - lamports(E - 1)` | Reward lamports recorded during `E - 1` |
@@ -126,16 +126,16 @@ bytes in both the header and entries **MUST** remain zero for version 1.
 | `accumulated_lamports` | `u64` | 72 |
 | `inflation_rewards_commission_bps` | `u16` | 80 |
 | `block_revenue_commission_bps` | `u16` | 82 |
-| `alpenglow_rank` | `u16` | 84 |
+| `bls_signer_index` | `u16` | 84 |
 | `_padding` | `[u8; 10]` | 86 |
 | `bls_pubkey_compressed` | `[u8; 48]` | 96 |
 | `latest_vote` | `u64`, `u64::MAX` = none | 144 |
 | `root_slot` | `u64`, `u64::MAX` = none | 152 |
 
 Each vote account selected at the boundary into `E` appears once. This snapshot can
-include entries excluded from the BLS rank map because they share a validator
-identity or BLS key. Those entries retain their stake and commission data and
-use `u16::MAX` for the rank. The fields contain:
+include entries excluded from the BLS signer index map because they share a
+validator identity or BLS key. Those entries retain their stake and commission
+data and use `u16::MAX` for the signer index. The fields contain:
 
 - `vote_pubkey`: the vote account address.
 - `node_pubkey`: its validator identity at the snapshot.
@@ -155,9 +155,9 @@ use `u16::MAX` for the rank. The fields contain:
   with only a legacy inflation commission percentage, publish that percentage
   multiplied by 100 and a block-revenue commission of 10,000, following
   [SIMD-0185].
-- `alpenglow_rank`: the rank in the canonical Alpenglow BLS validator set for
-  `E + 1`, constructed as specified in [BLS Validator Ranks]. Rank zero has the
-  highest eligible stake. Write `u16::MAX` for an entry outside that ranked set.
+- `bls_signer_index`: the index in the canonical Alpenglow BLS validator set for
+  `E + 1`, constructed as specified in [BLS Signer Indices]. Index zero has the
+  highest eligible stake. Write `u16::MAX` for an entry outside that signer set.
 - `_padding`: 10 bytes that remain zero for version 1.
 - `bls_pubkey_compressed`: the vote state's 48-byte compressed BLS public key,
   or 48 zero bytes if it has no BLS key.
@@ -239,7 +239,7 @@ to a retained account can increase its balance without changing the snapshot.
 ### Activation, Retention, and Closure
 
 Activation **MUST** occur at an epoch boundary with [SIMD-0326] and [SIMD-0357]
-active. The rank and entry-count bound depend on those proposals.
+active. The signer index and entry-count bound depend on those proposals.
 
 Eight snapshots cover the [requested minimum of five epochs] for on-chain
 delegation scoring and leave room for delayed reads. At the 2,000-entry limit,
@@ -292,7 +292,7 @@ account data, without adding sysvar access or reserved-key rules.
 ### Publishing the Leader Schedule
 
 [SIMD-0558] provides a separate interface for current and next leader lookup.
-This proposal exposes its underlying stake data and Alpenglow ranks. The
+This proposal exposes its underlying stake data and BLS signer indices. The
 interfaces share no account or ABI. Schedule derivation uses vote-account keys
 under [SIMD-0180]. The `node_pubkey` here is snapshot metadata.
 
@@ -322,15 +322,15 @@ Existing RPC methods and validator configuration remain unchanged.
 
 Programs can read the accounts directly. Indexers can use `accountSubscribe`,
 `programSubscribe`, or Geyser account notifications and archive snapshots before
-expiry. Consumers mapping certificates to ranks use the preceding epoch's
-snapshot. Consumers of commissions and accumulated rewards use the timing
-rules above.
+expiry. Consumers mapping certificate signer indices to validators use the
+preceding epoch's snapshot. Consumers of commissions and accumulated rewards use
+the timing rules above.
 
 ## Security Considerations
 
 Account data is covered by the bank hash. Publication uses the existing
-consensus snapshot and canonical rank map. It does not alter stake selection,
-reward calculation, or snapshot loading.
+consensus snapshot and canonical signer index map. It does not alter stake
+selection, reward calculation, or snapshot loading.
 
 Publication preserves pre-funded balances and mints only a rent shortfall.
 Closure burns the full expired balance. Funding uses the current rent minimum.
@@ -357,6 +357,6 @@ feature activates.
 [SIMD-0180]: ./0180-vote-account-leader-schedule.md
 [SIMD-0185]: ./0185-vote-account-v4.md
 [SIMD-0326]: ./0326-alpenglow.md
-[BLS Validator Ranks]: https://github.com/solana-foundation/solana-improvement-documents/pull/727
+[BLS Signer Indices]: https://github.com/solana-foundation/solana-improvement-documents/pull/727
 [SIMD-0357]: ./0357-alpenglow_validator_admission_ticket.md
 [SIMD-0558]: ./0558-leader-info-syscall.md
