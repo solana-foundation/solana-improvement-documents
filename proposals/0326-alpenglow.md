@@ -126,13 +126,14 @@ There are five types of certificates:
 - Notar-fallback: corresponds to 60% of *notarize* or *notar-fallback* votes.
 
 
-### BLS Validator Ranks
+### BLS Signer Indices
 
-Each consensus epoch has a fixed mapping from ranks to validators. Derive it
-from the vote-account snapshot selected for that epoch under
+A **BLS signer index** identifies a validator in BLS votes and certificates.
+Each consensus epoch has a fixed mapping from these zero-based indices to
+validators. Derive it from the vote-account snapshot selected for that epoch under
 [SIMD-0357](./0357-alpenglow_validator_admission_ticket.md) at the start of the
 preceding epoch. Use the stake, validator identity, and BLS public key from
-that snapshot. Later vote-account updates do not change these ranks.
+that snapshot. Later vote-account updates do not change these indices.
 
 Clients **MUST** construct the mapping in this order:
 
@@ -148,16 +149,16 @@ Clients **MUST** construct the mapping in this order:
 3. Sort the remaining candidates by delegated stake in descending order. For
    equal stakes, sort by the 48 compressed BLS public-key bytes in ascending
    lexicographic order, comparing unsigned bytes from index 0 through 47.
-4. Assign consecutive `u16` ranks starting at zero in this order. Rank zero has
-   the highest eligible stake. Excluded accounts have no rank.
+4. Assign consecutive `u16` indices starting at zero in this order. Index zero has
+   the highest eligible stake. Excluded accounts have no signer index.
 
 These filters do not change VAT admission or admit replacement accounts.
-The BLS-key tie-break applies only to rank ordering after admission. The
+The BLS-key tie-break applies only to signer index ordering after admission. The
 stake-cutoff rule in SIMD-0357 still determines which accounts are admitted.
 
 Votes and certificates identify validators using the mapping for the epoch of
 their slot. Their stake weights and total participating stake come from the
-remaining ranked candidates.
+remaining candidates.
 
 
 ### Finality
