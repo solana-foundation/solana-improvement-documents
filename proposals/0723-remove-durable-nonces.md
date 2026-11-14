@@ -25,7 +25,7 @@ place of durable nonces.
 
 ## Motivation
 
-A transaction expires once its recent blockhash is more than 150 blocks old.
+A transaction expires once its recent blockhash is more than 151 blocks old.
 Durable nonces were [proposed][solana#6725] and [implemented][solana#6845] in
 2019 to support offline and delayed signing. They require additional consensus
 rules:
@@ -108,7 +108,7 @@ and failure rules.
 
 A transaction's lifetime is valid while its recent blockhash is in the bank's
 blockhash queue with an age of at most the maximum processing age, currently
-150. In v1 messages this field is `LifetimeSpecifier`. Validators MUST NOT use a
+151. In v1 messages this field is `LifetimeSpecifier`. Validators MUST NOT use a
 nonce account, the contents of instruction 0 or a nonce authority signature to
 decide lifetime validity.
 
