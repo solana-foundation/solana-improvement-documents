@@ -17,11 +17,10 @@ transaction to remain valid without a recent blockhash. The special cases they
 require, from transaction validation through replay, have repeatedly caused
 security vulnerabilities and consensus bugs in validator clients.
 
-After activation, every transaction needs a recent blockhash. The System Program
-stops initializing, advancing and upgrading nonce accounts but keeps the
-instructions that withdraw from them and change their authority. For offline and
+After activation, every transaction needs a recent blockhash. For offline and
 delayed signing use cases, programs that verify signatures onchain can take the
-place of durable nonces.
+place of durable nonces. Nonce account instructions and fee-payer eligibility
+are unchanged.
 
 ## Motivation
 
@@ -72,19 +71,6 @@ The goal is to remove the lifetime exception instead of maintaining the special
 cases it requires. After activation, every transaction follows the same lifetime
 and failure rules.
 
-## Dependencies
-
-- **[SIMD-0610]: Prohibit Nonce Account Self-Withdrawals**
-
-    Its feature must be active on a cluster before this proposal's feature is
-    activated there. Withdrawing a nonce account's full balance to itself leaves
-    that balance in an uninitialized nonce account. Today the balance can be
-    recovered by initializing the account again. Once this proposal disables
-    `InitializeNonceAccount`, only a signature from the account's own address
-    can recover it. Without that signature, the balance stays locked. SIMD-0610
-    rejects these self-withdrawals, so no new locked balances can arise after
-    activation.
-
 ## New Terminology
 
 - **Durable nonce transaction (DNT)**: a transaction whose first instruction is
@@ -100,9 +86,8 @@ and failure rules.
 | --- | --- | --- |
 | Lifetime | Recent blockhash or durable nonce | Recent blockhash only |
 | Signed DNT | Valid while its nonce matches | `BlockhashNotFound` |
-| Failed transaction | Fee, plus nonce advance if a DNT | Fee only |
-| Initialize, Advance, Upgrade | Available | `InvalidInstructionData` |
-| Withdraw, Authorize | Available | Unchanged |
+| Nonce instructions | Available | Unchanged |
+| Nonce fee payers | Eligible | Unchanged |
 
 ### Transaction lifetime
 
@@ -125,35 +110,14 @@ Transaction validation, fee-only processing and failed-transaction rollback MUST
 NOT read, advance or commit a nonce account because of the transaction's
 lifetime. A failed transaction therefore commits at most its fee debit.
 
-### System Program nonce instructions
-
-| Discriminant | Instruction              | After activation |
-|--------------|--------------------------|------------------|
-| 4            | `AdvanceNonceAccount`    | Disabled         |
-| 5            | `WithdrawNonceAccount`   | Unchanged        |
-| 6            | `InitializeNonceAccount` | Disabled         |
-| 7            | `AuthorizeNonceAccount`  | Unchanged        |
-| 12           | `UpgradeNonceAccount`    | Disabled         |
-
-After the System Program charges its fixed 150 compute units, the three disabled
-instructions MUST fail with `InstructionError::InvalidInstructionData` before
-checking accounts or signers. This applies equally to top-level instructions and
-CPIs. Their discriminants are retired and MUST NOT be reused.
-
-`WithdrawNonceAccount` and `AuthorizeNonceAccount` MUST behave as before
-activation for legacy and current nonce accounts, including the [SIMD-0610]
-rejection of self-withdrawals.
-
 ### Existing nonce accounts
 
-Activation MUST NOT modify any nonce account. Initialized nonce accounts remain
-eligible fee payers under the existing rules.
+Activation MUST NOT modify any nonce account. Nonce account fee-payer
+eligibility and reserve requirements are unchanged.
 
-Withdrawing from a funded uninitialized nonce account needs the account's own
-address as a signer, through its keypair or, for a PDA, through its program by
-CPI. If no such signer is available, the balance stays locked permanently. This
-proposal accepts that loss. Until activation, if such an account is rent-exempt,
-anyone can initialize it with their own authority and withdraw its balance.
+All System Program nonce instructions MUST retain their existing behavior. In
+transactions with a valid recent blockhash, they follow ordinary execution and
+rollback rules.
 
 ### Block production
 
@@ -164,7 +128,7 @@ loading accounts for execution.
 
 | Validator Component             | Impact                             |
 |---------------------------------|------------------------------------|
-| Transaction Execution (Runtime) | Lifetime, rollback, System Program |
+| Transaction Execution (Runtime) | Lifetime and rollback              |
 | Virtual Machine                 | None                               |
 | Block Packing                   | Drop DNTs at the blockhash check   |
 | Consensus                       | Blocks with a DNT are invalid      |
@@ -191,25 +155,14 @@ loading accounts for execution.
   asynchronous execution. We reject this alternative because it retains nonce
   validation and cache coordination while allowing the same invalid transaction
   in multiple blocks.
-- Reject DNTs but keep every nonce instruction working. We reject this
-  alternative because `InitializeNonceAccount`, `AdvanceNonceAccount` and
-  `UpgradeNonceAccount` would then only create or update nonce state that has no
-  remaining use outside creating new nonce account fee payers.
-- Sweep or close nonce accounts at activation. This would remove more code and
-  leave no locked balances. We reject this alternative because it would move
-  user funds without their owners' signatures.
-- Also retire nonce account fee payers in this proposal. We leave them out
-  because fee payer eligibility is a separate rule with no lifetime or failure
-  semantics.
+- Also retire nonce account instructions and fee-payer eligibility. These are
+  separate account-management rules and are left to a follow-up proposal.
 
 ## Impact
 
 Any workflow that signs a transaction and submits it after the blockhash window
 must change before activation. This includes custodians and exchanges that use
-air-gapped signing, where approvals take longer than that window. Transactions
-and programs that call `InitializeNonceAccount`, `AdvanceNonceAccount` or
-`UpgradeNonceAccount`, including through CPI, also fail after activation, even
-with a recent blockhash.
+air-gapped signing, where approvals take longer than that window.
 
 Affected users have at least six months to migrate, counted from this proposal's
 publication on 2026-11-05. The feature will not be activated on mainnet-beta
@@ -258,4 +211,3 @@ the protocol needs no special handling.
 [SIMD-0297]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0297-relax-invalid-nonce.md
 [SIMD-0571]: https://github.com/solana-foundation/solana-improvement-documents/pull/571
 [SIMD-0602]: https://github.com/solana-foundation/solana-improvement-documents/pull/602
-[SIMD-0610]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0610-prohibit-nonce-self-withdrawals.md
