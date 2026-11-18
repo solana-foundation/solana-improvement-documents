@@ -14,8 +14,8 @@ feature: (fill in with feature tracking issues once accepted)
 
 Publish the stake and vote-account snapshot taken at the start of epoch `E` in
 an on-chain account keyed by `E`. It contains delegated stake, identity,
-commission, accumulated rewards, latest vote, root slot, and the BLS key and
-signer index used for Alpenglow in `E + 1`.
+commission, reward state, collectors, location, latest vote, root slot, and the
+BLS key and signer index used for Alpenglow in `E + 1`.
 Retain eight snapshots: the current epoch and seven previous epochs. Close
 older accounts at epoch boundaries.
 
@@ -24,17 +24,17 @@ older accounts at epoch boundaries.
 Historical epoch stakes currently live in validator-local caches and snapshot
 manifests. Publishing per-validator stake weights, identities, and BLS keys and
 signer indices as account data puts these consensus inputs under the bank hash.
-Rebuilding stake-weight and BLS signer index lookups from these accounts during
-snapshot loading is an intended follow-up, reducing reliance on historical
-vote-account data in the manifest.
+Snapshot loading uses these accounts to rebuild the corresponding historical
+stake and vote-state cache fields. This allows clients to retire duplicate
+manifest data once their remaining legacy consumers no longer need it.
 
 On-chain programs can inspect stake distributions, and read-layer clients can
 map BLS signer indices in certificates to validators. Existing account reads and
 subscriptions can serve this data without a new RPC method or Geyser interface.
 
-Removing caches or snapshot-manifest fields remains follow-up work. This
-proposal does not change snapshot loading, reward calculation, or existing RPC
-methods.
+The snapshot-loading transition below preserves existing reward calculations
+and RPC methods. In-memory caches may remain. Removing fields from the snapshot
+wire format requires a coordinated format change and is not required here.
 
 ## Dependencies
 
@@ -44,6 +44,10 @@ methods.
   the 2,000-entry limit.
 
 Both features **MUST** be active before this proposal activates.
+
+The location field uses the encoding in the proposed [SIMD-0674]. That feature
+is not an activation prerequisite. Vote states without a location use the
+absent value defined below.
 
 ## New Terminology
 
@@ -58,7 +62,8 @@ program-derived address (PDA) keyed by that epoch.
 At the boundary into epoch `E`, take the snapshot after applying feature
 activations, calculating stake activation and deactivation for `E`, and applying
 the validator admission rules used to form the consensus stake set for `E + 1`.
-Use vote-account state before distributing inflation rewards at this boundary
+Use vote-account state before sweeping pending delegator rewards or
+distributing inflation rewards at this boundary
 and before processing any transactions in the new epoch. The consensus stake
 set for `E + 1` is derived from this vote-account snapshot.
 
@@ -103,7 +108,7 @@ during the epoch. A missing value is distinct from slot zero.
 Version 1 has an immutable binary layout and field meanings. Any change to
 that layout or those meanings, including use of padding bytes for data,
 **MUST** introduce a new version. All multi-byte integers are little-endian.
-The header is 32 bytes, followed by `num_entries` entries of 160 bytes each.
+The header is 32 bytes, followed by `num_entries` entries of 264 bytes each.
 Entries are sorted in ascending lexicographic order of `vote_pubkey` bytes.
 
 | Header field | Type | Byte offset |
@@ -131,6 +136,13 @@ bytes in both the header and entries **MUST** remain zero for version 1.
 | `bls_pubkey_compressed` | `[u8; 48]` | 96 |
 | `latest_vote` | `u64`, `u64::MAX` = none | 144 |
 | `root_slot` | `u64`, `u64::MAX` = none | 152 |
+| `pending_delegator_rewards` | `u64` | 160 |
+| `last_reward_epoch` | `u64`, `u64::MAX` = none | 168 |
+| `previous_accumulated_lamports` | `u64` | 176 |
+| `inflation_rewards_collector` | `Pubkey` | 184 |
+| `block_revenue_collector` | `Pubkey` | 216 |
+| `location` | `[i32; 3]` | 248 |
+| `_padding_tail` | `[u8; 4]` | 260 |
 
 Each vote account selected at the boundary into `E` appears once. This snapshot can
 include entries excluded from the BLS signer index map because they share a
@@ -164,15 +176,39 @@ data and use `u16::MAX` for the signer index. The fields contain:
 - `latest_vote`: the last voted slot recorded in the snapshot's vote state,
   or `u64::MAX` when absent.
 - `root_slot`: the root slot recorded in that vote state, or `u64::MAX` when absent.
+- `pending_delegator_rewards`: the pending block-revenue rewards for delegators
+  at the snapshot, before the boundary's sweep and distribution. Publish zero
+  for vote-state formats without this field.
+- `last_reward_epoch` and `previous_accumulated_lamports`: together with
+  `accumulated_lamports`, the last recorded reward tuple
+  `(epoch, cumulative, previous)`. For formats with `epoch_credits`, copy all
+  three values from its last entry. Apply the same rule to the accumulated
+  lamports history in newer formats. If the history is empty, publish
+  `u64::MAX` for the epoch and zero for both counters. Preserve migration
+  offsets and counter resets exactly. The recorded epoch can precede `E - 1`
+  by more than eight epochs. Do not infer it or the previous counter from
+  adjacent epoch stakes accounts.
+- `inflation_rewards_collector` and `block_revenue_collector`: the collector
+  addresses in the boundary vote state. For formats without these fields,
+  use `vote_pubkey` and `node_pubkey`, respectively, following [SIMD-0232].
+- `location`: the registered `(x, y, z)` WGS84 ECEF coordinates in meters,
+  encoded as three signed little-endian integers in that order, as in
+  [SIMD-0674]. Copy the boundary value without recomputing or rounding it.
+  Publish `[0, 0, 0]` when the vote state has no registered location, including
+  formats without the field. This proposal does not activate location
+  registration or change validator eligibility.
+- `_padding_tail`: four bytes that remain zero for version 1.
 
-Collector addresses are excluded. Changes to which vote-account state supplies
-reward collectors belong to a separate proposal. This account does not define
-or change those rules.
+These collector fields are historical metadata, not a new payment rule.
+Inflation collector lookup continues to use live vote-account state under
+[SIMD-0232]. If [SIMD-0700] activates, block-revenue collector lookup also uses
+live state. Otherwise its existing lookup rule remains in force. Publishing a
+collector here does not make it the payment destination.
 
 The admission limit from [SIMD-0357] bounds each account to 2,000 entries.
-The data length **MUST** be exactly `32 + num_entries * 160` bytes, at most
-320,032 bytes (about 313 KiB). Eight retained accounts occupy at most
-2,560,256 bytes (about 2.44 MiB), excluding account and storage metadata.
+The data length **MUST** be exactly `32 + num_entries * 264` bytes, at most
+528,032 bytes (about 516 KiB). Eight retained accounts occupy at most
+4,224,256 bytes (about 4.03 MiB), excluding account and storage metadata.
 
 ### Commission Schedule Selection
 
@@ -243,7 +279,7 @@ active. The signer index and entry-count bound depend on those proposals.
 
 Eight snapshots cover the [requested minimum of five epochs] for on-chain
 delegation scoring and leave room for delayed reads. At the 2,000-entry limit,
-this bounds live account data at about 2.44 MiB.
+this bounds live account data at about 4.03 MiB.
 
 [requested minimum of five epochs]: https://github.com/solana-foundation/solana-improvement-documents/pull/676#issuecomment-5904637000
 
@@ -279,6 +315,62 @@ Consumers can authenticate a snapshot by checking the derived address, owner,
 format version, header epoch, and data length. A funded PDA alone does not prove
 publication. Older history requires an archive. Neither missing snapshots nor
 missing entries imply zero stake, accumulated rewards, or commission.
+
+### Snapshot Loading and Migration
+
+For a published snapshot epoch `S`, clients **MUST** rebuild the corresponding
+cache fields from `epoch_stakes(S)` when loading a validator snapshot. Its
+consensus epoch is `S + 1`. Load it from the same bank's restored account state,
+including incremental-snapshot updates, rather than from a live RPC or another
+fork. The usual snapshot hash and trust checks still apply.
+
+Validate the PDA, owner, version, header epoch, exact length, entry-count bound,
+zero padding, strictly increasing vote keys, and checked sum of delegated
+stake. Rebuild the canonical BLS signer index map and verify the stored indices,
+including excluded entries. The header's total includes every admitted entry,
+so it need not equal the BLS-eligible total. A malformed published account or a
+disagreement with manifest fields representing the same historical inputs
+**MUST** fail snapshot loading.
+Do not silently substitute manifest or current vote-account data.
+
+Reconstruction **MUST** preserve the selected VAT membership, including entries
+outside the BLS signer set. Restore stake and identity mappings, commissions,
+BLS keys and indices, pending delegator rewards, collectors, location, and the
+latest reward tuple using their definitions above. Boundary `S` supplies the
+distribution vote-state view used when paying rewards for `S - 1`. Older
+snapshots supply delayed commission and consensus inputs under their existing
+rules. This does not add previous VAT payers to a distribution set.
+
+The latest reward tuple is sufficient for the ordinary Alpenglow reward-points
+calculation. It is not a replacement for the full history needed by Tower or
+the Alpenglow migration-epoch calculation. Clients **MUST** retain that history
+through any snapshot restore or pending reward recalculation that needs it.
+They must also retain any other inputs absent from this format while a consumer
+still requires them, such as legacy authorized-voter state or commission
+schedule entries needed by a fallback lookup for another epoch. Do not
+synthesize complete vote accounts with invented values for omitted fields.
+
+Reward recalculation continues to load current stake accounts, stake history,
+epoch-reward state, and the existing reward-epoch delegated-stake totals from
+their established sources. The pre-reward `delegated_stake` field is not a
+replacement for these inputs or for balances after partitioned payouts.
+
+At activation `A`, historical cache entries derived before `A` still come from
+the legacy snapshot representation. Keep that representation until every
+required historical input has an on-chain source or is no longer needed. A
+missing account is permitted only when publication was not required, such as
+a pre-activation or skipped epoch, or an epoch outside retention. Such an
+absence does not mean an empty validator set. Preserve any legacy input still
+needed for that case, and reject a snapshot lacking a required input from
+either source. Missing data for an epoch known to have published is an error.
+
+Eight calendar epochs bound storage, not the number of reward-history entries.
+An eight-epoch wait alone therefore does not authorize manifest removal.
+Clients may retire duplicate historical fields only after verifying that all
+consumers can use the accounts, including across activation, skipped epochs,
+vote-account closure or recreation, and active partitioned rewards. A later
+snapshot-format change can then remove the redundant wire fields without
+changing this account layout or reward semantics.
 
 ## Alternatives Considered
 
@@ -317,7 +409,7 @@ existing interfaces, including Geyser.
 ## Impact
 
 Validators publish one account per epoch and close expired accounts. The
-2,000-entry limit and eight-epoch window bound live data at about 2.44 MiB.
+2,000-entry limit and eight-epoch window bound live data at about 4.03 MiB.
 Existing RPC methods and validator configuration remain unchanged.
 
 Programs can read the accounts directly. Indexers can use `accountSubscribe`,
@@ -330,33 +422,36 @@ the timing rules above.
 
 Account data is covered by the bank hash. Publication uses the existing
 consensus snapshot and canonical signer index map. It does not alter stake
-selection, reward calculation, or snapshot loading.
+selection or reward calculation. Snapshot loading validates and uses the
+published historical fields under the transition rules above.
 
 Publication preserves pre-funded balances and mints only a rent shortfall.
 Closure burns the full expired balance. Funding uses the current rent minimum.
 At 5,080 lamports per byte and 128 bytes of account overhead, eight maximum
-accounts need about 13.01 SOL if entirely funded by the runtime. Once the window
+accounts need about 21.46 SOL if entirely funded by the runtime. Once the window
 is full, an expired account offsets funding a new account of the same size.
 Transfers can raise balances but cannot enlarge the account data.
 
 ## Future Work
 
-Snapshot-manifest validation or replacement, per-epoch reward totals, and
-changes to collector lookup remain separate proposals. This format omits
-authorized voters, collector addresses, and the full reward-counter history, so it
-cannot replace the complete cached vote-account state. The pre-reward stake
-snapshot also does not replace the stake balances used for reward recalculation.
+Removing redundant snapshot wire fields, publishing per-epoch reward totals,
+and changing collector lookup remain separate work. This format does not
+serialize complete vote accounts or replace live stake balances.
 
 ## Backwards Compatibility
 
 This introduces a new account format and owner address under a feature gate.
 It changes no existing account layout, sysvar, RPC method, or reward rule.
-All validators must implement publication, funding, and closure before the
-feature activates.
+All validators must implement publication, funding, closure, and the
+snapshot-loading transition before the feature activates. Older snapshots
+remain loadable through the legacy path when they predate activation.
 
 [SIMD-0180]: ./0180-vote-account-leader-schedule.md
 [SIMD-0185]: ./0185-vote-account-v4.md
+[SIMD-0232]: ./0232-custom-commission-collector.md
 [SIMD-0326]: ./0326-alpenglow.md
 [BLS Signer Indices]: https://github.com/solana-foundation/solana-improvement-documents/pull/727
 [SIMD-0357]: ./0357-alpenglow_validator_admission_ticket.md
 [SIMD-0558]: ./0558-leader-info-syscall.md
+[SIMD-0674]: https://github.com/solana-foundation/solana-improvement-documents/pull/674
+[SIMD-0700]: https://github.com/solana-foundation/solana-improvement-documents/pull/700
