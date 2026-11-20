@@ -164,10 +164,6 @@ Any workflow that signs a transaction and submits it after the blockhash window
 must change before activation. This includes custodians and exchanges that use
 air-gapped signing, where approvals take longer than that window.
 
-Affected users have at least six months to migrate, counted from this proposal's
-publication on 2026-11-05. The feature will not be activated on mainnet-beta
-before 2027-05-05.
-
 ### Program-based replacements
 
 Programs such as [Programmatic Signer] and [Blueshift Vector] are designed to
