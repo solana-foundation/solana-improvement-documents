@@ -104,7 +104,8 @@ includes it is invalid.
 
 Every transaction with a valid lifetime is therefore a blockhash transaction, so
 the fee-payer rules of [SIMD-0290] apply to all of them. Rules that apply only
-to DNTs, including any adopted under [SIMD-0297] or [SIMD-0602], have no effect.
+to DNTs, including [SIMD-0242] and any adopted under [SIMD-0297] or [SIMD-0602],
+have no effect.
 
 Transaction validation, fee-only processing and failed-transaction rollback MUST
 NOT read, advance or commit a nonce account because of the transaction's
