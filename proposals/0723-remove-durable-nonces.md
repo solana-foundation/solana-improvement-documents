@@ -24,10 +24,10 @@ are unchanged.
 
 ## Motivation
 
-A transaction expires once its recent blockhash is more than 151 blocks old.
-Durable nonces were [proposed][solana#6725] and [implemented][solana#6845] in
-2019 to support offline and delayed signing. They require additional consensus
-rules:
+A blockhash expires for transaction processing once the bank has recorded 151
+newer blockhashes. Durable nonces were [proposed][solana#6725] and
+[implemented][solana#6845] in 2019 to support offline and delayed signing. They
+require additional consensus rules:
 
 1. A nonce transaction is valid only while its nonce account stores the same
    value as the transaction's blockhash field.
