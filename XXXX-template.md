@@ -20,8 +20,13 @@ A brief summary of what the feature is.
 
 ## Motivation
 
-Why are we doing this? What use cases does it support? What is the expected
-outcome?
+What problem does this proposal solve? Describe the problem on its own terms,
+independently of the solution proposed by this SIMD. Who is affected, in what
+way, and why the status quo is not sufficient? A reader should be able to use
+this section to explore the solution space on their own, not just evaluate the
+solution proposed here in isolation.
+
+What is the expected outcome after this proposal is implemented?
 
 ## Dependencies *(Optional)*
 
@@ -40,7 +45,7 @@ Is there any new terminology introduced with this proposal?
 ## Detailed Design
 
 Explain the feature as if it was already implemented and you're explaining it
-to another Solana core contributor. The generally means:
+to another Solana core contributor. This generally means:
 
 - Explain the proposed change and how it works
 - Where the feature fits in to the runtime, core, or relevant sub-system
@@ -56,7 +61,7 @@ document are to be interpreted as described in [RFC
 ### Edge Cases
 
 Which edge cases should the implementors of this change be aware of? Enumerate
-these below. This may includes topics such as extreme max/min/zero values,
+these below. This may include topics such as extreme max/min/zero values,
 unusual states and scenarios that require particular attention.
 
 ### Validator Components Affected
@@ -77,12 +82,14 @@ Which validator components are affected by this change?
 
 ## Alternatives Considered
 
-What alternative designs were considered and what pros/cons does this feature
-have relative to them?
+Describe fundamentally different approaches that could address the problem
+identified in the motivation section (i.e. the solution space), and explain
+why the proposed design was chosen over these alternative solutions.
 
 ## Impact
 
-How will the implemented proposal impacts dapp developers, validators, and core contributors?
+How will the implemented proposal impact dapp developers, validators, and core
+contributors?
 
 ## Security Considerations
 
